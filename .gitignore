@@ -1,27 +1,13 @@
-# Dépendances
-node_modules/
-.pnp
-.pnp.js
+# Godot 4 : dossier de cache/import genere localement
+.godot/
+/android/
 
-# Build
-dist/
+# Exports
 build/
-.next/
-out/
-*.tsbuildinfo
+export_presets.cfg
+*.translation
 
-# Environnement
-.env
-.env.local
-.env*.local
-
-# Logs
-*.log
-npm-debug.log*
-yarn-debug.log*
-yarn-error.log*
-
-# OS / éditeurs
+# OS / editeurs
 .DS_Store
 Thumbs.db
 .vscode/
