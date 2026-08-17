@@ -1,0 +1,67 @@
+[gd_scene load_steps=3 format=3]
+
+[ext_resource type="Script" path="res://scenes/battle/battle_prep.gd" id="1_prep"]
+[ext_resource type="Script" path="res://scripts/ui/safe_area.gd" id="2_safe"]
+
+[node name="BattlePrep" type="Control"]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+script = ExtResource("1_prep")
+
+[node name="Background" type="ColorRect" parent="."]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+color = Color(0.078, 0.106, 0.157, 1)
+
+[node name="Safe" type="MarginContainer" parent="."]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+script = ExtResource("2_safe")
+
+[node name="Root" type="VBoxContainer" parent="Safe"]
+layout_mode = 2
+theme_override_constants/separation = 12
+
+[node name="BackButton" type="Button" parent="Safe/Root"]
+layout_mode = 2
+size_flags_horizontal = 0
+text = "< Village"
+
+[node name="TitleLabel" type="Label" parent="Safe/Root"]
+layout_mode = 2
+text = "BATAILLE"
+horizontal_alignment = 1
+
+[node name="NameLabel" type="Label" parent="Safe/Root"]
+layout_mode = 2
+text = ""
+horizontal_alignment = 1
+autowrap_mode = 3
+
+[node name="InfoPanel" type="PanelContainer" parent="Safe/Root"]
+layout_mode = 2
+
+[node name="InfoBox" type="VBoxContainer" parent="Safe/Root/InfoPanel"]
+layout_mode = 2
+theme_override_constants/separation = 8
+
+[node name="Filler" type="Control" parent="Safe/Root"]
+layout_mode = 2
+size_flags_vertical = 3
+
+[node name="PrepareButton" type="Button" parent="Safe/Root"]
+custom_minimum_size = Vector2(0, 62)
+layout_mode = 2
+text = "PREPARER L'ARMEE"

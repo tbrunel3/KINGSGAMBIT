@@ -1,15 +1,23 @@
-; Configuration du projet King's Gambit
+; Engine configuration file.
+; It's best edited using the editor UI and not directly,
+; since the parameters that go here are not all obvious.
 ;
-; Les valeurs d'equilibrage du jeu ne sont PAS ici : voir scripts/data/balance.gd
+; Format:
+;   [section] ; section goes between []
+;   param=value ; assign values to parameters
 
 config_version=5
+
+[animation]
+
+compatibility/default_parent_skeleton_in_mesh_instance_3d=true
 
 [application]
 
 config/name="King's Gambit"
 config/description="Jeu de strategie fantasy inspire des echecs. MVP Phase 1."
 run/main_scene="res://scenes/village/village.tscn"
-config/features=PackedStringArray("4.4", "GL Compatibility")
+config/features=PackedStringArray("4.7", "GL Compatibility")
 config/icon="res://icon.svg"
 
 [autoload]
@@ -25,9 +33,9 @@ window/size/viewport_width=393
 window/size/viewport_height=852
 window/size/window_width_override=393
 window/size/window_height_override=852
-window/handheld/orientation=1
 window/stretch/mode="canvas_items"
 window/stretch/aspect="expand"
+window/handheld/orientation=1
 
 [gui]
 

@@ -59,9 +59,16 @@ static func style_panel(panel: PanelContainer, color: Color = PANEL) -> void:
 
 
 ## Cree un label deja stylise, pour eviter cinq lignes repetees partout.
+##
+## Le retour a la ligne automatique est actif par defaut : sur un ecran de 393
+## points, un label d'une seule ligne un peu long impose sa largeur a tout son
+## conteneur et fait deborder l'ecran entier.
 static func make_label(text: String, size: int = 16, color: Color = TEXT) -> Label:
 	var label := Label.new()
 	label.text = text
+	label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	label.custom_minimum_size = Vector2(0, 0)
+	label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	label.add_theme_font_size_override("font_size", size)
 	label.add_theme_color_override("font_color", color)
 	return label

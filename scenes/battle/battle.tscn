@@ -1,0 +1,66 @@
+[gd_scene load_steps=4 format=3]
+
+[ext_resource type="Script" path="res://scenes/battle/battle.gd" id="1_battle"]
+[ext_resource type="Script" path="res://scripts/ui/safe_area.gd" id="2_safe"]
+[ext_resource type="Script" path="res://scripts/battle/grid_view.gd" id="3_grid"]
+
+[node name="Battle" type="Control"]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+script = ExtResource("1_battle")
+
+[node name="Background" type="ColorRect" parent="."]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+color = Color(0.078, 0.106, 0.157, 1)
+
+[node name="Safe" type="MarginContainer" parent="."]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+script = ExtResource("2_safe")
+
+[node name="Root" type="VBoxContainer" parent="Safe"]
+layout_mode = 2
+theme_override_constants/separation = 10
+
+[node name="TopBar" type="PanelContainer" parent="Safe/Root"]
+layout_mode = 2
+
+[node name="TopRow" type="HBoxContainer" parent="Safe/Root/TopBar"]
+layout_mode = 2
+
+[node name="PhaseLabel" type="Label" parent="Safe/Root/TopBar/TopRow"]
+layout_mode = 2
+text = "Placement"
+
+[node name="Spacer" type="Control" parent="Safe/Root/TopBar/TopRow"]
+layout_mode = 2
+size_flags_horizontal = 3
+
+[node name="QuitButton" type="Button" parent="Safe/Root/TopBar/TopRow"]
+layout_mode = 2
+text = "Quitter"
+
+[node name="Grid" type="Control" parent="Safe/Root"]
+layout_mode = 2
+size_flags_vertical = 3
+script = ExtResource("3_grid")
+
+[node name="BottomPanel" type="PanelContainer" parent="Safe/Root"]
+layout_mode = 2
+
+[node name="BottomBox" type="VBoxContainer" parent="Safe/Root/BottomPanel"]
+layout_mode = 2
+theme_override_constants/separation = 8

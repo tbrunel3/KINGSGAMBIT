@@ -124,7 +124,7 @@ const CASTLE_DATA := {
 	"name": "Chateau Royal",
 	"letter": "R",
 	"color": "c6a84f",
-	"deploy_slots": [6, 8, 11],
+	"deploy_slots": [6, 10, 14],
 	"upgrade_cost": [300, 800],
 	"upgrade_seconds": [120, 600],
 }
@@ -145,8 +145,8 @@ const CAMPAIGN := [
 	{"id": 6,  "name": "La Carriere",        "cols": 8, "rows": 10, "reward": 320, "level": 2, "enemies": {PION: 6, CAVALIER: 2, TOUR: 1}},
 	{"id": 7,  "name": "Les Marches Grises", "cols": 8, "rows": 11, "reward": 400, "level": 2, "enemies": {PION: 5, FOU: 3, CAVALIER: 2}},
 	{"id": 8,  "name": "Le Col du Corbeau",  "cols": 8, "rows": 11, "reward": 500, "level": 2, "enemies": {PION: 6, TOUR: 3, CAVALIER: 2}},
-	{"id": 9,  "name": "Les Ruines Hautes",  "cols": 9, "rows": 12, "reward": 640, "level": 3, "enemies": {PION: 6, FOU: 3, TOUR: 2, CAVALIER: 2}},
-	{"id": 10, "name": "La Tour de la Dame", "cols": 9, "rows": 12, "reward": 900, "level": 3, "enemies": {PION: 8, FOU: 3, TOUR: 3, CAVALIER: 3}},
+	{"id": 9,  "name": "Les Ruines Hautes",  "cols": 9, "rows": 12, "reward": 640, "level": 3, "enemies": {PION: 6, FOU: 2, TOUR: 2, CAVALIER: 2}},
+	{"id": 10, "name": "La Tour de la Dame", "cols": 9, "rows": 12, "reward": 900, "level": 3, "enemies": {PION: 7, FOU: 3, TOUR: 2, CAVALIER: 2}},
 ]
 
 # ------------------------------- COMBAT --------------------------------------
@@ -158,7 +158,8 @@ const COMBAT := {
 	"step_delay": 0.30,        # pause entre deux activations
 	"move_duration": 0.22,     # duree de l'animation de deplacement
 	"attack_duration": 0.20,   # duree du flash d'attaque
-	"max_activations": 400,    # garde-fou anti-blocage : au-dela, defaite
+	"stalemate_limit": 24,     # activations sans degats avant de trancher
+	"max_activations": 400,    # garde-fou absolu
 }
 
 const SPEEDS := [1.0, 2.0, 4.0]
