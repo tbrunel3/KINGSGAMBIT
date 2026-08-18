@@ -56,13 +56,18 @@ Les pièces rappellent les échecs sans en respecter les règles. **Il n'y a ni
 points de vie ni dégâts** : une pièce est sur le plateau, ou capturée. On capture
 en se **déplaçant sur la case adverse**. Aucune attaque à distance.
 
-| Pièce | Déplacement | Portée Nv.1 → Nv.10 |
-|---|---|---|
-| **Tour** | lignes et colonnes, bloquée par les pièces | 2 → 8 |
-| **Fou** | diagonales, bloqué par les pièces | 2 → 8 |
-| **Cavalier** | sauts, ignore les pièces du trajet | 1 figure → 7 figures |
-| **Pion** | avance tout droit, capture en diagonale avant | 1 → 4 |
-| **Dame** | toutes directions — uniquement par promotion | 3 → 9 |
+| Pièce | Déplacement | Nv.1 | Nv.10 |
+|---|---|---|---|
+| **Pion** | avance tout droit, capture en diagonale avant | 1 case | 4 cases |
+| **Cavalier** | sauts, ignore les pièces du trajet | petit saut (1,1) | 7 figures, jusqu'à (3,4) |
+| **Fou** | diagonales, bloqué par les pièces | 2 cases | 8 cases |
+| **Tour** | lignes et colonnes, bloquée par les pièces | 2 cases | 8 cases |
+| **Dame** | toutes directions — uniquement par promotion | 2 cases | 9 cases |
+
+Le cavalier démarre avec un **petit saut diagonal** et n'obtient le L classique
+qu'au niveau 2, puis des figures de plus en plus longues. La tour et le fou
+restent à 2 cases au niveau 1 : à 1 case ils seraient plus faibles qu'un pion,
+incapables de riposter à une pièce postée en diagonale.
 
 Une Tour ou un Fou s'arrête devant une pièce alliée, et s'arrête **en prenant**
 la première pièce ennemie rencontrée. Un Cavalier saute par-dessus tout.
@@ -149,6 +154,7 @@ scenes/
 tools/
   smoke_test.tscn        banc de test headless
   ui_test.tscn           appuie sur les vrais boutons du jeu
+  debug_battle.tscn      trace une bataille coup par coup
   screenshot.tscn        génération des captures
 ```
 
@@ -192,17 +198,36 @@ godot --headless --path . tools/ui_test.tscn
 Appuie sur les vrais boutons : ouvrir un bâtiment, recruter, améliorer, jouer une
 bataille du placement à la récompense. 26 vérifications.
 
+```bash
+godot --headless --path . tools/debug_battle.tscn
+```
+
+Rejoue une bataille coup par coup en imprimant le plateau et chaque activation.
+À sortir dès qu'une bataille tourne mal : c'est cette trace qui a révélé que le
+fou se faisait prendre gratuitement plutôt que d'accepter un échange perdant.
+
 ### Équilibrage vérifié
 
 Le banc de test simule un joueur au niveau de la bataille qu'il affronte. Les 10
 batailles sont franchissables, avec des pertes réelles à chaque fois.
 
+Deux compositions sont testées par bataille — une armée variée et une armée de
+pions — et il en faut une qui passe. Exiger qu'une composition unique gagne
+partout nierait l'intérêt du choix d'armée : contre trois pions, ce sont les
+pions qui répondent, et la bataille 1 le démontre.
+
 ```
-Bataille  1  L Oree du Bois        Nv.1   6 vs  3  ->  VICTOIRE   3 pieces perdues
-Bataille  5  Le Pont Noir          Nv.3   9 vs  6  ->  VICTOIRE   4 pieces perdues
-Bataille  8  Le Col du Corbeau     Nv.4  10 vs 11  ->  VICTOIRE   7 pieces perdues
-Bataille 10  La Tour de la Dame    Nv.5  12 vs 12  ->  VICTOIRE   6 pieces perdues
+Bataille  1  L Oree du Bois     Nv.1  armee variee    6 vs  3  ->  defaite
+Bataille  1  L Oree du Bois     Nv.1  armee pions     6 vs  3  ->  VICTOIRE   4 perdues
+Bataille  5  Le Pont Noir       Nv.3  armee variee    9 vs  6  ->  VICTOIRE   3 perdues
+Bataille 10  La Tour de la Dame Nv.6  armee variee   13 vs 13  ->  VICTOIRE   8 perdues
+
+Premiere partie (armee de depart, sans recrutement) : 6 vs 3 -> VICTOIRE
 ```
+
+Le dernier cas est le plus important : il joue la toute première bataille avec
+l'armée de départ exacte, sans un seul recrutement. C'est lui qui a détecté que
+le premier combat du jeu était perdu.
 
 ---
 

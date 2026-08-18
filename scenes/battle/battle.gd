@@ -232,32 +232,45 @@ func _on_reset_placement() -> void:
 	_refresh_placement()
 
 
-## Remplit la zone de deploiement en formation compacte : rangee avancee
-## d'abord, du centre vers les bords, en alternant les types. C'est le miroir
-## exact de la formation ennemie.
+## Formation automatique : les pions devant, les pieces lourdes derriere.
+##
+## Aligner tout le monde sur la meme rangee est le pire placement possible :
+## les pieces se bouchent le passage et la tour ne sort jamais. Les pions
+## ouvrent le contact, les pieces de valeur suivent une fois les lignes ouvertes.
 func _on_auto_place() -> void:
 	var slots := Game.deploy_slots()
-	for cell in _engine.grid.free_player_cells():
-		if _placed.size() >= slots:
-			break
-		var type := _pick_available_type()
+	var order: Array = []
+	while order.size() < slots:
+		var type := _pick_available_type(order)
 		if type.is_empty():
 			break
+		order.append(type)
+
+	# Les pions passent devant, le reste garde son ordre d'alternance.
+	order.sort_custom(func(a, b): return Balance.unit_value(a) < Balance.unit_value(b))
+
+	var cells: Array = _engine.grid.free_player_cells()
+	for i in range(mini(order.size(), cells.size())):
+		var type: String = order[i]
 		var unit := _engine.add_unit(type, Game.building_level(type),
-			BattleUnit.TEAM_PLAYER, cell)
+			BattleUnit.TEAM_PLAYER, cells[i])
 		_placed.append(unit)
 		_remaining[type] = int(_remaining[type]) - 1
+
 	_grid_view.queue_redraw()
 	_refresh_placement()
 
 
 ## Alterne les types disponibles plutot que de vider la caserne la plus pleine :
 ## un mur de pions perd contre a peu pres tout.
-func _pick_available_type() -> String:
+##
+## `taken` contient les types deja retenus pour cette formation, afin de tenir
+## le compte avant que les pieces soient reellement posees.
+func _pick_available_type(taken: Array = []) -> String:
 	var types: Array = Balance.UNIT_TYPES
 	for offset in range(types.size()):
-		var type: String = types[(_placed.size() + offset) % types.size()]
-		if int(_remaining[type]) > 0:
+		var type: String = types[(taken.size() + offset) % types.size()]
+		if int(_remaining[type]) - taken.count(type) > 0:
 			return type
 	return ""
 

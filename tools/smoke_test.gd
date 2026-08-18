@@ -232,13 +232,21 @@ func _play_all_battles() -> void:
 	print("  Joueur suppose au niveau de la bataille qu'il affronte.")
 	print("")
 
+	# Deux compositions par bataille : une armee variee et une armee de pions.
+	# Exiger qu'une seule composition gagne partout reviendrait a nier l'interet
+	# du choix d'armee - contre des pions, ce sont les pions qui repondent.
 	var wins := 0
 	for battle in Balance.CAMPAIGN:
 		var level := int(battle["level"])
-		if _play_battle(battle, level, level):
+		var varied := _play_battle(battle, level, level, "variee")
+		var massed := _play_battle(battle, level, level, "pions") if not varied else false
+		if varied or massed:
 			wins += 1
+		else:
+			_fail("bataille %d : aucune composition ne passe" % int(battle["id"]))
 
 	print("")
+	_check_first_run()
 	print("  Batailles gagnables avec la progression attendue : %d / %d" % [
 		wins, Balance.battle_count()])
 	print("  Promotions observees : %d" % _promotions_seen)
@@ -246,8 +254,46 @@ func _play_all_battles() -> void:
 		_fail("la campagne n'est pas franchissable en jouant normalement")
 
 
+## La toute premiere partie : armee de depart exacte, sans un seul recrutement.
+##
+## Le reste de la simulation suppose des casernes pleines, ce qui masque le cas
+## le plus important - un joueur qui lance sa premiere bataille et perd des
+## pieces definitivement.
+func _check_first_run() -> void:
+	var battle := Balance.battle(1)
+	var engine := BattleEngine.new(int(battle["cols"]), int(battle["rows"]))
+
+	var cells: Array = engine.grid.free_enemy_cells()
+	var enemy_count := 0
+	for type in Balance.UNIT_TYPES:
+		if not battle["enemies"].has(type):
+			continue
+		for i in range(int(battle["enemies"][type])):
+			engine.add_unit(type, int(battle["level"]), BattleUnit.TEAM_ENEMY, cells[enemy_count])
+			enemy_count += 1
+
+	var pool: Dictionary = {}
+	for type in Balance.UNIT_TYPES:
+		pool[type] = int(Balance.STARTING_UNITS.get(type, 0))
+
+	var placed := _deploy(engine, pool, Balance.deploy_slots(1), 1)
+
+	while not engine.finished:
+		engine.step()
+
+	var victory := engine.winner == BattleUnit.TEAM_PLAYER
+	var lost := 0
+	for count in engine.losses(BattleUnit.TEAM_PLAYER).values():
+		lost += int(count)
+
+	print("  Premiere partie (armee de depart, sans recrutement) : %d vs %d  ->  %s, %d perdues" % [
+		placed, enemy_count, "VICTOIRE" if victory else "DEFAITE", lost])
+	if not victory:
+		_fail("la toute premiere bataille est perdue avec l'armee de depart")
+
+
 ## Joue une bataille avec un joueur au niveau donne. Retourne true si victoire.
-func _play_battle(battle: Dictionary, castle_level: int, unit_level: int) -> bool:
+func _play_battle(battle: Dictionary, castle_level: int, unit_level: int, style: String = "variee") -> bool:
 	var engine := BattleEngine.new(int(battle["cols"]), int(battle["rows"]))
 
 	var level := int(battle["level"])
@@ -263,20 +309,13 @@ func _play_battle(battle: Dictionary, castle_level: int, unit_level: int) -> boo
 	var slots := Balance.deploy_slots(castle_level)
 	var pool: Dictionary = {}
 	for type in Balance.UNIT_TYPES:
-		pool[type] = Balance.capacity(type, unit_level)
+		# Armee de pions : casernes lourdes volontairement presque vides.
+		if style == "pions" and type != Balance.PION:
+			pool[type] = 1
+		else:
+			pool[type] = Balance.capacity(type, unit_level)
 
-	var placed := 0
-	var cursor := 0
-	for cell in engine.grid.free_player_cells():
-		if placed >= slots:
-			break
-		var type := _pick_round_robin(pool, cursor)
-		if type.is_empty():
-			break
-		engine.add_unit(type, unit_level, BattleUnit.TEAM_PLAYER, cell)
-		pool[type] = int(pool[type]) - 1
-		cursor += 1
-		placed += 1
+	var placed := _deploy(engine, pool, slots, unit_level)
 
 	if placed == 0:
 		_fail("bataille %d : aucune piece joueur placee" % int(battle["id"]))
@@ -292,8 +331,8 @@ func _play_battle(battle: Dictionary, castle_level: int, unit_level: int) -> boo
 	for count in engine.losses(BattleUnit.TEAM_PLAYER).values():
 		lost += int(count)
 
-	print("  Bataille %2d  %-20s  Nv.%d  %2d vs %2d  ->  %-8s  %2d pieces perdues, %d activations" % [
-		int(battle["id"]), String(battle["name"]), unit_level, placed, enemy_count,
+	print("  Bataille %2d  %-20s  Nv.%d  armee %-7s  %2d vs %2d  ->  %-8s  %2d perdues, %d activations" % [
+		int(battle["id"]), String(battle["name"]), unit_level, style, placed, enemy_count,
 		"VICTOIRE" if victory else "defaite", lost, engine.activation_count
 	])
 
@@ -301,6 +340,27 @@ func _play_battle(battle: Dictionary, castle_level: int, unit_level: int) -> boo
 		_fail("bataille %d : limite d'activations atteinte (combat bloque ?)" % int(battle["id"]))
 
 	return victory
+
+
+## Deploie l'armee exactement comme le bouton Auto du jeu : alternance des
+## types, puis pions devant et pieces lourdes derriere. Retourne le nombre de
+## pieces posees.
+func _deploy(engine: BattleEngine, pool: Dictionary, slots: int, level: int) -> int:
+	var order: Array = []
+	while order.size() < slots:
+		var type := _pick_round_robin(pool, order.size())
+		if type.is_empty():
+			break
+		order.append(type)
+		pool[type] = int(pool[type]) - 1
+
+	order.sort_custom(func(a, b): return Balance.unit_value(a) < Balance.unit_value(b))
+
+	var cells: Array = engine.grid.free_player_cells()
+	var placed := mini(order.size(), cells.size())
+	for i in range(placed):
+		engine.add_unit(String(order[i]), level, BattleUnit.TEAM_PLAYER, cells[i])
+	return placed
 
 
 ## Alterne les types pour obtenir une armee variee plutot qu'un mur de pions.

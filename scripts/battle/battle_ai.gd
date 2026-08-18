@@ -15,6 +15,11 @@ class_name BattleAI
 ## le reste du moteur n'a pas a changer.
 ##
 
+## Valeur en dessous de laquelle une piece accepte d'avancer sur une case
+## menacee. A 1, seuls les pions se sacrifient.
+const _EXPENDABLE_VALUE := 1
+
+
 ## Retourne {"move": Vector2i, "capture": BattleUnit|null}.
 ## "move" vaut la case actuelle si la piece reste sur place.
 static func decide(unit: BattleUnit, grid: GridModel, units: Array) -> Dictionary:
@@ -28,10 +33,15 @@ static func decide(unit: BattleUnit, grid: GridModel, units: Array) -> Dictionar
 
 	var enemy_team := BattleUnit.TEAM_ENEMY if unit.team == BattleUnit.TEAM_PLAYER else BattleUnit.TEAM_PLAYER
 
-	# 1. Les prises d'abord, evaluees comme un echange : ce que je gagne moins
-	#    ce que je risque de perdre si la case est reprise juste apres.
+	# Une piece deja attaquee sera prise si elle ne fait rien : ses calculs
+	# changent completement, elle n'a plus rien a proteger.
+	var in_danger := MovementRules.is_cell_threatened(unit.cell, enemy_team, grid, units)
+
+	# 1. Les prises, evaluees comme un echange : ce que je gagne moins ce que je
+	#    risque de perdre si la case est reprise juste apres.
 	var best_cell := Vector2i(-1, -1)
 	var best_trade := -INF
+	var best_value := 0.0
 	for cell in moves:
 		var target := grid.unit_at(cell)
 		if target == null or not unit.is_enemy_of(target):
@@ -42,13 +52,25 @@ static func decide(unit: BattleUnit, grid: GridModel, units: Array) -> Dictionar
 		if trade > best_trade:
 			best_trade = trade
 			best_cell = cell
+			best_value = float(target.value)
 
-	# Un echange nul est accepte, un echange perdant non : une tour ne prend pas
-	# un pion pour se faire reprendre au coup suivant.
-	if best_cell != Vector2i(-1, -1) and best_trade >= 0.0:
-		return {"move": best_cell, "capture": grid.unit_at(best_cell)}
+	if best_cell != Vector2i(-1, -1):
+		# Un echange nul passe, un echange perdant non : une tour ne prend pas un
+		# pion pour se faire reprendre au coup suivant.
+		if best_trade >= 0.0:
+			return {"move": best_cell, "capture": grid.unit_at(best_cell)}
+		# SAUF si elle est deja en prise : elle est perdue de toute facon, autant
+		# emporter quelque chose. Ne pas le faire, c'est mourir les mains vides.
+		if in_danger and _best_escape(unit, grid, units, enemies, enemy_team) == Vector2i(-1, -1):
+			return {"move": best_cell, "capture": grid.unit_at(best_cell)}
 
-	# 2. Aucune prise interessante : on avance. On prefere une case sure, mais on
+	# 2. En prise et capable de fuir : elle se degage.
+	if in_danger:
+		var escape := _best_escape(unit, grid, units, enemies, enemy_team)
+		if escape != Vector2i(-1, -1):
+			return {"move": escape, "capture": null}
+
+	# 3. Aucune prise interessante : on avance. On prefere une case sure, mais on
 	#    avance quand meme s'il n'y en a pas - rester plante signifie perdre la
 	#    bataille a l'usure sans avoir combattu.
 	#
@@ -81,14 +103,37 @@ static func decide(unit: BattleUnit, grid: GridModel, units: Array) -> Dictionar
 
 	if safe_cell != Vector2i(-1, -1):
 		return {"move": safe_cell, "capture": null}
-	if any_cell != Vector2i(-1, -1):
+
+	# 3. Aucune case sure. Seules les pieces de faible valeur avancent quand
+	#    meme : c'est le role du pion d'ouvrir le contact et d'etre echange.
+	#    Une tour qui s'offre a un pion perd la bataille a elle seule.
+	if any_cell != Vector2i(-1, -1) and unit.value <= _EXPENDABLE_VALUE:
 		return {"move": any_cell, "capture": null}
 
-	# 3. Rien ne rapproche : la piece tient sa position.
+	# 4. Rien de sur, et la piece vaut trop cher pour se sacrifier : elle tient
+	#    sa position. Si les deux camps s'immobilisent, le moteur tranche au
+	#    materiel restant apres Balance.COMBAT.stalemate_rounds.
 	return {"move": unit.cell, "capture": null}
 
 
 # ------------------------------- HEURISTIQUES --------------------------------
+
+## Case de repli pour une piece en prise : une case libre et sure, en preferant
+## celle qui reste la plus proche de l'ennemi. Vector2i(-1, -1) si aucune ne
+## met la piece a l'abri - elle vendra alors sa peau sur place.
+static func _best_escape(unit: BattleUnit, grid: GridModel, units: Array, enemies: Array, enemy_team: int) -> Vector2i:
+	var best := Vector2i(-1, -1)
+	var best_distance := 9999
+	for cell in MovementRules.legal_moves(unit, grid):
+		if grid.unit_at(cell) != null:
+			continue
+		if _would_be_threatened(cell, unit, enemy_team, grid, units):
+			continue
+		var distance := _distance_to_nearest(cell, enemies)
+		if distance < best_distance:
+			best_distance = distance
+			best = cell
+	return best
 
 ## Simule le deplacement pour savoir si la case d'arrivee est reprenable.
 ## On retire temporairement la piece de sa case d'origine : sans cela, elle se

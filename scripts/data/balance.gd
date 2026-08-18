@@ -84,7 +84,7 @@ const UNITS := {
 		"recruit_cost_base": 35,
 		"recruit_cost_step": 8,  # cout = base + step * (nb deja possede)
 		#            Nv  1  2  3  4  5  6  7  8  9 10
-		"move_range": [ 1, 1, 1, 2, 2, 2, 3, 3, 3, 4],
+		"move_range": [ 1, 1, 1, 1, 2, 2, 2, 3, 3, 4],
 		"capacity":   [ 8,10,12,14,16,18,20,22,24,26],
 		"upgrade_cost":    [150, 300,  500,  750, 1050, 1400, 1800, 2250, 2750],
 		"upgrade_seconds": [ 30,  90,  240,  600, 1200, 2400, 4200, 7200,10800],
@@ -101,16 +101,16 @@ const UNITS := {
 		# Le cavalier ne gagne pas en portee mais en FIGURES de saut : chaque
 		# palier ouvre de nouveaux angles, symetrises dans les 8 sens.
 		"jump_offsets": [
-			[[1, 2]],
-			[[1, 2]],
-			[[1, 2], [1, 3]],
-			[[1, 2], [1, 3]],
-			[[1, 2], [1, 3], [2, 3]],
-			[[1, 2], [1, 3], [2, 3]],
-			[[1, 2], [1, 3], [2, 3], [1, 4]],
-			[[1, 2], [1, 3], [2, 3], [1, 4], [2, 4]],
-			[[1, 2], [1, 3], [2, 3], [1, 4], [2, 4], [3, 4]],
-			[[1, 2], [1, 3], [2, 3], [1, 4], [2, 4], [3, 4], [1, 5]],
+			[[1, 1]],                                                    # Nv.1  petit saut
+			[[1, 2]],                                                    # Nv.2  le L classique
+			[[1, 1], [1, 2]],                                            # Nv.3
+			[[1, 1], [1, 2]],                                            # Nv.4
+			[[1, 1], [1, 2], [1, 3]],                                    # Nv.5
+			[[1, 1], [1, 2], [1, 3]],                                    # Nv.6
+			[[1, 1], [1, 2], [1, 3], [2, 3]],                            # Nv.7
+			[[1, 1], [1, 2], [1, 3], [2, 3], [1, 4]],                    # Nv.8
+			[[1, 1], [1, 2], [1, 3], [2, 3], [1, 4], [2, 4]],            # Nv.9
+			[[1, 1], [1, 2], [1, 3], [2, 3], [1, 4], [2, 4], [3, 4]],    # Nv.10
 		],
 		"capacity":   [ 4, 5, 6, 7, 8, 9,10,11,12,13],
 		"upgrade_cost":    [220, 420,  680, 1000, 1380, 1820, 2320, 2880, 3500],
@@ -126,7 +126,7 @@ const UNITS := {
 		"recruit_cost_base": 80,
 		"recruit_cost_step": 20,
 		#            Nv  1  2  3  4  5  6  7  8  9 10
-		"move_range": [ 2, 2, 3, 3, 4, 5, 6, 6, 7, 8],
+		"move_range": [ 2, 2, 2, 3, 3, 4, 5, 6, 7, 8],
 		"capacity":   [ 4, 5, 6, 7, 8, 9,10,11,12,13],
 		"upgrade_cost":    [200, 390,  630,  930, 1290, 1710, 2190, 2730, 3330],
 		"upgrade_seconds": [ 60, 180,  420,  900, 1800, 3300, 5400, 8400,12600],
@@ -141,7 +141,7 @@ const UNITS := {
 		"recruit_cost_base": 110,
 		"recruit_cost_step": 30,
 		#            Nv  1  2  3  4  5  6  7  8  9 10
-		"move_range": [ 2, 2, 3, 3, 4, 5, 6, 6, 7, 8],
+		"move_range": [ 2, 2, 2, 3, 3, 4, 5, 6, 7, 8],
 		"capacity":   [ 3, 4, 5, 6, 7, 8, 9,10,11,12],
 		"upgrade_cost":    [260, 500,  800, 1160, 1580, 2060, 2600, 3200, 3860],
 		"upgrade_seconds": [ 90, 240,  540, 1080, 2100, 3900, 6300, 9600,14400],
@@ -157,7 +157,7 @@ const UNITS := {
 		"recruit_cost_step": 0,
 		# Un pion promu devient une Dame du meme niveau que lui.
 		#            Nv  1  2  3  4  5  6  7  8  9 10
-		"move_range": [ 3, 3, 4, 4, 5, 6, 7, 7, 8, 9],
+		"move_range": [ 2, 2, 3, 3, 4, 5, 6, 7, 8, 9],
 		"capacity":   [ 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
 		"upgrade_cost": [],
 		"upgrade_seconds": [],
@@ -188,15 +188,15 @@ const CASTLE_DATA := {
 
 const CAMPAIGN := [
 	{"id": 1,  "name": "L Oree du Bois",     "cols": 6, "rows": 8,  "reward": 90,  "level": 1, "enemies": {PION: 3}},
-	{"id": 2,  "name": "Le Gue de Pierre",   "cols": 6, "rows": 8,  "reward": 120, "level": 1, "enemies": {PION: 3, FOU: 1}},
+	{"id": 2,  "name": "Le Gue de Pierre",   "cols": 6, "rows": 8,  "reward": 120, "level": 1, "enemies": {PION: 2, FOU: 1}},
 	{"id": 3,  "name": "La Route du Sel",    "cols": 7, "rows": 9,  "reward": 160, "level": 2, "enemies": {PION: 4, CAVALIER: 1, TOUR: 1}},
-	{"id": 4,  "name": "Les Champs Brules",  "cols": 7, "rows": 9,  "reward": 200, "level": 2, "enemies": {PION: 5, FOU: 2, CAVALIER: 1}},
+	{"id": 4,  "name": "Les Champs Brules",  "cols": 7, "rows": 9,  "reward": 200, "level": 2, "enemies": {PION: 4, FOU: 1, CAVALIER: 1}},
 	{"id": 5,  "name": "Le Pont Noir",       "cols": 7, "rows": 10, "reward": 260, "level": 3, "enemies": {PION: 4, TOUR: 1, FOU: 1}},
-	{"id": 6,  "name": "La Carriere",        "cols": 8, "rows": 10, "reward": 320, "level": 3, "enemies": {PION: 6, CAVALIER: 2, TOUR: 1}},
-	{"id": 7,  "name": "Les Marches Grises", "cols": 8, "rows": 11, "reward": 400, "level": 4, "enemies": {PION: 5, FOU: 3, CAVALIER: 2}},
+	{"id": 6,  "name": "La Carriere",        "cols": 8, "rows": 10, "reward": 320, "level": 3, "enemies": {PION: 5, CAVALIER: 1, TOUR: 1}},
+	{"id": 7,  "name": "Les Marches Grises", "cols": 8, "rows": 11, "reward": 400, "level": 4, "enemies": {PION: 5, FOU: 2, CAVALIER: 1}},
 	{"id": 8,  "name": "Le Col du Corbeau",  "cols": 8, "rows": 11, "reward": 500, "level": 4, "enemies": {PION: 6, TOUR: 3, CAVALIER: 2}},
 	{"id": 9,  "name": "Les Ruines Hautes",  "cols": 9, "rows": 12, "reward": 640, "level": 5, "enemies": {PION: 6, FOU: 2, TOUR: 2, CAVALIER: 2}},
-	{"id": 10, "name": "La Tour de la Dame", "cols": 9, "rows": 12, "reward": 900, "level": 5, "enemies": {PION: 6, FOU: 2, TOUR: 2, CAVALIER: 2}},
+	{"id": 10, "name": "La Tour de la Dame", "cols": 9, "rows": 12, "reward": 900, "level": 6, "enemies": {PION: 6, FOU: 3, TOUR: 2, CAVALIER: 2}},
 ]
 
 # ------------------------------- COMBAT --------------------------------------
