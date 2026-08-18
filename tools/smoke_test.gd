@@ -6,17 +6,20 @@ extends Node
 ##   godot --headless --path . tools/smoke_test.tscn
 ##
 ## Ne fait pas partie du jeu : c'est un outil de developpement. Il sert surtout
-## a detecter les combats qui ne se terminent pas et les batailles impossibles
-## a peupler apres un reglage dans Balance.
+## a detecter les combats qui ne se terminent pas, les batailles impossibles a
+## peupler, et les tableaux de Balance mal dimensionnes apres un reglage.
 ##
 
 var _failures: int = 0
+var _promotions_seen: int = 0
 
 
 func _ready() -> void:
 	print("=== KING'S GAMBIT - banc de test ===")
 	_check_balance()
 	_check_save()
+	_check_losses()
+	_check_rules()
 	_play_all_battles()
 	await _check_scenes()
 	_check_campaign_loop()
@@ -39,15 +42,36 @@ func _fail(message: String) -> void:
 func _check_balance() -> void:
 	print("\n[1] Coherence des donnees")
 
+	var levels := Balance.MAX_LEVEL
 	for type in Balance.UNIT_TYPES:
 		var data: Dictionary = Balance.UNITS[type]
-		var levels: int = data["levels"].size()
 		if data["capacity"].size() != levels:
 			_fail("%s : capacity a %d entrees pour %d niveaux" % [type, data["capacity"].size(), levels])
 		if data["upgrade_cost"].size() != levels - 1:
 			_fail("%s : upgrade_cost devrait avoir %d entrees" % [type, levels - 1])
 		if data["upgrade_seconds"].size() != levels - 1:
 			_fail("%s : upgrade_seconds devrait avoir %d entrees" % [type, levels - 1])
+
+		# Chaque piece doit savoir bouger a tous les niveaux.
+		for level in range(1, levels + 1):
+			var reach := Balance.move_range(type, level) + Balance.jump_offsets(type, level).size()
+			if reach <= 0:
+				_fail("%s niveau %d : aucune mobilite definie" % [type, level])
+
+		# La mobilite ne doit jamais reculer d'un niveau au suivant.
+		for level in range(2, levels + 1):
+			if Balance.move_range(type, level) < Balance.move_range(type, level - 1):
+				_fail("%s : la portee baisse au niveau %d" % [type, level])
+
+	if Balance.CASTLE_DATA["deploy_slots"].size() != levels:
+		_fail("chateau : deploy_slots a %d entrees pour %d niveaux" % [
+			Balance.CASTLE_DATA["deploy_slots"].size(), levels])
+
+	# La Dame n'est pas recrutable mais doit exister pour la promotion.
+	if not Balance.UNITS.has(Balance.DAME):
+		_fail("la Dame est absente de Balance.UNITS")
+	if Balance.UNIT_TYPES.has(Balance.DAME):
+		_fail("la Dame ne doit pas etre recrutable")
 
 	var min_rows: int = Balance.DEPLOY_ROWS * 2 + 1
 	for battle in Balance.CAMPAIGN:
@@ -59,11 +83,12 @@ func _check_balance() -> void:
 		var enemy_count := 0
 		for type in battle["enemies"].keys():
 			enemy_count += int(battle["enemies"][type])
-		var enemy_cells: int = cols * Balance.DEPLOY_ROWS
-		if enemy_count > enemy_cells:
-			_fail("bataille %d : %d ennemis pour %d cases" % [int(battle["id"]), enemy_count, enemy_cells])
+		if enemy_count > cols * Balance.DEPLOY_ROWS:
+			_fail("bataille %d : %d ennemis pour %d cases" % [
+				int(battle["id"]), enemy_count, cols * Balance.DEPLOY_ROWS])
 
-	print("  %d unites, %d batailles verifiees" % [Balance.UNIT_TYPES.size(), Balance.battle_count()])
+	print("  %d pieces sur %d niveaux, %d batailles verifiees" % [
+		Balance.UNIT_TYPES.size(), levels, Balance.battle_count()])
 
 
 # ------------------------------- SAUVEGARDE ----------------------------------
@@ -84,8 +109,7 @@ func _check_save() -> void:
 	if Game.gold != Balance.STARTING_GOLD - cost:
 		_fail("l'or n'a pas ete debite correctement")
 
-	# Amelioration : le timer doit repousser la fin dans le futur.
-	Game.add_gold(5000)
+	Game.add_gold(50000)
 	if not Game.start_upgrade(Balance.TOUR):
 		_fail("amelioration du donjon refusee")
 	if Game.upgrade_remaining(Balance.TOUR) <= 0:
@@ -98,29 +122,127 @@ func _check_save() -> void:
 	print("  or, recrutement, amelioration : OK")
 
 
+# ------------------------------- PERTES --------------------------------------
+
+func _check_losses() -> void:
+	print("\n[3] Pertes definitives")
+
+	# On recrute au-dessus du plancher de garnison, sinon les pertes testees
+	# seraient immediatement compensees et le test ne prouverait rien.
+	Game.reset_progress()
+	Game.add_gold(5000)
+	for i in range(6):
+		Game.recruit(Balance.PION)
+	var pions := Game.units_owned(Balance.PION)
+	Game.apply_losses({Balance.PION: 2})
+	if Game.units_owned(Balance.PION) != pions - 2:
+		_fail("les pions perdus ne sont pas retires de l'armee (%d au lieu de %d)" % [
+			Game.units_owned(Balance.PION), pions - 2])
+
+	# On ne descend jamais sous zero, meme si la bataille rapporte des pertes
+	# superieures a ce que le village possede.
+	Game.apply_losses({Balance.PION: 999})
+	if Game.units_owned(Balance.PION) < 0:
+		_fail("le compte de pions est devenu negatif")
+
+	# Garnison minimale : une armee balayee doit revenir au plancher, sinon le
+	# joueur ne peut plus rejouer une bataille pour refaire de l'or.
+	Game.apply_losses({Balance.PION: 99, Balance.CAVALIER: 99, Balance.FOU: 99, Balance.TOUR: 99})
+	Game.spend_gold(Game.gold)
+	for type in Balance.GARRISON_MINIMUM.keys():
+		var floor_count := int(Balance.GARRISON_MINIMUM[type])
+		if Game.units_owned(type) < floor_count:
+			_fail("%s : garnison minimale non retablie (%d au lieu de %d)" % [
+				type, Game.units_owned(type), floor_count])
+	if Game.total_units() == 0:
+		_fail("armee vide et or nul : la partie est sans issue")
+
+	Game.reset_progress()
+	print("  retrait des pertes, plancher a zero, garnison minimale : OK")
+
+
+# ------------------------------- REGLES DE PIECES ----------------------------
+#
+#  Scenarios minuscules et deterministes : une regle par test, sur un plateau
+#  monte a la main. C'est ce qui permet de toucher a l'IA sans casser les regles.
+
+func _check_rules() -> void:
+	print("\n[4] Regles de deplacement et de capture")
+
+	# Le pion avance sur une case vide mais ne prend pas devant lui.
+	var engine := BattleEngine.new(5, 8)
+	var pawn := engine.add_unit(Balance.PION, 1, BattleUnit.TEAM_PLAYER, Vector2i(2, 4))
+	var blocker := engine.add_unit(Balance.PION, 1, BattleUnit.TEAM_ENEMY, Vector2i(2, 3))
+	var moves := MovementRules.legal_moves(pawn, engine.grid)
+	if moves.has(Vector2i(2, 3)):
+		_fail("le pion capture droit devant, il ne devrait pas")
+	if not moves.is_empty():
+		_fail("le pion bloque devant devrait etre immobile, il a %d coups" % moves.size())
+
+	# Il prend en diagonale avant.
+	engine.remove_unit(blocker)
+	engine.add_unit(Balance.PION, 1, BattleUnit.TEAM_ENEMY, Vector2i(3, 3))
+	moves = MovementRules.legal_moves(pawn, engine.grid)
+	if not moves.has(Vector2i(3, 3)):
+		_fail("le pion ne prend pas en diagonale avant")
+	if not moves.has(Vector2i(2, 3)):
+		_fail("le pion ne peut plus avancer alors que la case est libre")
+
+	# La tour est bloquee par une piece alliee, et prend la premiere ennemie.
+	var engine2 := BattleEngine.new(8, 8)
+	var rook := engine2.add_unit(Balance.TOUR, 5, BattleUnit.TEAM_PLAYER, Vector2i(0, 4))
+	engine2.add_unit(Balance.PION, 1, BattleUnit.TEAM_PLAYER, Vector2i(2, 4))
+	engine2.add_unit(Balance.PION, 1, BattleUnit.TEAM_ENEMY, Vector2i(0, 2))
+	var rook_moves := MovementRules.legal_moves(rook, engine2.grid)
+	if rook_moves.has(Vector2i(2, 4)) or rook_moves.has(Vector2i(3, 4)):
+		_fail("la tour traverse une piece alliee")
+	if not rook_moves.has(Vector2i(0, 2)):
+		_fail("la tour ne prend pas la premiere piece ennemie de sa ligne")
+	if rook_moves.has(Vector2i(0, 1)):
+		_fail("la tour depasse la piece qu'elle capture")
+
+	# Promotion : un pion qui atteint la rangee 0 devient Dame.
+	var engine3 := BattleEngine.new(5, 8)
+	engine3.add_unit(Balance.PION, 1, BattleUnit.TEAM_PLAYER, Vector2i(2, 1))
+	engine3.add_unit(Balance.TOUR, 1, BattleUnit.TEAM_ENEMY, Vector2i(4, 0))
+	var promoted := false
+	var guard := 0
+	while not engine3.finished and guard < 60:
+		for event in engine3.step():
+			if String(event["type"]) == "promotion":
+				promoted = true
+		guard += 1
+	if not promoted:
+		_fail("aucune promotion alors qu'un pion pouvait atteindre le fond")
+	else:
+		var queen: BattleUnit = engine3.living(BattleUnit.TEAM_PLAYER)[0] if not engine3.living(BattleUnit.TEAM_PLAYER).is_empty() else null
+		if queen != null:
+			if queen.type != Balance.DAME:
+				_fail("le pion promu n'est pas devenu une Dame")
+			if queen.origin_type != Balance.PION:
+				_fail("la Dame promue a perdu son type d'origine, elle ne redeviendra pas un pion")
+
+	print("  pion (avance, prise diagonale), tour (blocage, prise), promotion : OK")
+
+
 # ------------------------------- BATAILLES -----------------------------------
 
 func _play_all_battles() -> void:
-	print("\n[3] Simulation des batailles")
-	print("  Le joueur simule est suppose avoir suivi la progression normale :")
-	print("  batailles 1-3 au niveau 1, 4-7 au niveau 2, 8-10 au niveau 3.")
+	print("\n[4] Simulation des batailles")
+	print("  Joueur suppose au niveau de la bataille qu'il affronte.")
 	print("")
 
-	var expected_wins := 0
+	var wins := 0
 	for battle in Balance.CAMPAIGN:
-		var id := int(battle["id"])
-		var player_level := 1
-		if id >= 8:
-			player_level = 3
-		elif id >= 4:
-			player_level = 2
-		if _play_battle(battle, player_level, player_level):
-			expected_wins += 1
+		var level := int(battle["level"])
+		if _play_battle(battle, level, level):
+			wins += 1
 
 	print("")
 	print("  Batailles gagnables avec la progression attendue : %d / %d" % [
-		expected_wins, Balance.battle_count()])
-	if expected_wins < Balance.battle_count():
+		wins, Balance.battle_count()])
+	print("  Promotions observees : %d" % _promotions_seen)
+	if wins < Balance.battle_count():
 		_fail("la campagne n'est pas franchissable en jouant normalement")
 
 
@@ -128,7 +250,6 @@ func _play_all_battles() -> void:
 func _play_battle(battle: Dictionary, castle_level: int, unit_level: int) -> bool:
 	var engine := BattleEngine.new(int(battle["cols"]), int(battle["rows"]))
 
-	# Armee ennemie
 	var level := int(battle["level"])
 	var cells: Array = engine.grid.free_enemy_cells()
 	var enemy_count := 0
@@ -139,8 +260,6 @@ func _play_battle(battle: Dictionary, castle_level: int, unit_level: int) -> boo
 			engine.add_unit(type, level, BattleUnit.TEAM_ENEMY, cells[enemy_count])
 			enemy_count += 1
 
-	# Armee du joueur : casernes pleines pour son niveau, deploiement en
-	# alternant les types (comme le bouton Auto du jeu).
 	var slots := Balance.deploy_slots(castle_level)
 	var pool: Dictionary = {}
 	for type in Balance.UNIT_TYPES:
@@ -148,32 +267,34 @@ func _play_battle(battle: Dictionary, castle_level: int, unit_level: int) -> boo
 
 	var placed := 0
 	var cursor := 0
-	for y in range(engine.grid.rows - 1, engine.grid.player_zone_first_row() - 1, -1):
-		for x in range(engine.grid.cols):
-			if placed >= slots:
-				break
-			var type := _pick_round_robin(pool, cursor)
-			if type.is_empty():
-				break
-			engine.add_unit(type, unit_level, BattleUnit.TEAM_PLAYER, Vector2i(x, y))
-			pool[type] = int(pool[type]) - 1
-			cursor += 1
-			placed += 1
+	for cell in engine.grid.free_player_cells():
+		if placed >= slots:
+			break
+		var type := _pick_round_robin(pool, cursor)
+		if type.is_empty():
+			break
+		engine.add_unit(type, unit_level, BattleUnit.TEAM_PLAYER, cell)
+		pool[type] = int(pool[type]) - 1
+		cursor += 1
+		placed += 1
 
 	if placed == 0:
-		_fail("bataille %d : aucune unite joueur placee" % int(battle["id"]))
+		_fail("bataille %d : aucune piece joueur placee" % int(battle["id"]))
 		return false
 
 	while not engine.finished:
-		engine.step()
+		for event in engine.step():
+			if String(event["type"]) == "promotion":
+				_promotions_seen += 1
 
 	var victory := engine.winner == BattleUnit.TEAM_PLAYER
-	var survivors := engine.living(BattleUnit.TEAM_PLAYER).size() if victory \
-		else engine.living(BattleUnit.TEAM_ENEMY).size()
+	var lost := 0
+	for count in engine.losses(BattleUnit.TEAM_PLAYER).values():
+		lost += int(count)
 
-	print("  Bataille %2d  %-20s  Nv.%d  %2d vs %2d  ->  %s (%d survivants, %d activations)" % [
+	print("  Bataille %2d  %-20s  Nv.%d  %2d vs %2d  ->  %-8s  %2d pieces perdues, %d activations" % [
 		int(battle["id"]), String(battle["name"]), unit_level, placed, enemy_count,
-		"VICTOIRE" if victory else "defaite", survivors, engine.activation_count
+		"VICTOIRE" if victory else "defaite", lost, engine.activation_count
 	])
 
 	if engine.activation_count >= int(Balance.COMBAT["max_activations"]):
@@ -182,24 +303,31 @@ func _play_battle(battle: Dictionary, castle_level: int, unit_level: int) -> boo
 	return victory
 
 
+## Alterne les types pour obtenir une armee variee plutot qu'un mur de pions.
+func _pick_round_robin(pool: Dictionary, cursor: int) -> String:
+	var types: Array = Balance.UNIT_TYPES
+	for offset in range(types.size()):
+		var type: String = types[(cursor + offset) % types.size()]
+		if int(pool[type]) > 0:
+			return type
+	return ""
+
+
 # ------------------------------- SCENES --------------------------------------
 
 ## Instancie chaque ecran pour verifier les chemins de noeuds et les _ready().
 func _check_scenes() -> void:
-	print("\n[4] Chargement des ecrans")
+	print("\n[5] Chargement des ecrans")
 
 	Game.reset_progress()
 	Router.current_battle_id = 1
 
-	for path in [Router.VILLAGE_SCENE, Router.PREP_SCENE, Router.BATTLE_SCENE]:
+	for path in [Router.VILLAGE_SCENE, Router.CAMPAIGN_SCENE, Router.PREP_SCENE, Router.BATTLE_SCENE]:
 		var packed: PackedScene = load(path)
 		if packed == null:
 			_fail("scene introuvable : %s" % path)
 			continue
 		var instance: Node = packed.instantiate()
-		if instance == null:
-			_fail("instanciation impossible : %s" % path)
-			continue
 		add_child(instance)
 		await get_tree().process_frame
 		await get_tree().process_frame
@@ -212,7 +340,7 @@ func _check_scenes() -> void:
 
 ## Verifie le circuit complet : victoire -> or -> bataille suivante debloquee.
 func _check_campaign_loop() -> void:
-	print("\n[5] Boucle de progression")
+	print("\n[6] Boucle de progression")
 
 	Game.reset_progress()
 	var gold_before := Game.gold
@@ -226,20 +354,18 @@ func _check_campaign_loop() -> void:
 	if not Game.is_battle_won(1):
 		_fail("la bataille 1 n'est pas marquee comme gagnee")
 
-	# La sauvegarde doit survivre a un rechargement complet.
 	Game._load()
 	if Game.unlocked_battle() != 2:
 		_fail("la progression n'a pas ete relue depuis le disque")
 
+	# Rejouer une bataille deja gagnee doit rapporter moins.
+	var full := int(battle["reward"])
+	var replay := Game.reward_for(1)
+	if replay >= full:
+		_fail("rejouer la bataille 1 rapporte autant qu'une premiere victoire")
+	if replay <= 0:
+		_fail("rejouer une bataille ne rapporte rien : le farm est impossible")
+
 	print("  victoire, recompense, deblocage, relecture disque : OK")
+	print("  rejouer la bataille 1 : %d or au lieu de %d" % [replay, full])
 	Game.reset_progress()
-
-
-## Alterne les types pour obtenir une armee variee plutot qu'un mur de pions.
-func _pick_round_robin(pool: Dictionary, cursor: int) -> String:
-	var types: Array = Balance.UNIT_TYPES
-	for offset in range(types.size()):
-		var type: String = types[(cursor + offset) % types.size()]
-		if int(pool[type]) > 0:
-			return type
-	return ""

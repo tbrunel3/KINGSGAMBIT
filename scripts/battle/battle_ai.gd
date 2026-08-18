@@ -1,85 +1,115 @@
 class_name BattleAI
 ##
-## IA - decide ce que fait une unite quand c'est son tour.
+## IA - decide ce que fait une piece quand c'est son tour.
 ##
 ## Les deux camps utilisent la meme IA : le combat est automatique des qu'il
 ## commence, le joueur ne joue que le placement.
 ##
 ## Ordre de priorite (volontairement simple et previsible) :
-##   1. une cible est deja a portee     -> attaquer sans bouger
-##   2. une cible devient atteignable   -> se deplacer puis attaquer
-##   3. sinon                           -> se rapprocher de l'ennemi le plus proche
-##   4. aucun gain                      -> ne pas bouger
+##   1. capturer, en visant la piece la plus chere
+##   2. a valeur egale, preferer une case ou l'on ne sera pas repris
+##   3. sinon avancer vers l'ennemi le plus proche, sur une case sure si possible
+##   4. si rien n'ameliore la position, ne pas bouger
 ##
-## A cibles egales, l'IA vise l'unite la plus faible en points de vie, puis la
-## plus proche. Pour rendre l'IA plus maligne en Phase 2, il suffit de modifier
-## _score_target et _score_cell : le reste du moteur n'a pas a changer.
+## Pour rendre l'IA plus maligne en Phase 2, il suffit de retoucher _score_move :
+## le reste du moteur n'a pas a changer.
 ##
 
-## Retourne {"move": Vector2i, "target": BattleUnit|null}.
-## "move" vaut la case actuelle si l'unite reste sur place.
+## Retourne {"move": Vector2i, "capture": BattleUnit|null}.
+## "move" vaut la case actuelle si la piece reste sur place.
 static func decide(unit: BattleUnit, grid: GridModel, units: Array) -> Dictionary:
 	var enemies := _living_enemies(unit, units)
 	if enemies.is_empty():
-		return {"move": unit.cell, "target": null}
+		return {"move": unit.cell, "capture": null}
 
-	# 1. Cible deja a portee : on frappe sans bouger.
-	var direct := _best_target_from(unit.cell, unit, enemies)
-	if direct != null:
-		return {"move": unit.cell, "target": direct}
+	var moves := MovementRules.legal_moves(unit, grid)
+	if moves.is_empty():
+		return {"move": unit.cell, "capture": null}
 
-	var reachable := MovementRules.reachable_cells(unit, grid)
+	var enemy_team := BattleUnit.TEAM_ENEMY if unit.team == BattleUnit.TEAM_PLAYER else BattleUnit.TEAM_PLAYER
 
-	# 2. Une case permet-elle d'attaquer ce tour-ci ?
-	var best_cell := unit.cell
-	var best_target: BattleUnit = null
-	var best_score := INF
-	for cell in reachable:
-		var target := _best_target_from(cell, unit, enemies)
-		if target == null:
+	# 1. Les prises d'abord, evaluees comme un echange : ce que je gagne moins
+	#    ce que je risque de perdre si la case est reprise juste apres.
+	var best_cell := Vector2i(-1, -1)
+	var best_trade := -INF
+	for cell in moves:
+		var target := grid.unit_at(cell)
+		if target == null or not unit.is_enemy_of(target):
 			continue
-		var score := _score_target(target) + 0.01 * _distance(unit.cell, cell)
-		if score < best_score:
-			best_score = score
+		var trade := float(target.value)
+		if _would_be_threatened(cell, unit, enemy_team, grid, units):
+			trade -= float(unit.value)
+		if trade > best_trade:
+			best_trade = trade
 			best_cell = cell
-			best_target = target
 
-	if best_target != null:
-		return {"move": best_cell, "target": best_target}
+	# Un echange nul est accepte, un echange perdant non : une tour ne prend pas
+	# un pion pour se faire reprendre au coup suivant.
+	if best_cell != Vector2i(-1, -1) and best_trade >= 0.0:
+		return {"move": best_cell, "capture": grid.unit_at(best_cell)}
 
-	# 3. Aucune attaque possible : on se rapproche.
+	# 2. Aucune prise interessante : on avance. On prefere une case sure, mais on
+	#    avance quand meme s'il n'y en a pas - rester plante signifie perdre la
+	#    bataille a l'usure sans avoir combattu.
+	#
+	#    Un pion compte double : se rapprocher de l'ennemi, mais aussi du fond
+	#    adverse, ou il devient Dame. Sans ce second critere, un pion cesse
+	#    d'avancer des qu'il ne gagne plus de distance et ne promeut jamais.
 	var current_distance := _distance_to_nearest(unit.cell, enemies)
-	var move_cell := unit.cell
-	var move_score := float(current_distance)
-	for cell in reachable:
-		var score := float(_distance_to_nearest(cell, enemies))
-		if score < move_score:
-			move_score = score
-			move_cell = cell
+	var wants_promotion: bool = unit.origin_type == Balance.PION and not unit.promoted
+	var promotion_row := unit.promotion_row(grid.rows)
 
-	# 4. Si aucune case ne rapproche vraiment, l'unite tient sa position.
-	return {"move": move_cell, "target": null}
+	var safe_cell := Vector2i(-1, -1)
+	var safe_score := 0
+	var any_cell := Vector2i(-1, -1)
+	var any_score := 0
+
+	for cell in moves:
+		if grid.unit_at(cell) != null:
+			continue
+		var score := (current_distance - _distance_to_nearest(cell, enemies)) * 4
+		if wants_promotion:
+			score += (absi(unit.cell.y - promotion_row) - absi(cell.y - promotion_row)) * 3
+		if score <= 0:
+			continue
+		if score > any_score:
+			any_score = score
+			any_cell = cell
+		if score > safe_score and not _would_be_threatened(cell, unit, enemy_team, grid, units):
+			safe_score = score
+			safe_cell = cell
+
+	if safe_cell != Vector2i(-1, -1):
+		return {"move": safe_cell, "capture": null}
+	if any_cell != Vector2i(-1, -1):
+		return {"move": any_cell, "capture": null}
+
+	# 3. Rien ne rapproche : la piece tient sa position.
+	return {"move": unit.cell, "capture": null}
 
 
 # ------------------------------- HEURISTIQUES --------------------------------
 
-## Plus le score est bas, plus la cible est interessante.
-## Ici : achever les unites entamees, a distance egale.
-static func _score_target(target: BattleUnit) -> float:
-	return float(target.hp)
+## Simule le deplacement pour savoir si la case d'arrivee est reprenable.
+## On retire temporairement la piece de sa case d'origine : sans cela, elle se
+## bloquerait elle-meme les lignes de vue et jugerait mal le danger.
+static func _would_be_threatened(cell: Vector2i, unit: BattleUnit, enemy_team: int, grid: GridModel, units: Array) -> bool:
+	var origin := unit.cell
+	var victim := grid.unit_at(cell)
 
+	grid.remove_unit(unit)
+	if victim != null:
+		grid.remove_unit(victim)
+	grid.place(unit, cell)
 
-static func _best_target_from(cell: Vector2i, unit: BattleUnit, enemies: Array) -> BattleUnit:
-	var best: BattleUnit = null
-	var best_score := INF
-	for enemy in enemies:
-		if not MovementRules.can_attack_from(cell, unit, enemy):
-			continue
-		var score := _score_target(enemy) + 0.01 * _distance(cell, enemy.cell)
-		if score < best_score:
-			best_score = score
-			best = enemy
-	return best
+	var threatened := MovementRules.is_cell_threatened(cell, enemy_team, grid, units)
+
+	grid.remove_unit(unit)
+	if victim != null:
+		grid.place(victim, cell)
+	grid.place(unit, origin)
+
+	return threatened
 
 
 static func _living_enemies(unit: BattleUnit, units: Array) -> Array:

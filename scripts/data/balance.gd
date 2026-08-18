@@ -7,6 +7,20 @@ extends Node
 ##  Pour regler le jeu, ce fichier suffit - pas besoin d'ouvrir l'editeur.
 ## ===========================================================================
 ##
+##  MODELE DE COMBAT
+##
+##  Pas de points de vie, pas de degats. Une piece est sur le plateau, ou
+##  capturee. On capture en se DEPLACANT sur la case adverse, comme aux echecs.
+##  Aucune attaque a distance.
+##
+##  Le niveau d'un batiment augmente la MOBILITE de ses pieces et la capacite
+##  de la caserne. L'ecart est volontairement enorme entre le niveau 1 et le
+##  niveau 10 : une tour niveau 1 avance de 2 cases, une tour niveau 10 en
+##  traverse 8.
+##
+##  Le pion se deplace tout droit, capture en diagonale avant, et PROMEUT en
+##  Dame s'il atteint le fond du plateau adverse.
+##
 
 # ------------------------------- TYPES D'UNITES ------------------------------
 
@@ -14,9 +28,11 @@ const PION := "pion"
 const CAVALIER := "cavalier"
 const FOU := "fou"
 const TOUR := "tour"
+const DAME := "dame"
 const CASTLE := "chateau"
 
-## Ordre d'affichage dans le village et dans le panneau de placement.
+## Pieces recrutables, dans l'ordre d'affichage du village et du placement.
+## La Dame n'y figure pas : elle n'existe que par promotion d'un pion.
 const UNIT_TYPES := [PION, CAVALIER, FOU, TOUR]
 
 # ------------------------------- DEMARRAGE -----------------------------------
@@ -24,23 +40,38 @@ const UNIT_TYPES := [PION, CAVALIER, FOU, TOUR]
 const STARTING_GOLD := 300
 const STARTING_UNITS := {PION: 4, CAVALIER: 1, FOU: 1, TOUR: 1}
 
-const MAX_LEVEL := 3
+const MAX_LEVEL := 10
 const DEPLOY_ROWS := 3  ## rangees de deploiement de chaque cote
+
+## Les pieces capturees en bataille sont DEFINITIVEMENT perdues : il faut les
+## recruter a nouveau. Sans filet, une armee balayee sans or restant rend la
+## partie injouable.
+##
+## GARNISON MINIMALE : apres chaque bataille, l'armee est completee gratuitement
+## jusqu'a ce plancher. Le joueur garde donc toujours de quoi rejouer une
+## bataille deja gagnee pour refaire de l'or. Les pertes restent definitives
+## au-dessus du plancher, la ou se joue la vraie gestion.
+const GARRISON_MINIMUM := {PION: 3}
+
+## Une bataille deja gagnee rapporte moins : on peut farmer, mais progresser
+## reste plus rentable que repasser sur un terrain conquis.
+const REPLAY_REWARD_RATIO := 0.4
 
 # ------------------------------- UNITES --------------------------------------
 #
-#  levels[] est indexe par (niveau - 1). Ajouter un niveau = ajouter une entree
-#  ici, plus une entree dans upgrade_cost / upgrade_seconds / capacity.
+#  Chaque tableau est indexe par (niveau - 1) et compte MAX_LEVEL entrees.
+#  upgrade_cost et upgrade_seconds en comptent une de moins : il y a 9 paliers
+#  d'amelioration pour 10 niveaux.
 #
 #  move_type :
-#    "forward"    - avance surtout tout droit (pion)
-#    "jump"       - saute, ignore les unites intermediaires (cavalier)
-#    "diagonal"   - diagonales, bloque par les unites (fou)
-#    "orthogonal" - lignes et colonnes, bloque par les unites (tour)
+#    "forward"    - avance tout droit, capture en diagonale avant (pion)
+#    "jump"       - saute, ignore les pieces intermediaires (cavalier)
+#    "diagonal"   - diagonales, bloque par les pieces (fou)
+#    "orthogonal" - lignes et colonnes, bloque par les pieces (tour)
+#    "queen"      - lignes, colonnes ET diagonales (dame, par promotion)
 #
-#  attack_range est mesure en distance de Tchebychev (le max des ecarts en
-#  colonne et en rangee), sans ligne de vue. Choix MVP : simple a comprendre
-#  et a debugger.
+#  value sert a l'IA pour choisir quelle piece capturer en priorite. Memes
+#  proportions qu'aux echecs.
 
 const UNITS := {
 	PION: {
@@ -49,16 +80,14 @@ const UNITS := {
 		"letter": "P",
 		"color": "4f86c6",
 		"move_type": "forward",
+		"value": 1,
 		"recruit_cost_base": 35,
-		"recruit_cost_step": 8,      # cout = base + step * (nb deja possede)
-		"capacity": [8, 12, 18],     # nb max d'unites possedees, par niveau
-		"upgrade_cost": [150, 420],  # niveau 1 vers 2, puis 2 vers 3
-		"upgrade_seconds": [30, 180],
-		"levels": [
-			{"hp": 22, "damage": 6, "move_range": 1, "attack_range": 1},
-			{"hp": 30, "damage": 8, "move_range": 2, "attack_range": 1},
-			{"hp": 40, "damage": 11, "move_range": 2, "attack_range": 2},
-		],
+		"recruit_cost_step": 8,  # cout = base + step * (nb deja possede)
+		#            Nv  1  2  3  4  5  6  7  8  9 10
+		"move_range": [ 1, 1, 1, 2, 2, 2, 3, 3, 3, 4],
+		"capacity":   [ 8,10,12,14,16,18,20,22,24,26],
+		"upgrade_cost":    [150, 300,  500,  750, 1050, 1400, 1800, 2250, 2750],
+		"upgrade_seconds": [ 30,  90,  240,  600, 1200, 2400, 4200, 7200,10800],
 	},
 	CAVALIER: {
 		"name": "Cavalier",
@@ -66,18 +95,26 @@ const UNITS := {
 		"letter": "C",
 		"color": "c96f4f",
 		"move_type": "jump",
+		"value": 3,
 		"recruit_cost_base": 90,
 		"recruit_cost_step": 25,
-		"capacity": [4, 6, 9],
-		"upgrade_cost": [220, 600],
-		"upgrade_seconds": [60, 300],
-		"levels": [
-			# jump_offsets : deplacements en L autorises (dx, dy), symetrises
-			# automatiquement dans les 8 sens. Ignorent les unites du trajet.
-			{"hp": 34, "damage": 11, "attack_range": 1, "jump_offsets": [[1, 2]]},
-			{"hp": 44, "damage": 14, "attack_range": 1, "jump_offsets": [[1, 2], [1, 3]]},
-			{"hp": 56, "damage": 18, "attack_range": 2, "jump_offsets": [[1, 2], [1, 3], [2, 3]]},
+		# Le cavalier ne gagne pas en portee mais en FIGURES de saut : chaque
+		# palier ouvre de nouveaux angles, symetrises dans les 8 sens.
+		"jump_offsets": [
+			[[1, 2]],
+			[[1, 2]],
+			[[1, 2], [1, 3]],
+			[[1, 2], [1, 3]],
+			[[1, 2], [1, 3], [2, 3]],
+			[[1, 2], [1, 3], [2, 3]],
+			[[1, 2], [1, 3], [2, 3], [1, 4]],
+			[[1, 2], [1, 3], [2, 3], [1, 4], [2, 4]],
+			[[1, 2], [1, 3], [2, 3], [1, 4], [2, 4], [3, 4]],
+			[[1, 2], [1, 3], [2, 3], [1, 4], [2, 4], [3, 4], [1, 5]],
 		],
+		"capacity":   [ 4, 5, 6, 7, 8, 9,10,11,12,13],
+		"upgrade_cost":    [220, 420,  680, 1000, 1380, 1820, 2320, 2880, 3500],
+		"upgrade_seconds": [ 60, 180,  420,  900, 1800, 3300, 5400, 8400,12600],
 	},
 	FOU: {
 		"name": "Fou",
@@ -85,16 +122,14 @@ const UNITS := {
 		"letter": "F",
 		"color": "8f6fc6",
 		"move_type": "diagonal",
+		"value": 3,
 		"recruit_cost_base": 80,
 		"recruit_cost_step": 20,
-		"capacity": [4, 6, 9],
-		"upgrade_cost": [200, 560],
-		"upgrade_seconds": [60, 300],
-		"levels": [
-			{"hp": 26, "damage": 13, "move_range": 2, "attack_range": 2},
-			{"hp": 34, "damage": 17, "move_range": 3, "attack_range": 2},
-			{"hp": 44, "damage": 22, "move_range": 4, "attack_range": 3},
-		],
+		#            Nv  1  2  3  4  5  6  7  8  9 10
+		"move_range": [ 2, 2, 3, 3, 4, 5, 6, 6, 7, 8],
+		"capacity":   [ 4, 5, 6, 7, 8, 9,10,11,12,13],
+		"upgrade_cost":    [200, 390,  630,  930, 1290, 1710, 2190, 2730, 3330],
+		"upgrade_seconds": [ 60, 180,  420,  900, 1800, 3300, 5400, 8400,12600],
 	},
 	TOUR: {
 		"name": "Tour",
@@ -102,31 +137,46 @@ const UNITS := {
 		"letter": "T",
 		"color": "6f9f5f",
 		"move_type": "orthogonal",
+		"value": 5,
 		"recruit_cost_base": 110,
 		"recruit_cost_step": 30,
-		"capacity": [3, 5, 7],
-		"upgrade_cost": [260, 700],
-		"upgrade_seconds": [90, 420],
-		"levels": [
-			{"hp": 48, "damage": 12, "move_range": 2, "attack_range": 2},
-			{"hp": 62, "damage": 16, "move_range": 3, "attack_range": 2},
-			{"hp": 80, "damage": 21, "move_range": 4, "attack_range": 3},
-		],
+		#            Nv  1  2  3  4  5  6  7  8  9 10
+		"move_range": [ 2, 2, 3, 3, 4, 5, 6, 6, 7, 8],
+		"capacity":   [ 3, 4, 5, 6, 7, 8, 9,10,11,12],
+		"upgrade_cost":    [260, 500,  800, 1160, 1580, 2060, 2600, 3200, 3860],
+		"upgrade_seconds": [ 90, 240,  540, 1080, 2100, 3900, 6300, 9600,14400],
+	},
+	DAME: {
+		"name": "Dame",
+		"building_name": "Dame",
+		"letter": "D",
+		"color": "d8a0d0",
+		"move_type": "queen",
+		"value": 9,
+		"recruit_cost_base": 0,
+		"recruit_cost_step": 0,
+		# Un pion promu devient une Dame du meme niveau que lui.
+		#            Nv  1  2  3  4  5  6  7  8  9 10
+		"move_range": [ 3, 3, 4, 4, 5, 6, 7, 7, 8, 9],
+		"capacity":   [ 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+		"upgrade_cost": [],
+		"upgrade_seconds": [],
 	},
 }
 
 # ------------------------------- CHATEAU -------------------------------------
 #
 #  Le Roi n'est pas jouable au MVP. Le chateau porte la narration et fixe le
-#  nombre d'unites deployables en bataille.
+#  nombre de pieces deployables en bataille.
 
 const CASTLE_DATA := {
 	"name": "Chateau Royal",
 	"letter": "R",
 	"color": "c6a84f",
-	"deploy_slots": [6, 10, 14],
-	"upgrade_cost": [300, 800],
-	"upgrade_seconds": [120, 600],
+	#                Nv  1  2  3  4  5  6  7  8  9 10
+	"deploy_slots": [ 6, 8, 9,10,12,13,14,15,16,18],
+	"upgrade_cost":    [300, 560,  900, 1320, 1820, 2400, 3060, 3800, 4620],
+	"upgrade_seconds": [120, 300,  660, 1320, 2400, 4200, 6600, 9900,14400],
 }
 
 # ------------------------------- CAMPAGNE ------------------------------------
@@ -134,19 +184,19 @@ const CASTLE_DATA := {
 #  10 batailles de test, difficulte croissante.
 #  cols/rows : taille de la grille. rows vaut au moins 2 * DEPLOY_ROWS + 1.
 #  enemies   : composition ennemie {type: quantite}
-#  level     : niveau de TOUTES les unites ennemies de cette bataille
+#  level     : niveau de TOUTES les pieces ennemies de cette bataille
 
 const CAMPAIGN := [
 	{"id": 1,  "name": "L Oree du Bois",     "cols": 6, "rows": 8,  "reward": 90,  "level": 1, "enemies": {PION: 3}},
-	{"id": 2,  "name": "Le Gue de Pierre",   "cols": 6, "rows": 8,  "reward": 120, "level": 1, "enemies": {PION: 4, FOU: 1}},
-	{"id": 3,  "name": "La Route du Sel",    "cols": 7, "rows": 9,  "reward": 160, "level": 1, "enemies": {PION: 4, CAVALIER: 1, TOUR: 1}},
-	{"id": 4,  "name": "Les Champs Brules",  "cols": 7, "rows": 9,  "reward": 200, "level": 1, "enemies": {PION: 5, FOU: 2, CAVALIER: 1}},
-	{"id": 5,  "name": "Le Pont Noir",       "cols": 7, "rows": 10, "reward": 260, "level": 2, "enemies": {PION: 4, TOUR: 2, FOU: 1}},
-	{"id": 6,  "name": "La Carriere",        "cols": 8, "rows": 10, "reward": 320, "level": 2, "enemies": {PION: 6, CAVALIER: 2, TOUR: 1}},
-	{"id": 7,  "name": "Les Marches Grises", "cols": 8, "rows": 11, "reward": 400, "level": 2, "enemies": {PION: 5, FOU: 3, CAVALIER: 2}},
-	{"id": 8,  "name": "Le Col du Corbeau",  "cols": 8, "rows": 11, "reward": 500, "level": 2, "enemies": {PION: 6, TOUR: 3, CAVALIER: 2}},
-	{"id": 9,  "name": "Les Ruines Hautes",  "cols": 9, "rows": 12, "reward": 640, "level": 3, "enemies": {PION: 6, FOU: 2, TOUR: 2, CAVALIER: 2}},
-	{"id": 10, "name": "La Tour de la Dame", "cols": 9, "rows": 12, "reward": 900, "level": 3, "enemies": {PION: 7, FOU: 3, TOUR: 2, CAVALIER: 2}},
+	{"id": 2,  "name": "Le Gue de Pierre",   "cols": 6, "rows": 8,  "reward": 120, "level": 1, "enemies": {PION: 3, FOU: 1}},
+	{"id": 3,  "name": "La Route du Sel",    "cols": 7, "rows": 9,  "reward": 160, "level": 2, "enemies": {PION: 4, CAVALIER: 1, TOUR: 1}},
+	{"id": 4,  "name": "Les Champs Brules",  "cols": 7, "rows": 9,  "reward": 200, "level": 2, "enemies": {PION: 5, FOU: 2, CAVALIER: 1}},
+	{"id": 5,  "name": "Le Pont Noir",       "cols": 7, "rows": 10, "reward": 260, "level": 3, "enemies": {PION: 4, TOUR: 1, FOU: 1}},
+	{"id": 6,  "name": "La Carriere",        "cols": 8, "rows": 10, "reward": 320, "level": 3, "enemies": {PION: 6, CAVALIER: 2, TOUR: 1}},
+	{"id": 7,  "name": "Les Marches Grises", "cols": 8, "rows": 11, "reward": 400, "level": 4, "enemies": {PION: 5, FOU: 3, CAVALIER: 2}},
+	{"id": 8,  "name": "Le Col du Corbeau",  "cols": 8, "rows": 11, "reward": 500, "level": 4, "enemies": {PION: 6, TOUR: 3, CAVALIER: 2}},
+	{"id": 9,  "name": "Les Ruines Hautes",  "cols": 9, "rows": 12, "reward": 640, "level": 5, "enemies": {PION: 6, FOU: 2, TOUR: 2, CAVALIER: 2}},
+	{"id": 10, "name": "La Tour de la Dame", "cols": 9, "rows": 12, "reward": 900, "level": 5, "enemies": {PION: 6, FOU: 2, TOUR: 2, CAVALIER: 2}},
 ]
 
 # ------------------------------- COMBAT --------------------------------------
@@ -157,9 +207,12 @@ const CAMPAIGN := [
 const COMBAT := {
 	"step_delay": 0.30,        # pause entre deux activations
 	"move_duration": 0.22,     # duree de l'animation de deplacement
-	"attack_duration": 0.20,   # duree du flash d'attaque
-	"stalemate_limit": 24,     # activations sans degats avant de trancher
-	"max_activations": 400,    # garde-fou absolu
+	"capture_duration": 0.18,  # temps ou la piece capturee reste visible
+	# Enlisement : nombre de TOURS COMPLETS sans la moindre prise avant de
+	# trancher aux pieces restantes. Compte en tours et non en activations,
+	# sinon une grande armee declencherait le verdict avant meme le contact.
+	"stalemate_rounds": 8,
+	"max_activations": 1200,   # garde-fou absolu
 }
 
 const SPEEDS := [1.0, 2.0, 4.0]
@@ -197,11 +250,45 @@ func unit_letter(type: String) -> String:
 	return UNITS[type]["letter"]
 
 
-## Statistiques d'une unite d'un type et d'un niveau donnes.
-func unit_stats(type: String, level: int) -> Dictionary:
-	var levels: Array = UNITS[type]["levels"]
-	var index := clampi(level - 1, 0, levels.size() - 1)
-	return levels[index]
+func move_type(type: String) -> String:
+	return String(UNITS[type]["move_type"])
+
+
+## Valeur d'une piece pour l'IA : elle capture en priorite la plus chere.
+func unit_value(type: String) -> int:
+	return int(UNITS[type].get("value", 1))
+
+
+## Lecture d'un tableau indexe par niveau, avec bornage.
+func _at_level(values: Array, level: int) -> Variant:
+	if values.is_empty():
+		return null
+	return values[clampi(level - 1, 0, values.size() - 1)]
+
+
+func move_range(type: String, level: int) -> int:
+	var value: Variant = _at_level(UNITS[type].get("move_range", []), level)
+	return 0 if value == null else int(value)
+
+
+func jump_offsets(type: String, level: int) -> Array:
+	var value: Variant = _at_level(UNITS[type].get("jump_offsets", []), level)
+	return [] if value == null else value
+
+
+## Description lisible du deplacement, affichee dans le popup de batiment.
+func move_description(type: String, level: int) -> String:
+	match move_type(type):
+		"orthogonal":
+			return "lignes et colonnes, %d cases" % move_range(type, level)
+		"diagonal":
+			return "diagonales, %d cases" % move_range(type, level)
+		"queen":
+			return "toutes directions, %d cases" % move_range(type, level)
+		"jump":
+			return "saut, %d figures" % jump_offsets(type, level).size()
+		_:
+			return "en avant %d case(s), capture en diagonale" % move_range(type, level)
 
 
 ## Cout du prochain recrutement : augmente avec le nombre deja possede.
@@ -210,16 +297,15 @@ func recruit_cost(type: String, owned: int) -> int:
 	return int(d["recruit_cost_base"]) + int(d["recruit_cost_step"]) * owned
 
 
-## Nombre maximum d'unites de ce type que le batiment peut abriter.
+## Nombre maximum de pieces de ce type que le batiment peut abriter.
 func capacity(type: String, level: int) -> int:
-	var caps: Array = UNITS[type]["capacity"]
-	return int(caps[clampi(level - 1, 0, caps.size() - 1)])
+	return int(_at_level(UNITS[type]["capacity"], level))
 
 
 func max_level(type: String) -> int:
 	if type == CASTLE:
 		return CASTLE_DATA["deploy_slots"].size()
-	return UNITS[type]["levels"].size()
+	return UNITS[type]["capacity"].size()
 
 
 ## Cout de l'amelioration depuis le niveau courant. -1 si deja au maximum.
@@ -238,10 +324,9 @@ func upgrade_seconds(type: String, current_level: int) -> int:
 	return int(times[current_level - 1])
 
 
-## Nombre d'unites deployables en bataille, fixe par le niveau du chateau.
+## Nombre de pieces deployables en bataille, fixe par le niveau du chateau.
 func deploy_slots(castle_level: int) -> int:
-	var slots: Array = CASTLE_DATA["deploy_slots"]
-	return int(slots[clampi(castle_level - 1, 0, slots.size() - 1)])
+	return int(_at_level(CASTLE_DATA["deploy_slots"], castle_level))
 
 
 ## Donnees d'une bataille par son numero (1 = premiere bataille).

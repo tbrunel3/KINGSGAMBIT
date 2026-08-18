@@ -86,19 +86,23 @@ func _add_castle_body() -> void:
 
 func _add_unit_body() -> void:
 	var level := Game.building_level(_type)
-	var stats := Balance.unit_stats(_type, level)
 	var owned := Game.units_owned(_type)
 	var cap := Balance.capacity(_type, level)
 
-	_content.add_child(UiTheme.make_label("Unites : %d / %d" % [owned, cap], 16))
-
-	var move_text := "portee %d" % int(stats.get("move_range", 0))
-	if _type == Balance.CAVALIER:
-		move_text = "saut (ignore les unites)"
+	_content.add_child(UiTheme.make_label("Pieces : %d / %d" % [owned, cap], 16))
 	_content.add_child(UiTheme.make_label(
-		"PV %d   Degats %d   Deplacement %s   Attaque %d" % [
-			int(stats["hp"]), int(stats["damage"]), move_text, int(stats["attack_range"])
-		], 13, UiTheme.TEXT_DIM))
+		"Deplacement : %s" % Balance.move_description(_type, level), 13, UiTheme.TEXT_DIM))
+
+	# Ce que le prochain niveau apporte concretement, s'il existe.
+	if level < Balance.max_level(_type):
+		_content.add_child(UiTheme.make_label(
+			"Niveau %d : %s" % [level + 1, Balance.move_description(_type, level + 1)],
+			12, UiTheme.TEXT_DIM.darkened(0.15)))
+
+	if _type == Balance.PION:
+		_content.add_child(UiTheme.make_label(
+			"Un pion qui atteint le fond adverse devient une Dame, le temps du combat.",
+			12, UiTheme.GOLD.darkened(0.2)))
 
 	_content.add_child(HSeparator.new())
 

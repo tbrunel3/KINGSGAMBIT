@@ -66,13 +66,24 @@ func is_enemy_zone(cell: Vector2i) -> bool:
 	return in_bounds(cell) and cell.y < Balance.DEPLOY_ROWS
 
 
-## Cases libres de la zone ennemie, du centre vers les bords : utilise pour
-## repartir l'armee adverse de facon lisible plutot qu'aleatoire.
+## Cases libres de la zone ennemie, rangee du fond d'abord, du centre vers les
+## bords : une armee massee au centre se defend mieux qu'une ligne etalee.
 func free_enemy_cells() -> Array:
 	var cells: Array = []
 	for y in range(Balance.DEPLOY_ROWS):
-		var order := _row_from_center(y)
-		for cell in order:
+		for cell in _row_from_center(y):
+			if is_free(cell):
+				cells.append(cell)
+	return cells
+
+
+## Meme logique, en miroir, pour le camp du joueur : la rangee la plus proche
+## de l'ennemi vient en premier, du centre vers les bords. C'est ce qu'utilise
+## le bouton Auto, pour que les deux camps partent a armes egales.
+func free_player_cells() -> Array:
+	var cells: Array = []
+	for y in range(player_zone_first_row(), rows):
+		for cell in _row_from_center(y):
 			if is_free(cell):
 				cells.append(cell)
 	return cells

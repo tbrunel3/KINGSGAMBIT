@@ -151,8 +151,7 @@ func _on_building_pressed(type: String) -> void:
 
 
 func _on_battle_pressed() -> void:
-	var id := mini(Game.unlocked_battle(), Balance.battle_count())
-	Router.goto_prep(id)
+	Router.goto_campaign()
 
 
 func _on_reset_pressed() -> void:

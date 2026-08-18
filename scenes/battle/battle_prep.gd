@@ -27,7 +27,7 @@ func _ready() -> void:
 	_name.add_theme_color_override("font_color", UiTheme.TEXT_DIM)
 	_prepare.add_theme_font_size_override("font_size", 20)
 
-	_back.pressed.connect(Router.goto_village)
+	_back.pressed.connect(Router.goto_campaign)
 	_prepare.pressed.connect(func(): Router.goto_battle(int(_battle["id"])))
 
 	_fill()
@@ -48,12 +48,11 @@ func _fill() -> void:
 	for type in Balance.UNIT_TYPES:
 		if not enemies.has(type):
 			continue
-		var stats := Balance.unit_stats(type, enemy_level)
 		_info.add_child(UiTheme.make_label(
-			"%d x %s Nv.%d   (%d PV, %d degats)" % [
+			"%d x %s Nv.%d   (%s)" % [
 				int(enemies[type]), Balance.unit_name(type), enemy_level,
-				int(stats["hp"]), int(stats["damage"])
-			], 14))
+				Balance.move_description(type, enemy_level)
+			], 13))
 
 	_info.add_child(HSeparator.new())
 	_info.add_child(_section("Ton armee", UiTheme.ACCENT.lightened(0.2)))
@@ -71,8 +70,11 @@ func _fill() -> void:
 		"Deployables : %d (niveau du chateau)" % Game.deploy_slots(), 13, UiTheme.TEXT_DIM))
 
 	_info.add_child(HSeparator.new())
-	_info.add_child(UiTheme.make_label(
-		"Recompense : %d or" % int(_battle["reward"]), 16, UiTheme.GOLD))
+	var reward := Game.reward_for(int(_battle["id"]))
+	var reward_text := "Recompense : %d or" % reward
+	if Game.is_battle_won(int(_battle["id"])):
+		reward_text += "   (bataille deja gagnee)"
+	_info.add_child(UiTheme.make_label(reward_text, 16, UiTheme.GOLD))
 	_info.add_child(UiTheme.make_label(
 		"Terrain : %d x %d cases" % [int(_battle["cols"]), int(_battle["rows"])],
 		13, UiTheme.TEXT_DIM))

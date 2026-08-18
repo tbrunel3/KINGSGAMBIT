@@ -11,11 +11,11 @@ extends RefCounted
 ## d'une bataille. Le combat est entierement determine par le placement.
 ##
 ## Evenements produits :
-##   {"type": "activate", "unit": id}
-##   {"type": "move",     "unit": id, "from": Vector2i, "to": Vector2i}
-##   {"type": "attack",   "unit": id, "target": id, "damage": int, "target_hp": int}
-##   {"type": "death",    "unit": id}
-##   {"type": "end",      "winner": team, "reason": String}
+##   {"type": "activate",  "unit": id}
+##   {"type": "move",      "unit": id, "from": Vector2i, "to": Vector2i}
+##   {"type": "capture",   "unit": id, "target": id, "cell": Vector2i}
+##   {"type": "promotion", "unit": id, "cell": Vector2i}
+##   {"type": "end",       "winner": team, "reason": String}
 ##
 
 const TEAM_PLAYER := BattleUnit.TEAM_PLAYER
@@ -34,8 +34,8 @@ var current_team: int = TEAM_PLAYER
 var _next_id: int = 1
 var _queues: Dictionary = {TEAM_PLAYER: [], TEAM_ENEMY: []}
 
-## Nombre d'activations consecutives sans le moindre degat. Sert a detecter
-## deux armees qui ne peuvent plus s'atteindre.
+## Activations consecutives sans capture. Sert a detecter deux armees qui ne
+## peuvent plus s'atteindre.
 var _idle_activations: int = 0
 
 
@@ -53,7 +53,7 @@ func add_unit(type: String, level: int, team: int, cell: Vector2i) -> BattleUnit
 	return unit
 
 
-## Retire une unite du plateau (utilise pendant la phase de placement).
+## Retire une piece du plateau (utilise pendant la phase de placement).
 func remove_unit(unit: BattleUnit) -> void:
 	grid.remove_unit(unit)
 	units.erase(unit)
@@ -72,6 +72,26 @@ func living(team: int) -> Array:
 		if unit.is_alive() and unit.team == team:
 			result.append(unit)
 	return result
+
+
+## Pieces d'un camp capturees pendant la bataille, comptees par type d'origine.
+## Une Dame promue puis prise compte comme le pion qu'elle etait.
+func losses(team: int) -> Dictionary:
+	var lost: Dictionary = {}
+	for unit in units:
+		if unit.team != team or unit.is_alive():
+			continue
+		lost[unit.origin_type] = int(lost.get(unit.origin_type, 0)) + 1
+	return lost
+
+
+## Pieces d'un camp encore debout, comptees par type d'origine : c'est l'armee
+## qui rentre au village.
+func survivors(team: int) -> Dictionary:
+	var alive: Dictionary = {}
+	for unit in living(team):
+		alive[unit.origin_type] = int(alive.get(unit.origin_type, 0)) + 1
+	return alive
 
 
 # ------------------------------- BOUCLE --------------------------------------
@@ -94,56 +114,45 @@ func step() -> Array:
 	events.append({"type": "activate", "unit": unit.id})
 
 	var decision := BattleAI.decide(unit, grid, units)
-
 	var destination: Vector2i = decision["move"]
+	var captured := false
+
 	if destination != unit.cell:
 		var from := unit.cell
+		var target: BattleUnit = grid.unit_at(destination)
+
+		if target != null and unit.is_enemy_of(target):
+			target.captured = true
+			grid.remove_unit(target)
+			captured = true
+			events.append({
+				"type": "capture",
+				"unit": unit.id,
+				"target": target.id,
+				"cell": destination,
+			})
+
 		grid.move_unit(unit, destination)
 		events.append({"type": "move", "unit": unit.id, "from": from, "to": destination})
 
-	var target: BattleUnit = decision["target"]
-	var dealt_damage := false
-	if target != null and target.is_alive() and MovementRules.can_attack(unit, target):
-		var killed := target.take_damage(unit.damage)
-		dealt_damage = true
-		events.append({
-			"type": "attack",
-			"unit": unit.id,
-			"target": target.id,
-			"damage": unit.damage,
-			"target_hp": target.hp,
-		})
-		if killed:
-			grid.remove_unit(target)
-			events.append({"type": "death", "unit": target.id})
+		# Promotion : un pion qui atteint le fond adverse devient une Dame.
+		if unit.origin_type == Balance.PION and not unit.promoted \
+				and destination.y == unit.promotion_row(grid.rows):
+			unit.promote_to_queen()
+			events.append({"type": "promotion", "unit": unit.id, "cell": destination})
 
-	_idle_activations = 0 if dealt_damage else _idle_activations + 1
+	_idle_activations = 0 if captured else _idle_activations + 1
 	current_team = _other_team(current_team)
 
 	if not _check_end(events):
 		# Deux armees qui ne peuvent plus s'atteindre ne doivent pas bloquer la
-		# partie : on tranche aux points de vie restants.
-		if _idle_activations >= int(Balance.COMBAT["stalemate_limit"]):
-			_finish_on_health("plus aucun contact possible", events)
+		# partie : on tranche au nombre de pieces restantes.
+		if _idle_activations >= _stalemate_limit():
+			_finish_on_material("plus aucune prise possible", events)
 		elif activation_count >= int(Balance.COMBAT["max_activations"]):
-			_finish_on_health("limite de tours atteinte", events)
+			_finish_on_material("limite de tours atteinte", events)
 
 	return events
-
-
-## Departage sur le total de points de vie restants. En cas d'egalite parfaite,
-## l'avantage va a l'ennemi : au joueur d'aller chercher la victoire.
-func _finish_on_health(reason: String, events: Array) -> void:
-	var player_hp := total_health(TEAM_PLAYER)
-	var enemy_hp := total_health(TEAM_ENEMY)
-	_finish(TEAM_PLAYER if player_hp > enemy_hp else TEAM_ENEMY, reason, events)
-
-
-func total_health(team: int) -> int:
-	var total := 0
-	for unit in living(team):
-		total += unit.hp
-	return total
 
 
 func _next_unit(team: int) -> BattleUnit:
@@ -162,14 +171,34 @@ func _next_unit(team: int) -> BattleUnit:
 	return null
 
 
+## Seuil d'enlisement exprime en activations, deduit du nombre de pieces encore
+## en jeu : un tour complet coute une activation par piece vivante.
+func _stalemate_limit() -> int:
+	var alive := living(TEAM_PLAYER).size() + living(TEAM_ENEMY).size()
+	return int(Balance.COMBAT["stalemate_rounds"]) * maxi(4, alive)
+
+
+## Departage a la valeur totale des pieces restantes. En cas d'egalite parfaite,
+## l'avantage va a l'ennemi : au joueur d'aller chercher la victoire.
+func _finish_on_material(reason: String, events: Array) -> void:
+	_finish(TEAM_PLAYER if material(TEAM_PLAYER) > material(TEAM_ENEMY) else TEAM_ENEMY, reason, events)
+
+
+func material(team: int) -> int:
+	var total := 0
+	for unit in living(team):
+		total += unit.value
+	return total
+
+
 func _check_end(events: Array) -> bool:
 	if finished:
 		return true
 	if living(TEAM_ENEMY).is_empty():
-		_finish(TEAM_PLAYER, "armee ennemie aneantie", events)
+		_finish(TEAM_PLAYER, "armee ennemie capturee", events)
 		return true
 	if living(TEAM_PLAYER).is_empty():
-		_finish(TEAM_ENEMY, "armee du Roi aneantie", events)
+		_finish(TEAM_ENEMY, "armee du Roi capturee", events)
 		return true
 	return false
 

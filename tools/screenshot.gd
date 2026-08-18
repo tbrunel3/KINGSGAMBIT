@@ -16,8 +16,9 @@ const OUTPUT_DIR := "res://tools/screenshots"
 
 const SHOTS := [
 	{"scene": "res://scenes/village/village.tscn", "file": "1_village.png", "battle": 1},
-	{"scene": "res://scenes/battle/battle_prep.tscn", "file": "2_preparation.png", "battle": 3},
-	{"scene": "res://scenes/battle/battle.tscn", "file": "3_placement.png", "battle": 3},
+	{"scene": "res://scenes/battle/campaign.tscn", "file": "2_campagne.png", "battle": 1},
+	{"scene": "res://scenes/battle/battle_prep.tscn", "file": "3_preparation.png", "battle": 3},
+	{"scene": "res://scenes/battle/battle.tscn", "file": "4_placement.png", "battle": 3},
 ]
 
 
@@ -58,13 +59,18 @@ func _capture_combat() -> void:
 	for i in range(4):
 		await RenderingServer.frame_post_draw
 
+	# Armee posee : c'est ici que les fleches d'apercu doivent apparaitre.
 	battle._on_auto_place()
+	for i in range(4):
+		await RenderingServer.frame_post_draw
+	_save(battle, "5_apercu.png")
+
 	battle._speed = 4.0
 	battle._start_combat()
 
 	for i in range(40):
 		await RenderingServer.frame_post_draw
-	_save(battle, "4_combat.png")
+	_save(battle, "6_combat.png")
 
 	var guard := 0
 	while battle._phase != 2 and guard < 6000:
@@ -75,7 +81,7 @@ func _capture_combat() -> void:
 
 	for i in range(3):
 		await RenderingServer.frame_post_draw
-	_save(battle, "5_resultat.png")
+	_save(battle, "7_resultat.png")
 
 	battle.queue_free()
 	await get_tree().process_frame

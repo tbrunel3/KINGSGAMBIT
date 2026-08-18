@@ -2,16 +2,16 @@
 
 importer="texture"
 type="CompressedTexture2D"
-uid="uid://3a27iwem0scb"
-path="res://.godot/imported/3_placement.png-c8c8112b29feb21663e04873ca02bf2e.ctex"
+uid="uid://dwwlkm3enmu27"
+path="res://.godot/imported/5_apercu.png-2b0b83b37df6cb7baba907a00c23ad47.ctex"
 metadata={
 "vram_texture": false
 }
 
 [deps]
 
-source_file="res://tools/screenshots/3_placement.png"
-dest_files=["res://.godot/imported/3_placement.png-c8c8112b29feb21663e04873ca02bf2e.ctex"]
+source_file="res://tools/screenshots/5_apercu.png"
+dest_files=["res://.godot/imported/5_apercu.png-2b0b83b37df6cb7baba907a00c23ad47.ctex"]
 
 [params]
 

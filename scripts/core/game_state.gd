@@ -148,6 +148,47 @@ func is_at_capacity(type: String) -> bool:
 	return units_owned(type) >= Balance.capacity(type, building_level(type))
 
 
+## Retire de l'armee les pieces perdues en bataille.
+##
+## Les pertes sont definitives : une piece capturee n'existe plus, il faut la
+## recruter a nouveau. C'est ce qui donne son poids au placement.
+func apply_losses(losses: Dictionary) -> void:
+	if losses.is_empty():
+		_ensure_playable()
+		return
+
+	for type in losses.keys():
+		if not _state["units"].has(type):
+			continue
+		_state["units"][type] = maxi(0, units_owned(type) - int(losses[type]))
+
+	_ensure_playable()
+	save()
+	units_changed.emit()
+
+
+## Complete gratuitement l'armee jusqu'a la garnison minimale.
+##
+## Le joueur conserve ainsi toujours de quoi rejouer une bataille deja gagnee
+## et refaire de l'or. Voir Balance.GARRISON_MINIMUM.
+func _ensure_playable() -> void:
+	for type in Balance.GARRISON_MINIMUM.keys():
+		var floor_count := int(Balance.GARRISON_MINIMUM[type])
+		if units_owned(type) < floor_count:
+			_state["units"][type] = floor_count
+
+
+## Or rapporte par une bataille : une victoire deja acquise rapporte moins.
+func reward_for(battle_id: int) -> int:
+	var data := Balance.battle(battle_id)
+	if data.is_empty():
+		return 0
+	var reward := int(data["reward"])
+	if is_battle_won(battle_id):
+		return int(round(reward * Balance.REPLAY_REWARD_RATIO))
+	return reward
+
+
 ## Recrute une unite. Retourne false si l'or manque ou si la caserne est pleine.
 func recruit(type: String) -> bool:
 	if is_at_capacity(type):

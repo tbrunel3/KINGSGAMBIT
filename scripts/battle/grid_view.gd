@@ -3,9 +3,9 @@ extends Control
 ## VUE DE LA GRILLE - tout l'affichage du champ de bataille.
 ##
 ## Rien ici ne decide du jeu : la vue lit le moteur et le dessine. Les formes
-## sont des placeholders (cercles + lettre + barre de vie) volontairement
-## basiques : en Phase 2, _draw_unit sera remplace par des sprites sans qu'une
-## seule regle de combat ait a bouger.
+## sont des placeholders (cercles + lettre) volontairement basiques : en Phase 2,
+## _draw_unit sera remplace par des sprites sans qu'une seule regle de combat
+## ait a bouger.
 ##
 ## La taille des cases est calculee a partir de la place disponible, donc
 ## n'importe quelle grille definie dans Balance.CAMPAIGN s'affiche correctement.
@@ -19,6 +19,10 @@ var engine: BattleEngine = null
 var highlighted: Array = []
 var selected_cell: Vector2i = Vector2i(-1, -1)
 
+## Apercu des premiers deplacements, affiche pendant le placement.
+## Chaque entree : {"from": Vector2i, "to": Vector2i, "team": int, "capture": bool}
+var preview_moves: Array = []
+
 var _cell_size: float = 32.0
 var _origin: Vector2 = Vector2.ZERO
 
@@ -28,9 +32,8 @@ var _anim_from: Vector2i = Vector2i.ZERO
 var _anim_to: Vector2i = Vector2i.ZERO
 var _anim_t: float = 0.0
 
-var _flash_unit: int = -1
-var _flash_target: int = -1
-var _flash_t: float = 0.0
+var _capture_cell: Vector2i = Vector2i(-1, -1)
+var _capture_t: float = 0.0
 
 
 func _ready() -> void:
@@ -44,7 +47,7 @@ func setup(battle_engine: BattleEngine) -> void:
 
 
 func _process(_delta: float) -> void:
-	if _anim_unit != -1 or _flash_unit != -1:
+	if _anim_unit != -1 or _capture_cell.x != -1:
 		queue_redraw()
 
 
@@ -96,9 +99,11 @@ func _draw() -> void:
 		# La grille n'a pas encore de taille utile (premiere image du layout).
 		return
 	_draw_cells()
+	_draw_preview()
 	for unit in engine.units:
 		if unit.is_alive():
 			_draw_unit(unit)
+	_draw_capture()
 
 
 func _draw_cells() -> void:
@@ -120,9 +125,42 @@ func _draw_cells() -> void:
 			if cell == selected_cell:
 				draw_rect(rect, UiTheme.GOLD, false, maxf(2.0, _cell_size * 0.08))
 
-	# Contour general du plateau
 	var board := Rect2(_origin, Vector2(grid.cols, grid.rows) * _cell_size)
 	draw_rect(board, UiTheme.BORDER, false, 2.0)
+
+
+## Fleches d'apercu : ou chaque piece ira a sa premiere activation.
+func _draw_preview() -> void:
+	for move in preview_moves:
+		var from: Vector2i = move["from"]
+		var to: Vector2i = move["to"]
+		if from == to:
+			continue
+
+		var is_player: bool = int(move["team"]) == BattleUnit.TEAM_PLAYER
+		var color: Color = UiTheme.SUCCESS if is_player else UiTheme.ENEMY.lightened(0.15)
+		if bool(move.get("capture", false)):
+			color = UiTheme.GOLD
+		color.a = 0.85 if is_player else 0.5
+
+		_draw_arrow(cell_center(from), cell_center(to), color)
+
+
+func _draw_arrow(from: Vector2, to: Vector2, color: Color) -> void:
+	var direction := (to - from).normalized()
+	var margin := _cell_size * 0.34
+	var start := from + direction * margin
+	var end := to - direction * margin * 0.8
+	var width := maxf(1.5, _cell_size * 0.045)
+
+	draw_line(start, end, color, width)
+
+	# Pointe : deux traits ramenes vers l'arriere.
+	var head := _cell_size * 0.16
+	var left := direction.rotated(2.6) * head
+	var right := direction.rotated(-2.6) * head
+	draw_line(end, end + left, color, width)
+	draw_line(end, end + right, color, width)
 
 
 func _draw_unit(unit: BattleUnit) -> void:
@@ -137,42 +175,38 @@ func _draw_unit(unit: BattleUnit) -> void:
 	if unit.team == BattleUnit.TEAM_ENEMY:
 		base = base.lerp(UiTheme.ENEMY, 0.55).darkened(0.1)
 
-	# Flash blanc sur l'attaquant et sa cible.
-	if unit.id == _flash_unit or unit.id == _flash_target:
-		base = base.lerp(Color.WHITE, 0.55 * (1.0 - _flash_t))
-
 	draw_circle(center, radius, base)
 	draw_arc(center, radius, 0.0, TAU, 24,
 		UiTheme.TEXT if unit.team == BattleUnit.TEAM_PLAYER else UiTheme.ENEMY.lightened(0.3),
 		maxf(1.5, _cell_size * 0.05))
 
+	# Une Dame promue porte un lisere dore, pour la distinguer d'un coup d'oeil.
+	if unit.promoted:
+		draw_arc(center, radius * 1.18, 0.0, TAU, 24, UiTheme.GOLD, maxf(1.5, _cell_size * 0.04))
+
 	var font := ThemeDB.fallback_font
-	var font_size := maxi(8, int(_cell_size * 0.4))
-	var letter := Balance.unit_letter(unit.type)
-	draw_string(font, center + Vector2(-radius, font_size * 0.36), letter,
+	var font_size := maxi(8, int(_cell_size * 0.42))
+	draw_string(font, center + Vector2(-radius, font_size * 0.36),
+		Balance.unit_letter(unit.type),
 		HORIZONTAL_ALIGNMENT_CENTER, radius * 2.0, font_size, UiTheme.TEXT)
 
-	_draw_health_bar(unit, center, radius)
 
-
-func _draw_health_bar(unit: BattleUnit, center: Vector2, radius: float) -> void:
-	var width := radius * 2.0
-	var height := maxf(3.0, _cell_size * 0.08)
-	var origin := center + Vector2(-radius, radius + height * 0.4)
-
-	draw_rect(Rect2(origin, Vector2(width, height)), UiTheme.BG)
-	var ratio := clampf(float(unit.hp) / float(unit.max_hp), 0.0, 1.0)
-	var color := UiTheme.SUCCESS
-	if ratio < 0.6:
-		color = UiTheme.GOLD
-	if ratio < 0.3:
-		color = UiTheme.DANGER
-	draw_rect(Rect2(origin, Vector2(width * ratio, height)), color)
+## Marque brievement la case ou une piece vient d'etre capturee.
+func _draw_capture() -> void:
+	if _capture_cell.x < 0:
+		return
+	var center := cell_center(_capture_cell)
+	var radius := _cell_size * 0.4 * (1.0 - _capture_t * 0.5)
+	var color := UiTheme.DANGER
+	color.a = 1.0 - _capture_t
+	var width := maxf(2.0, _cell_size * 0.07)
+	draw_line(center + Vector2(-radius, -radius), center + Vector2(radius, radius), color, width)
+	draw_line(center + Vector2(radius, -radius), center + Vector2(-radius, radius), color, width)
 
 
 # ------------------------------- ANIMATIONS ----------------------------------
 #
-#  Ces methodes sont attendues par le controleur de bataille, qui leur passe une
+#  Ces methodes sont appelees par le controleur de bataille, qui leur passe une
 #  duree deja divisee par la vitesse choisie (x1 / x2 / x4).
 
 func play_move(unit_id: int, from: Vector2i, to: Vector2i, duration: float) -> void:
@@ -187,13 +221,11 @@ func play_move(unit_id: int, from: Vector2i, to: Vector2i, duration: float) -> v
 	queue_redraw()
 
 
-func play_attack(unit_id: int, target_id: int, duration: float) -> void:
-	_flash_unit = unit_id
-	_flash_target = target_id
-	_flash_t = 0.0
+func play_capture(cell: Vector2i, duration: float) -> void:
+	_capture_cell = cell
+	_capture_t = 0.0
 	var tween := create_tween()
-	tween.tween_property(self, "_flash_t", 1.0, maxf(0.01, duration))
+	tween.tween_property(self, "_capture_t", 1.0, maxf(0.01, duration))
 	await tween.finished
-	_flash_unit = -1
-	_flash_target = -1
+	_capture_cell = Vector2i(-1, -1)
 	queue_redraw()

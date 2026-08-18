@@ -161,6 +161,29 @@ func _refresh_placement() -> void:
 		UiTheme.style_button(button, color.darkened(0.2) if type == _selected_type else color.darkened(0.6))
 
 	_fight_button.disabled = _placed.is_empty()
+	_update_preview()
+
+
+## Apercu : ou chaque piece irait a sa premiere activation, dans la position
+## actuelle. Chaque piece est evaluee independamment des autres - les fleches
+## montrent les intentions d'ouverture, pas la sequence exacte du combat.
+func _update_preview() -> void:
+	var preview: Array = []
+	for unit in _engine.units:
+		if not unit.is_alive():
+			continue
+		var decision := BattleAI.decide(unit, _engine.grid, _engine.units)
+		var destination: Vector2i = decision["move"]
+		if destination == unit.cell:
+			continue
+		preview.append({
+			"from": unit.cell,
+			"to": destination,
+			"team": unit.team,
+			"capture": decision["capture"] != null,
+		})
+	_grid_view.preview_moves = preview
+	_grid_view.queue_redraw()
 
 
 func _on_type_selected(type: String) -> void:
@@ -209,26 +232,22 @@ func _on_reset_placement() -> void:
 	_refresh_placement()
 
 
-## Remplit la zone de deploiement en partant de la rangee la plus avancee.
+## Remplit la zone de deploiement en formation compacte : rangee avancee
+## d'abord, du centre vers les bords, en alternant les types. C'est le miroir
+## exact de la formation ennemie.
 func _on_auto_place() -> void:
 	var slots := Game.deploy_slots()
-	for y in range(_engine.grid.rows - 1, _engine.grid.player_zone_first_row() - 1, -1):
-		for x in range(_engine.grid.cols):
-			if _placed.size() >= slots:
-				_refresh_placement()
-				return
-			var cell := Vector2i(x, y)
-			if not _engine.grid.is_free(cell):
-				continue
-			var type := _pick_available_type()
-			if type.is_empty():
-				_refresh_placement()
-				return
-			var unit := _engine.add_unit(type, Game.building_level(type),
-				BattleUnit.TEAM_PLAYER, cell)
-			_placed.append(unit)
-			_remaining[type] = int(_remaining[type]) - 1
-			_grid_view.queue_redraw()
+	for cell in _engine.grid.free_player_cells():
+		if _placed.size() >= slots:
+			break
+		var type := _pick_available_type()
+		if type.is_empty():
+			break
+		var unit := _engine.add_unit(type, Game.building_level(type),
+			BattleUnit.TEAM_PLAYER, cell)
+		_placed.append(unit)
+		_remaining[type] = int(_remaining[type]) - 1
+	_grid_view.queue_redraw()
 	_refresh_placement()
 
 
@@ -250,6 +269,7 @@ func _start_combat() -> void:
 		return
 	_phase = Phase.COMBAT
 	_phase_label.text = "Combat - bataille %d" % int(_battle["id"])
+	_grid_view.preview_moves = []
 	_grid_view.highlighted = []
 	_grid_view.selected_cell = Vector2i(-1, -1)
 	_grid_view.queue_redraw()
@@ -330,17 +350,16 @@ func _play_events(events: Array) -> void:
 		if not _running:
 			return
 		match String(event["type"]):
+			"capture":
+				await _grid_view.play_capture(
+					event["cell"], float(Balance.COMBAT["capture_duration"]) / _speed)
 			"move":
 				await _grid_view.play_move(
 					int(event["unit"]), event["from"], event["to"],
 					float(Balance.COMBAT["move_duration"]) / _speed)
-			"attack":
-				await _grid_view.play_attack(
-					int(event["unit"]), int(event["target"]),
-					float(Balance.COMBAT["attack_duration"]) / _speed)
-			"death":
+			"promotion":
 				_grid_view.queue_redraw()
-				await _wait(float(Balance.COMBAT["attack_duration"]) * 0.5)
+				await _wait(float(Balance.COMBAT["capture_duration"]))
 			_:
 				pass
 
@@ -356,9 +375,14 @@ func _show_result() -> void:
 	_phase = Phase.RESULT
 	_running = false
 	var victory := _engine.winner == BattleUnit.TEAM_PLAYER
-	var reward := int(_battle["reward"])
+	var reward := Game.reward_for(int(_battle["id"]))
 	var battle_id := int(_battle["id"])
 	var first_win := victory and not Game.is_battle_won(battle_id)
+
+	# Les pertes sont definitives, victoire ou defaite : les pieces capturees
+	# quittent l'armee et devront etre recrutees a nouveau.
+	var losses: Dictionary = _engine.losses(BattleUnit.TEAM_PLAYER)
+	Game.apply_losses(losses)
 
 	if victory:
 		# Or ajoute et bataille suivante debloquee cote GameState.
@@ -401,6 +425,23 @@ func _show_result() -> void:
 		box.add_child(UiTheme.make_label(
 			"Ton armee a ete balayee. Recrute, ameliore, recommence.",
 			13, UiTheme.TEXT_DIM))
+
+	# Les pertes comptent autant que la recompense : elles sont definitives.
+	box.add_child(HSeparator.new())
+	if losses.is_empty():
+		box.add_child(UiTheme.make_label("Aucune perte. Toute ton armee rentre.",
+			14, UiTheme.SUCCESS))
+	else:
+		var details: Array = []
+		var total := 0
+		for type in Balance.UNIT_TYPES:
+			if losses.has(type):
+				details.append("%d %s" % [int(losses[type]), Balance.unit_name(type)])
+				total += int(losses[type])
+		box.add_child(UiTheme.make_label(
+			"Pieces perdues definitivement : %s" % ", ".join(details), 14, UiTheme.DANGER))
+		box.add_child(UiTheme.make_label(
+			"Il faudra les recruter a nouveau au village.", 12, UiTheme.TEXT_DIM))
 
 	box.add_child(HSeparator.new())
 

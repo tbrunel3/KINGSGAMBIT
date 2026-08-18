@@ -24,18 +24,19 @@ GitHub) : il se régénère avec la commande d'export plus bas.
 pour modifier le jeu.
 
 **3. Navigateur, y compris iPhone** — le dossier `docs/` contient un build web
-prêt à publier. Une fois GitHub Pages activé sur le dépôt (Settings → Pages →
-Branch `main`, dossier `/docs`), le jeu est jouable à l'adresse
+prêt à publier. Une fois GitHub Pages activé (Settings → Pages → Branch `main`,
+dossier `/docs`), le jeu est jouable à l'adresse
 `https://tbrunel3.github.io/KINGSGAMBIT/`, au doigt, sans rien installer.
 Le build est mono-thread et embarque un manifeste PWA : « Sur l'écran d'accueil »
 depuis Safari donne une icône et un affichage plein écran en portrait.
 
 ### Le parcours à tester
 
-**BATAILLE** → **PRÉPARER L'ARMÉE** → **Auto** (ou choisis un type et touche les
-cases vertes) → **COMBATTRE**. Le combat se joue seul, passe en **x4**. Ensuite
-retour au village, ouvre un bâtiment, recrute, lance une amélioration : le compte
-à rebours continue même jeu fermé. Le bouton **RAZ** efface la sauvegarde.
+**BATAILLE** → choisis une bataille → **PRÉPARER L'ARMÉE** → **Auto** (ou choisis
+un type et touche les cases vertes) → **COMBATTRE**. Le combat se joue seul,
+passe en **x4**. Retour au village, ouvre un bâtiment, recrute, lance une
+amélioration : le compte à rebours continue même jeu fermé. **RAZ** efface la
+sauvegarde.
 
 ### Regénérer les builds
 
@@ -47,18 +48,46 @@ godot --headless --path . --export-release "Windows Desktop"
 godot --headless --path . --export-release "Web"
 ```
 
-Le banc de test (données, sauvegarde, 10 batailles simulées, chargement des
-écrans) tourne sans interface :
+---
 
-```bash
-godot --headless --path . tools/smoke_test.tscn
-```
+## Règles du jeu
 
-Les captures d'écran de `tools/screenshots/` se régénèrent avec :
+Les pièces rappellent les échecs sans en respecter les règles. **Il n'y a ni
+points de vie ni dégâts** : une pièce est sur le plateau, ou capturée. On capture
+en se **déplaçant sur la case adverse**. Aucune attaque à distance.
 
-```bash
-godot --path . tools/screenshot.tscn
-```
+| Pièce | Déplacement | Portée Nv.1 → Nv.10 |
+|---|---|---|
+| **Tour** | lignes et colonnes, bloquée par les pièces | 2 → 8 |
+| **Fou** | diagonales, bloqué par les pièces | 2 → 8 |
+| **Cavalier** | sauts, ignore les pièces du trajet | 1 figure → 7 figures |
+| **Pion** | avance tout droit, capture en diagonale avant | 1 → 4 |
+| **Dame** | toutes directions — uniquement par promotion | 3 → 9 |
+
+Une Tour ou un Fou s'arrête devant une pièce alliée, et s'arrête **en prenant**
+la première pièce ennemie rencontrée. Un Cavalier saute par-dessus tout.
+
+**Promotion** : un pion qui atteint le fond du plateau adverse devient une Dame,
+**le temps du combat seulement**. De retour au village, elle redevient le pion
+qu'elle était.
+
+**Les pertes sont définitives.** Une pièce capturée quitte l'armée et devra être
+recrutée à nouveau. C'est ce qui donne son poids au placement — et la raison
+d'être de l'écran de campagne, qui permet de rejouer une bataille déjà gagnée
+pour refaire de l'or (à 40 % de la récompense). Une **garnison minimale** de
+3 pions est rendue gratuitement après chaque bataille, sans quoi une armée
+balayée sans or rendrait la partie impossible à reprendre.
+
+Un combat se termine quand un camp n'a plus de pièce. Si les deux armées ne
+peuvent plus s'atteindre (8 tours complets sans la moindre prise), la victoire
+va au camp qui conserve le plus de matériel, à la valeur des pièces.
+
+### Aperçu des ouvertures
+
+Pendant le placement, une flèche part de chaque pièce vers la case où elle irait
+à sa première activation — vertes pour les tiennes, rouges pour l'ennemi, dorées
+quand c'est une prise. Chaque pièce est évaluée indépendamment : ce sont les
+intentions d'ouverture, pas la séquence exacte du combat.
 
 ---
 
@@ -66,19 +95,17 @@ godot --path . tools/screenshot.tscn
 
 **Tout l'équilibrage est dans un seul fichier : [`scripts/data/balance.gd`](scripts/data/balance.gd).**
 
-Aucune valeur de gameplay n'est écrite ailleurs. Ce fichier contient :
-
 | Section | Contenu |
 |---|---|
-| `UNITS` | PV, dégâts, portée, type de mouvement, coût de recrutement, capacité, coût et durée d'amélioration — **par niveau** |
-| `CASTLE_DATA` | Nombre d'unités déployables par niveau de château, coûts et durées |
-| `CAMPAIGN` | Les 10 batailles : taille de grille, composition ennemie, niveau ennemi, récompense |
-| `COMBAT` | Durées d'animation, seuil d'enlisement, garde-fou d'activations |
-| `STARTING_GOLD`, `STARTING_UNITS`, `DEPLOY_ROWS` | Conditions de départ |
+| `UNITS` | mobilité, capacité, valeur, coût de recrutement, coût et durée d'amélioration — **sur 10 niveaux** |
+| `CASTLE_DATA` | pièces déployables par niveau de château, coûts et durées |
+| `CAMPAIGN` | les 10 batailles : taille de grille, composition ennemie, niveau, récompense |
+| `COMBAT` | durées d'animation, seuil d'enlisement, garde-fou d'activations |
+| `GARRISON_MINIMUM`, `REPLAY_REWARD_RATIO` | filet de sécurité et rentabilité du farm |
 
-Ajouter un niveau à une unité = ajouter une entrée dans `levels`, `capacity`,
-`upgrade_cost` et `upgrade_seconds`. Ajouter une bataille = ajouter une ligne à
-`CAMPAIGN`. Rien d'autre à toucher.
+Les tableaux sont indexés par niveau : ajouter un niveau = ajouter une valeur à
+chaque tableau de la pièce, et augmenter `MAX_LEVEL`. Le banc de test vérifie que
+les tailles concordent et que la mobilité ne recule jamais d'un niveau au suivant.
 
 L'habillage (couleurs, arrondis, marges) est isolé dans
 [`scripts/ui/ui_theme.gd`](scripts/ui/ui_theme.gd) — le seul fichier à remplacer
@@ -99,15 +126,15 @@ project.godot            portrait, stretch canvas_items, 4 autoloads
 scripts/
   data/balance.gd        [autoload Balance]     toutes les valeurs de réglage
   core/save_manager.gd   [autoload SaveManager] lecture/écriture JSON dans user://
-  core/game_state.gd     [autoload Game]        or, unités, niveaux, progression
+  core/game_state.gd     [autoload Game]        or, armée, niveaux, progression
   core/router.gd         [autoload Router]      changement de scène + contexte
 
   battle/battle_unit.gd     une pièce en combat (données pures)
   battle/grid_model.gd      occupation du plateau, zones de déploiement
-  battle/movement_rules.gd  déplacements par type de pièce (fonctions pures)
+  battle/movement_rules.gd  déplacements et prises, par type de pièce
   battle/battle_ai.gd       décision d'une activation
   battle/battle_engine.gd   boucle tour par tour, émet des événements
-  battle/grid_view.gd       rendu de la grille et des unités, entrées tactiles
+  battle/grid_view.gd       rendu de la grille, flèches d'aperçu, entrées tactiles
 
   ui/ui_theme.gd         palette et styles (placeholder)
   ui/safe_area.gd        marges d'encoche iPhone
@@ -115,19 +142,21 @@ scripts/
 scenes/
   village/village.tscn        village, or, bâtiments, bouton bataille
   village/building_popup.tscn recrutement et amélioration
+  battle/campaign.tscn        liste des batailles, rejouables comprises
   battle/battle_prep.tscn     briefing avant combat
   battle/battle.tscn          placement, combat et résultat (une seule scène)
 
 tools/
   smoke_test.tscn        banc de test headless
+  ui_test.tscn           appuie sur les vrais boutons du jeu
   screenshot.tscn        génération des captures
 ```
 
 ### Le point important : moteur et vitesse
 
 `BattleEngine.step()` résout **une activation complète** et retourne la liste des
-événements correspondants (`move`, `attack`, `death`, `end`). La vue les rejoue
-ensuite avec des délais.
+événements correspondants (`move`, `capture`, `promotion`, `end`). La vue les
+rejoue ensuite avec des délais.
 
 Conséquence : **x1, x2, x4 et Pause ne modifient jamais le résultat d'un combat.**
 Ils ne touchent que les durées d'affichage. Une bataille est entièrement
@@ -141,50 +170,38 @@ déterminée par le placement.
   ressources `.tres` : éditables dans n'importe quel éditeur de texte, lisibles
   en diff Git, modifiables sans ouvrir Godot.
 - **Les améliorations sont stockées comme un timestamp Unix de fin.** Le temps
-  passe donc normalement jeu fermé : au retour, on compare l'heure courante à
-  l'heure de fin enregistrée.
+  passe donc normalement jeu fermé.
 
 ---
 
-## Règles de jeu implémentées
+## Tests
 
-Les pièces rappellent les échecs sans en respecter les règles. La portée croît
-avec le niveau du bâtiment correspondant.
+```bash
+godot --headless --path . tools/smoke_test.tscn
+```
 
-| Pièce | Déplacement | Portée Nv.1 → Nv.3 |
-|---|---|---|
-| **Tour** | lignes et colonnes, bloquée par les unités | 2 → 3 → 4 |
-| **Fou** | diagonales, bloqué par les unités | 2 → 3 → 4 |
-| **Pion** | tout droit, plus un pas latéral ou arrière | 1 → 2 → 2 |
-| **Cavalier** | sauts en L, ignore les unités du trajet | (1,2) → +(1,3) → +(2,3) |
+Vérifie la cohérence des tableaux de `balance.gd`, l'économie, le retrait des
+pertes, les règles de pièces sur des plateaux montés à la main (le pion ne prend
+pas devant lui, la tour ne traverse pas, la promotion se déclenche), puis simule
+les 10 batailles et charge les quatre écrans.
 
-L'attaque utilise la **distance de Tchebychev** (le plus grand écart en colonne
-ou en rangée), sans ligne de vue, pour toutes les pièces. Simplification assumée
-du MVP : une seule règle à retenir.
+```bash
+godot --headless --path . tools/ui_test.tscn
+```
 
-L'IA, identique pour les deux camps, applique dans l'ordre : attaquer une cible
-à portée, sinon se déplacer pour attaquer, sinon se rapprocher de l'ennemi le
-plus proche, sinon tenir sa position. À cibles égales elle achève l'unité la
-plus faible. Pour la rendre plus maligne, seules `_score_target` et le choix de
-case dans `battle_ai.gd` sont à modifier.
+Appuie sur les vrais boutons : ouvrir un bâtiment, recruter, améliorer, jouer une
+bataille du placement à la récompense. 26 vérifications.
 
-Un combat se termine quand un camp n'a plus d'unité vivante. Si les deux armées
-ne peuvent plus s'atteindre (24 activations sans le moindre dégât), la victoire
-va au camp qui conserve le plus de points de vie.
+### Équilibrage vérifié
 
----
-
-## Équilibrage vérifié
-
-Le banc de test simule un joueur suivant la progression normale : batailles 1-3
-au niveau 1, 4-7 au niveau 2, 8-10 au niveau 3. Les 10 batailles sont
-franchissables, plusieurs se jouent à 2 ou 3 survivants.
+Le banc de test simule un joueur au niveau de la bataille qu'il affronte. Les 10
+batailles sont franchissables, avec des pertes réelles à chaque fois.
 
 ```
-Bataille  1  L Oree du Bois        Nv.1   6 vs  3  ->  VICTOIRE (5 survivants)
-Bataille  3  La Route du Sel       Nv.1   6 vs  6  ->  VICTOIRE (1 survivant)
-Bataille  7  Les Marches Grises    Nv.2  10 vs 10  ->  VICTOIRE (2 survivants)
-Bataille 10  La Tour de la Dame    Nv.3  14 vs 14  ->  VICTOIRE (3 survivants)
+Bataille  1  L Oree du Bois        Nv.1   6 vs  3  ->  VICTOIRE   3 pieces perdues
+Bataille  5  Le Pont Noir          Nv.3   9 vs  6  ->  VICTOIRE   4 pieces perdues
+Bataille  8  Le Col du Corbeau     Nv.4  10 vs 11  ->  VICTOIRE   7 pieces perdues
+Bataille 10  La Tour de la Dame    Nv.5  12 vs 12  ->  VICTOIRE   6 pieces perdues
 ```
 
 ---
@@ -194,35 +211,39 @@ Bataille 10  La Tour de la Dame    Nv.3  14 vs 14  ->  VICTOIRE (3 survivants)
 - Projet Godot 4 lançable, portrait iPhone, safe areas
 - Village : château, 4 bâtiments cliquables, compteur d'or, bouton bataille
 - Économie : or unique, recrutement au coût croissant, capacité par bâtiment
-- Améliorations avec durée réelle, **timer qui continue jeu fermé**
-- Campagne de 10 batailles, déblocage progressif après victoire
+- 10 niveaux d'amélioration par bâtiment, avec durée réelle et **timer qui
+  continue jeu fermé**
+- Écran de campagne : batailles débloquées, rejouables à récompense réduite
 - Écran de préparation : composition ennemie, récompense, armée disponible
 - Grille de taille variable par bataille (6×8 à 9×12), zones de déploiement
-- Placement : sélection d'un type puis clic sur case, retrait, Auto,
-  Réinitialiser, Combattre, limite d'unités liée au niveau du château
-- Combat automatique tour par tour, alternance des camps
-- 4 types de déplacement distincts, portées liées au niveau
-- IA modulaire avec ordre de priorité explicite
+- Placement au clic, retrait, Auto, Réinitialiser, limite liée au château
+- **Aperçu des premiers déplacements** pendant le placement
+- Combat automatique tour par tour, capture par déplacement, sans points de vie
+- 5 types de déplacement, mobilité liée au niveau, **promotion du pion en Dame**
+- **Pertes définitives** avec garnison minimale de sécurité
+- IA modulaire : prise la plus rentable, refus des mauvais échanges, avancée
+  sur case sûre quand c'est possible
 - Contrôles x1 / x2 / x4 / Pause sans effet sur les règles
-- Victoire/défaite, or crédité, bataille suivante débloquée, rejouer, retour village
-- Sauvegarde JSON locale + bouton de remise à zéro pour les tests
-- Banc de test headless et générateur de captures
+- Victoire/défaite, or crédité, bataille suivante débloquée, pertes affichées
+- Sauvegarde JSON locale + bouton de remise à zéro
+- Trois outils de développement : tests headless, test d'interface, captures
 
 ## Reste à faire — Phase 2 (visuelle)
 
-- Remplacer les placeholders par les assets Figma : sprites d'unités, décor du
+- Remplacer les placeholders par les assets Figma : sprites de pièces, décor du
   village, fond de plateau, icônes de bâtiments
 - Drag & drop au placement (le clic-puis-case reste en secours)
-- Animations d'attaque et de mort dignes de ce nom, effets de dégâts chiffrés
+- Animations de capture et de promotion dignes de ce nom
 - Sons et retours haptiques
-- Écran de sélection de bataille (carte de campagne) plutôt qu'un bouton unique
+- Carte de campagne illustrée à la place de la liste
 - Mise en scène narrative du Roi et de la Dame
-- Export web (GitHub Pages) puis export iOS
+- Export iOS
 
 ### Limites connues du MVP
 
 - La pause ne s'applique qu'entre deux activations, pas au milieu d'une animation.
-- Le Roi n'est pas une unité jouable : le château est décoratif et fixe le
-  nombre d'unités déployables.
+- Le Roi n'est pas une pièce jouable : le château fixe le nombre de pièces
+  déployables.
+- L'IA ne raisonne qu'à un coup : elle évite une reprise immédiate, mais ne voit
+  pas plus loin.
 - Aucune migration de sauvegarde : changer `SAVE_VERSION` repart de zéro.
-- L'IA ne se protège pas et n'anticipe pas le tour adverse.

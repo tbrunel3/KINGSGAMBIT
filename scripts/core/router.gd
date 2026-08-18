@@ -8,6 +8,7 @@ extends Node
 ##
 
 const VILLAGE_SCENE := "res://scenes/village/village.tscn"
+const CAMPAIGN_SCENE := "res://scenes/battle/campaign.tscn"
 const PREP_SCENE := "res://scenes/battle/battle_prep.tscn"
 const BATTLE_SCENE := "res://scenes/battle/battle.tscn"
 
@@ -17,6 +18,10 @@ var current_battle_id: int = 1
 
 func goto_village() -> void:
 	_change(VILLAGE_SCENE)
+
+
+func goto_campaign() -> void:
+	_change(CAMPAIGN_SCENE)
 
 
 func goto_prep(battle_id: int) -> void:
