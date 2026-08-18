@@ -12,15 +12,39 @@ et seront remplacés en Phase 2 à partir des maquettes Figma.
 
 ---
 
-## Lancer le projet
+## Jouer
 
-Le projet est à la racine du dépôt. Ouvre Godot 4, `Importer`, puis sélectionne
-le fichier `project.godot`. Appuie sur **F5** pour jouer.
+Trois façons, de la plus rapide à la plus portable.
 
-En ligne de commande :
+**1. Exécutable Windows** — `build/windows/KingsGambit.exe`, un seul fichier
+autonome, double-clic. Non versionné (109 Mo, au-delà de la limite de fichier
+GitHub) : il se régénère avec la commande d'export plus bas.
+
+**2. Dans Godot** — ouvre `project.godot`, puis **F5**. C'est la voie à prendre
+pour modifier le jeu.
+
+**3. Navigateur, y compris iPhone** — le dossier `docs/` contient un build web
+prêt à publier. Une fois GitHub Pages activé sur le dépôt (Settings → Pages →
+Branch `main`, dossier `/docs`), le jeu est jouable à l'adresse
+`https://tbrunel3.github.io/KINGSGAMBIT/`, au doigt, sans rien installer.
+Le build est mono-thread et embarque un manifeste PWA : « Sur l'écran d'accueil »
+depuis Safari donne une icône et un affichage plein écran en portrait.
+
+### Le parcours à tester
+
+**BATAILLE** → **PRÉPARER L'ARMÉE** → **Auto** (ou choisis un type et touche les
+cases vertes) → **COMBATTRE**. Le combat se joue seul, passe en **x4**. Ensuite
+retour au village, ouvre un bâtiment, recrute, lance une amélioration : le compte
+à rebours continue même jeu fermé. Le bouton **RAZ** efface la sauvegarde.
+
+### Regénérer les builds
 
 ```bash
-godot --path . 
+godot --headless --path . --export-release "Windows Desktop"
+```
+
+```bash
+godot --headless --path . --export-release "Web"
 ```
 
 Le banc de test (données, sauvegarde, 10 batailles simulées, chargement des

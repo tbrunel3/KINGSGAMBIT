@@ -4,7 +4,6 @@
 
 # Exports
 build/
-export_presets.cfg
 *.translation
 
 # OS / editeurs

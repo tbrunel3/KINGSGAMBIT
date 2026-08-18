@@ -68,6 +68,12 @@ func _style() -> void:
 	_next_battle_label.add_theme_color_override("font_color", UiTheme.TEXT_DIM)
 	_next_battle_label.add_theme_font_size_override("font_size", 13)
 
+	var version := UiTheme.make_label(
+		"v%s" % ProjectSettings.get_setting("application/config/version", "1.0.0"),
+		11, UiTheme.TEXT_DIM.darkened(0.25))
+	version.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	$Safe/Root/Header.add_child(version)
+
 
 func _build_building_buttons() -> void:
 	for type in Balance.UNIT_TYPES:
