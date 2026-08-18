@@ -1,0 +1,16 @@
+# Godot 4 : dossier de cache/import genere localement
+.godot/
+/android/
+
+# Exports
+build/
+*.translation
+
+# OS / editeurs
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+
+# Etat local d'outils d'assistance (non lie au projet)
+.claude/

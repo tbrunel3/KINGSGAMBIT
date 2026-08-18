@@ -1,0 +1,49 @@
+; Engine configuration file.
+; It's best edited using the editor UI and not directly,
+; since the parameters that go here are not all obvious.
+;
+; Format:
+;   [section] ; section goes between []
+;   param=value ; assign values to parameters
+
+config_version=5
+
+[animation]
+
+compatibility/default_parent_skeleton_in_mesh_instance_3d=true
+
+[application]
+
+config/name="King's Gambit"
+config/version="1.2.0"
+config/description="Jeu de strategie fantasy inspire des echecs. MVP Phase 1."
+run/main_scene="res://scenes/village/village.tscn"
+config/features=PackedStringArray("4.7", "GL Compatibility")
+config/icon="res://icon.svg"
+
+[autoload]
+
+Balance="*res://scripts/data/balance.gd"
+SaveManager="*res://scripts/core/save_manager.gd"
+Game="*res://scripts/core/game_state.gd"
+Router="*res://scripts/core/router.gd"
+
+[display]
+
+window/size/viewport_width=393
+window/size/viewport_height=852
+window/size/window_width_override=393
+window/size/window_height_override=852
+window/stretch/mode="canvas_items"
+window/stretch/aspect="expand"
+window/handheld/orientation=1
+
+[gui]
+
+theme/default_font_multichannel_signed_distance_field=true
+
+[rendering]
+
+renderer/rendering_method="gl_compatibility"
+renderer/rendering_method.mobile="gl_compatibility"
+textures/vram_compression/import_etc2_astc=true

@@ -1,0 +1,171 @@
+extends Control
+##
+## POPUP DE BATIMENT - recrutement et amelioration.
+##
+## Le contenu est reconstruit a chaque rafraichissement : c'est plus simple a
+## suivre qu'une mise a jour partielle, et le popup est trop petit pour que le
+## cout en performance compte.
+##
+
+var _type: String = ""
+
+@onready var _dim: ColorRect = $Dim
+@onready var _panel: PanelContainer = $Center/Panel
+@onready var _content: VBoxContainer = $Center/Panel/Content
+
+
+func _ready() -> void:
+	UiTheme.style_panel(_panel)
+	_dim.gui_input.connect(_on_dim_input)
+
+	Game.gold_changed.connect(func(_g): _refresh())
+	Game.units_changed.connect(_refresh)
+	Game.buildings_changed.connect(_refresh)
+
+	var ticker := Timer.new()
+	ticker.wait_time = 1.0
+	ticker.timeout.connect(func():
+		Game.check_upgrades()
+		if Game.is_upgrading(_type):
+			_refresh()
+	)
+	add_child(ticker)
+	ticker.start()
+
+
+## Appele par le village juste apres l'instanciation.
+func open(type: String) -> void:
+	_type = type
+	_refresh()
+
+
+func _on_dim_input(event: InputEvent) -> void:
+	if event is InputEventMouseButton and event.pressed:
+		queue_free()
+
+
+# ------------------------------- CONTENU -------------------------------------
+
+func _refresh() -> void:
+	if _type.is_empty() or _content == null:
+		return
+
+	for child in _content.get_children():
+		child.queue_free()
+
+	_add_header()
+	if _type == Balance.CASTLE:
+		_add_castle_body()
+		_add_upgrade_section()
+	elif not Game.is_building_unlocked(_type):
+		_add_locked_body()
+	else:
+		_add_unit_body()
+		_add_upgrade_section()
+
+	var close := UiTheme.make_button("Fermer", UiTheme.PANEL_LIGHT, 15)
+	close.pressed.connect(queue_free)
+	_content.add_child(close)
+
+
+func _add_header() -> void:
+	var title := UiTheme.make_label(Balance.building_name(_type), 21, Balance.unit_color(_type))
+	_content.add_child(title)
+
+	var level_text := "Niveau %d / %d" % [Game.building_level(_type), Balance.max_level(_type)]
+	if _type != Balance.CASTLE and not Game.is_building_unlocked(_type):
+		level_text = "Pas encore construit"
+	var level := UiTheme.make_label(level_text, 13, UiTheme.TEXT_DIM)
+	_content.add_child(level)
+	_content.add_child(HSeparator.new())
+
+
+func _add_castle_body() -> void:
+	_content.add_child(UiTheme.make_label(
+		"Le Roi tient le chateau. Ameliorer la forteresse augmente le nombre "
+		+ "d'unites que tu peux deployer en bataille.", 13, UiTheme.TEXT_DIM))
+	_content.add_child(UiTheme.make_label(
+		"Unites deployables : %d" % Game.deploy_slots(), 16))
+
+
+## Batiment pas encore construit (Ecuries, Cloitre, Donjon au tout debut) :
+## un aperçu et le seuil de chateau qui le fera apparaitre, gratuitement.
+func _add_locked_body() -> void:
+	var required := Balance.unlock_castle_level(_type)
+	_content.add_child(UiTheme.make_label(
+		"Batiment pas encore construit. Une fois disponible : %s" % Balance.move_description(_type, 1),
+		13, UiTheme.TEXT_DIM))
+	_content.add_child(HSeparator.new())
+	_content.add_child(UiTheme.make_label(
+		"Apparait gratuitement au Chateau Royal niveau %d (actuellement %d)." % [
+			required, Game.castle_level()],
+		14, UiTheme.GOLD))
+
+
+func _add_unit_body() -> void:
+	var level := Game.building_level(_type)
+	var owned := Game.units_owned(_type)
+	var cap := Balance.capacity(_type, level)
+
+	_content.add_child(UiTheme.make_label("Pieces : %d / %d" % [owned, cap], 16))
+	_content.add_child(UiTheme.make_label(
+		"Deplacement : %s" % Balance.move_description(_type, level), 13, UiTheme.TEXT_DIM))
+
+	# Ce que le prochain niveau apporte concretement, s'il existe.
+	if level < Balance.max_level(_type):
+		_content.add_child(UiTheme.make_label(
+			"Niveau %d : %s" % [level + 1, Balance.move_description(_type, level + 1)],
+			12, UiTheme.TEXT_DIM.darkened(0.15)))
+
+	if _type == Balance.PION:
+		_content.add_child(UiTheme.make_label(
+			"Un pion qui atteint le fond adverse devient au hasard Cavalier, Fou ou " +
+			"Dame (rare), le temps du combat.",
+			12, UiTheme.GOLD.darkened(0.2)))
+
+	_content.add_child(HSeparator.new())
+
+	var cost := Game.recruit_cost(_type)
+	var recruit := UiTheme.make_button("Recruter  -  %d or" % cost, UiTheme.SUCCESS.darkened(0.35), 16)
+	if owned >= cap:
+		recruit.text = "Caserne pleine (Nv.%d max %d)" % [level, cap]
+		recruit.disabled = true
+	elif not Game.can_afford(cost):
+		recruit.disabled = true
+	recruit.pressed.connect(func(): Game.recruit(_type))
+	_content.add_child(recruit)
+
+
+func _add_upgrade_section() -> void:
+	_content.add_child(HSeparator.new())
+
+	if Game.is_upgrading(_type):
+		_content.add_child(UiTheme.make_label(
+			"Amelioration en cours : %s" % UiTheme.format_duration(Game.upgrade_remaining(_type)),
+			15, UiTheme.GOLD))
+		_content.add_child(UiTheme.make_label(
+			"Le chantier avance meme jeu ferme.", 12, UiTheme.TEXT_DIM))
+		var skip := UiTheme.make_button("Terminer maintenant (test)", UiTheme.PANEL_LIGHT, 13)
+		skip.pressed.connect(func(): Game.force_finish_upgrade(_type))
+		_content.add_child(skip)
+		return
+
+	if Game.is_max_level(_type):
+		_content.add_child(UiTheme.make_label("Niveau maximum atteint.", 14, UiTheme.TEXT_DIM))
+		return
+
+	var level := Game.building_level(_type)
+	var cost := Balance.upgrade_cost(_type, level)
+	var seconds := Balance.upgrade_seconds(_type, level)
+
+	var gain := "capacite et statistiques du niveau %d" % (level + 1)
+	if _type == Balance.CASTLE:
+		gain = "%d unites deployables" % Balance.deploy_slots(level + 1)
+	_content.add_child(UiTheme.make_label("Niveau %d : %s" % [level + 1, gain], 13, UiTheme.TEXT_DIM))
+
+	var upgrade := UiTheme.make_button(
+		"Ameliorer  -  %d or  -  %s" % [cost, UiTheme.format_duration(seconds)],
+		UiTheme.ACCENT.darkened(0.25), 15)
+	upgrade.disabled = not Game.can_afford(cost)
+	upgrade.pressed.connect(func(): Game.start_upgrade(_type))
+	_content.add_child(upgrade)
