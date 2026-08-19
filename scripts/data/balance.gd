@@ -215,7 +215,7 @@ const CAMPAIGN := [
 	{"id": 4,  "name": "Les Champs Brules",  "cols": 7, "rows": 9,  "reward": 200, "level": 2, "enemies": {PION: 4, FOU: 1, CAVALIER: 1}},
 	{"id": 5,  "name": "Le Pont Noir",       "cols": 7, "rows": 10, "reward": 260, "level": 3, "enemies": {PION: 4, TOUR: 1, FOU: 1}},
 	{"id": 6,  "name": "La Carriere",        "cols": 8, "rows": 10, "reward": 320, "level": 3, "enemies": {PION: 5, CAVALIER: 1, TOUR: 1}},
-	{"id": 7,  "name": "Les Marches Grises", "cols": 8, "rows": 11, "reward": 400, "level": 4, "enemies": {PION: 6, FOU: 1, CAVALIER: 1}},
+	{"id": 7,  "name": "Les Marches Grises", "cols": 8, "rows": 11, "reward": 400, "level": 4, "enemies": {PION: 4, FOU: 1, CAVALIER: 1}},
 	{"id": 8,  "name": "Le Col du Corbeau",  "cols": 8, "rows": 11, "reward": 500, "level": 4, "enemies": {PION: 6, TOUR: 3, CAVALIER: 2}},
 	{"id": 9,  "name": "Les Ruines Hautes",  "cols": 9, "rows": 12, "reward": 640, "level": 5, "enemies": {PION: 6, FOU: 2, TOUR: 2, CAVALIER: 2}},
 	{"id": 10, "name": "La Tour de la Dame", "cols": 9, "rows": 12, "reward": 900, "level": 6, "enemies": {PION: 6, FOU: 3, TOUR: 2, CAVALIER: 2}},

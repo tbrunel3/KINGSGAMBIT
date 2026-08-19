@@ -113,7 +113,7 @@ func step() -> Array:
 	activation_count += 1
 	events.append({"type": "activate", "unit": unit.id})
 
-	var decision := BattleAI.decide(unit, grid, units)
+	var decision := BattleAI.decide(unit, grid, units, _idle_activations, _stalemate_limit())
 	var destination: Vector2i = decision["move"]
 	var captured := false
 
