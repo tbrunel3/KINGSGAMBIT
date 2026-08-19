@@ -1,8 +1,8 @@
 [gd_scene load_steps=4 format=3]
 
 [ext_resource type="Script" path="res://scenes/village/village.gd" id="1_village"]
-[ext_resource type="Script" path="res://scripts/ui/safe_area.gd" id="2_safe"]
-[ext_resource type="Texture2D" path="res://assets/backgrounds/village_background.png" id="3_bg"]
+[ext_resource type="Texture2D" path="res://assets/backgrounds/village_background.png" id="2_bg"]
+[ext_resource type="Script" path="res://scenes/ui/components/edge_fades.gd" id="3_fades"]
 
 [node name="Village" type="Control"]
 layout_mode = 3
@@ -13,15 +13,6 @@ grow_horizontal = 2
 grow_vertical = 2
 script = ExtResource("1_village")
 
-[node name="Background" type="ColorRect" parent="."]
-layout_mode = 1
-anchors_preset = 15
-anchor_right = 1.0
-anchor_bottom = 1.0
-grow_horizontal = 2
-grow_vertical = 2
-color = Color(0.078, 0.106, 0.157, 1)
-
 [node name="BackgroundImage" type="TextureRect" parent="."]
 layout_mode = 1
 anchors_preset = 15
@@ -29,7 +20,7 @@ anchor_right = 1.0
 anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
-texture = ExtResource("3_bg")
+texture = ExtResource("2_bg")
 expand_mode = 1
 stretch_mode = 6
 
@@ -40,75 +31,23 @@ anchor_right = 1.0
 anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
-color = Color(0.03, 0.035, 0.05, 0.5)
+color = Color(0.03, 0.035, 0.05, 0.32)
 
-[node name="Safe" type="MarginContainer" parent="."]
+[node name="EdgeFades" type="Control" parent="."]
 layout_mode = 1
 anchors_preset = 15
 anchor_right = 1.0
 anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
-script = ExtResource("2_safe")
+mouse_filter = 2
+script = ExtResource("3_fades")
 
-[node name="Root" type="VBoxContainer" parent="Safe"]
-layout_mode = 2
-theme_override_constants/separation = 14
-
-[node name="TopBar" type="PanelContainer" parent="Safe/Root"]
-layout_mode = 2
-
-[node name="TopRow" type="HBoxContainer" parent="Safe/Root/TopBar"]
-layout_mode = 2
-
-[node name="GoldLabel" type="Label" parent="Safe/Root/TopBar/TopRow"]
-layout_mode = 2
-text = "Or 0"
-
-[node name="Spacer" type="Control" parent="Safe/Root/TopBar/TopRow"]
-layout_mode = 2
-size_flags_horizontal = 3
-
-[node name="DevButton" type="Button" parent="Safe/Root/TopBar/TopRow"]
-layout_mode = 2
-text = "DEV"
-
-[node name="Header" type="VBoxContainer" parent="Safe/Root"]
-layout_mode = 2
-theme_override_constants/separation = 2
-
-[node name="TitleLabel" type="Label" parent="Safe/Root/Header"]
-layout_mode = 2
-text = "KING'S GAMBIT"
-horizontal_alignment = 1
-
-[node name="StoryLabel" type="Label" parent="Safe/Root/Header"]
-layout_mode = 2
-text = "Le Roi a perdu sa Dame."
-horizontal_alignment = 1
-autowrap_mode = 3
-
-[node name="CastleButton" type="Button" parent="Safe/Root"]
-custom_minimum_size = Vector2(0, 92)
-layout_mode = 2
-text = "Chateau Royal"
-
-[node name="BuildingsGrid" type="GridContainer" parent="Safe/Root"]
-layout_mode = 2
-theme_override_constants/h_separation = 10
-theme_override_constants/v_separation = 10
-columns = 2
-
-[node name="Filler" type="Control" parent="Safe/Root"]
-layout_mode = 2
-size_flags_vertical = 3
-
-[node name="NextBattleLabel" type="Label" parent="Safe/Root"]
-layout_mode = 2
-text = "Bataille 1"
-horizontal_alignment = 1
-
-[node name="BattleButton" type="Button" parent="Safe/Root"]
-custom_minimum_size = Vector2(0, 62)
-layout_mode = 2
-text = "BATAILLE"
+[node name="Overlay" type="Control" parent="."]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2

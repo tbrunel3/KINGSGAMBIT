@@ -1,9 +1,10 @@
-[gd_scene load_steps=5 format=3]
+[gd_scene load_steps=6 format=3]
 
 [ext_resource type="Script" path="res://scenes/battle/battle.gd" id="1_battle"]
 [ext_resource type="Script" path="res://scripts/ui/safe_area.gd" id="2_safe"]
 [ext_resource type="Script" path="res://scripts/battle/grid_view.gd" id="3_grid"]
 [ext_resource type="Texture2D" path="res://assets/backgrounds/battlefield_background.png" id="4_bg"]
+[ext_resource type="Script" path="res://scenes/ui/components/edge_fades.gd" id="5_fades"]
 
 [node name="Battle" type="Control"]
 layout_mode = 3
@@ -13,15 +14,6 @@ anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
 script = ExtResource("1_battle")
-
-[node name="Background" type="ColorRect" parent="."]
-layout_mode = 1
-anchors_preset = 15
-anchor_right = 1.0
-anchor_bottom = 1.0
-grow_horizontal = 2
-grow_vertical = 2
-color = Color(0.078, 0.106, 0.157, 1)
 
 [node name="BackgroundImage" type="TextureRect" parent="."]
 layout_mode = 1
@@ -41,7 +33,17 @@ anchor_right = 1.0
 anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
-color = Color(0.03, 0.035, 0.05, 0.55)
+color = Color(0.03, 0.035, 0.05, 0.18)
+
+[node name="EdgeFades" type="Control" parent="."]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+script = ExtResource("5_fades")
 
 [node name="Safe" type="MarginContainer" parent="."]
 layout_mode = 1
@@ -52,36 +54,65 @@ grow_horizontal = 2
 grow_vertical = 2
 script = ExtResource("2_safe")
 
-[node name="Root" type="VBoxContainer" parent="Safe"]
+[node name="Overlay" type="Control" parent="Safe"]
 layout_mode = 2
-theme_override_constants/separation = 10
+mouse_filter = 2
 
-[node name="TopBar" type="PanelContainer" parent="Safe/Root"]
-layout_mode = 2
-
-[node name="TopRow" type="HBoxContainer" parent="Safe/Root/TopBar"]
-layout_mode = 2
-
-[node name="PhaseLabel" type="Label" parent="Safe/Root/TopBar/TopRow"]
-layout_mode = 2
-text = "Placement"
-
-[node name="Spacer" type="Control" parent="Safe/Root/TopBar/TopRow"]
-layout_mode = 2
-size_flags_horizontal = 3
-
-[node name="QuitButton" type="Button" parent="Safe/Root/TopBar/TopRow"]
-layout_mode = 2
-text = "Quitter"
-
-[node name="Grid" type="Control" parent="Safe/Root"]
-layout_mode = 2
-size_flags_vertical = 3
+[node name="Grid" type="Control" parent="Safe/Overlay"]
+layout_mode = 0
+offset_left = 17.0
+offset_top = 100.0
+offset_right = 377.0
+offset_bottom = 596.0
 script = ExtResource("3_grid")
 
-[node name="BottomPanel" type="PanelContainer" parent="Safe/Root"]
-layout_mode = 2
+[node name="TourBadge" type="PanelContainer" parent="Safe/Overlay"]
+layout_mode = 0
+offset_left = 12.0
+offset_top = 12.0
+offset_right = 181.0
+offset_bottom = 47.0
 
-[node name="BottomBox" type="VBoxContainer" parent="Safe/Root/BottomPanel"]
+[node name="TourRow" type="HBoxContainer" parent="Safe/Overlay/TourBadge"]
 layout_mode = 2
+theme_override_constants/separation = 6
+
+[node name="PhasePrefixLabel" type="Label" parent="Safe/Overlay/TourBadge/TourRow"]
+layout_mode = 2
+text = "PHASE DE"
+
+[node name="PhaseLabel" type="Label" parent="Safe/Overlay/TourBadge/TourRow"]
+layout_mode = 2
+text = "PLACEMENT"
+
+[node name="QuitButton" type="Button" parent="Safe/Overlay"]
+layout_mode = 0
+offset_left = 337.0
+offset_top = 12.0
+offset_right = 381.0
+offset_bottom = 40.0
+theme_type_variation = &"DangerButton"
+text = "X"
+
+[node name="StatsHud" type="PanelContainer" parent="Safe/Overlay"]
+layout_mode = 0
+offset_left = 333.0
+offset_top = 330.0
+offset_right = 381.0
+offset_bottom = 390.0
+
+[node name="StatsBox" type="VBoxContainer" parent="Safe/Overlay/StatsHud"]
+layout_mode = 2
+alignment = 1
 theme_override_constants/separation = 8
+
+[node name="BottomPanel" type="PanelContainer" parent="Safe/Overlay"]
+layout_mode = 0
+offset_left = 0.0
+offset_top = 610.0
+offset_right = 393.0
+offset_bottom = 799.0
+
+[node name="BottomBox" type="VBoxContainer" parent="Safe/Overlay/BottomPanel"]
+layout_mode = 2
+theme_override_constants/separation = 12

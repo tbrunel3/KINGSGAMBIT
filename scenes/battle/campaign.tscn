@@ -1,8 +1,7 @@
-[gd_scene load_steps=4 format=3]
+[gd_scene load_steps=3 format=3]
 
 [ext_resource type="Script" path="res://scenes/battle/campaign.gd" id="1_campaign"]
-[ext_resource type="Script" path="res://scripts/ui/safe_area.gd" id="2_safe"]
-[ext_resource type="Texture2D" path="res://assets/backgrounds/parchment_map.png" id="3_bg"]
+[ext_resource type="Texture2D" path="res://assets/backgrounds/parchment_map.png" id="2_bg"]
 
 [node name="Campaign" type="Control"]
 layout_mode = 3
@@ -13,69 +12,37 @@ grow_horizontal = 2
 grow_vertical = 2
 script = ExtResource("1_campaign")
 
-[node name="Background" type="ColorRect" parent="."]
+[node name="Planks" type="Control" parent="."]
 layout_mode = 1
 anchors_preset = 15
 anchor_right = 1.0
 anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
-color = Color(0.204, 0.153, 0.11, 1)
 
-[node name="BackgroundImage" type="TextureRect" parent="."]
-layout_mode = 1
-anchors_preset = 15
-anchor_right = 1.0
-anchor_bottom = 1.0
-grow_horizontal = 2
-grow_vertical = 2
-texture = ExtResource("3_bg")
+[node name="ParchmentShadow" type="ColorRect" parent="."]
+layout_mode = 0
+offset_left = 19.0
+offset_top = 40.0
+offset_right = 382.0
+offset_bottom = 820.0
+color = Color(0, 0, 0, 0.45)
+
+[node name="Parchment" type="TextureRect" parent="."]
+layout_mode = 0
+offset_left = 15.0
+offset_top = 36.0
+offset_right = 378.0
+offset_bottom = 816.0
+texture = ExtResource("2_bg")
 expand_mode = 1
 stretch_mode = 6
 
-[node name="BackgroundOverlay" type="ColorRect" parent="."]
+[node name="Overlay" type="Control" parent="."]
 layout_mode = 1
 anchors_preset = 15
 anchor_right = 1.0
 anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
-color = Color(0.055, 0.06, 0.09, 0.7)
-
-[node name="Safe" type="MarginContainer" parent="."]
-layout_mode = 1
-anchors_preset = 15
-anchor_right = 1.0
-anchor_bottom = 1.0
-grow_horizontal = 2
-grow_vertical = 2
-script = ExtResource("2_safe")
-
-[node name="Root" type="VBoxContainer" parent="Safe"]
-layout_mode = 2
-theme_override_constants/separation = 10
-
-[node name="BackButton" type="Button" parent="Safe/Root"]
-layout_mode = 2
-size_flags_horizontal = 0
-text = "< Village"
-
-[node name="TitleLabel" type="Label" parent="Safe/Root"]
-layout_mode = 2
-text = "CAMPAGNE"
-horizontal_alignment = 1
-
-[node name="HintLabel" type="Label" parent="Safe/Root"]
-layout_mode = 2
-text = ""
-horizontal_alignment = 1
-autowrap_mode = 3
-
-[node name="Scroll" type="ScrollContainer" parent="Safe/Root"]
-layout_mode = 2
-size_flags_vertical = 3
-
-[node name="List" type="VBoxContainer" parent="Safe/Root/Scroll"]
-layout_mode = 2
-size_flags_horizontal = 3
-theme_override_constants/separation = 8
+mouse_filter = 2

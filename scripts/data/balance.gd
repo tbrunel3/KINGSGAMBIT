@@ -74,6 +74,11 @@ const GARRISON_MINIMUM := {PION: 3}
 ## reste plus rentable que repasser sur un terrain conquis.
 const REPLAY_REWARD_RATIO := 0.4
 
+## Recompense de consolation en cas de defaite - cf. capture Figma 07
+## (Consolation-Row), qui recompense un peu meme l'echec plutot que de
+## repartir les mains vides.
+const DEFEAT_CONSOLATION_RATIO := 0.1
+
 # ------------------------------- UNITES --------------------------------------
 #
 #  Chaque tableau est indexe par (niveau - 1) et compte MAX_LEVEL entrees.

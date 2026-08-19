@@ -1,7 +1,8 @@
-[gd_scene load_steps=3 format=3]
+[gd_scene load_steps=4 format=3]
 
 [ext_resource type="Script" path="res://scenes/battle/battle_prep.gd" id="1_prep"]
 [ext_resource type="Script" path="res://scripts/ui/safe_area.gd" id="2_safe"]
+[ext_resource type="PackedScene" path="res://scenes/ui/components/card.tscn" id="3_card"]
 
 [node name="BattlePrep" type="Control"]
 layout_mode = 3
@@ -19,7 +20,7 @@ anchor_right = 1.0
 anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
-color = Color(0.078, 0.106, 0.157, 1)
+color = Color(0.058823, 0.066666, 0.101960, 1)
 
 [node name="Safe" type="MarginContainer" parent="."]
 layout_mode = 1
@@ -32,36 +33,65 @@ script = ExtResource("2_safe")
 
 [node name="Root" type="VBoxContainer" parent="Safe"]
 layout_mode = 2
-theme_override_constants/separation = 12
+size_flags_horizontal = 3
+size_flags_vertical = 3
+theme_override_constants/separation = 0
 
-[node name="BackButton" type="Button" parent="Safe/Root"]
+[node name="Header" type="PanelContainer" parent="Safe/Root"]
+layout_mode = 2
+
+[node name="HeaderRow" type="HBoxContainer" parent="Safe/Root/Header"]
+layout_mode = 2
+
+[node name="BackButton" type="PanelContainer" parent="Safe/Root/Header/HeaderRow"]
 layout_mode = 2
 size_flags_horizontal = 0
-text = "< Village"
+size_flags_vertical = 4
 
-[node name="TitleLabel" type="Label" parent="Safe/Root"]
+[node name="TitleLabel" type="Label" parent="Safe/Root/Header/HeaderRow"]
 layout_mode = 2
+size_flags_horizontal = 3
+horizontal_alignment = 1
+vertical_alignment = 1
 text = "BATAILLE"
-horizontal_alignment = 1
 
-[node name="NameLabel" type="Label" parent="Safe/Root"]
+[node name="HeaderSpacer" type="Control" parent="Safe/Root/Header/HeaderRow"]
 layout_mode = 2
-text = ""
-horizontal_alignment = 1
-autowrap_mode = 3
+custom_minimum_size = Vector2(30, 30)
+size_flags_horizontal = 0
 
-[node name="InfoPanel" type="PanelContainer" parent="Safe/Root"]
-layout_mode = 2
-
-[node name="InfoBox" type="VBoxContainer" parent="Safe/Root/InfoPanel"]
-layout_mode = 2
-theme_override_constants/separation = 8
-
-[node name="Filler" type="Control" parent="Safe/Root"]
+[node name="Scroll" type="ScrollContainer" parent="Safe/Root"]
 layout_mode = 2
 size_flags_vertical = 3
+horizontal_scroll_mode = 0
 
-[node name="PrepareButton" type="Button" parent="Safe/Root"]
-custom_minimum_size = Vector2(0, 62)
+[node name="BodyMargin" type="MarginContainer" parent="Safe/Root/Scroll"]
 layout_mode = 2
-text = "PREPARER L'ARMEE"
+size_flags_horizontal = 3
+theme_override_constants/margin_left = 16
+theme_override_constants/margin_right = 16
+theme_override_constants/margin_top = 16
+theme_override_constants/margin_bottom = 16
+
+[node name="Body" type="VBoxContainer" parent="Safe/Root/Scroll/BodyMargin"]
+layout_mode = 2
+theme_override_constants/separation = 12
+
+[node name="EnemiesCard" parent="Safe/Root/Scroll/BodyMargin/Body" instance=ExtResource("3_card")]
+layout_mode = 2
+
+[node name="PlayerCard" parent="Safe/Root/Scroll/BodyMargin/Body" instance=ExtResource("3_card")]
+layout_mode = 2
+
+[node name="InfoCard" parent="Safe/Root/Scroll/BodyMargin/Body" instance=ExtResource("3_card")]
+layout_mode = 2
+
+[node name="BottomMargin" type="MarginContainer" parent="Safe/Root"]
+layout_mode = 2
+theme_override_constants/margin_left = 24
+theme_override_constants/margin_right = 24
+theme_override_constants/margin_top = 12
+theme_override_constants/margin_bottom = 20
+
+[node name="PrepareButton" type="PanelContainer" parent="Safe/Root/BottomMargin"]
+layout_mode = 2

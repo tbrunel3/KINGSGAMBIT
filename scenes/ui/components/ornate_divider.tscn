@@ -1,0 +1,26 @@
+[gd_scene load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scenes/ui/components/icon.gd" id="1_icon"]
+
+[node name="OrnateDivider" type="HBoxContainer"]
+layout_mode = 3
+anchors_preset = 0
+theme_override_constants/separation = 8
+
+[node name="LineLeft" type="HSeparator" parent="."]
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_colors/separator_color = Color(0.23921569, 0.30980393, 0.41960785, 1)
+
+[node name="Ornament" type="Control" parent="."]
+custom_minimum_size = Vector2(12, 12)
+layout_mode = 2
+size_flags_vertical = 4
+script = ExtResource("1_icon")
+icon_name = "diamond"
+color = Color(1, 0.81960785, 0.101960786, 1)
+
+[node name="LineRight" type="HSeparator" parent="."]
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_colors/separator_color = Color(0.23921569, 0.30980393, 0.41960785, 1)

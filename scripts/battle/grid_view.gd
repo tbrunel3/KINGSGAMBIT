@@ -15,8 +15,10 @@ signal cell_clicked(cell: Vector2i)
 
 var engine: BattleEngine = null
 
-## Cases mises en avant (zone de deploiement pendant le placement).
-var highlighted: Array = []
+## Zones de deploiement (pointilles rouge/bleu) : visibles pendant le
+## placement, masquees pendant le combat - cf. captures Figma 04 vs 05, ou le
+## terrain redevient un simple fond illustre une fois la bataille lancee.
+var show_zones: bool = true
 var selected_cell: Vector2i = Vector2i(-1, -1)
 
 ## Apercu des premiers deplacements, affiche pendant le placement.
@@ -127,27 +129,37 @@ func _draw() -> void:
 	_draw_promotion()
 
 
+## Le terrain (assets/backgrounds/battlefield_background.png) est deja dessine
+## derriere cette vue : aucun damier ici, seules les deux zones de deploiement
+## sont tintees, en pointilles, comme sur la capture Figma 04. Pendant le
+## combat (show_zones = false) le plateau redevient un fond illustre nu.
 func _draw_cells() -> void:
 	var grid := engine.grid
-	for y in range(grid.rows):
-		for x in range(grid.cols):
-			var cell := Vector2i(x, y)
-			var rect := Rect2(cell_to_position(cell), Vector2(_cell_size, _cell_size))
+	if show_zones:
+		_draw_zone_rect(0, Balance.DEPLOY_ROWS, grid.cols,
+			Color(0.851, 0.102, 0.051, 0.28), Color(1.0, 0.251, 0.149, 0.7))
+		_draw_zone_rect(grid.player_zone_first_row(), grid.rows, grid.cols,
+			Color(0.051, 0.302, 0.898, 0.28), Color(0.302, 0.6, 1.0, 0.7))
 
-			var color := UiTheme.PANEL if (x + y) % 2 == 0 else UiTheme.PANEL_LIGHT
-			if grid.is_player_zone(cell):
-				color = color.lerp(UiTheme.ACCENT, 0.16)
-			elif grid.is_enemy_zone(cell):
-				color = color.lerp(UiTheme.ENEMY, 0.13)
-			draw_rect(rect, color)
+	if grid.in_bounds(selected_cell):
+		var rect := Rect2(cell_to_position(selected_cell), Vector2(_cell_size, _cell_size))
+		draw_rect(rect, UiTheme.GOLD, false, maxf(2.0, _cell_size * 0.08))
 
-			if highlighted.has(cell):
-				draw_rect(rect, UiTheme.SUCCESS, false, maxf(2.0, _cell_size * 0.06))
-			if cell == selected_cell:
-				draw_rect(rect, UiTheme.GOLD, false, maxf(2.0, _cell_size * 0.08))
 
-	var board := Rect2(_origin, Vector2(grid.cols, grid.rows) * _cell_size)
-	draw_rect(board, UiTheme.BORDER, false, 2.0)
+## Rectangle englobant d'une zone (toute la largeur, quelques rangees),
+## rempli en transparence avec une bordure pointillee - jamais case par case,
+## pour coller au rendu Figma plutot qu'a un damier de jeu de plateau.
+func _draw_zone_rect(first_row: int, last_row: int, cols: int, fill: Color, border: Color) -> void:
+	var top_left := cell_to_position(Vector2i(0, first_row))
+	var bottom_right := cell_to_position(Vector2i(cols, last_row))
+	var rect := Rect2(top_left, bottom_right - top_left)
+	draw_rect(rect, fill)
+
+	var width := maxf(1.5, _cell_size * 0.08)
+	var dash := maxf(4.0, _cell_size * 0.18)
+	var corners := [rect.position, Vector2(rect.end.x, rect.position.y), rect.end, Vector2(rect.position.x, rect.end.y)]
+	for i in range(4):
+		draw_dashed_line(corners[i], corners[(i + 1) % 4], border, width, dash, true)
 
 
 ## Fleches d'apercu : ou chaque piece ira a sa premiere activation.

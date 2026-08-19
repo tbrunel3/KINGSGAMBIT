@@ -19,6 +19,7 @@ const SHOTS := [
 	{"scene": "res://scenes/battle/campaign.tscn", "file": "2_campagne.png", "battle": 1},
 	{"scene": "res://scenes/battle/battle_prep.tscn", "file": "3_preparation.png", "battle": 3},
 	{"scene": "res://scenes/battle/battle.tscn", "file": "4_placement.png", "battle": 3},
+	{"scene": "res://scenes/ui/ui_kit_showcase.tscn", "file": "0_ui_kit.png", "battle": 1},
 ]
 
 

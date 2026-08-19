@@ -1,0 +1,29 @@
+[gd_scene load_steps=3 format=3]
+
+[ext_resource type="Script" path="res://scenes/ui/components/pill.gd" id="1_pill"]
+[ext_resource type="Script" path="res://scenes/ui/components/icon.gd" id="2_icon"]
+
+[node name="Pill" type="PanelContainer"]
+layout_mode = 3
+anchors_preset = 0
+size_flags_horizontal = 0
+size_flags_vertical = 0
+script = ExtResource("1_pill")
+
+[node name="Row" type="HBoxContainer" parent="."]
+layout_mode = 2
+theme_override_constants/separation = 5
+
+[node name="Icon" type="Control" parent="Row"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(12, 12)
+layout_mode = 2
+size_flags_vertical = 4
+script = ExtResource("2_icon")
+icon_name = "star"
+
+[node name="Text" type="Label" parent="Row"]
+unique_name_in_owner = true
+layout_mode = 2
+theme_override_font_sizes/font_size = 12
+text = "Texte"

@@ -49,9 +49,9 @@ func _test_village() -> void:
 	add_child(village)
 	await _frames(3)
 
-	# Ouvrir la caserne des pions
-	var building_button: Button = village._building_buttons[Balance.PION]
-	building_button.pressed.emit()
+	# Ouvrir la caserne des pions (label cliquable, pas un Button - cf. village.gd)
+	_check(village._building_buttons.has(Balance.PION), "le label de la caserne existe")
+	village._on_building_pressed(Balance.PION)
 	await _frames(3)
 	_check(is_instance_valid(village._popup), "le popup de batiment s'ouvre")
 	if not is_instance_valid(village._popup):
@@ -73,7 +73,7 @@ func _test_village() -> void:
 	# Ameliorer : l'or doit suffire
 	Game.add_gold(5000)
 	await _frames(2)
-	var upgrade := _find_button(village._popup, "Ameliorer")
+	var upgrade := _find_button(village._popup, "AMELIORER")
 	_check(upgrade != null, "le bouton Ameliorer est present")
 	if upgrade != null:
 		upgrade.pressed.emit()
@@ -98,10 +98,11 @@ func _test_village() -> void:
 	_check(Game.is_at_capacity(Balance.PION), "la caserne atteint sa capacite (%d)" % capacity)
 	_check(not Game.recruit(Balance.PION), "le recrutement est refuse caserne pleine")
 
-	# Fermeture
-	var close := _find_button(village._popup, "Fermer")
-	if close != null:
-		close.pressed.emit()
+	# Fermeture (croix de la modale, cf. scenes/ui/components/modal.gd)
+	var modal: Modal = village._popup.get_node("Modal")
+	_check(modal != null, "la modale du popup est presente")
+	if modal != null:
+		modal.close()
 		await _frames(3)
 		_check(not is_instance_valid(village._popup), "le popup se ferme")
 

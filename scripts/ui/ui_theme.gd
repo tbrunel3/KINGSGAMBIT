@@ -16,8 +16,8 @@ const GOLD := Color("ffd11a")          ## accent dore vif (bouton primaire)
 const GOLD_TEXT := Color("331f00")     ## texte fonce lisible sur fond dore
 const GOLD_BUTTON := Color("c59b27")   ## bouton or secondaire (ameliorer, preparer)
 const ACCENT := Color("268cd9")        ## accent joueur (bouton bleu, ex. AUTO)
-const DANGER := Color("c65f5f")
-const SUCCESS := Color("339940")
+const DANGER := Color("ff3b30")   ## rouge vif (Enemies-Card, modale Defaite) - Phase 2
+const SUCCESS := Color("4cd964")  ## vert vif (Progression, Portee) - Phase 2
 const ENEMY := Color("b5514f")
 
 const RADIUS := 10
@@ -103,6 +103,39 @@ static func make_button(text: String, color: Color = PANEL_LIGHT, font_size: int
 	button.add_theme_font_size_override("font_size", font_size)
 	style_button(button, color)
 	return button
+
+
+## Ligne "libelle a gauche / valeur a droite" pour les cartes de stats (popups
+## de batiment, modales de resultat). Autowrap desactive : ces lignes tiennent
+## toujours sur une seule ligne, et le wrap casse le layout dans un HBox etroit.
+static func stat_row(label_text: String, value: Control) -> HBoxContainer:
+	var row := HBoxContainer.new()
+	var label := make_label(label_text, 14, TEXT_DIM)
+	label.autowrap_mode = TextServer.AUTOWRAP_OFF
+	label.size_flags_horizontal = Control.SIZE_SHRINK_BEGIN
+	row.add_child(label)
+	var spacer := Control.new()
+	spacer.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	row.add_child(spacer)
+	if value is Label:
+		(value as Label).autowrap_mode = TextServer.AUTOWRAP_OFF
+	value.size_flags_horizontal = Control.SIZE_SHRINK_END
+	row.add_child(value)
+	return row
+
+
+## Rend un sous-arbre transparent a la souris.
+##
+## Un Control a mouse_filter STOP (le defaut) par-dessus un parent cliquable
+## intercepte le clic avant qu'il n'atteigne le gui_input du parent : chaque
+## composant "panneau + gui_input" (chip de selection, pastille de campagne,
+## label de batiment...) doit donc neutraliser tout son contenu decoratif, ou
+## le joueur ne peut cliquer que sur les quelques pixels de marge non couverts.
+static func ignore_mouse_recursive(node: Node) -> void:
+	if node is Control:
+		(node as Control).mouse_filter = Control.MOUSE_FILTER_IGNORE
+	for child in node.get_children():
+		ignore_mouse_recursive(child)
 
 
 ## Formate une duree en secondes pour un compte a rebours (1h 05m / 3m 20s).
