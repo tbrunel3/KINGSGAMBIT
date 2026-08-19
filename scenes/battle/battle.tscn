@@ -1,8 +1,9 @@
-[gd_scene load_steps=4 format=3]
+[gd_scene load_steps=5 format=3]
 
 [ext_resource type="Script" path="res://scenes/battle/battle.gd" id="1_battle"]
 [ext_resource type="Script" path="res://scripts/ui/safe_area.gd" id="2_safe"]
 [ext_resource type="Script" path="res://scripts/battle/grid_view.gd" id="3_grid"]
+[ext_resource type="Texture2D" path="res://assets/backgrounds/battlefield_background.png" id="4_bg"]
 
 [node name="Battle" type="Control"]
 layout_mode = 3
@@ -21,6 +22,26 @@ anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
 color = Color(0.078, 0.106, 0.157, 1)
+
+[node name="BackgroundImage" type="TextureRect" parent="."]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+texture = ExtResource("4_bg")
+expand_mode = 1
+stretch_mode = 6
+
+[node name="BackgroundOverlay" type="ColorRect" parent="."]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+color = Color(0.03, 0.035, 0.05, 0.55)
 
 [node name="Safe" type="MarginContainer" parent="."]
 layout_mode = 1

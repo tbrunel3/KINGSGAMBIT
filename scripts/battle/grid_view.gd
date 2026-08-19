@@ -2,13 +2,13 @@ extends Control
 ##
 ## VUE DE LA GRILLE - tout l'affichage du champ de bataille.
 ##
-## Rien ici ne decide du jeu : la vue lit le moteur et le dessine. Les formes
-## sont des placeholders (cercles + lettre) volontairement basiques : en Phase 2,
-## _draw_unit sera remplace par des sprites sans qu'une seule regle de combat
-## ait a bouger.
+## Rien ici ne decide du jeu : la vue lit le moteur et le dessine. Les pieces
+## sont des sprites (assets/pieces/{bleu,rouge}/*.png) ; si un sprite manque,
+## on replie sur un cercle + lettre pour ne jamais planter.
 ##
 ## La taille des cases est calculee a partir de la place disponible, donc
-## n'importe quelle grille definie dans Balance.CAMPAIGN s'affiche correctement.
+## n'importe quelle grille definie dans Balance.CAMPAIGN s'affiche correctement
+## - aucune des tailles fixes du mockup Figma n'est codee en dur ici.
 ##
 
 signal cell_clicked(cell: Vector2i)
@@ -43,9 +43,22 @@ var _promotion_type: String = ""
 var _promotion_t: float = 0.0
 
 
+## "bleu_pion" -> Texture2D. Charge une seule fois, jamais dans _draw().
+var _piece_textures: Dictionary = {}
+
+
 func _ready() -> void:
 	resized.connect(queue_redraw)
 	set_process(true)
+	_load_piece_textures()
+
+
+func _load_piece_textures() -> void:
+	for team_folder in ["bleu", "rouge"]:
+		for type in [Balance.PION, Balance.CAVALIER, Balance.FOU, Balance.TOUR, Balance.DAME]:
+			var path := "res://assets/pieces/%s/%s.png" % [team_folder, type]
+			if ResourceLoader.exists(path):
+				_piece_textures["%s_%s" % [team_folder, type]] = load(path)
 
 
 func setup(battle_engine: BattleEngine) -> void:
@@ -179,25 +192,30 @@ func _draw_unit(unit: BattleUnit) -> void:
 		center = cell_center(_anim_from).lerp(cell_center(_anim_to), _anim_t)
 
 	var radius := _cell_size * 0.36
-	var base := Balance.unit_color(unit.type)
-	if unit.team == BattleUnit.TEAM_ENEMY:
-		base = base.lerp(UiTheme.ENEMY, 0.55).darkened(0.1)
+	var team_folder := "bleu" if unit.team == BattleUnit.TEAM_PLAYER else "rouge"
+	var texture: Texture2D = _piece_textures.get("%s_%s" % [team_folder, unit.type])
 
-	draw_circle(center, radius, base)
-	draw_arc(center, radius, 0.0, TAU, 24,
-		UiTheme.TEXT if unit.team == BattleUnit.TEAM_PLAYER else UiTheme.ENEMY.lightened(0.3),
-		maxf(1.5, _cell_size * 0.05))
+	if texture != null:
+		var size := radius * 2.0
+		draw_texture_rect(texture, Rect2(center - Vector2(size, size) * 0.5, Vector2(size, size)), false)
+	else:
+		# Repli si un sprite manque : cercle + lettre, comme en Phase 1.
+		var base := Balance.unit_color(unit.type)
+		if unit.team == BattleUnit.TEAM_ENEMY:
+			base = base.lerp(UiTheme.ENEMY, 0.55).darkened(0.1)
+		draw_circle(center, radius, base)
+		draw_arc(center, radius, 0.0, TAU, 24,
+			UiTheme.TEXT if unit.team == BattleUnit.TEAM_PLAYER else UiTheme.ENEMY.lightened(0.3),
+			maxf(1.5, _cell_size * 0.05))
+		var font_size := maxi(8, int(_cell_size * 0.42))
+		draw_string(ThemeDB.fallback_font, center + Vector2(-radius, font_size * 0.36),
+			Balance.unit_letter(unit.type),
+			HORIZONTAL_ALIGNMENT_CENTER, radius * 2.0, font_size, UiTheme.TEXT)
 
 	# Une piece promue (loterie) porte un lisere dore, pour la distinguer
 	# d'un coup d'oeil, quel que soit le resultat du tirage.
 	if unit.promoted:
 		draw_arc(center, radius * 1.18, 0.0, TAU, 24, UiTheme.GOLD, maxf(1.5, _cell_size * 0.04))
-
-	var font := ThemeDB.fallback_font
-	var font_size := maxi(8, int(_cell_size * 0.42))
-	draw_string(font, center + Vector2(-radius, font_size * 0.36),
-		Balance.unit_letter(unit.type),
-		HORIZONTAL_ALIGNMENT_CENTER, radius * 2.0, font_size, UiTheme.TEXT)
 
 
 ## Marque brievement la case ou une piece vient d'etre capturee.

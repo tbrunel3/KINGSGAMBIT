@@ -1,7 +1,8 @@
-[gd_scene load_steps=3 format=3]
+[gd_scene load_steps=4 format=3]
 
 [ext_resource type="Script" path="res://scenes/village/village.gd" id="1_village"]
 [ext_resource type="Script" path="res://scripts/ui/safe_area.gd" id="2_safe"]
+[ext_resource type="Texture2D" path="res://assets/backgrounds/village_background.png" id="3_bg"]
 
 [node name="Village" type="Control"]
 layout_mode = 3
@@ -20,6 +21,26 @@ anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
 color = Color(0.078, 0.106, 0.157, 1)
+
+[node name="BackgroundImage" type="TextureRect" parent="."]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+texture = ExtResource("3_bg")
+expand_mode = 1
+stretch_mode = 6
+
+[node name="BackgroundOverlay" type="ColorRect" parent="."]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+color = Color(0.03, 0.035, 0.05, 0.5)
 
 [node name="Safe" type="MarginContainer" parent="."]
 layout_mode = 1

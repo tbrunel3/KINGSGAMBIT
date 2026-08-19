@@ -53,7 +53,7 @@ func _style() -> void:
 	UiTheme.style_panel($Safe/Root/TopBar)
 	UiTheme.style_button(_dev_button, UiTheme.PANEL_LIGHT)
 	UiTheme.style_button(_castle_button, UiTheme.GOLD.darkened(0.55))
-	UiTheme.style_button(_battle_button, UiTheme.ACCENT)
+	UiTheme.style_button(_battle_button, UiTheme.GOLD)
 
 	_gold_label.add_theme_color_override("font_color", UiTheme.GOLD)
 	_gold_label.add_theme_font_size_override("font_size", 20)

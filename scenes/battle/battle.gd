@@ -126,7 +126,7 @@ func _build_placement_ui() -> void:
 	actions.add_theme_constant_override("separation", 6)
 	_bottom.add_child(actions)
 
-	var auto := UiTheme.make_button("Auto", UiTheme.PANEL_LIGHT, 14)
+	var auto := UiTheme.make_button("Auto", UiTheme.ACCENT.darkened(0.15), 14)
 	auto.pressed.connect(_on_auto_place)
 	actions.add_child(auto)
 
@@ -134,7 +134,7 @@ func _build_placement_ui() -> void:
 	reset.pressed.connect(_on_reset_placement)
 	actions.add_child(reset)
 
-	_fight_button = UiTheme.make_button("COMBATTRE", UiTheme.SUCCESS.darkened(0.3), 17)
+	_fight_button = UiTheme.make_button("COMBATTRE", UiTheme.GOLD, 17)
 	_fight_button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	_fight_button.custom_minimum_size = Vector2(0, 52)
 	_fight_button.pressed.connect(_start_combat)

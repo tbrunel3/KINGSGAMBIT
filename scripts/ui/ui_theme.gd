@@ -1,26 +1,44 @@
 class_name UiTheme
 ##
-## UI THEME - habillage temporaire, entierement centralise ici.
+## UI THEME - habillage entierement centralise ici.
 ##
-## Phase 1 : formes simples, palette sobre, texte lisible.
-## Phase 2 : ce fichier est le seul a remplacer pour brancher la direction
-## artistique definitive. Aucune couleur ne doit etre ecrite ailleurs.
+## Phase 2 : palette et polices tirees de CLAUDE.md (handoff Figma). Aucune
+## couleur ne doit etre ecrite ailleurs que dans ce fichier.
 ##
 
-const BG := Color("141b28")
-const PANEL := Color("1e293b")
-const PANEL_LIGHT := Color("2c3b52")
+const BG := Color("0f111a")
+const PANEL := Color("161926")
+const PANEL_LIGHT := Color("262c3f")
 const BORDER := Color("3d4f6b")
 const TEXT := Color("e6ecf5")
 const TEXT_DIM := Color("8fa0b8")
-const GOLD := Color("e8c15a")
-const ACCENT := Color("4f86c6")
+const GOLD := Color("ffd11a")          ## accent dore vif (bouton primaire)
+const GOLD_TEXT := Color("331f00")     ## texte fonce lisible sur fond dore
+const GOLD_BUTTON := Color("c59b27")   ## bouton or secondaire (ameliorer, preparer)
+const ACCENT := Color("268cd9")        ## accent joueur (bouton bleu, ex. AUTO)
 const DANGER := Color("c65f5f")
-const SUCCESS := Color("5fb37a")
+const SUCCESS := Color("339940")
 const ENEMY := Color("b5514f")
 
 const RADIUS := 10
 const PAD := 12
+
+## Police Inter, chargee depuis assets/fonts si presente ; sinon la police de
+## secours de Godot (evite de planter si les fichiers n'ont pas encore ete
+## ajoutes au projet).
+static var _font: FontFile = null
+static var _font_bold: FontFile = null
+
+static func font() -> Font:
+	if _font == null and ResourceLoader.exists("res://assets/fonts/Inter-Regular.ttf"):
+		_font = load("res://assets/fonts/Inter-Regular.ttf")
+	return _font if _font != null else ThemeDB.fallback_font
+
+
+static func font_bold() -> Font:
+	if _font_bold == null and ResourceLoader.exists("res://assets/fonts/Inter-Bold.ttf"):
+		_font_bold = load("res://assets/fonts/Inter-Bold.ttf")
+	return _font_bold if _font_bold != null else ThemeDB.fallback_font
 
 
 static func panel_box(color: Color = PANEL, border: Color = BORDER) -> StyleBoxFlat:
@@ -42,15 +60,20 @@ static func button_box(color: Color) -> StyleBoxFlat:
 
 
 ## Applique le style de bouton par defaut. `color` = teinte au repos.
+##
+## Sur un fond dore vif (bouton primaire), le texte clair standard devient
+## illisible : on bascule automatiquement sur GOLD_TEXT, comme specifie pour
+## le bouton BATAILLE.
 static func style_button(button: Button, color: Color = PANEL_LIGHT) -> void:
 	button.add_theme_stylebox_override("normal", button_box(color))
 	button.add_theme_stylebox_override("hover", button_box(color.lightened(0.12)))
 	button.add_theme_stylebox_override("pressed", button_box(color.darkened(0.18)))
 	button.add_theme_stylebox_override("focus", button_box(color))
 	button.add_theme_stylebox_override("disabled", button_box(color.darkened(0.45)))
-	button.add_theme_color_override("font_color", TEXT)
-	button.add_theme_color_override("font_hover_color", TEXT)
-	button.add_theme_color_override("font_pressed_color", TEXT)
+	var font_color := GOLD_TEXT if color == GOLD else TEXT
+	button.add_theme_color_override("font_color", font_color)
+	button.add_theme_color_override("font_hover_color", font_color)
+	button.add_theme_color_override("font_pressed_color", font_color)
 	button.add_theme_color_override("font_disabled_color", TEXT_DIM)
 
 
