@@ -7,6 +7,8 @@ extends Node
 ## un seul endroit a lire quand on se demande d'ou vient une valeur.
 ##
 
+const SPLASH_SCENE := "res://scenes/intro/splash_screen.tscn"
+const INTRO_SCENE := "res://scenes/intro/king_intro_dialogue.tscn"
 const VILLAGE_SCENE := "res://scenes/village/village.tscn"
 const CAMPAIGN_SCENE := "res://scenes/battle/campaign.tscn"
 const PREP_SCENE := "res://scenes/battle/battle_prep.tscn"
@@ -14,6 +16,10 @@ const BATTLE_SCENE := "res://scenes/battle/battle.tscn"
 
 ## Bataille en cours de preparation ou de combat.
 var current_battle_id: int = 1
+
+
+func goto_intro() -> void:
+	_change(INTRO_SCENE)
 
 
 func goto_village() -> void:

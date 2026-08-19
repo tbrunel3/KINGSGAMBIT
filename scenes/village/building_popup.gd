@@ -265,8 +265,8 @@ func _add_piece_card(body: VBoxContainer) -> void:
 
 	if _type == Balance.PION:
 		texts.add_child(UiTheme.make_label(
-			"Un pion qui atteint le fond adverse devient au hasard Cavalier, Fou ou " +
-			"Dame (rare), le temps du combat.", 11, UiTheme.GOLD.darkened(0.2)))
+			"Un pion qui atteint le fond adverse devient Dame, avec sa propre " +
+			"mobilite, le temps du combat.", 11, UiTheme.GOLD.darkened(0.2)))
 
 	row.add_child(texts)
 	card_body.add_child(row)

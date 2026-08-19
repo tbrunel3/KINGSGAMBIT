@@ -56,8 +56,9 @@ func _apply_type(new_type: String) -> void:
 	value = Balance.unit_value(new_type)
 
 
-## Promotion : un pion arrive au fond adverse devient une piece aleatoire du
-## meme niveau (voir Balance.roll_promotion), jamais un pion ni une tour.
+## Promotion : un pion arrive au fond adverse devient Dame, en gardant son
+## niveau - une Dame issue d'un pion de bas niveau reste donc moins mobile
+## qu'une Dame issue d'un pion de haut niveau.
 func promote_to(new_type: String) -> void:
 	_apply_type(new_type)
 	promoted = true

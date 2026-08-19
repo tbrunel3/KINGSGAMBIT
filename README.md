@@ -77,12 +77,11 @@ incapables de riposter à une pièce postée en diagonale.
 Une Tour ou un Fou s'arrête devant une pièce alliée, et s'arrête **en prenant**
 la première pièce ennemie rencontrée. Un Cavalier saute par-dessus tout.
 
-**Promotion** : un pion qui atteint le fond du plateau adverse déclenche une
-petite loterie et devient Cavalier, Fou ou (rarement) Dame, **le temps du
-combat seulement**. De retour au village, il redevient le pion qu'il était.
-La chance d'obtenir la Dame (le reste se partage entre Cavalier et Fou) est
-dans `Balance.PROMOTION_DAME_CHANCE` : elle reste faible pour un pion de bas
-niveau.
+**Promotion** : un pion qui atteint le fond du plateau adverse devient
+**Dame**, comme aux échecs, **le temps du combat seulement**. Elle garde le
+niveau du pion qui a promu — une Dame issue d'un pion Nv.1 se déplace donc
+bien moins loin que celle d'un pion Nv.10. De retour au village, elle
+redevient le pion qu'elle était.
 
 **Les pertes sont définitives.** Une pièce capturée quitte l'armée et devra être
 recrutée à nouveau. C'est ce qui donne son poids au placement — et la raison
@@ -116,7 +115,6 @@ intentions d'ouverture, pas la séquence exacte du combat.
 | `COMBAT` | durées d'animation, seuil d'enlisement, garde-fou d'activations |
 | `GARRISON_MINIMUM`, `REPLAY_REWARD_RATIO` | filet de sécurité et rentabilité du farm |
 | `UNLOCK_CASTLE_LEVEL` | niveau de château auquel Écuries / Cloître / Donjon apparaissent gratuitement |
-| `PROMOTION_DAME_CHANCE` | chance (%) d'obtenir la Dame a la promotion, par niveau du pion |
 
 Les tableaux sont indexés par niveau : ajouter un niveau = ajouter une valeur à
 chaque tableau de la pièce, et augmenter `MAX_LEVEL`. Le banc de test vérifie que
@@ -256,8 +254,8 @@ le premier combat du jeu était perdu.
 - Placement au clic, retrait, Auto, Réinitialiser, limite liée au château
 - **Aperçu des premiers déplacements** pendant le placement
 - Combat automatique tour par tour, capture par déplacement, sans points de vie
-- 5 types de déplacement, mobilité liée au niveau, **loterie de promotion**
-  (pion → Cavalier, Fou ou Dame rare)
+- 5 types de déplacement, mobilité liée au niveau, **promotion en Dame**
+  (pion → Dame du même niveau, le temps du combat)
 - **Pertes définitives** avec garnison minimale de sécurité
 - IA modulaire : prise la plus rentable, refus des mauvais échanges, avancée
   sur case sûre quand c'est possible

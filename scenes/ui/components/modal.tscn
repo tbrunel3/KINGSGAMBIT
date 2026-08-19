@@ -50,6 +50,32 @@ theme_type_variation = &"ModalPanel"
 
 [node name="Content" type="Control" parent="Center/Panel"]
 layout_mode = 2
+clip_contents = true
+
+[node name="BackgroundImage" type="TextureRect" parent="Center/Panel/Content"]
+unique_name_in_owner = true
+visible = false
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+expand_mode = 1
+stretch_mode = 6
+
+[node name="BackgroundOverlay" type="ColorRect" parent="Center/Panel/Content"]
+unique_name_in_owner = true
+visible = false
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+color = Color(0, 0, 0, 0.35)
 
 [node name="Margin" type="MarginContainer" parent="Center/Panel/Content"]
 layout_mode = 1

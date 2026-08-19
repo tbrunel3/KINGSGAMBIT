@@ -40,6 +40,7 @@ func _default_state() -> Dictionary:
 		"unlocked_battle": 1,
 		"battles_won": [],
 		"upgrades": {},  # type -> timestamp Unix de fin
+		"seen_intro": false,
 	}
 
 
@@ -335,6 +336,22 @@ func win_battle(id: int, reward: int) -> void:
 	save()
 	gold_changed.emit(gold)
 	progress_changed.emit()
+
+
+# ------------------------------- INTRODUCTION --------------------------------
+#
+#  Le dialogue du Roi (king_intro_dialogue.tscn) ne doit se montrer qu'une
+#  fois : au premier lancement, pas a chaque retour au village.
+
+func has_seen_intro() -> bool:
+	return bool(_state.get("seen_intro", false))
+
+
+func mark_intro_seen() -> void:
+	if has_seen_intro():
+		return
+	_state["seen_intro"] = true
+	save()
 
 
 # ------------------------------- OUTILS DE TEST ------------------------------

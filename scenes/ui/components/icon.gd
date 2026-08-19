@@ -16,7 +16,7 @@ extends Control
 ##   icon.color = UiTheme.TEXT_DIM
 ##
 
-@export_enum("lock", "wrench", "star", "check", "close", "diamond", "sword", "house", "crown", "coin", "dot", "pause", "skip", "arrow_left") var icon_name: String = "star"
+@export_enum("lock", "wrench", "star", "check", "close", "diamond", "sword", "house", "crown", "crown_broken", "compass", "coin", "dot", "pause", "skip", "arrow_left") var icon_name: String = "star"
 @export var color: Color = Color.WHITE
 @export var line_width: float = 1.8
 
@@ -57,6 +57,10 @@ func _draw() -> void:
 			_draw_house(c, s, lw)
 		"crown":
 			_draw_crown(c, s, lw)
+		"crown_broken":
+			_draw_crown_broken(c, s, lw)
+		"compass":
+			_draw_compass(c, s, lw)
 		"coin":
 			_draw_coin(c, s, lw)
 		"dot":
@@ -182,6 +186,50 @@ func _draw_crown(c: Vector2, s: float, lw: float) -> void:
 	])
 	draw_polyline(points, color, lw, true)
 	draw_line(c + Vector2(-0.36 * s, 0.12 * s), c + Vector2(0.36 * s, 0.12 * s), color, lw, true)
+
+
+## Meme diademe que _draw_crown, mais la pointe centrale est cassee et tombee -
+## cf. le blason de la modale Defaite dans la maquette Figma.
+func _draw_crown_broken(c: Vector2, s: float, lw: float) -> void:
+	var left := PackedVector2Array([
+		c + Vector2(-0.32 * s, 0.12 * s),
+		c + Vector2(-0.32 * s, -0.28 * s),
+		c + Vector2(-0.11 * s, 0.0),
+		c + Vector2(-0.02 * s, -0.2 * s),
+	])
+	draw_polyline(left, color, lw, true)
+
+	var right := PackedVector2Array([
+		c + Vector2(0.32 * s, 0.12 * s),
+		c + Vector2(0.32 * s, -0.28 * s),
+		c + Vector2(0.11 * s, 0.0),
+		c + Vector2(0.04 * s, -0.12 * s),
+	])
+	draw_polyline(right, color, lw, true)
+
+	draw_line(c + Vector2(-0.36 * s, 0.12 * s), c + Vector2(0.36 * s, 0.12 * s), color, lw, true)
+
+	# La pointe centrale, detachee et tombee sous le diademe.
+	var broken_tip := PackedVector2Array([
+		c + Vector2(0.07 * s, 0.26 * s),
+		c + Vector2(-0.03 * s, 0.14 * s),
+		c + Vector2(0.15 * s, 0.18 * s),
+	])
+	draw_polyline(broken_tip, color, lw * 0.85, true)
+
+
+## Rose des vents simplifiee : cercle + aiguille losange - cf. Compass-Icon
+## du bouton "Carte de campagne" dans les captures Figma.
+func _draw_compass(c: Vector2, s: float, lw: float) -> void:
+	draw_arc(c, s * 0.4, 0.0, TAU, 24, color, lw, true)
+	var needle := PackedVector2Array([
+		c + Vector2(0, -s * 0.32),
+		c + Vector2(s * 0.1, 0),
+		c + Vector2(0, s * 0.32),
+		c + Vector2(-s * 0.1, 0),
+	])
+	draw_colored_polygon(needle, color)
+	draw_circle(c, s * 0.05, Color(0, 0, 0, 0.35))
 
 
 ## Deux pieces empilees - cf. les montants "+X Or" dans les captures Figma.

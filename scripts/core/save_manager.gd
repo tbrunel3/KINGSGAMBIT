@@ -48,6 +48,23 @@ func save_data(data: Dictionary) -> void:
 		return
 	file.store_string(JSON.stringify(data, "\t"))
 	file.close()
+	_sync_web_fs()
+
+
+## Sur le Web, user:// vit dans IndexedDB (IDBFS) mais Godot n'y copie les
+## ecritures MEMFS qu'en differe : sans ce sync explicite, une sauvegarde
+## suivie de peu par un rechargement de page (ferme l'onglet, revient plus
+## tard) peut tout simplement disparaitre. Sans effet sur les autres plateformes.
+func _sync_web_fs() -> void:
+	if OS.get_name() != "Web":
+		return
+	JavaScriptBridge.eval("""
+		if (typeof FS !== 'undefined' && FS.syncfs) {
+			FS.syncfs(false, function(err) {
+				if (err) { console.error('IDBFS sync failed:', err); }
+			});
+		}
+	""", true)
 
 
 func has_save() -> bool:
@@ -58,6 +75,7 @@ func has_save() -> bool:
 func erase() -> void:
 	if FileAccess.file_exists(SAVE_PATH):
 		DirAccess.remove_absolute(ProjectSettings.globalize_path(SAVE_PATH))
+		_sync_web_fs()
 
 
 ## Chemin reel du fichier, affiche dans l'ecran de debug.

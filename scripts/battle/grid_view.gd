@@ -37,9 +37,9 @@ var _anim_t: float = 0.0
 var _capture_cell: Vector2i = Vector2i(-1, -1)
 var _capture_t: float = 0.0
 
-# Badge de loterie de promotion : petit et transitoire, plusieurs peuvent se
-# succeder rapidement en fin de partie sans jamais se superposer (une seule
-# activation a la fois).
+# Badge de promotion : petit et transitoire, plusieurs peuvent se succeder
+# rapidement en fin de partie sans jamais se superposer (une seule activation
+# a la fois).
 var _promotion_cell: Vector2i = Vector2i(-1, -1)
 var _promotion_type: String = ""
 var _promotion_t: float = 0.0
@@ -130,11 +130,13 @@ func _draw() -> void:
 
 
 ## Le terrain (assets/backgrounds/battlefield_background.png) est deja dessine
-## derriere cette vue : aucun damier ici, seules les deux zones de deploiement
-## sont tintees, en pointilles, comme sur la capture Figma 04. Pendant le
-## combat (show_zones = false) le plateau redevient un fond illustre nu.
+## derriere cette vue. Un quadrillage tres fin (cf. Battle-Grid, cellules
+## Figma 04/05 : bordure 0.75px blanc 3% opacite) reste visible en
+## permanence sur les deux ecrans ; seules les zones de deploiement teintees,
+## en pointilles, disparaissent une fois le combat lance (show_zones = false).
 func _draw_cells() -> void:
 	var grid := engine.grid
+	_draw_grid_lines(grid.cols, grid.rows)
 	if show_zones:
 		_draw_zone_rect(0, Balance.DEPLOY_ROWS, grid.cols,
 			Color(0.851, 0.102, 0.051, 0.28), Color(1.0, 0.251, 0.149, 0.7))
@@ -144,6 +146,22 @@ func _draw_cells() -> void:
 	if grid.in_bounds(selected_cell):
 		var rect := Rect2(cell_to_position(selected_cell), Vector2(_cell_size, _cell_size))
 		draw_rect(rect, UiTheme.GOLD, false, maxf(2.0, _cell_size * 0.08))
+
+
+## Quadrillage plein plateau : chaque case a sa propre bordure fine, comme
+## dans le fichier Figma (une bordure par cellule plutot qu'un trace unique) -
+## les aretes partagees ressortent donc legerement plus marquees, exactement
+## comme sur la maquette. La maquette declare une bordure blanche a 3%
+## d'opacite, mais son rendu reel (export Figma) est nettement plus visible
+## qu'un 3% brut ne le laisse penser sur le fond du terrain - on part donc du
+## rendu observe plutot que de la valeur CSS litterale.
+func _draw_grid_lines(cols: int, rows: int) -> void:
+	var color := Color(1, 1, 1, 0.3)
+	var width := maxf(1.25, _cell_size * 0.03)
+	for row in range(rows):
+		for col in range(cols):
+			var pos := cell_to_position(Vector2i(col, row))
+			draw_rect(Rect2(pos, Vector2(_cell_size, _cell_size)), color, false, width)
 
 
 ## Rectangle englobant d'une zone (toute la largeur, quelques rangees),
@@ -203,13 +221,23 @@ func _draw_unit(unit: BattleUnit) -> void:
 	if unit.id == _anim_unit:
 		center = cell_center(_anim_from).lerp(cell_center(_anim_to), _anim_t)
 
-	var radius := _cell_size * 0.36
+	# Hauteur relative a la case (18/24 sur une case de 31, cf. maquette
+	# Figma 04/05) : le pion reste nettement plus petit que les autres
+	# pieces, qui partagent toutes la meme hauteur.
+	var height_fraction := (18.0 / 31.0) if unit.type == Balance.PION else (24.0 / 31.0)
+	var height := _cell_size * height_fraction
+	var radius := height * 0.5
 	var team_folder := "bleu" if unit.team == BattleUnit.TEAM_PLAYER else "rouge"
 	var texture: Texture2D = _piece_textures.get("%s_%s" % [team_folder, unit.type])
 
 	if texture != null:
-		var size := radius * 2.0
-		draw_texture_rect(texture, Rect2(center - Vector2(size, size) * 0.5, Vector2(size, size)), false)
+		# La largeur suit le ratio naturel du sprite plutot qu'un carre, pour
+		# ne pas deformer les silhouettes (un pion est nettement plus etroit
+		# qu'une tour).
+		var tex_size := texture.get_size()
+		var width := height * (tex_size.x / tex_size.y) if tex_size.y > 0 else height
+		var draw_size := Vector2(width, height)
+		draw_texture_rect(texture, Rect2(center - draw_size * 0.5, draw_size), false)
 	else:
 		# Repli si un sprite manque : cercle + lettre, comme en Phase 1.
 		var base := Balance.unit_color(unit.type)
@@ -224,8 +252,9 @@ func _draw_unit(unit: BattleUnit) -> void:
 			Balance.unit_letter(unit.type),
 			HORIZONTAL_ALIGNMENT_CENTER, radius * 2.0, font_size, UiTheme.TEXT)
 
-	# Une piece promue (loterie) porte un lisere dore, pour la distinguer
-	# d'un coup d'oeil, quel que soit le resultat du tirage.
+	# Une piece promue porte un lisere dore, pour la distinguer d'un coup
+	# d'oeil - elle garde le type "Dame" mais reste rattachee a son pion
+	# d'origine (voir BattleUnit.origin_type).
 	if unit.promoted:
 		draw_arc(center, radius * 1.18, 0.0, TAU, 24, UiTheme.GOLD, maxf(1.5, _cell_size * 0.04))
 
@@ -244,8 +273,8 @@ func _draw_capture() -> void:
 
 
 ## Petit badge flottant qui monte et s'estompe au-dessus de la case,
-## affichant le resultat de la loterie de promotion. Volontairement compact :
-## en fin de partie plusieurs pions peuvent promouvoir coup sur coup.
+## affichant la promotion en Dame. Volontairement compact : en fin de partie
+## plusieurs pions peuvent promouvoir coup sur coup.
 func _draw_promotion() -> void:
 	if _promotion_cell.x < 0:
 		return

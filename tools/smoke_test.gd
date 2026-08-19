@@ -82,17 +82,6 @@ func _check_balance() -> void:
 		if required < 2 or required > Balance.max_level(Balance.CASTLE):
 			_fail("%s : seuil de deblocage chateau incoherent (%d)" % [type, required])
 
-	if Balance.PROMOTION_DAME_CHANCE.size() != Balance.MAX_LEVEL:
-		_fail("PROMOTION_DAME_CHANCE a %d entrees pour %d niveaux" % [
-			Balance.PROMOTION_DAME_CHANCE.size(), Balance.MAX_LEVEL])
-	for level in range(1, Balance.MAX_LEVEL + 1):
-		var chance := Balance.promotion_dame_chance(level)
-		if chance <= 0 or chance >= 100:
-			_fail("promotion_dame_chance niveau %d : %d%% hors plage" % [level, chance])
-	for level in range(2, Balance.MAX_LEVEL + 1):
-		if Balance.promotion_dame_chance(level) < Balance.promotion_dame_chance(level - 1):
-			_fail("promotion_dame_chance : la chance de Dame baisse au niveau %d" % level)
-
 	var min_rows: int = Balance.DEPLOY_ROWS * 2 + 1
 	for battle in Balance.CAMPAIGN:
 		var cols := int(battle["cols"])
@@ -240,42 +229,31 @@ func _check_rules() -> void:
 	if rook_moves.has(Vector2i(0, 1)):
 		_fail("la tour depasse la piece qu'elle capture")
 
-	# Promotion : un pion qui atteint la rangee 0 devient Dame.
+	# Promotion : un pion qui atteint la rangee 0 devient Dame, toujours, et
+	# garde le niveau (donc la mobilite) du pion qui a promu.
 	var engine3 := BattleEngine.new(5, 8)
-	engine3.add_unit(Balance.PION, 1, BattleUnit.TEAM_PLAYER, Vector2i(2, 1))
+	engine3.add_unit(Balance.PION, 4, BattleUnit.TEAM_PLAYER, Vector2i(2, 1))
 	engine3.add_unit(Balance.TOUR, 1, BattleUnit.TEAM_ENEMY, Vector2i(4, 0))
 	var promoted := false
 	var guard := 0
-	var promotion_result := ""
 	while not engine3.finished and guard < 60:
 		for event in engine3.step():
 			if String(event["type"]) == "promotion":
 				promoted = true
-				promotion_result = String(event["result"])
+				if String(event["result"]) != Balance.DAME:
+					_fail("une promotion n'a pas produit une Dame : %s" % String(event["result"]))
 		guard += 1
 	if not promoted:
 		_fail("aucune promotion alors qu'un pion pouvait atteindre le fond")
 	else:
-		if not Balance.PROMOTION_TYPES.has(promotion_result):
-			_fail("la loterie de promotion a produit un type inattendu : %s" % promotion_result)
 		var piece: BattleUnit = engine3.living(BattleUnit.TEAM_PLAYER)[0] if not engine3.living(BattleUnit.TEAM_PLAYER).is_empty() else null
 		if piece != null:
-			if piece.type != promotion_result:
-				_fail("la piece promue n'a pas le type tire par la loterie")
+			if piece.type != Balance.DAME:
+				_fail("la piece promue n'est pas devenue Dame")
 			if piece.origin_type != Balance.PION:
 				_fail("la piece promue a perdu son type d'origine, elle ne redeviendra pas un pion")
-
-	# La loterie doit vraiment etre aleatoire : sur beaucoup de tirages, les
-	# trois issues apparaissent, et la Dame reste rare a bas niveau.
-	var counts := {Balance.CAVALIER: 0, Balance.FOU: 0, Balance.DAME: 0}
-	for i in range(600):
-		var result := Balance.roll_promotion(1)
-		counts[result] = int(counts[result]) + 1
-	for type in counts.keys():
-		if int(counts[type]) == 0:
-			_fail("la loterie de promotion n'a jamais produit %s en 600 tirages" % type)
-	if int(counts[Balance.DAME]) >= int(counts[Balance.CAVALIER]) or int(counts[Balance.DAME]) >= int(counts[Balance.FOU]):
-		_fail("la Dame n'est pas plus rare que cavalier/fou au niveau 1 (%s)" % counts)
+			if piece.move_range != Balance.move_range(Balance.DAME, 4):
+				_fail("la Dame promue ne garde pas la mobilite du niveau de son pion")
 
 	print("  pion (avance, prise diagonale), tour (blocage, prise), promotion : OK")
 
@@ -315,65 +293,41 @@ func _play_all_battles() -> void:
 ## le plus important - un joueur qui lance sa premiere bataille et perd des
 ## pieces definitivement.
 ##
-## La loterie de promotion (voir Balance.roll_promotion) rend le combat non
-## deterministe : un seul essai ne prouve plus rien. On mesure donc un taux de
-## victoire sur plusieurs essais plutot qu'un pass/fail sur un seul tirage -
-## une bataille perdue reste rejouable en jeu, mais le tout premier combat doit
-## rester gagnable largement plus souvent qu'il n'est perdu.
-const _FIRST_RUN_TRIALS := 80
-const _FIRST_RUN_MIN_RATE := 0.5
-
+## Le combat n'a plus aucune source d'alea (la promotion est desormais
+## deterministe, voir BattleEngine.step) : un seul essai suffit a prouver
+## le resultat.
 func _check_first_run() -> void:
 	var battle := Balance.battle(1)
-	var wins := 0
-	var placed := 0
+	var engine := BattleEngine.new(int(battle["cols"]), int(battle["rows"]))
+	var cells: Array = engine.grid.free_enemy_cells()
 	var enemy_count := 0
+	for type in Balance.UNIT_TYPES:
+		if not battle["enemies"].has(type):
+			continue
+		for j in range(int(battle["enemies"][type])):
+			engine.add_unit(type, int(battle["level"]), BattleUnit.TEAM_ENEMY, cells[enemy_count])
+			enemy_count += 1
 
-	for i in range(_FIRST_RUN_TRIALS):
-		var engine := BattleEngine.new(int(battle["cols"]), int(battle["rows"]))
-		var cells: Array = engine.grid.free_enemy_cells()
-		enemy_count = 0
-		for type in Balance.UNIT_TYPES:
-			if not battle["enemies"].has(type):
-				continue
-			for j in range(int(battle["enemies"][type])):
-				engine.add_unit(type, int(battle["level"]), BattleUnit.TEAM_ENEMY, cells[enemy_count])
-				enemy_count += 1
+	var pool: Dictionary = {}
+	for type in Balance.UNIT_TYPES:
+		pool[type] = int(Balance.STARTING_UNITS.get(type, 0))
 
-		var pool: Dictionary = {}
-		for type in Balance.UNIT_TYPES:
-			pool[type] = int(Balance.STARTING_UNITS.get(type, 0))
+	var placed := _deploy(engine, pool, Balance.deploy_slots(1), 1)
 
-		placed = _deploy(engine, pool, Balance.deploy_slots(1), 1)
+	while not engine.finished:
+		engine.step()
 
-		while not engine.finished:
-			engine.step()
-
-		if engine.winner == BattleUnit.TEAM_PLAYER:
-			wins += 1
-
-	var rate := float(wins) / float(_FIRST_RUN_TRIALS)
-	print("  Premiere partie (armee de depart, sans recrutement) : %d vs %d  ->  %d/%d essais gagnes (%.0f%%)" % [
-		placed, enemy_count, wins, _FIRST_RUN_TRIALS, rate * 100.0])
-	if rate < _FIRST_RUN_MIN_RATE:
-		_fail("la toute premiere bataille ne se gagne que %.0f%% du temps (minimum %.0f%%)" % [
-			rate * 100.0, _FIRST_RUN_MIN_RATE * 100.0])
+	var victory := engine.winner == BattleUnit.TEAM_PLAYER
+	print("  Premiere partie (armee de depart, sans recrutement) : %d vs %d  ->  %s" % [
+		placed, enemy_count, "VICTOIRE" if victory else "defaite"])
+	if not victory:
+		_fail("la toute premiere bataille ne se gagne pas avec l'armee de depart")
 
 
-## Joue une bataille avec un joueur au niveau donne, jusqu'a _BATTLE_ATTEMPTS
-## essais. Retourne true des la premiere victoire : la loterie de promotion
-## rend un essai isole non concluant, mais une bataille perdue reste rejouable
-## en jeu, donc n'echoue vraiment que si aucun essai ne passe.
-const _BATTLE_ATTEMPTS := 5
-
+## Joue une bataille avec un joueur au niveau donne. Le combat est
+## entierement deterministe (placement + IA fixes, plus aucun alea) : un seul
+## passage par composition suffit.
 func _play_battle(battle: Dictionary, castle_level: int, unit_level: int, style: String = "variee") -> bool:
-	for attempt in range(_BATTLE_ATTEMPTS):
-		if _play_battle_once(battle, castle_level, unit_level, style, attempt + 1):
-			return true
-	return false
-
-
-func _play_battle_once(battle: Dictionary, castle_level: int, unit_level: int, style: String, attempt: int) -> bool:
 	var engine := BattleEngine.new(int(battle["cols"]), int(battle["rows"]))
 
 	var level := int(battle["level"])
@@ -411,10 +365,9 @@ func _play_battle_once(battle: Dictionary, castle_level: int, unit_level: int, s
 	for count in engine.losses(BattleUnit.TEAM_PLAYER).values():
 		lost += int(count)
 
-	var attempt_note := "" if attempt == 1 else "  (essai %d/%d)" % [attempt, _BATTLE_ATTEMPTS]
-	print("  Bataille %2d  %-20s  Nv.%d  armee %-7s  %2d vs %2d  ->  %-8s  %2d perdues, %d activations%s" % [
+	print("  Bataille %2d  %-20s  Nv.%d  armee %-7s  %2d vs %2d  ->  %-8s  %2d perdues, %d activations" % [
 		int(battle["id"]), String(battle["name"]), unit_level, style, placed, enemy_count,
-		"VICTOIRE" if victory else "defaite", lost, engine.activation_count, attempt_note
+		"VICTOIRE" if victory else "defaite", lost, engine.activation_count
 	])
 
 	if engine.activation_count >= int(Balance.COMBAT["max_activations"]):
@@ -463,7 +416,7 @@ func _check_scenes() -> void:
 	Game.reset_progress()
 	Router.current_battle_id = 1
 
-	for path in [Router.VILLAGE_SCENE, Router.CAMPAIGN_SCENE, Router.PREP_SCENE, Router.BATTLE_SCENE]:
+	for path in [Router.SPLASH_SCENE, Router.INTRO_SCENE, Router.VILLAGE_SCENE, Router.CAMPAIGN_SCENE, Router.PREP_SCENE, Router.BATTLE_SCENE]:
 		var packed: PackedScene = load(path)
 		if packed == null:
 			_fail("scene introuvable : %s" % path)

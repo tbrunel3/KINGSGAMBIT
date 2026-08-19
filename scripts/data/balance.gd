@@ -208,19 +208,6 @@ const CASTLE_DATA := {
 #  enemies   : composition ennemie {type: quantite}
 #  level     : niveau de TOUTES les pieces ennemies de cette bataille
 
-## Loterie de promotion : un pion qui atteint le fond adverse devient une
-## piece aleatoire plutot que toujours une Dame. Un camp reduit a des pions
-## immobilises ne se retrouve plus jamais fige : la promotion apporte de la
-## mobilite neuve (cavalier, fou) ou, plus rarement, toute la puissance de
-## la Dame.
-const PROMOTION_TYPES := [CAVALIER, FOU, DAME]
-
-## Un seul chiffre a regler par niveau : la chance (en %) que la promotion
-## soit une Dame. Le reste se partage a parts egales entre cavalier et fou.
-## Indexe comme les autres tableaux (index 0 = niveau 1). La Dame reste rare
-## aux bas niveaux et devient une vraie option en fin de partie.
-const PROMOTION_DAME_CHANCE := [10, 10, 14, 18, 22, 26, 30, 34, 38, 42]  # Nv.1 -> Nv.10
-
 const CAMPAIGN := [
 	{"id": 1,  "name": "L Oree du Bois",     "cols": 6, "rows": 8,  "reward": 90,  "level": 1, "enemies": {PION: 3}},
 	{"id": 2,  "name": "Le Gue de Pierre",   "cols": 6, "rows": 8,  "reward": 120, "level": 1, "enemies": {PION: 2, FOU: 1}},
@@ -243,7 +230,7 @@ const COMBAT := {
 	"step_delay": 0.30,        # pause entre deux activations
 	"move_duration": 0.22,     # duree de l'animation de deplacement
 	"capture_duration": 0.18,  # temps ou la piece capturee reste visible
-	"promotion_duration": 0.45,  # temps d'affichage du resultat de la loterie
+	"promotion_duration": 0.45,  # temps d'affichage du badge de promotion
 	# Enlisement : nombre de TOURS COMPLETS sans la moindre prise avant de
 	# trancher aux pieces restantes. Compte en tours et non en activations,
 	# sinon une grande armee declencherait le verdict avant meme le contact.
@@ -310,19 +297,6 @@ func move_range(type: String, level: int) -> int:
 func jump_offsets(type: String, level: int) -> Array:
 	var value: Variant = _at_level(UNITS[type].get("jump_offsets", []), level)
 	return [] if value == null else value
-
-
-func promotion_dame_chance(level: int) -> int:
-	return int(_at_level(PROMOTION_DAME_CHANCE, level))
-
-
-## Tire au sort le resultat de la promotion d'un pion de ce niveau : Dame
-## avec la chance de promotion_dame_chance(), sinon Cavalier ou Fou a parts
-## egales.
-func roll_promotion(level: int) -> String:
-	if randi_range(1, 100) <= promotion_dame_chance(level):
-		return DAME
-	return CAVALIER if randi_range(0, 1) == 0 else FOU
 
 
 ## Description lisible du deplacement, affichee dans le popup de batiment.

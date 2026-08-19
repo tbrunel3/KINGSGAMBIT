@@ -1,7 +1,9 @@
-[gd_scene load_steps=3 format=3]
+[gd_scene load_steps=5 format=3]
 
 [ext_resource type="Script" path="res://scenes/battle/campaign.gd" id="1_campaign"]
 [ext_resource type="Texture2D" path="res://assets/backgrounds/parchment_map.png" id="2_bg"]
+[ext_resource type="Script" path="res://scenes/battle/path_dots.gd" id="3_dots"]
+[ext_resource type="Script" path="res://scenes/ui/components/edge_fades.gd" id="4_fades"]
 
 [node name="Campaign" type="Control"]
 layout_mode = 3
@@ -12,33 +14,41 @@ grow_horizontal = 2
 grow_vertical = 2
 script = ExtResource("1_campaign")
 
-[node name="Planks" type="Control" parent="."]
+[node name="Scroll" type="ScrollContainer" parent="."]
 layout_mode = 1
 anchors_preset = 15
 anchor_right = 1.0
 anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
+horizontal_scroll_mode = 0
 
-[node name="ParchmentShadow" type="ColorRect" parent="."]
+[node name="Content" type="Control" parent="Scroll"]
+layout_mode = 2
+
+[node name="Planks" type="Control" parent="Scroll/Content"]
 layout_mode = 0
-offset_left = 19.0
-offset_top = 40.0
-offset_right = 382.0
-offset_bottom = 820.0
+
+[node name="ParchmentShadow" type="ColorRect" parent="Scroll/Content"]
+layout_mode = 0
 color = Color(0, 0, 0, 0.45)
 
-[node name="Parchment" type="TextureRect" parent="."]
+[node name="Parchment" type="TextureRect" parent="Scroll/Content"]
 layout_mode = 0
-offset_left = 15.0
-offset_top = 36.0
-offset_right = 378.0
-offset_bottom = 816.0
 texture = ExtResource("2_bg")
 expand_mode = 1
-stretch_mode = 6
+stretch_mode = 1
 
-[node name="Overlay" type="Control" parent="."]
+[node name="PathDots" type="Control" parent="Scroll/Content"]
+layout_mode = 0
+mouse_filter = 2
+script = ExtResource("3_dots")
+
+[node name="MapOverlay" type="Control" parent="Scroll/Content"]
+layout_mode = 0
+mouse_filter = 2
+
+[node name="FixedOverlay" type="Control" parent="."]
 layout_mode = 1
 anchors_preset = 15
 anchor_right = 1.0
@@ -46,3 +56,34 @@ anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
 mouse_filter = 2
+
+[node name="EdgeFades" type="Control" parent="."]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+script = ExtResource("4_fades")
+fade_size = 90.0
+max_alpha = 0.55
+
+[node name="BottomBar" type="Control" parent="."]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+
+[node name="FadeOverlay" type="ColorRect" parent="."]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+color = Color(0, 0, 0, 0)

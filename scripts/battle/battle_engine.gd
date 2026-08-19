@@ -135,14 +135,15 @@ func step() -> Array:
 		grid.move_unit(unit, destination)
 		events.append({"type": "move", "unit": unit.id, "from": from, "to": destination})
 
-		# Promotion : un pion qui atteint le fond adverse devient une piece
-		# aleatoire (loterie, voir Balance.roll_promotion).
+		# Promotion : un pion qui atteint le fond adverse devient Dame, comme
+		# aux echecs. Elle garde le niveau du pion (voir BattleUnit.promote_to) :
+		# une Dame issue d'un pion Nv.1 se deplace donc bien moins loin que
+		# celle d'un pion Nv.10.
 		if unit.origin_type == Balance.PION and not unit.promoted \
 				and destination.y == unit.promotion_row(grid.rows):
-			var result_type := Balance.roll_promotion(unit.level)
-			unit.promote_to(result_type)
+			unit.promote_to(Balance.DAME)
 			events.append({
-				"type": "promotion", "unit": unit.id, "cell": destination, "result": result_type,
+				"type": "promotion", "unit": unit.id, "cell": destination, "result": Balance.DAME,
 			})
 
 	_idle_activations = 0 if captured else _idle_activations + 1

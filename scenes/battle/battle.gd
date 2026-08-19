@@ -13,9 +13,10 @@ extends Control
 enum Phase { PLACEMENT, COMBAT, RESULT }
 
 const ModalScene := preload("res://scenes/ui/components/modal.tscn")
-const CardScene := preload("res://scenes/ui/components/card.tscn")
-const DividerScene := preload("res://scenes/ui/components/ornate_divider.tscn")
 const SelectionChipScene := preload("res://scenes/ui/components/selection_chip.tscn")
+
+const VICTORY_BG_PATH := "res://assets/results/victory_modal_bg.png"
+const DEFEAT_BG_PATH := "res://assets/results/defeat_modal_bg.png"
 
 @onready var _tour_badge: PanelContainer = $Safe/Overlay/TourBadge
 @onready var _phase_prefix: Label = $Safe/Overlay/TourBadge/TourRow/PhasePrefixLabel
@@ -681,7 +682,6 @@ func _show_result() -> void:
 	var victory := _engine.winner == BattleUnit.TEAM_PLAYER
 	var reward := Game.reward_for(int(_battle["id"]))
 	var battle_id := int(_battle["id"])
-	var first_win := victory and not Game.is_battle_won(battle_id)
 
 	# Les pertes sont definitives, victoire ou defaite : les pieces capturees
 	# quittent l'armee et devront etre recrutees a nouveau.
@@ -707,113 +707,134 @@ func _show_result() -> void:
 		total_enemies += int(enemy_data[type])
 	var enemies_defeated := total_enemies - _engine.living(BattleUnit.TEAM_ENEMY).size()
 
-	# Modal generique (cf. scenes/ui/components/modal.gd) : contexte or pour
-	# la victoire, rouge pour la defaite, comme prevu par les captures Figma
-	# 06/07, avec le blason couronne et le grand titre "Inter Black" repris
-	# tels quels (title-block).
+	# Modale generique (cf. scenes/ui/components/modal.gd) + illustration de
+	# fond (confettis en victoire, braises en defaite) - cf. captures Figma
+	# 06/07. Le blason (couronne / couronne brisee) a son propre halo circulaire,
+	# trop specifique pour rester dans le header_icon integre de Modal : on le
+	# construit ici plutot que de le forcer dans le composant generique.
 	var modal: Modal = ModalScene.instantiate()
 	modal.show_close_button = false
 	modal.close_on_dim_click = false
 	add_child(modal)
-	modal.open("VICTOIRE" if victory else "DEFAITE",
-		Modal.Context.GOLD if victory else Modal.Context.RED, "crown")
-	(modal.get_node("%TitleLabel") as Label).add_theme_font_size_override("font_size", 32)
+	modal.open("", Modal.Context.GOLD if victory else Modal.Context.RED)
+	var bg_path := VICTORY_BG_PATH if victory else DEFEAT_BG_PATH
+	if ResourceLoader.exists(bg_path):
+		modal.set_background(load(bg_path), 0.35 if victory else 0.3)
 	var body := modal.body
 
-	if not victory:
-		var subtitle := UiTheme.make_label(
-			"Tes forces ont succombe face a la strategie ennemie.", 12, Color("a0aabf"))
-		subtitle.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-		body.add_child(subtitle)
-		body.add_child(DividerScene.instantiate())
+	body.add_child(_result_badge(victory))
 
-	var stats_card: PanelContainer = CardScene.instantiate()
-	var stats_body: VBoxContainer = stats_card.get_node("%Body")
-	body.add_child(stats_card)
+	var stats_panel := _result_stats_panel()
+	var stats_body: VBoxContainer = stats_panel.get_child(0)
+	body.add_child(stats_panel)
 
 	if victory:
-		stats_body.add_child(UiTheme.stat_row("Recompense",
-			_icon_value("coin", UiTheme.GOLD, "+%d Or" % reward, UiTheme.GOLD, 16)))
+		stats_body.add_child(_result_highlight_row("Récompense",
+			_icon_value("coin", UiTheme.GOLD, "+%d Or" % reward, UiTheme.GOLD, 16), UiTheme.GOLD))
 		stats_body.add_child(_stats_separator())
 		stats_body.add_child(UiTheme.stat_row("Ennemis vaincus",
 			_plain_value(str(enemies_defeated), Color("f0f3f8"), 14)))
-		if first_win and battle_id < Balance.battle_count():
-			stats_body.add_child(_stats_separator())
-			stats_body.add_child(UiTheme.stat_row("Progression",
-				_icon_value("check", Color("4cd964"), "Bataille %d debloquee" % (battle_id + 1), Color("4cd964"), 14)))
-		elif battle_id >= Balance.battle_count():
-			stats_body.add_child(_stats_separator())
-			stats_body.add_child(UiTheme.stat_row("Progression",
-				_plain_value("Campagne terminee", UiTheme.GOLD, 14)))
 		if not losses.is_empty():
-			var details: Array = []
-			for type in Balance.UNIT_TYPES:
-				if losses.has(type):
-					details.append("%d %s" % [int(losses[type]), Balance.unit_name(type)])
 			stats_body.add_child(_stats_separator())
-			stats_body.add_child(UiTheme.stat_row("Pertes",
-				UiTheme.make_label(", ".join(details), 14, Color("a0aabf"))))
+			stats_body.add_child(UiTheme.stat_row("Pertes", _plain_value(_format_losses(losses), Color("a0aabf"), 14)))
 	else:
-		if losses.is_empty():
-			stats_body.add_child(UiTheme.make_label("Aucune perte. Toute ton armee rentre.",
-				13, UiTheme.SUCCESS))
-		else:
-			stats_body.add_child(UiTheme.make_label("Pertes subies", 12, Color("a0aabf")))
-			var row := HBoxContainer.new()
-			row.add_theme_constant_override("separation", 12)
-			for type in Balance.UNIT_TYPES:
-				if losses.has(type):
-					row.add_child(_loss_chip(int(losses[type]), Balance.unit_name(type)))
-			stats_body.add_child(row)
 		if consolation > 0:
+			stats_body.add_child(_result_highlight_row("Consolation",
+				_icon_value("coin", Color("d4af37"), "+%d Or" % consolation, Color("d4af37"), 14), UiTheme.DANGER))
 			stats_body.add_child(_stats_separator())
-			stats_body.add_child(UiTheme.stat_row("Consolation",
-				_icon_value("coin", UiTheme.GOLD_BUTTON, "+%d Or" % consolation, UiTheme.GOLD_BUTTON, 14)))
+		var loss_text := "Aucune - toute l'armee rentre" if losses.is_empty() else _format_losses(losses)
+		stats_body.add_child(UiTheme.stat_row("Pertes subies", _plain_value(loss_text, Color("a0aabf"), 14)))
 
-	body.add_child(DividerScene.instantiate())
-
-	# Boutons : ordre et styles repris tels quels des captures Figma 06/07 -
-	# victoire met en avant l'or (bataille suivante), defaite met en avant
-	# le rejeu (Reessayer) plutot que le retour au village.
+	# Boutons - cf. Button-Stack Figma 06/07 : victoire met en avant l'or
+	# (bataille suivante) puis Reessayer ; defaite met Reessayer en avant sans
+	# alternative. "Retour au village" et "Carte de campagne" restent
+	# communs aux deux issues.
 	if victory:
 		if battle_id < Balance.battle_count():
-			var next := Button.new()
-			next.text = "BATAILLE SUIVANTE"
-			next.theme_type_variation = "GoldButton"
-			next.pressed.connect(func(): Router.goto_prep(battle_id + 1))
-			body.add_child(next)
-
-		var retry := Button.new()
-		retry.text = "REESSAYER"
-		retry.theme_type_variation = "SecondaryButton"
-		retry.pressed.connect(func(): Router.goto_battle(battle_id))
-		body.add_child(retry)
-
-		var village_link := Button.new()
-		village_link.text = "RETOUR AU VILLAGE"
-		village_link.theme_type_variation = "DiscreetButton"
-		village_link.add_theme_font_size_override("font_size", 13)
-		var underline := StyleBoxFlat.new()
-		underline.bg_color = Color(0, 0, 0, 0)
-		underline.border_color = UiTheme.TEXT_DIM
-		underline.border_width_bottom = 1
-		village_link.add_theme_stylebox_override("normal", underline)
-		village_link.add_theme_stylebox_override("hover", underline)
-		village_link.add_theme_stylebox_override("pressed", underline)
-		village_link.pressed.connect(Router.goto_village)
-		body.add_child(village_link)
+			body.add_child(_result_primary_button("BATAILLE SUIVANTE",
+				func(): Router.goto_prep(battle_id + 1)))
+		body.add_child(_result_secondary_button("RÉESSAYER", Color("262c3f"), Color("2a2f45"),
+			func(): Router.goto_battle(battle_id)))
 	else:
-		var retry := Button.new()
-		retry.text = "REESSAYER"
-		retry.theme_type_variation = "GoldButton"
-		retry.pressed.connect(func(): Router.goto_battle(battle_id))
-		body.add_child(retry)
+		body.add_child(_result_danger_button("RÉESSAYER", func(): Router.goto_battle(battle_id)))
 
-		var village := Button.new()
-		village.text = "RETOUR AU VILLAGE"
-		village.theme_type_variation = "SecondaryButton"
-		village.pressed.connect(Router.goto_village)
-		body.add_child(village)
+	body.add_child(_result_amber_button("RETOUR AU VILLAGE", "house", Router.goto_village))
+	body.add_child(_result_amber_button("CARTE DE CAMPAGNE", "compass", Router.goto_campaign))
+
+
+## Blason circulaire (couronne en victoire, couronne brisee en defaite) +
+## grand titre - cf. Title-Block des captures Figma 06/07.
+func _result_badge(victory: bool) -> VBoxContainer:
+	var accent := UiTheme.GOLD if victory else UiTheme.DANGER
+
+	var block := VBoxContainer.new()
+	block.alignment = BoxContainer.ALIGNMENT_CENTER
+	block.add_theme_constant_override("separation", 10)
+
+	var badge := PanelContainer.new()
+	var badge_box := StyleBoxFlat.new()
+	badge_box.bg_color = Color(accent, 0.09)
+	badge_box.border_color = accent
+	badge_box.set_border_width_all(2)
+	badge_box.set_corner_radius_all(36)
+	badge_box.shadow_color = Color(accent, 0.33)
+	badge_box.shadow_size = 10
+	badge.add_theme_stylebox_override("panel", badge_box)
+	badge.custom_minimum_size = Vector2(72, 72)
+	badge.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
+	block.add_child(badge)
+
+	var glyph_wrap := CenterContainer.new()
+	badge.add_child(glyph_wrap)
+	var glyph := Icon.new()
+	glyph.icon_name = "crown" if victory else "crown_broken"
+	glyph.color = accent
+	glyph.custom_minimum_size = Vector2(44, 44)
+	glyph_wrap.add_child(glyph)
+
+	var title := UiTheme.make_label("VICTOIRE" if victory else "DEFAITE", 32, accent)
+	title.add_theme_font_override("font", UiTheme.font_bold())
+	title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	title.autowrap_mode = TextServer.AUTOWRAP_OFF
+	block.add_child(title)
+
+	return block
+
+
+## Carte de stats semi-transparente posee sur l'illustration de fond -
+## cf. Stats-List des captures Figma 06/07.
+func _result_stats_panel() -> PanelContainer:
+	var panel := PanelContainer.new()
+	var box := StyleBoxFlat.new()
+	box.bg_color = Color("1a2035", 0.8)
+	box.border_color = Color("2a2f45")
+	box.set_border_width_all(1)
+	box.set_corner_radius_all(12)
+	box.set_content_margin_all(16)
+	box.shadow_color = Color(0, 0, 0, 0.6)
+	box.shadow_size = 10
+	panel.add_theme_stylebox_override("panel", box)
+
+	var body := VBoxContainer.new()
+	body.add_theme_constant_override("separation", 16)
+	panel.add_child(body)
+
+	return panel
+
+
+## Ligne de stat mise en avant dans son propre encart teinte - cf. Reward-Row
+## (victoire) / Consolation-Row (defaite) des captures Figma 06/07.
+func _result_highlight_row(label_text: String, value: Control, accent: Color) -> PanelContainer:
+	var panel := PanelContainer.new()
+	var box := StyleBoxFlat.new()
+	box.bg_color = Color(accent, 0.06)
+	box.border_color = Color(accent, 0.2)
+	box.set_border_width_all(1)
+	box.set_corner_radius_all(10)
+	box.set_content_margin_all(12)
+	panel.add_theme_stylebox_override("panel", box)
+	panel.add_child(UiTheme.stat_row(label_text, value))
+	return panel
 
 
 func _stats_separator() -> ColorRect:
@@ -831,8 +852,7 @@ func _plain_value(text: String, color: Color, size: int) -> Label:
 
 
 ## Valeur d'une ligne de stats avec une icone devant le texte (recompense,
-## deblocage, consolation) - cf. captures Figma 06/07, ou ces trois lignes
-## seules portent un petit glyphe.
+## consolation) - cf. captures Figma 06/07.
 func _icon_value(icon_name: String, icon_color: Color, text: String, text_color: Color, size: int) -> HBoxContainer:
 	var box := HBoxContainer.new()
 	box.add_theme_constant_override("separation", 6)
@@ -848,20 +868,131 @@ func _icon_value(icon_name: String, icon_color: Color, text: String, text_color:
 	return box
 
 
-func _loss_chip(count: int, name: String) -> HBoxContainer:
-	var chip := HBoxContainer.new()
-	chip.add_theme_constant_override("separation", 4)
-	var dot := Icon.new()
-	dot.icon_name = "dot"
-	dot.color = UiTheme.DANGER
-	dot.custom_minimum_size = Vector2(16, 16)
-	chip.add_child(dot)
-	var label := UiTheme.make_label("%d %s" % [count, name], 13, Color("f0f3f8"))
+## "4 Pions, 1 Cavalier" - une seule ligne, plutot que des jetons par type,
+## cf. Losses-Row des nouvelles captures Figma 06/07.
+func _format_losses(losses: Dictionary) -> String:
+	var details: Array = []
+	for type in Balance.UNIT_TYPES:
+		if losses.has(type):
+			details.append("%d %s" % [int(losses[type]), Balance.unit_name(type)])
+	return ", ".join(details)
+
+
+func _result_primary_button(text: String, on_press: Callable) -> PanelContainer:
+	var button := PanelContainer.new()
+	var box := StyleBoxFlat.new()
+	box.bg_color = UiTheme.GOLD
+	box.border_color = Color("b8860b")
+	box.set_border_width_all(2)
+	box.set_corner_radius_all(12)
+	box.content_margin_top = 15
+	box.content_margin_bottom = 15
+	button.add_theme_stylebox_override("panel", box)
+	button.mouse_filter = Control.MOUSE_FILTER_STOP
+
+	var label := UiTheme.make_label(text, 14, Color("0f111a"))
+	label.add_theme_font_override("font", UiTheme.font_bold())
+	label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	label.autowrap_mode = TextServer.AUTOWRAP_OFF
+	label.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	button.add_child(label)
+
+	button.gui_input.connect(func(event: InputEvent):
+		if event is InputEventMouseButton and event.pressed and event.button_index == MOUSE_BUTTON_LEFT:
+			on_press.call())
+	return button
+
+
+func _result_secondary_button(text: String, bg: Color, border: Color, on_press: Callable) -> PanelContainer:
+	var button := PanelContainer.new()
+	var box := StyleBoxFlat.new()
+	box.bg_color = bg
+	box.border_color = border
+	box.set_border_width_all(1)
+	box.set_corner_radius_all(10)
+	box.content_margin_top = 15
+	box.content_margin_bottom = 15
+	button.add_theme_stylebox_override("panel", box)
+	button.mouse_filter = Control.MOUSE_FILTER_STOP
+
+	var label := UiTheme.make_label(text, 14, Color("f0f3f8"))
+	label.add_theme_font_override("font", UiTheme.font_bold())
+	label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	label.autowrap_mode = TextServer.AUTOWRAP_OFF
+	label.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	button.add_child(label)
+
+	button.gui_input.connect(func(event: InputEvent):
+		if event is InputEventMouseButton and event.pressed and event.button_index == MOUSE_BUTTON_LEFT:
+			on_press.call())
+	return button
+
+
+func _result_danger_button(text: String, on_press: Callable) -> PanelContainer:
+	var button := PanelContainer.new()
+	var box := StyleBoxFlat.new()
+	box.bg_color = Color("c0392b")
+	box.border_color = UiTheme.DANGER
+	box.set_border_width_all(2)
+	box.set_corner_radius_all(10)
+	box.content_margin_top = 15
+	box.content_margin_bottom = 15
+	box.shadow_color = Color(UiTheme.DANGER, 0.27)
+	box.shadow_size = 10
+	button.add_theme_stylebox_override("panel", box)
+	button.mouse_filter = Control.MOUSE_FILTER_STOP
+
+	var label := UiTheme.make_label(text, 14, Color("f0f3f8"))
+	label.add_theme_font_override("font", UiTheme.font_bold())
+	label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	label.autowrap_mode = TextServer.AUTOWRAP_OFF
+	label.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	button.add_child(label)
+
+	button.gui_input.connect(func(event: InputEvent):
+		if event is InputEventMouseButton and event.pressed and event.button_index == MOUSE_BUTTON_LEFT:
+			on_press.call())
+	return button
+
+
+## Bouton ambre discret - "Retour au village" / "Carte de campagne" des
+## captures Figma 06/07, meme habillage que le bouton VILLAGE de l'ecran
+## Campagne (cf. campaign.gd > _build_village_button).
+func _result_amber_button(text: String, icon_name: String, on_press: Callable) -> PanelContainer:
+	var button := PanelContainer.new()
+	var box := StyleBoxFlat.new()
+	box.bg_color = Color("261a0d", 0.9)
+	box.border_color = Color("99804d", 0.4)
+	box.set_border_width_all(1)
+	box.set_corner_radius_all(14)
+	box.content_margin_left = 24
+	box.content_margin_right = 24
+	box.content_margin_top = 12
+	box.content_margin_bottom = 12
+	button.add_theme_stylebox_override("panel", box)
+	button.mouse_filter = Control.MOUSE_FILTER_STOP
+
+	var row := HBoxContainer.new()
+	row.alignment = BoxContainer.ALIGNMENT_CENTER
+	row.add_theme_constant_override("separation", 6)
+	button.add_child(row)
+
+	var icon := Icon.new()
+	icon.icon_name = icon_name
+	icon.color = Color("d9c78c")
+	icon.custom_minimum_size = Vector2(16, 16)
+	row.add_child(icon)
+
+	var label := UiTheme.make_label(text, 13, Color("d9c78c"))
 	label.add_theme_font_override("font", UiTheme.font_bold())
 	label.autowrap_mode = TextServer.AUTOWRAP_OFF
-	label.size_flags_horizontal = Control.SIZE_SHRINK_BEGIN
-	chip.add_child(label)
-	return chip
+	row.add_child(label)
+
+	UiTheme.ignore_mouse_recursive(row)
+	button.gui_input.connect(func(event: InputEvent):
+		if event is InputEventMouseButton and event.pressed and event.button_index == MOUSE_BUTTON_LEFT:
+			on_press.call())
+	return button
 
 
 # ------------------------------- DIVERS --------------------------------------

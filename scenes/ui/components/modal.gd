@@ -26,6 +26,8 @@ signal closed
 @onready var _dim: ColorRect = $Dim
 @onready var _panel: PanelContainer = $Center/Panel
 @onready var _content: Control = $Center/Panel/Content
+@onready var _background_image: TextureRect = %BackgroundImage
+@onready var _background_overlay: ColorRect = %BackgroundOverlay
 @onready var _content_margin: MarginContainer = $Center/Panel/Content/Margin
 @onready var _header_icon_wrap: CenterContainer = %HeaderIcon
 @onready var _header_icon: Icon = %HeaderIconGlyph
@@ -64,6 +66,16 @@ func open(title: String = "", context: Context = Context.GOLD, header_icon: Stri
 	if not header_icon.is_empty():
 		_header_icon.set_icon(header_icon, _header_icon.color)
 	visible = true
+
+
+## Image de fond optionnelle derriere le contenu, avec un voile sombre pour
+## garder le texte lisible - cf. Victory-Modal/Defeat-Modal des captures
+## Figma. Sans appel, la modale garde son fond plat habituel.
+func set_background(texture: Texture2D, overlay_alpha: float = 0.35) -> void:
+	_background_image.texture = texture
+	_background_image.visible = texture != null
+	_background_overlay.color.a = overlay_alpha
+	_background_overlay.visible = texture != null
 
 
 func set_context(context: Context) -> void:

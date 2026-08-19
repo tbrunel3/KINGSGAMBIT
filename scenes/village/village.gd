@@ -328,16 +328,18 @@ func _build_dev_button() -> void:
 
 ## Chaque label a la teinte de son batiment en bordure + halo - cf. captures
 ## Figma 01, ou seul le Chateau (or) et les quatre casernes (bleu/vert/mauve/
-## rouge) different par cette seule couleur d'accent.
+## rouge) different par cette seule couleur d'accent. Le halo reprend cette
+## meme teinte plutot qu'une ombre noire generique - il s'estompe de lui-meme
+## sur un batiment verrouille via le modulate applique dans _refresh_building().
 func _style_building_panel(panel: PanelContainer, accent: Color, radius: int) -> void:
 	var box := StyleBoxFlat.new()
 	box.bg_color = Color("0a0d14", 0.88)
 	box.set_corner_radius_all(radius)
 	box.border_color = Color(accent, 0.5)
 	box.set_border_width_all(2)
-	box.shadow_color = Color(0, 0, 0, 0.5)
-	box.shadow_size = 8
-	box.shadow_offset = Vector2(0, 3)
+	box.shadow_color = Color(accent, 0.45)
+	box.shadow_size = 14
+	box.shadow_offset = Vector2(0, 2)
 	panel.add_theme_stylebox_override("panel", box)
 
 
