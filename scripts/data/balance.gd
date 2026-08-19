@@ -210,22 +210,11 @@ const CASTLE_DATA := {
 ## la Dame.
 const PROMOTION_TYPES := [CAVALIER, FOU, DAME]
 
-## Poids [cavalier, fou, dame] par niveau du pion promu, indexes comme les
-## autres tableaux (index 0 = niveau 1). N'ont pas besoin de sommer a 100 :
-## ils sont normalises au tirage. La Dame reste rare aux bas niveaux et
-## devient une vraie option en fin de partie.
-const PROMOTION_WEIGHTS := [
-	[45, 45, 10],   # Nv.1
-	[45, 45, 10],   # Nv.2
-	[43, 43, 14],   # Nv.3
-	[41, 41, 18],   # Nv.4
-	[39, 39, 22],   # Nv.5
-	[37, 37, 26],   # Nv.6
-	[35, 35, 30],   # Nv.7
-	[33, 33, 34],   # Nv.8
-	[31, 31, 38],   # Nv.9
-	[29, 29, 42],   # Nv.10
-]
+## Un seul chiffre a regler par niveau : la chance (en %) que la promotion
+## soit une Dame. Le reste se partage a parts egales entre cavalier et fou.
+## Indexe comme les autres tableaux (index 0 = niveau 1). La Dame reste rare
+## aux bas niveaux et devient une vraie option en fin de partie.
+const PROMOTION_DAME_CHANCE := [10, 10, 14, 18, 22, 26, 30, 34, 38, 42]  # Nv.1 -> Nv.10
 
 const CAMPAIGN := [
 	{"id": 1,  "name": "L Oree du Bois",     "cols": 6, "rows": 8,  "reward": 90,  "level": 1, "enemies": {PION: 3}},
@@ -318,23 +307,17 @@ func jump_offsets(type: String, level: int) -> Array:
 	return [] if value == null else value
 
 
-func promotion_weights(level: int) -> Array:
-	return _at_level(PROMOTION_WEIGHTS, level)
+func promotion_dame_chance(level: int) -> int:
+	return int(_at_level(PROMOTION_DAME_CHANCE, level))
 
 
-## Tire au sort le resultat de la promotion d'un pion de ce niveau.
+## Tire au sort le resultat de la promotion d'un pion de ce niveau : Dame
+## avec la chance de promotion_dame_chance(), sinon Cavalier ou Fou a parts
+## egales.
 func roll_promotion(level: int) -> String:
-	var weights: Array = promotion_weights(level)
-	var total := 0
-	for w in weights:
-		total += int(w)
-	var roll := randi_range(1, total)
-	var cumulative := 0
-	for i in range(PROMOTION_TYPES.size()):
-		cumulative += int(weights[i])
-		if roll <= cumulative:
-			return PROMOTION_TYPES[i]
-	return PROMOTION_TYPES[PROMOTION_TYPES.size() - 1]
+	if randi_range(1, 100) <= promotion_dame_chance(level):
+		return DAME
+	return CAVALIER if randi_range(0, 1) == 0 else FOU
 
 
 ## Description lisible du deplacement, affichee dans le popup de batiment.

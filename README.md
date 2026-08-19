@@ -80,8 +80,9 @@ la première pièce ennemie rencontrée. Un Cavalier saute par-dessus tout.
 **Promotion** : un pion qui atteint le fond du plateau adverse déclenche une
 petite loterie et devient Cavalier, Fou ou (rarement) Dame, **le temps du
 combat seulement**. De retour au village, il redevient le pion qu'il était.
-Les poids de la loterie sont dans `Balance.PROMOTION_WEIGHTS` : la Dame reste
-rare pour un pion de bas niveau.
+La chance d'obtenir la Dame (le reste se partage entre Cavalier et Fou) est
+dans `Balance.PROMOTION_DAME_CHANCE` : elle reste faible pour un pion de bas
+niveau.
 
 **Les pertes sont définitives.** Une pièce capturée quitte l'armée et devra être
 recrutée à nouveau. C'est ce qui donne son poids au placement — et la raison
@@ -115,7 +116,7 @@ intentions d'ouverture, pas la séquence exacte du combat.
 | `COMBAT` | durées d'animation, seuil d'enlisement, garde-fou d'activations |
 | `GARRISON_MINIMUM`, `REPLAY_REWARD_RATIO` | filet de sécurité et rentabilité du farm |
 | `UNLOCK_CASTLE_LEVEL` | niveau de château auquel Écuries / Cloître / Donjon apparaissent gratuitement |
-| `PROMOTION_WEIGHTS` | poids de la loterie de promotion (Cavalier / Fou / Dame) par niveau du pion |
+| `PROMOTION_DAME_CHANCE` | chance (%) d'obtenir la Dame a la promotion, par niveau du pion |
 
 Les tableaux sont indexés par niveau : ajouter un niveau = ajouter une valeur à
 chaque tableau de la pièce, et augmenter `MAX_LEVEL`. Le banc de test vérifie que

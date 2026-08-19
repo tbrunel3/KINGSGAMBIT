@@ -4,7 +4,7 @@
 // Incrementing CACHE_VERSION will kick off the install event and force
 // previously cached resources to be updated from the network.
 /** @type {string} */
-const CACHE_VERSION = '1787083110|6428287';
+const CACHE_VERSION = '1787084621|5963322';
 /** @type {string} */
 const CACHE_PREFIX = 'King's Gambit-sw-cache-';
 const CACHE_NAME = CACHE_PREFIX + CACHE_VERSION;

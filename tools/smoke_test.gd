@@ -82,17 +82,16 @@ func _check_balance() -> void:
 		if required < 2 or required > Balance.max_level(Balance.CASTLE):
 			_fail("%s : seuil de deblocage chateau incoherent (%d)" % [type, required])
 
-	if Balance.PROMOTION_WEIGHTS.size() != Balance.MAX_LEVEL:
-		_fail("PROMOTION_WEIGHTS a %d entrees pour %d niveaux" % [
-			Balance.PROMOTION_WEIGHTS.size(), Balance.MAX_LEVEL])
+	if Balance.PROMOTION_DAME_CHANCE.size() != Balance.MAX_LEVEL:
+		_fail("PROMOTION_DAME_CHANCE a %d entrees pour %d niveaux" % [
+			Balance.PROMOTION_DAME_CHANCE.size(), Balance.MAX_LEVEL])
 	for level in range(1, Balance.MAX_LEVEL + 1):
-		var weights := Balance.promotion_weights(level)
-		if weights.size() != Balance.PROMOTION_TYPES.size():
-			_fail("promotion_weights niveau %d : %d poids pour %d issues" % [
-				level, weights.size(), Balance.PROMOTION_TYPES.size()])
-		for w in weights:
-			if int(w) <= 0:
-				_fail("promotion_weights niveau %d : poids nul ou negatif (%s)" % [level, weights])
+		var chance := Balance.promotion_dame_chance(level)
+		if chance <= 0 or chance >= 100:
+			_fail("promotion_dame_chance niveau %d : %d%% hors plage" % [level, chance])
+	for level in range(2, Balance.MAX_LEVEL + 1):
+		if Balance.promotion_dame_chance(level) < Balance.promotion_dame_chance(level - 1):
+			_fail("promotion_dame_chance : la chance de Dame baisse au niveau %d" % level)
 
 	var min_rows: int = Balance.DEPLOY_ROWS * 2 + 1
 	for battle in Balance.CAMPAIGN:
