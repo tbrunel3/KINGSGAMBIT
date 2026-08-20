@@ -276,8 +276,22 @@ func castle_level() -> int:
 	return building_level(Balance.CASTLE)
 
 
+## Charge de deploiement disponible : celle du chateau, plus l'aura des Dames
+## ramenees (cf. Balance.DAME_AURA_DEPLOY).
 func deploy_capacity() -> int:
-	return Balance.deploy_capacity(castle_level())
+	return deploy_capacity_at(castle_level())
+
+
+## La meme, pour un niveau de chateau donne : sert a montrer ce que
+## rapporterait la prochaine amelioration sans oublier l'aura en cours.
+func deploy_capacity_at(level: int) -> int:
+	return Balance.deploy_capacity(level) + dame_aura()
+
+
+## Part de la charge de deploiement qui vient des Dames au repos. Zero tant
+## qu'aucune n'a ete ramenee vivante d'une bataille.
+func dame_aura() -> int:
+	return dames_owned() * Balance.DAME_AURA_DEPLOY
 
 
 func is_max_level(type: String) -> bool:

@@ -96,6 +96,12 @@ d'une Tour. Sa *valeur* reste 9 : c'est ce que voit l'IA, qui la traite comme la
 pièce la plus chère du plateau. Une Dame capturée est perdue comme le pion
 qu'elle était.
 
+**L'aura de la Dame** : chaque Dame rangée à la Tour de la Dame donne **+3 de
+charge de déploiement** au Château Royal (`Balance.DAME_AURA_DEPLOY`), qu'elle
+reparte au combat ou qu'elle reste au village — le Roi commande mieux quand sa
+Dame est rentrée. Au village, le château se met à **rayonner** tant qu'une Dame
+au moins est là, et son halo s'élargit un peu à chaque nouvelle.
+
 **Les pertes sont définitives.** Une pièce capturée quitte l'armée et devra être
 recrutée à nouveau. C'est ce qui donne son poids au placement — et la raison
 d'être de l'écran de campagne, qui permet de rejouer une bataille déjà gagnée
@@ -304,7 +310,8 @@ le premier combat du jeu était perdu.
 - Bouton **AUTO** : l'IA joue les deux camps jusqu'au bout (farm d'or)
 - 5 types de déplacement, mobilité liée au niveau, **promotion en Dame**
 - **Tour de la Dame** : une Dame ramenée vivante est stockée au village et
-  redéployable ensuite
+  redéployable ensuite ; le Château Royal rayonne et gagne +3 de charge de
+  déploiement par Dame au repos
 - **Pertes définitives** avec garnison minimale de sécurité
 - **IA à trois niveaux de jeu**, déclarés par bataille : novice (1-3), aguerri
   (4-7), expert (8-10) — prise la plus rentable, refus des mauvais échanges,

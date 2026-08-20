@@ -145,6 +145,8 @@ func _add_dame_screen(body: VBoxContainer) -> void:
 	how_body.add_child(HSeparator.new())
 	how_body.add_child(UiTheme.stat_row("Charge au deploiement",
 		UiTheme.make_label("%d" % Balance.deploy_weight(Balance.DAME), 14, UiTheme.GOLD)))
+	how_body.add_child(UiTheme.stat_row("Aura au Chateau Royal",
+		UiTheme.make_label("+%d de charge" % Balance.DAME_AURA_DEPLOY, 14, Color("d8a0d0"))))
 	body.add_child(how)
 
 
@@ -247,9 +249,21 @@ func _add_castle_card(body: VBoxContainer) -> void:
 	var card_body: VBoxContainer = card.get_node("%Body")
 	card_body.add_child(UiTheme.stat_row("Deploiement actuel",
 		UiTheme.make_label("%d de charge" % Game.deploy_capacity(), 14, Color("f0f3f8"))))
+
+	# L'aura n'apparait qu'une fois meritee : avant la premiere Dame, cette
+	# ligne n'aurait rien a raconter.
+	if Game.dame_aura() > 0:
+		card_body.add_child(HSeparator.new())
+		var aura := UiTheme.make_label(
+			"+%d (%d Dame%s au repos)" % [
+				Game.dame_aura(), Game.dames_owned(), "" if Game.dames_owned() <= 1 else "s"],
+			14, Color("d8a0d0"))
+		aura.add_theme_font_override("font", UiTheme.font_bold())
+		aura.autowrap_mode = TextServer.AUTOWRAP_OFF
+		card_body.add_child(UiTheme.stat_row("Aura de la Dame", aura))
 	if not Game.is_max_level(Balance.CASTLE):
 		card_body.add_child(HSeparator.new())
-		var next_slots := Balance.deploy_capacity(Game.castle_level() + 1)
+		var next_slots := Game.deploy_capacity_at(Game.castle_level() + 1)
 		# "15 -> 22 de charge" plutot que la seule valeur suivante, pour
 		# montrer le gain d'un coup d'oeil - cf. Stat-Line-Next (capture Figma 08).
 		var compare := HBoxContainer.new()

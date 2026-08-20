@@ -97,6 +97,7 @@ Tout est en Inter (Google Fonts, gratuite). Poids utilisés :
   - Label verrouillé (x:50, y:685) : "🔒 Forge" grisé + "Château Nv.6 requis" en petit
 - Bouton BATAILLE (x:87, y:748, w:219, h:59) : fond or #ffd11a, radius 18, stroke 2px, texte "⚔ BATAILLE" noir 19px bold
 - **Code actuel** : l'emplacement verrouillé (x:50, y:685) sert à la **Tour de la Dame** — grisé et "Promeus un pion au bout du plateau" tant qu'aucune Dame n'a été ramenée, puis "N Dames au repos" une fois le bâtiment ouvert. Il n'y a pas de Forge.
+- **Halo du Château Royal** : dès qu'une Dame est au repos, un dégradé radial doré en mélange additif (300×300 à partir de x:46, y:246, élargi de 12 % par Dame supplémentaire) respire lentement sous les labels, et le label du château affiche l'aura (+3 de charge par Dame).
 - Bouton DEV (x:362, y:14) : discret, 24×24, radius 4, emoji 🛠
 
 ### 02_Campagne (carte de progression)

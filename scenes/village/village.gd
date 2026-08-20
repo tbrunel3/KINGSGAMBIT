@@ -41,6 +41,11 @@ const BUILDING_ACCENT := {
 	"tour": "e5594d",
 	"dame": "d8a0d0",
 }
+## Zone du chateau sur le fond illustre : c'est la que se pose le halo dore
+## des Dames retrouvees (cf. _build_castle_glow). Coordonnees relevees sur
+## assets/backgrounds/village_background.png, pas sur le label.
+const CASTLE_GLOW_RECT := Rect2(46, 246, 300, 300)
+
 const SCREEN_WIDTH := 393.0
 const SCREEN_MARGIN := 8.0
 const BATTLE_RECT := Rect2(87, 748, 219, 59)
@@ -55,6 +60,8 @@ var _gold_pill: Pill
 var _level_pill: Pill
 var _gems_pill: Pill
 var _castle_label: PanelContainer
+var _castle_glow: TextureRect
+var _castle_glow_tween: Tween
 var _castle_sub_row: HBoxContainer
 var _building_labels: Dictionary = {}   # type -> {"panel":.., "sub_row":..}
 var _building_buttons: Dictionary = {}  # type -> panel cliquable (cf. tools/ui_test.gd)
@@ -63,6 +70,9 @@ var _battle_label: Label
 
 
 func _ready() -> void:
+	# Avant tout le reste : premier enfant de l'Overlay, donc dessine DERRIERE
+	# les labels de batiments.
+	_build_castle_glow()
 	_build_top_bar()
 	_build_castle_label()
 	for type in Balance.UNIT_TYPES:
@@ -143,6 +153,77 @@ func _place_pill(x: float, y: float, text: String, variant: Pill.Variant) -> Pil
 	pill.size = pill.get_combined_minimum_size()
 	pill.position = Vector2(x, y)
 	return pill
+
+
+## Halo dore pose sur le Chateau Royal, allume tant qu'une Dame au moins est
+## rentree. C'est la recompense visible de la campagne : le Roi a retrouve sa
+## Dame, son chateau rayonne a nouveau.
+##
+## Un degrade radial plutot qu'une image : ca ne coute aucun asset, ca se
+## teinte librement, et ca reste net a n'importe quelle definition d'ecran.
+func _build_castle_glow() -> void:
+	var gradient := Gradient.new()
+	gradient.set_color(0, Color("fff0b2", 0.5))
+	gradient.set_color(1, Color("ffd933", 0.0))
+	# Deux points d'inflexion : un coeur chaud et resserre autour des tours,
+	# puis une longue retombee. Sans eux le halo forme un disque net pose sur
+	# la carte au lieu de se fondre dans le decor.
+	gradient.add_point(0.30, Color("ffd966", 0.30))
+	gradient.add_point(0.60, Color("ffbf40", 0.11))
+
+	var texture := GradientTexture2D.new()
+	texture.gradient = gradient
+	texture.fill = GradientTexture2D.FILL_RADIAL
+	texture.fill_from = Vector2(0.5, 0.5)
+	texture.fill_to = Vector2(1.0, 0.5)
+	texture.width = 256
+	texture.height = 256
+
+	_castle_glow = TextureRect.new()
+	_castle_glow.texture = texture
+	# Melange additif : le halo AJOUTE de la lumiere au decor au lieu de
+	# peindre un voile jaune par-dessus. C'est ce qui fait la difference entre
+	# un chateau qui brille et un chateau sali.
+	var material := CanvasItemMaterial.new()
+	material.blend_mode = CanvasItemMaterial.BLEND_MODE_ADD
+	_castle_glow.material = material
+	_castle_glow.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+	_castle_glow.stretch_mode = TextureRect.STRETCH_SCALE
+	_castle_glow.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_castle_glow.visible = false
+	_overlay.add_child(_castle_glow)
+	_castle_glow.position = CASTLE_GLOW_RECT.position
+	_castle_glow.size = CASTLE_GLOW_RECT.size
+
+
+## Le halo respire lentement tant qu'il y a une Dame au village, et s'eteint
+## sinon. La boucle n'est relancee que si elle ne tourne pas deja : _refresh()
+## repasse ici chaque seconde (cf. le ticker de _ready).
+func _refresh_castle_glow() -> void:
+	var dames := Game.dames_owned()
+	_castle_glow.visible = dames > 0
+
+	if dames <= 0:
+		if _castle_glow_tween != null and _castle_glow_tween.is_valid():
+			_castle_glow_tween.kill()
+		_castle_glow_tween = null
+		return
+
+	# Chaque Dame supplementaire fait rayonner le chateau un peu plus loin,
+	# sans jamais noyer la carte.
+	var spread := 1.0 + minf(float(dames - 1) * 0.12, 0.36)
+	_castle_glow.size = CASTLE_GLOW_RECT.size * spread
+	_castle_glow.position = CASTLE_GLOW_RECT.position \
+		- (CASTLE_GLOW_RECT.size * (spread - 1.0)) * 0.5
+
+	if _castle_glow_tween != null and _castle_glow_tween.is_valid():
+		return
+	_castle_glow.modulate.a = 0.55
+	_castle_glow_tween = create_tween().set_loops()
+	_castle_glow_tween.tween_property(_castle_glow, "modulate:a", 1.0, 1.7) \
+		.set_trans(Tween.TRANS_SINE)
+	_castle_glow_tween.tween_property(_castle_glow, "modulate:a", 0.55, 1.7) \
+		.set_trans(Tween.TRANS_SINE)
 
 
 func _build_castle_label() -> void:
@@ -293,14 +374,15 @@ func _build_dev_button() -> void:
 ## rouge) different par cette seule couleur d'accent. Le halo reprend cette
 ## meme teinte plutot qu'une ombre noire generique - il s'estompe de lui-meme
 ## sur un batiment verrouille via le modulate applique dans _refresh_building().
-func _style_building_panel(panel: PanelContainer, accent: Color, radius: int) -> void:
+func _style_building_panel(panel: PanelContainer, accent: Color, radius: int,
+		shadow: float = 14.0) -> void:
 	var box := StyleBoxFlat.new()
 	box.bg_color = Color("0a0d14", 0.88)
 	box.set_corner_radius_all(radius)
 	box.border_color = Color(accent, 0.5)
 	box.set_border_width_all(2)
 	box.shadow_color = Color(accent, 0.45)
-	box.shadow_size = 14
+	box.shadow_size = int(shadow)
 	box.shadow_offset = Vector2(0, 2)
 	panel.add_theme_stylebox_override("panel", box)
 
@@ -335,6 +417,7 @@ func _refresh() -> void:
 	_gems_pill.size = _gems_pill.get_combined_minimum_size()
 	_gems_pill.position = Vector2(_level_pill.position.x + _level_pill.size.x + 16, pill_y)
 
+	_refresh_castle_glow()
 	_refresh_castle()
 	for type in Balance.UNIT_TYPES:
 		_refresh_building(type)
@@ -363,6 +446,14 @@ func _refresh_castle() -> void:
 	deploy.autowrap_mode = TextServer.AUTOWRAP_OFF
 	_castle_sub_row.add_child(deploy)
 
+	# La part apportee par les Dames au repos, dans leur propre teinte : le
+	# joueur doit voir d'ou vient le bonus, pas seulement qu'il existe.
+	if Game.dame_aura() > 0:
+		var aura := UiTheme.make_label("+%d" % Game.dame_aura(), 10, Color("d8a0d0"))
+		aura.add_theme_font_override("font", UiTheme.font_bold())
+		aura.autowrap_mode = TextServer.AUTOWRAP_OFF
+		_castle_sub_row.add_child(aura)
+
 	if Game.is_upgrading(Balance.CASTLE):
 		var eta := UiTheme.make_label(UiTheme.format_duration(Game.upgrade_remaining(Balance.CASTLE)),
 			11, UiTheme.GOLD)
@@ -370,6 +461,10 @@ func _refresh_castle() -> void:
 		_castle_sub_row.add_child(eta)
 
 	UiTheme.ignore_mouse_recursive(_castle_sub_row)
+	# Le label lui-meme se pare d'un halo plus large quand une Dame est rentree.
+	_style_building_panel(_castle_label, Color("ffd933"), 14,
+		26.0 if Game.dames_owned() > 0 else 14.0)
+
 	_castle_label.size = _castle_label.get_combined_minimum_size()
 	_castle_label.position.x = _clamp_x(CASTLE_POS.x, _castle_label.size.x)
 

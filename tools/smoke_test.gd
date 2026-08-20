@@ -210,6 +210,9 @@ func _check_losses() -> void:
 	if Game.is_building_unlocked(Balance.DAME):
 		_fail("la Tour de la Dame existe avant la premiere promotion")
 	var pions_before := Game.units_owned(Balance.PION)
+	var capacity_before := Game.deploy_capacity()
+	if Game.dame_aura() != 0:
+		_fail("le chateau rayonne deja alors qu'aucune Dame n'est rentree")
 	var stored := Game.store_promotions(2)
 	if stored != 2:
 		_fail("2 pions promus et rentres vivants n'ont pas donne 2 Dames (%d)" % stored)
@@ -220,10 +223,19 @@ func _check_losses() -> void:
 	if not Game.is_building_unlocked(Balance.DAME):
 		_fail("la Tour de la Dame n'apparait pas apres une promotion")
 
-	# Une Dame capturee se perd comme n'importe quelle piece.
+	# Aura de la Dame : chaque Dame au repos renforce le chateau.
+	if Game.dame_aura() != 2 * Balance.DAME_AURA_DEPLOY:
+		_fail("l'aura des Dames ne s'applique pas (%d)" % Game.dame_aura())
+	if Game.deploy_capacity() != capacity_before + 2 * Balance.DAME_AURA_DEPLOY:
+		_fail("la charge de deploiement ignore l'aura des Dames")
+
+	# Une Dame capturee se perd comme n'importe quelle piece - et son aura
+	# avec elle.
 	Game.apply_losses({Balance.DAME: 1})
 	if Game.dames_owned() != 1:
 		_fail("une Dame capturee n'a pas ete retiree de l'armee")
+	if Game.deploy_capacity() != capacity_before + Balance.DAME_AURA_DEPLOY:
+		_fail("l'aura n'a pas baisse apres la perte d'une Dame")
 
 	# Et elle ne s'achete a aucun prix.
 	Game.add_gold(9999)

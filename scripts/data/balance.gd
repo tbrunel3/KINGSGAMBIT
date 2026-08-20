@@ -80,6 +80,18 @@ const DEPLOY_ROWS := 2
 ## au-dessus du plancher, la ou se joue la vraie gestion.
 const GARRISON_MINIMUM := {PION: 3}
 
+## AURA DE LA DAME - le bonus que rapporte une Dame ramenee vivante.
+##
+## Le Roi a perdu sa Dame : toute la campagne consiste a la retrouver. Chaque
+## Dame rangee a la Tour de la Dame rend donc le Chateau Royal plus fort, et
+## ce bonus s'ajoute a la charge de deploiement quoi qu'il arrive - que la
+## Dame reparte au combat ou qu'elle reste au village.
+##
+## Volontairement inferieur au poids de deploiement d'une Dame (5) : la
+## ramener rend l'armee plus nombreuse, mais ne remplace pas ce qu'elle coute
+## a poser sur le plateau. A elle seule, l'aura vaut trois pions de plus.
+const DAME_AURA_DEPLOY := 3
+
 ## Une bataille deja gagnee rapporte moins : on peut farmer, mais progresser
 ## reste plus rentable que repasser sur un terrain conquis.
 const REPLAY_REWARD_RATIO := 0.4
