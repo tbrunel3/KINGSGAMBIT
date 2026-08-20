@@ -63,9 +63,9 @@ func _check_balance() -> void:
 			if Balance.move_range(type, level) < Balance.move_range(type, level - 1):
 				_fail("%s : la portee baisse au niveau %d" % [type, level])
 
-	if Balance.CASTLE_DATA["deploy_slots"].size() != levels:
-		_fail("chateau : deploy_slots a %d entrees pour %d niveaux" % [
-			Balance.CASTLE_DATA["deploy_slots"].size(), levels])
+	if Balance.CASTLE_DATA["deploy_capacity"].size() != levels:
+		_fail("chateau : deploy_capacity a %d entrees pour %d niveaux" % [
+			Balance.CASTLE_DATA["deploy_capacity"].size(), levels])
 
 	# La Dame n'est pas recrutable mais doit exister pour la promotion.
 	if not Balance.UNITS.has(Balance.DAME):
@@ -312,7 +312,7 @@ func _check_first_run() -> void:
 	for type in Balance.UNIT_TYPES:
 		pool[type] = int(Balance.STARTING_UNITS.get(type, 0))
 
-	var placed := _deploy(engine, pool, Balance.deploy_slots(1), 1)
+	var placed := _deploy(engine, pool, Balance.deploy_capacity(1), 1)
 
 	while not engine.finished:
 		engine.step()
@@ -340,7 +340,7 @@ func _play_battle(battle: Dictionary, castle_level: int, unit_level: int, style:
 			engine.add_unit(type, level, BattleUnit.TEAM_ENEMY, cells[enemy_count])
 			enemy_count += 1
 
-	var slots := Balance.deploy_slots(castle_level)
+	var slots := Balance.deploy_capacity(castle_level)
 	var pool: Dictionary = {}
 	for type in Balance.UNIT_TYPES:
 		# Armee de pions : casernes lourdes volontairement presque vides.
@@ -379,13 +379,22 @@ func _play_battle(battle: Dictionary, castle_level: int, unit_level: int, style:
 ## Deploie l'armee exactement comme le bouton Auto du jeu : alternance des
 ## types, puis pions devant et pieces lourdes derriere. Retourne le nombre de
 ## pieces posees.
-func _deploy(engine: BattleEngine, pool: Dictionary, slots: int, level: int) -> int:
+## `capacity` est un budget de poids (cf. CASTLE_DATA.deploy_capacity), pas un
+## nombre de pieces : chaque type ajoute pese Balance.unit_value(type).
+func _deploy(engine: BattleEngine, pool: Dictionary, capacity: int, level: int) -> int:
 	var order: Array = []
-	while order.size() < slots:
-		var type := _pick_round_robin(pool, order.size())
+	var weight := 0
+	var exhausted: Dictionary = {}
+	while true:
+		var type := _pick_round_robin(pool, order.size(), exhausted)
 		if type.is_empty():
 			break
+		var type_weight := Balance.unit_value(type)
+		if weight + type_weight > capacity:
+			exhausted[type] = true
+			continue
 		order.append(type)
+		weight += type_weight
 		pool[type] = int(pool[type]) - 1
 
 	order.sort_custom(func(a, b): return Balance.unit_value(a) < Balance.unit_value(b))
@@ -398,10 +407,13 @@ func _deploy(engine: BattleEngine, pool: Dictionary, slots: int, level: int) -> 
 
 
 ## Alterne les types pour obtenir une armee variee plutot qu'un mur de pions.
-func _pick_round_robin(pool: Dictionary, cursor: int) -> String:
+## `exhausted` exclut les types qui ne rentrent plus dans le poids restant.
+func _pick_round_robin(pool: Dictionary, cursor: int, exhausted: Dictionary = {}) -> String:
 	var types: Array = Balance.UNIT_TYPES
 	for offset in range(types.size()):
 		var type: String = types[(cursor + offset) % types.size()]
+		if exhausted.has(type):
+			continue
 		if int(pool[type]) > 0:
 			return type
 	return ""

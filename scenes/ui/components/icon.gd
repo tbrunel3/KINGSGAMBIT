@@ -16,7 +16,7 @@ extends Control
 ##   icon.color = UiTheme.TEXT_DIM
 ##
 
-@export_enum("lock", "wrench", "star", "check", "close", "diamond", "sword", "house", "crown", "crown_broken", "compass", "coin", "dot", "pause", "skip", "arrow_left") var icon_name: String = "star"
+@export_enum("lock", "wrench", "star", "check", "close", "diamond", "sword", "house", "crown", "crown_broken", "compass", "coin", "dot", "pause", "skip", "arrow_left", "clock") var icon_name: String = "star"
 @export var color: Color = Color.WHITE
 @export var line_width: float = 1.8
 
@@ -71,6 +71,8 @@ func _draw() -> void:
 			_draw_skip(c, s)
 		"arrow_left":
 			_draw_arrow_left(c, s, lw)
+		"clock":
+			_draw_clock(c, s, lw)
 
 
 func _draw_lock(c: Vector2, s: float, lw: float) -> void:
@@ -253,6 +255,13 @@ func _draw_arrow_left(c: Vector2, s: float, lw: float) -> void:
 	draw_line(c + Vector2(-half, 0), c + Vector2(half, 0), color, lw, true)
 	draw_line(c + Vector2(-half, 0), c + Vector2(-half * 0.15, -half * 0.85), color, lw, true)
 	draw_line(c + Vector2(-half, 0), c + Vector2(-half * 0.15, half * 0.85), color, lw, true)
+
+
+## Cadran + aiguilles - chrono de blocage de l'ecran de combat (battle.gd).
+func _draw_clock(c: Vector2, s: float, lw: float) -> void:
+	draw_arc(c, s * 0.4, 0.0, TAU, 24, color, lw, true)
+	draw_line(c, c + Vector2(0, -s * 0.26), color, lw, true)
+	draw_line(c, c + Vector2(s * 0.2, s * 0.08), color, lw, true)
 
 
 ## Triangle + barre - bouton "Fin tour" du controle de combat (ecran 05).

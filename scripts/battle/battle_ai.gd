@@ -9,32 +9,37 @@ class_name BattleAI
 ##   1. capturer, en visant la piece la plus chere
 ##   2. a valeur egale, preferer une case ou l'on ne sera pas repris
 ##   3. sinon avancer vers l'ennemi le plus proche, sur une case sure si possible
-##   4. si rien n'ameliore la position, ne pas bouger
+##   4. si rien n'ameliore la position ET que la bataille est bloquee depuis
+##      trop longtemps (cf. _STANDOFF_RATIO), bouger quand meme plutot que de
+##      rester plante - une piece ne doit jamais s'arreter indefiniment
+##   5. sinon, ne pas bouger
 ##
 ## Pour rendre l'IA plus maligne en Phase 2, il suffit de retoucher _score_move :
 ## le reste du moteur n'a pas a changer.
 ##
 
-## Valeur en dessous de laquelle une piece accepte d'avancer sur une case
-## menacee. A 1, seuls les pions se sacrifient - sauf en situation de blocage,
-## voir _STANDOFF_RATIO ci-dessous.
+## Valeur en dessous de laquelle une piece accepte D'EMBLEE d'avancer sur une
+## case menacee, sans attendre le moindre enlisement. A 1, seuls les pions :
+## c'est leur role d'ouvrir le contact et d'etre echanges.
 const _EXPENDABLE_VALUE := 1
 
 ## Fraction du seuil d'enlisement (BattleEngine._stalemate_limit) au-dela de
-## laquelle une piece sans coequipier sacrifiable accepte d'avancer sur une
-## case menacee plutot que de rester plantee. Sans ca, plusieurs pieces de
-## valeur (ex. 4 Dames apres une vague de promotions, plus un seul pion en
-## vie) peuvent chacune refuser indefiniment d'etre la premiere a s'exposer :
-## personne n'attaque, la bataille s'enlise et finit tranchee au materiel
-## alors que tout le monde est encore en vie.
+## laquelle TOUTE piece sans coup interessant accepte de bouger quand meme -
+## y compris sur une case menacee si aucune case sure n'existe - plutot que de
+## rester plantee. Sans ca, plusieurs pieces de valeur (ex. 4 Dames apres une
+## vague de promotions) peuvent chacune refuser indefiniment d'etre la
+## premiere a s'exposer : personne n'attaque, la bataille s'enlise et finit
+## tranchee au materiel alors que tout le monde est encore en vie.
 ##
-## Ne s'applique qu'aux camps qui n'ont plus AUCUNE piece sacrifiable en vie
-## (cf. _team_has_expendable ci-dessous) : tant qu'un pion peut encore ouvrir
-## le contact tout seul, les pieces de valeur restent prudentes normalement.
-## Restreindre aux seuls camps bloques evite qu'une bataille normale (qui
-## passe naturellement une bonne partie de son temps sans prise - positionne-
-## ment, poursuite) ne pousse des pieces a se sacrifier pour rien, ce qui a
-## fait perdre au joueur des combats qu'il gagnait auparavant lors des essais.
+## Volontairement PAS conditionne a l'absence de pion sacrifiable dans le
+## camp : un pion encore vivant mais coince (chemin bloque par ses propres
+## pieces, coin du plateau...) ne rejoint jamais le front, et un tel gardien
+## empechait avant cette regle toute autre piece du camp de se decoincer -
+## c'est exactement le blocage que ce garde-fou doit lever. Rester au-dela de
+## la moitie du seuil d'enlisement suffit a garantir que ce n'est pas une
+## bataille normale (qui passe naturellement du temps sans prise - position-
+## nement, poursuite) qui declenche ceci pour rien, ce qui a fait perdre au
+## joueur des combats qu'il gagnait auparavant lors des essais.
 const _STANDOFF_RATIO := 0.5
 
 ## Nombre minimum de pieces en vie (les deux camps confondus) pour que la
@@ -113,12 +118,14 @@ static func decide(unit: BattleUnit, grid: GridModel, units: Array, stalled: int
 	var safe_score := 0
 	var any_cell := Vector2i(-1, -1)
 	var any_score := 0
-	# Parmi les cases qui avancent mais restent menacees, la moins exposee -
-	# cf. desperation ci-dessous : sert a ne pas jeter une piece coincee sur la
-	# case la plus surveillee du plateau juste parce qu'elle grignote un point
-	# de distance de plus.
+	# Parmi TOUTES les cases libres, meme celles qui n'avancent pas, la moins
+	# survolee par l'ennemi - cf. desperation ci-dessous. Une piece coincee
+	# dans un angle du plateau peut n'avoir QUE des cases qui l'eloignent :
+	# sans ce filet calcule hors du "score <= 0: continue" plus bas, elle
+	# resterait plantee indefiniment meme en situation de blocage confirmee.
 	var least_exposed_cell := Vector2i(-1, -1)
 	var least_threats := 999
+	var least_exposed_score := -INF
 
 	for cell in moves:
 		if grid.unit_at(cell) != null:
@@ -133,45 +140,54 @@ static func decide(unit: BattleUnit, grid: GridModel, units: Array, stalled: int
 		# personne a chasser dans cette direction, et la partie s'enlise.
 		if promotion_gain > 0:
 			score = maxi(score, promotion_gain)
+
+		var threatened := _would_be_threatened(cell, unit, enemy_team, grid, units)
+		if threatened:
+			var threats := _threat_count(cell, unit, enemy_team, grid, units)
+			if threats < least_threats or (threats == least_threats and score > least_exposed_score):
+				least_threats = threats
+				least_exposed_cell = cell
+				least_exposed_score = score
+		elif score > least_exposed_score:
+			# Une case sure prime toujours sur une case menacee, meme si elle
+			# ne rapproche de rien : la desperation ne veut pas dire foncer
+			# dans le mur, juste refuser l'immobilisme.
+			least_threats = 0
+			least_exposed_cell = cell
+			least_exposed_score = score
+
 		if score <= 0:
 			continue
 		if score > any_score:
 			any_score = score
 			any_cell = cell
-		var threatened := _would_be_threatened(cell, unit, enemy_team, grid, units)
 		if not threatened and score > safe_score:
 			safe_score = score
 			safe_cell = cell
-		if threatened:
-			var threats := _threat_count(cell, unit, enemy_team, grid, units)
-			if threats < least_threats:
-				least_threats = threats
-				least_exposed_cell = cell
 
 	if safe_cell != Vector2i(-1, -1):
 		return {"move": safe_cell, "capture": null}
 
-	# 3. Aucune case sure. Seules les pieces de faible valeur avancent quand
-	#    meme : c'est le role du pion d'ouvrir le contact et d'etre echange.
-	#    Une tour qui s'offre a un pion perd la bataille a elle seule - SAUF
-	#    si son camp n'a plus aucun pion pour le faire a sa place et que la
-	#    position est bloquee depuis trop longtemps (cf. _STANDOFF_RATIO) :
-	#    mieux vaut un duel risque qu'une bataille qui ne se termine jamais
-	#    alors que des pieces sont encore en vie. Dans ce cas, on prend quand
-	#    meme la case la moins exposee (least_exposed_cell) plutot que la plus
-	#    avancee (any_cell) : mieux vaut un petit pas risque qu'un saut suicide.
+	# 3. Aucune case sure. Les pieces de faible valeur avancent quand meme :
+	#    c'est le role du pion d'ouvrir le contact et d'etre echange.
 	if any_cell != Vector2i(-1, -1) and unit.value <= _EXPENDABLE_VALUE:
 		return {"move": any_cell, "capture": null}
 
-	var desperate := unit.value > _EXPENDABLE_VALUE and not _team_has_expendable(unit.team, units) \
-		and _total_alive(units) >= _STANDOFF_MIN_PIECES \
+	# 4. Enlisement confirme (cf. _STANDOFF_RATIO) : quelle que soit sa valeur
+	#    et meme sans coup qui rapproche de l'ennemi, une piece qui a une case
+	#    libre ne doit plus rester plantee - sinon le combat ne se termine
+	#    jamais alors que des pieces sont encore en vie des deux cotes. Elle
+	#    prend la case la moins survolee (least_exposed_cell), qui peut tres
+	#    bien etre totalement sure : la desperation ne force pas un saut
+	#    suicide, elle interdit juste l'immobilisme prolonge.
+	var desperate := _total_alive(units) >= _STANDOFF_MIN_PIECES \
 		and stalled >= int(float(stalemate_limit) * _STANDOFF_RATIO)
 	if desperate and least_exposed_cell != Vector2i(-1, -1):
 		return {"move": least_exposed_cell, "capture": null}
 
-	# 4. Rien de sur, et la piece vaut trop cher pour se sacrifier : elle tient
-	#    sa position. Si les deux camps s'immobilisent, le moteur tranche au
-	#    materiel restant apres Balance.COMBAT.stalemate_rounds.
+	# 5. Rien de sur, la piece vaut trop cher pour se sacrifier hors enlisement
+	#    confirme : elle tient sa position. Si les deux camps s'immobilisent,
+	#    le moteur tranche au materiel restant apres Balance.COMBAT.stalemate.
 	return {"move": unit.cell, "capture": null}
 
 
@@ -247,17 +263,6 @@ static func _living_enemies(unit: BattleUnit, units: Array) -> Array:
 		if other.is_alive() and unit.is_enemy_of(other):
 			enemies.append(other)
 	return enemies
-
-
-## Vrai si ce camp a encore une piece sacrifiable (pion non promu) en vie -
-## cf. _STANDOFF_RATIO : tant que c'est le cas, elle reste la premiere
-## candidate naturelle pour ouvrir le contact, pas besoin de forcer une piece
-## de valeur a prendre le risque a sa place.
-static func _team_has_expendable(team: int, units: Array) -> bool:
-	for other in units:
-		if other.is_alive() and other.team == team and other.value <= _EXPENDABLE_VALUE:
-			return true
-	return false
 
 
 static func _total_alive(units: Array) -> int:

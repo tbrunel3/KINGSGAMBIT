@@ -130,7 +130,7 @@ func _fill() -> void:
 	header_spacer.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	header.add_child(header_spacer)
 	var deploy_label := UiTheme.make_label(
-		"Deploiement: %d/%d" % [_player_total(), Game.deploy_slots()], 12, Color("a0aabf"))
+		"Deploiement: %d/%d" % [_player_weight(), Game.deploy_capacity()], 12, Color("a0aabf"))
 	deploy_label.add_theme_font_override("font", UiTheme.font_bold())
 	deploy_label.autowrap_mode = TextServer.AUTOWRAP_OFF
 	deploy_label.size_flags_horizontal = Control.SIZE_SHRINK_END
@@ -167,11 +167,14 @@ func _fill() -> void:
 		_info_body.add_child(UiTheme.make_label("(bataille deja gagnee)", 12, UiTheme.TEXT_DIM))
 
 
-func _player_total() -> int:
-	var total := 0
+## Poids total de l'armee possedee - cf. CASTLE_DATA.deploy_capacity dans
+## balance.gd : la barre "Deploiement: X/Y" du briefing compare deja des
+## poids, pas des effectifs.
+func _player_weight() -> int:
+	var weight := 0
 	for type in Balance.UNIT_TYPES:
-		total += Game.units_owned(type)
-	return total
+		weight += Game.units_owned(type) * Balance.unit_value(type)
+	return weight
 
 
 ## Contour teinte (rouge ennemi / or joueur / aucun pour Info-Summary) - cf.

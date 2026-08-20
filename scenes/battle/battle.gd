@@ -28,6 +28,17 @@ const DEFEAT_BG_PATH := "res://assets/results/defeat_modal_bg.png"
 @onready var _bottom_panel: PanelContainer = $Safe/Overlay/BottomPanel
 @onready var _bottom: VBoxContainer = $Safe/Overlay/BottomPanel/BottomBox
 
+## Chrono de blocage (cf. Balance.COMBAT.stalemate_seconds_cap) : construit et
+## detruit avec la phase de combat, jamais present pendant placement/resultat.
+var _blockage_badge: PanelContainer = null
+var _blockage_label: Label = null
+
+## Fraction du seuil d'enlisement a partir de laquelle le chrono devient
+## visible. Reste cache avant ca : ce garde-fou doit rester exceptionnel, pas
+## un compte a rebours permanent qui inquieterait le joueur pour rien pendant
+## une phase de poursuite tout a fait normale.
+const _BLOCKAGE_WARNING_RATIO := 0.5
+
 var _battle: Dictionary = {}
 var _engine: BattleEngine = null
 var _phase: int = Phase.PLACEMENT
@@ -262,10 +273,20 @@ func _build_placement_ui() -> void:
 			break
 
 
+## Poids total (cf. Balance.unit_value) des pieces deja posees - c'est ce
+## qu'on compare a Game.deploy_capacity(), pas un nombre de pieces : voir
+## CASTLE_DATA.deploy_capacity dans balance.gd.
+func _placed_weight() -> int:
+	var weight := 0
+	for unit in _placed:
+		weight += Balance.unit_value(unit.type)
+	return weight
+
+
 func _refresh_placement() -> void:
-	var slots := Game.deploy_slots()
-	if _placed.size() >= slots:
-		_status_label.text = "Effectif maximum atteint"
+	var capacity := Game.deploy_capacity()
+	if _placed_weight() >= capacity:
+		_status_label.text = "Charge maximale atteinte"
 	else:
 		_status_label.text = "Tape pour poser"
 
@@ -286,12 +307,12 @@ func _refresh_stats_hud() -> void:
 		child.queue_free()
 
 	if _phase == Phase.PLACEMENT:
-		var label := UiTheme.make_label("Unites", 10, Color("b2b2cc"))
+		var label := UiTheme.make_label("Charge", 10, Color("b2b2cc"))
 		label.autowrap_mode = TextServer.AUTOWRAP_OFF
 		label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 		_stats_box.add_child(label)
 		_stats_box.add_child(_hud_separator())
-		var count := UiTheme.make_label("%d/%d" % [_placed.size(), Game.deploy_slots()], 13, Color("99ccff"))
+		var count := UiTheme.make_label("%d/%d" % [_placed_weight(), Game.deploy_capacity()], 13, Color("99ccff"))
 		count.autowrap_mode = TextServer.AUTOWRAP_OFF
 		count.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 		_stats_box.add_child(count)
@@ -372,9 +393,10 @@ func _on_cell_clicked(cell: Vector2i) -> void:
 		return
 	if _selected_type.is_empty() or int(_remaining[_selected_type]) <= 0:
 		return
-	if _placed.size() >= Game.deploy_slots():
-		_status_label.text = "Chateau Nv.%d : %d unites maximum." % [
-			Game.castle_level(), Game.deploy_slots()]
+	var capacity := Game.deploy_capacity()
+	if _placed_weight() + Balance.unit_value(_selected_type) > capacity:
+		_status_label.text = "Chateau Nv.%d : %d de charge maximum." % [
+			Game.castle_level(), capacity]
 		return
 
 	var unit := _engine.add_unit(_selected_type, Game.building_level(_selected_type),
@@ -400,13 +422,24 @@ func _on_reset_placement() -> void:
 ## les pieces se bouchent le passage et la tour ne sort jamais. Les pions
 ## ouvrent le contact, les pieces de valeur suivent une fois les lignes ouvertes.
 func _on_auto_place() -> void:
-	var slots := Game.deploy_slots()
+	var capacity := Game.deploy_capacity()
+	var weight := 0
 	var order: Array = []
-	while order.size() < slots:
-		var type := _pick_available_type(order)
+	# Types qui ne rentrent plus dans la charge restante : a exclure des tours
+	# suivants sans arreter la formation pour autant, un type plus leger peut
+	# encore avoir sa place (ex. il reste 2 de charge, la Tour a 5 ne rentre
+	# plus mais un Pion a 1 oui).
+	var exhausted: Dictionary = {}
+	while true:
+		var type := _pick_available_type(order, exhausted)
 		if type.is_empty():
 			break
+		var type_weight := Balance.unit_value(type)
+		if weight + type_weight > capacity:
+			exhausted[type] = true
+			continue
 		order.append(type)
+		weight += type_weight
 
 	# Les pions passent devant, le reste garde son ordre d'alternance.
 	order.sort_custom(func(a, b): return Balance.unit_value(a) < Balance.unit_value(b))
@@ -427,11 +460,14 @@ func _on_auto_place() -> void:
 ## un mur de pions perd contre a peu pres tout.
 ##
 ## `taken` contient les types deja retenus pour cette formation, afin de tenir
-## le compte avant que les pieces soient reellement posees.
-func _pick_available_type(taken: Array = []) -> String:
+## le compte avant que les pieces soient reellement posees. `exhausted` exclut
+## les types qui ne rentrent plus dans la charge restante (cf. _on_auto_place).
+func _pick_available_type(taken: Array = [], exhausted: Dictionary = {}) -> String:
 	var types: Array = Balance.UNIT_TYPES
 	for offset in range(types.size()):
 		var type: String = types[(taken.size() + offset) % types.size()]
+		if exhausted.has(type):
+			continue
 		if int(_remaining[type]) - taken.count(type) > 0:
 			return type
 	return ""
@@ -455,8 +491,54 @@ func _start_combat() -> void:
 	_grid_view.selected_cell = Vector2i(-1, -1)
 	_grid_view.queue_redraw()
 	_build_combat_ui()
+	_build_blockage_badge()
 	_refresh_stats_hud()
 	_run_combat()
+
+
+## Petit badge rouge sous le Tour-Badge, cache par defaut : cf.
+## _BLOCKAGE_WARNING_RATIO. Rejoue le meme habillage (fond fonce, bordure,
+## ombre) que les autres badges de l'ecran de combat.
+func _build_blockage_badge() -> void:
+	_blockage_badge = PanelContainer.new()
+	var box := StyleBoxFlat.new()
+	box.bg_color = Color(UiTheme.DANGER, 0.16)
+	box.set_corner_radius_all(10)
+	box.border_color = Color(UiTheme.DANGER, 0.7)
+	box.set_border_width_all(1.5)
+	box.content_margin_left = 10
+	box.content_margin_right = 10
+	box.content_margin_top = 5
+	box.content_margin_bottom = 5
+	box.shadow_color = Color(0, 0, 0, 0.35)
+	box.shadow_size = 4
+	_blockage_badge.add_theme_stylebox_override("panel", box)
+	_blockage_badge.position = Vector2(12, 97)
+	_blockage_badge.visible = false
+
+	var row := HBoxContainer.new()
+	row.add_theme_constant_override("separation", 5)
+	_blockage_badge.add_child(row)
+
+	var icon := Icon.new()
+	icon.icon_name = "clock"
+	icon.color = UiTheme.DANGER
+	icon.custom_minimum_size = Vector2(12, 12)
+	row.add_child(icon)
+
+	_blockage_label = UiTheme.make_label("", 10, UiTheme.DANGER)
+	_blockage_label.add_theme_font_override("font", UiTheme.font_bold())
+	_blockage_label.autowrap_mode = TextServer.AUTOWRAP_OFF
+	row.add_child(_blockage_label)
+
+	_tour_badge.get_parent().add_child(_blockage_badge)
+
+
+func _clear_blockage_badge() -> void:
+	if _blockage_badge != null:
+		_blockage_badge.queue_free()
+		_blockage_badge = null
+		_blockage_label = null
 
 
 func _build_combat_ui() -> void:
@@ -601,6 +683,7 @@ func _refresh_combat_status() -> void:
 	var turn := _turn_activations / _combat_unit_count + 1
 	_phase_label.text = str(turn)
 	_refresh_stats_hud()
+	_refresh_blockage_badge()
 
 	# La vitesse d'avant "Fin tour" revient des que le tour suivant commence -
 	# cf. _on_end_turn().
@@ -609,6 +692,27 @@ func _refresh_combat_status() -> void:
 		_fast_forward_target_turn = -1
 
 	var shown_speed := _speed_before_fast_forward if _fast_forward_target_turn != -1 else _speed
+	_update_speed_pills(shown_speed)
+
+
+## N'apparait que passe _BLOCKAGE_WARNING_RATIO du seuil d'enlisement (cf.
+## BattleEngine.stalemate_ratio) : le combat doit etre visiblement bloque
+## depuis un moment, pas juste en train de manoeuvrer sans prise recente.
+## Le texte reflete le temps reel avant resolution a la vitesse en cours,
+## coherent avec le fait que seul l'AFFICHAGE depend de la vitesse (cf.
+## BattleEngine.stalemate_seconds_remaining).
+func _refresh_blockage_badge() -> void:
+	if _blockage_badge == null or _engine.finished:
+		return
+	if _engine.stalemate_ratio() < _BLOCKAGE_WARNING_RATIO:
+		_blockage_badge.visible = false
+		return
+	_blockage_badge.visible = true
+	var seconds := _engine.stalemate_seconds_remaining() / _speed
+	_blockage_label.text = "Blocage — %ds" % maxi(1, int(ceil(seconds)))
+
+
+func _update_speed_pills(shown_speed: float) -> void:
 	for speed in _speed_buttons.keys():
 		var pill: PanelContainer = _speed_buttons[speed]
 		var active: bool = speed == shown_speed
@@ -679,6 +783,7 @@ func _wait(seconds: float) -> void:
 func _show_result() -> void:
 	_phase = Phase.RESULT
 	_running = false
+	_clear_blockage_badge()
 	var victory := _engine.winner == BattleUnit.TEAM_PLAYER
 	var reward := Game.reward_for(int(_battle["id"]))
 	var battle_id := int(_battle["id"])
@@ -1007,4 +1112,5 @@ func _clear_bottom() -> void:
 
 func _on_quit() -> void:
 	_running = false
+	_clear_blockage_badge()
 	Router.goto_village()

@@ -186,21 +186,21 @@ func _add_castle_card(body: VBoxContainer) -> void:
 	var card: PanelContainer = CardScene.instantiate()
 	var card_body: VBoxContainer = card.get_node("%Body")
 	card_body.add_child(UiTheme.stat_row("Deploiement actuel",
-		UiTheme.make_label("%d unites" % Game.deploy_slots(), 14, Color("f0f3f8"))))
+		UiTheme.make_label("%d de charge" % Game.deploy_capacity(), 14, Color("f0f3f8"))))
 	if not Game.is_max_level(Balance.CASTLE):
 		card_body.add_child(HSeparator.new())
-		var next_slots := Balance.deploy_slots(Game.castle_level() + 1)
-		# "15 -> 22 unites" plutot que la seule valeur suivante, pour montrer
-		# le gain d'un coup d'oeil - cf. Stat-Line-Next (capture Figma 08).
+		var next_slots := Balance.deploy_capacity(Game.castle_level() + 1)
+		# "15 -> 22 de charge" plutot que la seule valeur suivante, pour
+		# montrer le gain d'un coup d'oeil - cf. Stat-Line-Next (capture Figma 08).
 		var compare := HBoxContainer.new()
 		compare.add_theme_constant_override("separation", 6)
-		var current_label := UiTheme.make_label(str(Game.deploy_slots()), 13, Color("a0aabf"))
+		var current_label := UiTheme.make_label(str(Game.deploy_capacity()), 13, Color("a0aabf"))
 		current_label.autowrap_mode = TextServer.AUTOWRAP_OFF
 		compare.add_child(current_label)
 		var arrow := UiTheme.make_label("->", 13, UiTheme.GOLD)
 		arrow.autowrap_mode = TextServer.AUTOWRAP_OFF
 		compare.add_child(arrow)
-		var next_label := UiTheme.make_label("%d unites" % next_slots, 14, UiTheme.GOLD)
+		var next_label := UiTheme.make_label("%d de charge" % next_slots, 14, UiTheme.GOLD)
 		next_label.add_theme_font_override("font", UiTheme.font_bold())
 		next_label.autowrap_mode = TextServer.AUTOWRAP_OFF
 		compare.add_child(next_label)

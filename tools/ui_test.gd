@@ -131,7 +131,10 @@ func _test_battle() -> void:
 	await _frames(2)
 	var placed: int = battle._placed.size()
 	_check(placed > 0, "le placement automatique pose %d unites" % placed)
-	_check(placed <= Game.deploy_slots(), "le nombre d'unites respecte la limite du chateau")
+	var weight := 0
+	for unit in battle._placed:
+		weight += Balance.unit_value(unit.type)
+	_check(weight <= Game.deploy_capacity(), "la charge posee respecte la limite du chateau")
 
 	# Reinitialiser puis replacer
 	battle._on_reset_placement()

@@ -188,17 +188,32 @@ const UNITS := {
 
 # ------------------------------- CHATEAU -------------------------------------
 #
-#  Le Roi n'est pas jouable au MVP. Le chateau porte la narration et fixe le
-#  nombre de pieces deployables en bataille.
+#  Le Roi n'est pas jouable au MVP. Le chateau porte la narration et fixe la
+#  capacite de deploiement en bataille (un budget de poids, pas un nombre de
+#  pieces - voir CASTLE_DATA.deploy_capacity juste en dessous).
 
+## deploy_capacity est un budget de POIDS, pas un nombre de pieces : chaque
+## piece coute sa unit_value en capacite (le "sac a dos" du placement). Une
+## armee de pions (poids 1) remplit donc le chateau a l'unite pres, mais une
+## Dame (poids 9) coute autant de place que 9 pions - c'est voulu, une armee
+## de pieces fortes doit rester plus petite qu'un mur de pions.
+##
+## Valeurs calculees, pas choisies au hasard : chaque budget est le poids
+## EXACT de la formation que produisait l'ancien systeme a effectif fixe
+## (l'ancien tableau, en tetes) avec l'alternance Pion/Cavalier/Fou/Tour de
+## _on_auto_place (poids 1/3/3/5). L'armee par defaut - celle que pose le
+## bouton AUTO et que jouent les tests - est donc EXACTEMENT inchangee ;
+## seule une armee deliberement chargee en pieces fortes est desormais plus
+## petite. Verifie par tools/smoke_test.gd (10/10 batailles gagnables) :
+## revalider avec cet outil avant de retoucher ces chiffres.
+##                    Nv   1   2   3   4   5   6   7   8   9  10
 const CASTLE_DATA := {
 	"name": "Chateau Royal",
 	"letter": "R",
 	"color": "c6a84f",
-	#                Nv  1  2  3  4  5  6  7  8  9 10
-	"deploy_slots": [ 6, 8, 9,10,12,13,14,15,16,18],
-	"upgrade_cost":    [300, 560,  900, 1320, 1820, 2400, 3060, 3800, 4620],
-	"upgrade_seconds": [120, 300,  660, 1320, 2400, 4200, 6600, 9900,14400],
+	"deploy_capacity": [ 16, 24, 25, 28, 36, 37, 40, 43, 48, 52],
+	"upgrade_cost":     [300, 560,  900, 1320, 1820, 2400, 3060, 3800, 4620],
+	"upgrade_seconds":  [120, 300,  660, 1320, 2400, 4200, 6600, 9900,14400],
 }
 
 # ------------------------------- CAMPAGNE ------------------------------------
@@ -235,6 +250,11 @@ const COMBAT := {
 	# trancher aux pieces restantes. Compte en tours et non en activations,
 	# sinon une grande armee declencherait le verdict avant meme le contact.
 	"stalemate_rounds": 8,
+	# Chrono de blocage : quelle que soit la taille de l'armee, 30 secondes
+	# reelles (a vitesse x1) sans la moindre prise suffisent a trancher. Un
+	# filet de securite cense rester exceptionnel - cf. BattleAI._STANDOFF_RATIO,
+	# qui force normalement les pieces a bouger bien avant d'atteindre ce mur.
+	"stalemate_seconds_cap": 30,
 	"max_activations": 1200,   # garde-fou absolu
 }
 
@@ -277,7 +297,10 @@ func move_type(type: String) -> String:
 	return String(UNITS[type]["move_type"])
 
 
-## Valeur d'une piece pour l'IA : elle capture en priorite la plus chere.
+## Valeur d'une piece. Sert deux usages : l'IA capture en priorite la plus
+## chere (cf. BattleAI), et c'est aussi son cout en capacite de deploiement
+## (cf. CASTLE_DATA.deploy_capacity) - une piece plus forte prend plus de
+## place dans le sac a dos du placement.
 func unit_value(type: String) -> int:
 	return int(UNITS[type].get("value", 1))
 
@@ -338,7 +361,7 @@ func capacity(type: String, level: int) -> int:
 
 func max_level(type: String) -> int:
 	if type == CASTLE:
-		return CASTLE_DATA["deploy_slots"].size()
+		return CASTLE_DATA["deploy_capacity"].size()
 	return UNITS[type]["capacity"].size()
 
 
@@ -358,9 +381,10 @@ func upgrade_seconds(type: String, current_level: int) -> int:
 	return int(times[current_level - 1])
 
 
-## Nombre de pieces deployables en bataille, fixe par le niveau du chateau.
-func deploy_slots(castle_level: int) -> int:
-	return int(_at_level(CASTLE_DATA["deploy_slots"], castle_level))
+## Capacite de deploiement en bataille (poids total des pieces posables),
+## fixee par le niveau du chateau. Voir CASTLE_DATA.deploy_capacity.
+func deploy_capacity(castle_level: int) -> int:
+	return int(_at_level(CASTLE_DATA["deploy_capacity"], castle_level))
 
 
 ## Donnees d'une bataille par son numero (1 = premiere bataille).

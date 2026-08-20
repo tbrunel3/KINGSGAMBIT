@@ -177,10 +177,33 @@ func _next_unit(team: int) -> BattleUnit:
 
 
 ## Seuil d'enlisement exprime en activations, deduit du nombre de pieces encore
-## en jeu : un tour complet coute une activation par piece vivante.
+## en jeu : un tour complet coute une activation par piece vivante. Plafonne a
+## Balance.COMBAT.stalemate_seconds_cap de temps reel a vitesse x1 (converti en
+## activations via step_delay) : quelle que soit la taille de l'armee, une
+## bataille bloquee ne doit jamais faire attendre le joueur plus longtemps que
+## ca avant d'etre tranchee - cf. le "chrono" affiche cote vue (battle.gd).
 func _stalemate_limit() -> int:
 	var alive := living(TEAM_PLAYER).size() + living(TEAM_ENEMY).size()
-	return int(Balance.COMBAT["stalemate_rounds"]) * maxi(4, alive)
+	var by_army_size := int(Balance.COMBAT["stalemate_rounds"]) * maxi(4, alive)
+	var seconds_cap := int(Balance.COMBAT["stalemate_seconds_cap"])
+	var by_seconds := int(ceil(float(seconds_cap) / float(Balance.COMBAT["step_delay"])))
+	return mini(by_army_size, by_seconds)
+
+
+## Progression vers l'enlisement (0 = aucune prise recente, 1 = resolution
+## imminente au materiel). Sert uniquement a l'affichage du "chrono" de
+## blocage cote vue - la resolution elle-meme reste pilotee par step().
+func stalemate_ratio() -> float:
+	var limit := _stalemate_limit()
+	return 0.0 if limit <= 0 else clampf(float(_idle_activations) / float(limit), 0.0, 1.0)
+
+
+## Temps restant, en secondes de jeu a vitesse x1, avant que le moteur tranche
+## au materiel si aucune prise ne survient d'ici la. La vue divise par la
+## vitesse choisie pour l'affichage : le seuil reel, lui, ne bouge pas.
+func stalemate_seconds_remaining() -> float:
+	var remaining := _stalemate_limit() - _idle_activations
+	return maxf(0.0, float(remaining) * float(Balance.COMBAT["step_delay"]))
 
 
 ## Departage a la valeur totale des pieces restantes. En cas d'egalite parfaite,

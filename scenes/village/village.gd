@@ -396,7 +396,7 @@ func _refresh_castle() -> void:
 	level_pill.set_custom("", "Nv.%d" % Game.castle_level(), Color("ffd933", 0.2), Color("ffd933"))
 	level_pill.get_node("%Text").add_theme_font_size_override("font_size", 11)
 
-	var deploy := UiTheme.make_label("Deploiement: %d" % Game.deploy_slots(), 10, Color("ccd1e0"))
+	var deploy := UiTheme.make_label("Deploiement: %d" % Game.deploy_capacity(), 10, Color("ccd1e0"))
 	deploy.autowrap_mode = TextServer.AUTOWRAP_OFF
 	_castle_sub_row.add_child(deploy)
 

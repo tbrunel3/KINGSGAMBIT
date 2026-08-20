@@ -239,8 +239,8 @@ func castle_level() -> int:
 	return building_level(Balance.CASTLE)
 
 
-func deploy_slots() -> int:
-	return Balance.deploy_slots(castle_level())
+func deploy_capacity() -> int:
+	return Balance.deploy_capacity(castle_level())
 
 
 func is_max_level(type: String) -> bool:

@@ -31,16 +31,19 @@ func _ready() -> void:
 	for type in Balance.UNIT_TYPES:
 		pool[type] = int(Balance.STARTING_UNITS.get(type, 0))
 
+	var capacity := Balance.deploy_capacity(1)
+	var weight := 0
 	var placed := 0
 	var cursor := 0
 	for cell in engine.grid.free_player_cells():
-		if placed >= Balance.deploy_slots(1):
-			break
 		var type := _pick(pool, cursor)
 		if type.is_empty():
 			break
+		if weight + Balance.unit_value(type) > capacity:
+			break
 		engine.add_unit(type, 1, BattleUnit.TEAM_PLAYER, cell)
 		pool[type] = int(pool[type]) - 1
+		weight += Balance.unit_value(type)
 		cursor += 1
 		placed += 1
 
