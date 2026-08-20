@@ -15,6 +15,22 @@ Ton : fantasy médiéval, mélancolique mais pas sombre. Aucune violence graphiq
 - Godot 4 (gl_compatibility), portrait uniquement
 - Résolution de référence : 393 × 852 points (iPhone), stretch mode canvas_items / expand
 - Safe areas iPhone (encoche haut + barre gestuelle bas) à respecter
+
+### Mise en page : ancrer, ne plus positionner (règle pour la V2)
+
+Les écrans actuels sont posés en **coordonnées absolues** calibrées pour exactement 393 × 852. C'est la cause du « scale bizarre » constaté sur téléphone : en `stretch/aspect = expand`, la zone de jeu réelle fait 393 × 880 ou 405 × 852 selon l'appareil, et tout ce qui était calé sur 852 se retrouve décalé. La zone sûre retire en plus 16 points de chaque côté — un élément posé à `x:333` d'une largeur de 60 sort de l'écran.
+
+**Pour le prochain import Figma, chaque écran doit être découpé en zones ancrées** plutôt qu'en positions fixes :
+
+- une barre haute ancrée en haut, de hauteur fixe ;
+- un contenu central qui prend **toute la place restante** (hauteur variable) ;
+- un bandeau bas ancré en bas, de hauteur fixe.
+
+Les marges, les tailles de composants et les rayons restent figés ; seule la hauteur du milieu est libre. Les maquettes doivent donc être dessinées dans un cadre utile de **361 × 824** (393 × 852 moins les marges de zone sûre), ou fournir les positions en pourcentages.
+
+Écrans déjà convertis : `battle.tscn` (grille, croix, bandeau du bas ancrés). Restent à convertir : village, campagne, préparation.
+
+Solution de repli si la fidélité au pixel prime : passer `window/stretch/aspect` de `expand` à `keep` dans `project.godot` — la zone de jeu fait alors toujours 393 × 852 exactement, avec des bandes noires sur les écrans plus allongés.
 - Exports : sprites/textures PNG avec alpha, pas de blur lourd ni particules complexes
 
 ## Assets fournis
