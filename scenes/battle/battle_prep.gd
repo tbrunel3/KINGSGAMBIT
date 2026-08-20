@@ -142,11 +142,16 @@ func _fill() -> void:
 	_player_body.add_child(player_grid)
 
 	var total := 0
-	for type in Balance.UNIT_TYPES:
+	for type in Balance.ARMY_TYPES:
 		var owned := Game.units_owned(type)
 		total += owned
 		if owned > 0:
-			player_grid.add_child(_unit_card(type, "bleu", owned, Game.building_level(type),
+			# La Dame n'a pas de caserne qui monte en niveau : elle affiche
+			# celui de la Caserne des Pions, dont elle tient sa mobilite.
+			var level := Game.building_level(type)
+			if type == Balance.DAME:
+				level = Game.building_level(Balance.PION)
+			player_grid.add_child(_unit_card(type, "bleu", owned, level,
 				UiTheme.ACCENT, 32, 11, 9, "PRET", false))
 	if total == 0:
 		_player_body.add_child(UiTheme.make_label(
@@ -172,8 +177,8 @@ func _fill() -> void:
 ## poids, pas des effectifs.
 func _player_weight() -> int:
 	var weight := 0
-	for type in Balance.UNIT_TYPES:
-		weight += Game.units_owned(type) * Balance.unit_value(type)
+	for type in Balance.ARMY_TYPES:
+		weight += Game.units_owned(type) * Balance.deploy_weight(type)
 	return weight
 
 

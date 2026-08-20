@@ -60,7 +60,9 @@ func _refresh() -> void:
 		body.remove_child(child)
 		child.free()
 
-	if _type == Balance.CASTLE:
+	if _type == Balance.DAME:
+		_add_dame_screen(body)
+	elif _type == Balance.CASTLE:
 		_modal.open(Balance.building_name(_type).to_upper(), Modal.Context.GOLD, "crown")
 		body.add_child(_centered_pill("NIVEAU %d" % Game.castle_level(), Pill.Variant.INFO))
 		body.add_child(DividerScene.instantiate())
@@ -86,6 +88,64 @@ func _refresh() -> void:
 		_add_piece_card(body)
 		_add_recruit_row(body)
 		_add_upgrade_section(body)
+
+
+## La Tour de la Dame n'est pas une caserne : rien a recruter, rien a
+## ameliorer. Elle raconte ce qu'est une Dame, combien on en abrite, et
+## comment en obtenir une - c'est-a-dire en ramenant vivant un pion promu.
+func _add_dame_screen(body: VBoxContainer) -> void:
+	var owned := Game.dames_owned()
+	var unlocked := Game.is_building_unlocked(Balance.DAME)
+
+	_modal.open(Balance.building_name(_type).to_upper(),
+		Modal.Context.GOLD if unlocked else Modal.Context.NEUTRAL,
+		"crown" if unlocked else "lock")
+	if unlocked:
+		body.add_child(_centered_pill(
+			"%d DAME%s AU REPOS" % [owned, "" if owned <= 1 else "S"], Pill.Variant.INFO))
+	else:
+		body.add_child(_centered_pill("AUCUNE DAME", Pill.Variant.DEFAULT))
+	body.add_child(DividerScene.instantiate())
+
+	var card: PanelContainer = CardScene.instantiate()
+	var card_body: VBoxContainer = card.get_node("%Body")
+
+	var row := HBoxContainer.new()
+	row.add_theme_constant_override("separation", 10)
+	row.add_child(_piece_badge(56))
+	var texts := VBoxContainer.new()
+	texts.add_theme_constant_override("separation", 2)
+	texts.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	var name_label := UiTheme.make_label("LA DAME", 12, UiTheme.GOLD)
+	name_label.add_theme_font_override("font", UiTheme.font_bold())
+	texts.add_child(name_label)
+	var level := maxi(1, Game.building_level(Balance.PION))
+	var desc := UiTheme.make_label(Balance.move_description(Balance.DAME, level), 11, Color("f0f3f8"))
+	desc.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	texts.add_child(desc)
+	var origin := UiTheme.make_label(
+		"Elle garde la mobilite de la Caserne des Pions : c'est un pion qui a traverse le plateau.",
+		11, UiTheme.TEXT_DIM)
+	origin.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	texts.add_child(origin)
+	row.add_child(texts)
+	card_body.add_child(row)
+	body.add_child(card)
+
+	var how: PanelContainer = CardScene.instantiate()
+	var how_body: VBoxContainer = how.get_node("%Body")
+	how_body.add_child(UiTheme.make_label("COMMENT EN OBTENIR UNE", 12, UiTheme.GOLD))
+	how_body.get_child(0).add_theme_font_override("font", UiTheme.font_bold())
+	var steps := UiTheme.make_label(
+		"Mene un pion jusqu'a la derniere rangee ennemie : il devient Dame sur-le-champ. " +
+		"Ramene-la vivante et elle s'installe ici, prete a repartir au combat.",
+		11, Color("f0f3f8"))
+	steps.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	how_body.add_child(steps)
+	how_body.add_child(HSeparator.new())
+	how_body.add_child(UiTheme.stat_row("Charge au deploiement",
+		UiTheme.make_label("%d" % Balance.deploy_weight(Balance.DAME), 14, UiTheme.GOLD)))
+	body.add_child(how)
 
 
 func _centered_pill(text: String, variant: Pill.Variant) -> CenterContainer:
@@ -350,9 +410,13 @@ func _action_row(title_text: String, title_color: Color, cost_text: String, extr
 	button.add_child(button_label)
 	if not disabled:
 		button.mouse_filter = Control.MOUSE_FILTER_STOP
+		# call_deferred, et pas call : l'action (recruter, ameliorer) fait
+		# reconstruire le popup, donc liberer CE bouton - or il est en train
+		# d'emettre le signal qui nous amene ici. On laisse la frame se
+		# terminer avant de se supprimer soi-meme.
 		button.gui_input.connect(func(event: InputEvent):
 			if event is InputEventMouseButton and event.pressed and event.button_index == MOUSE_BUTTON_LEFT:
-				on_press.call())
+				on_press.call_deferred())
 	row.add_child(button)
 
 	return row_panel
@@ -414,7 +478,9 @@ func _add_upgrade_section(body: VBoxContainer) -> void:
 		skip.text = "Terminer maintenant (test)"
 		skip.theme_type_variation = "SecondaryButton"
 		skip.add_theme_font_size_override("font_size", 11)
-		skip.pressed.connect(func(): Game.force_finish_upgrade(_type))
+		# Meme raison que dans _action_row : terminer l'amelioration
+		# reconstruit le popup, donc libere ce bouton.
+		skip.pressed.connect(func(): Game.force_finish_upgrade.call_deferred(_type))
 		body.add_child(skip)
 		return
 

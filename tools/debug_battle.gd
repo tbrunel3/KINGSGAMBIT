@@ -17,6 +17,7 @@ const MAX_PRINTED := 400
 func _ready() -> void:
 	var battle := Balance.battle(BATTLE_ID)
 	var engine := BattleEngine.new(int(battle["cols"]), int(battle["rows"]))
+	engine.enemy_skill = Balance.battle_ai_skill(battle)
 
 	var cells: Array = engine.grid.free_enemy_cells()
 	var index := 0
@@ -28,7 +29,7 @@ func _ready() -> void:
 			index += 1
 
 	var pool: Dictionary = {}
-	for type in Balance.UNIT_TYPES:
+	for type in Balance.ARMY_TYPES:
 		pool[type] = int(Balance.STARTING_UNITS.get(type, 0))
 
 	var capacity := Balance.deploy_capacity(1)
@@ -39,11 +40,11 @@ func _ready() -> void:
 		var type := _pick(pool, cursor)
 		if type.is_empty():
 			break
-		if weight + Balance.unit_value(type) > capacity:
+		if weight + Balance.deploy_weight(type) > capacity:
 			break
 		engine.add_unit(type, 1, BattleUnit.TEAM_PLAYER, cell)
 		pool[type] = int(pool[type]) - 1
-		weight += Balance.unit_value(type)
+		weight += Balance.deploy_weight(type)
 		cursor += 1
 		placed += 1
 
@@ -58,14 +59,16 @@ func _ready() -> void:
 		var line := "%2d. %-6s " % [step, team_name]
 		for event in events:
 			match String(event["type"]):
-				"activate":
+				"move":
+					# Le moteur n'annonce plus l'activation a part : c'est
+					# l'evenement "move" qui porte la piece et ses deux cases.
 					var unit := engine.unit_by_id(int(event["unit"]))
-					line += "%s%s en %s " % [
+					line += "%s%s en %s -> %s " % [
 						Balance.unit_letter(unit.type),
 						"" if unit.team == BattleUnit.TEAM_PLAYER else "'",
-						unit.cell]
-				"move":
-					line += "-> %s " % event["to"]
+						event["from"], event["to"]]
+				"pass":
+					line += "PASSE "
 				"capture":
 					var victim := engine.unit_by_id(int(event["target"]))
 					line += "PREND %s en %s " % [Balance.unit_letter(victim.type), event["cell"]]
@@ -100,7 +103,7 @@ func _print_board(engine: BattleEngine) -> void:
 
 
 func _pick(pool: Dictionary, cursor: int) -> String:
-	var types: Array = Balance.UNIT_TYPES
+	var types: Array = Balance.ARMY_TYPES
 	for offset in range(types.size()):
 		var type: String = types[(cursor + offset) % types.size()]
 		if int(pool[type]) > 0:

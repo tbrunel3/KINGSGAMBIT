@@ -26,7 +26,7 @@ func _ready() -> void:
 
 func _default_state() -> Dictionary:
 	var units := {}
-	for type in Balance.UNIT_TYPES:
+	for type in Balance.ARMY_TYPES:
 		units[type] = int(Balance.STARTING_UNITS.get(type, 0))
 
 	var buildings := {}
@@ -66,7 +66,7 @@ func _normalize() -> void:
 	_state["unlocked_battle"] = int(_state.get("unlocked_battle", 1))
 
 	var units: Dictionary = _state.get("units", {})
-	for type in Balance.UNIT_TYPES:
+	for type in Balance.ARMY_TYPES:
 		units[type] = int(units.get(type, 0))
 	_state["units"] = units
 
@@ -75,7 +75,9 @@ func _normalize() -> void:
 	var buildings: Dictionary = _state.get("buildings", {})
 	buildings[Balance.CASTLE] = int(buildings.get(Balance.CASTLE, 1))
 	buildings[Balance.PION] = int(buildings.get(Balance.PION, 1))
-	for type in Balance.UNIT_TYPES:
+	# La Tour de la Dame (Balance.DAME) suit la meme regle que les casernes a
+	# debloquer : son absence veut dire "pas encore de Dame ramenee vivante".
+	for type in Balance.ARMY_TYPES:
 		if buildings.has(type):
 			buildings[type] = int(buildings[type])
 	_state["buildings"] = buildings
@@ -141,7 +143,7 @@ func units_owned(type: String) -> int:
 
 func total_units() -> int:
 	var total := 0
-	for type in Balance.UNIT_TYPES:
+	for type in Balance.ARMY_TYPES:
 		total += units_owned(type)
 	return total
 
@@ -186,6 +188,38 @@ func _ensure_playable() -> void:
 			_state["units"][type] = floor_count
 
 
+func dames_owned() -> int:
+	return units_owned(Balance.DAME)
+
+
+## Dames ramenees VIVANTES d'une bataille. Le pion promu quitte la caserne des
+## pions et la Dame prend sa place a la Tour de la Dame, qui apparait au
+## village a la premiere d'entre elles. Retourne le nombre reellement stocke -
+## il peut etre inferieur si le batiment est plein (cf. Balance capacity DAME).
+##
+## A appeler APRES apply_losses : une Dame capturee pendant le combat n'est
+## pas une survivante, elle a deja ete retiree comme le pion qu'elle etait.
+func store_promotions(count: int) -> int:
+	if count <= 0:
+		return 0
+
+	var room := Balance.capacity(Balance.DAME, 1) - dames_owned()
+	var stored := clampi(count, 0, maxi(0, room))
+	if stored <= 0:
+		return 0
+
+	_state["units"][Balance.PION] = maxi(0, units_owned(Balance.PION) - stored)
+	_state["units"][Balance.DAME] = dames_owned() + stored
+	if not is_building_unlocked(Balance.DAME):
+		_state["buildings"][Balance.DAME] = 1
+		buildings_changed.emit()
+
+	_ensure_playable()
+	save()
+	units_changed.emit()
+	return stored
+
+
 ## Or rapporte par une bataille : une victoire deja acquise rapporte moins.
 func reward_for(battle_id: int) -> int:
 	var data := Balance.battle(battle_id)
@@ -199,6 +233,9 @@ func reward_for(battle_id: int) -> int:
 
 ## Recrute une unite. Retourne false si l'or manque ou si la caserne est pleine.
 func recruit(type: String) -> bool:
+	# La Dame ne s'achete a aucun prix : elle se merite au bout du plateau.
+	if type == Balance.DAME:
+		return false
 	if is_at_capacity(type):
 		return false
 	if not spend_gold(recruit_cost(type)):
@@ -371,6 +408,18 @@ func dev_finish_all_upgrades() -> void:
 	for type in _state["upgrades"].keys():
 		_state["upgrades"][type] = int(Time.get_unix_time_from_system())
 	check_upgrades()
+
+
+## Offre une Dame sans passer par la promotion : le seul moyen de tester la
+## Tour de la Dame et le deploiement d'une Dame sans jouer une bataille
+## entiere jusqu'au bout du plateau.
+func dev_grant_dame() -> void:
+	_state["units"][Balance.DAME] = dames_owned() + 1
+	if not is_building_unlocked(Balance.DAME):
+		_state["buildings"][Balance.DAME] = 1
+		buildings_changed.emit()
+	save()
+	units_changed.emit()
 
 
 ## Rend toutes les batailles selectionnables sans les marquer gagnees : la

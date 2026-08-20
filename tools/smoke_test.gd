@@ -82,6 +82,24 @@ func _check_balance() -> void:
 		if required < 2 or required > Balance.max_level(Balance.CASTLE):
 			_fail("%s : seuil de deblocage chateau incoherent (%d)" % [type, required])
 
+	# La Dame doit rester la piece la plus CHERE pour l'IA, tout en restant
+	# posable : son poids de deploiement ne peut pas depasser la charge d'un
+	# chateau niveau 1, sinon la recompense d'une promotion est injouable.
+	if Balance.unit_value(Balance.DAME) <= Balance.unit_value(Balance.TOUR):
+		_fail("la Dame ne vaut pas plus qu'une Tour aux yeux de l'IA")
+	if Balance.deploy_weight(Balance.DAME) > Balance.deploy_capacity(1):
+		_fail("la Dame ne rentre pas dans la charge d'un chateau niveau 1")
+
+	# Le niveau de jeu de l'IA doit monter, jamais redescendre.
+	var previous_skill := -1
+	for battle in Balance.CAMPAIGN:
+		var skill := Balance.battle_ai_skill(battle)
+		if skill < Balance.AI_NOVICE or skill > Balance.AI_EXPERT:
+			_fail("bataille %d : niveau d'IA inconnu (%d)" % [int(battle["id"]), skill])
+		if skill < previous_skill:
+			_fail("bataille %d : l'IA joue moins bien que la precedente" % int(battle["id"]))
+		previous_skill = skill
+
 	var min_rows: int = Balance.DEPLOY_ROWS * 2 + 1
 	for battle in Balance.CAMPAIGN:
 		var cols := int(battle["cols"])
@@ -185,8 +203,35 @@ func _check_losses() -> void:
 	if Game.total_units() == 0:
 		_fail("armee vide et or nul : la partie est sans issue")
 
+	# Une Dame ramenee vivante : le pion promu quitte la caserne, la Dame
+	# s'installe a la Tour de la Dame, qui apparait au village a cette
+	# occasion. C'est la seule facon d'en obtenir une.
 	Game.reset_progress()
-	print("  retrait des pertes, plancher a zero, garnison minimale : OK")
+	if Game.is_building_unlocked(Balance.DAME):
+		_fail("la Tour de la Dame existe avant la premiere promotion")
+	var pions_before := Game.units_owned(Balance.PION)
+	var stored := Game.store_promotions(2)
+	if stored != 2:
+		_fail("2 pions promus et rentres vivants n'ont pas donne 2 Dames (%d)" % stored)
+	if Game.dames_owned() != 2:
+		_fail("les Dames ne sont pas stockees : %d" % Game.dames_owned())
+	if Game.units_owned(Balance.PION) != pions_before - 2:
+		_fail("les pions promus n'ont pas quitte la caserne")
+	if not Game.is_building_unlocked(Balance.DAME):
+		_fail("la Tour de la Dame n'apparait pas apres une promotion")
+
+	# Une Dame capturee se perd comme n'importe quelle piece.
+	Game.apply_losses({Balance.DAME: 1})
+	if Game.dames_owned() != 1:
+		_fail("une Dame capturee n'a pas ete retiree de l'armee")
+
+	# Et elle ne s'achete a aucun prix.
+	Game.add_gold(9999)
+	if Game.recruit(Balance.DAME):
+		_fail("la Dame a pu etre recrutee, elle ne doit s'obtenir que par promotion")
+
+	Game.reset_progress()
+	print("  retrait des pertes, plancher a zero, garnison minimale, Dames : OK")
 
 
 # ------------------------------- REGLES DE PIECES ----------------------------
@@ -299,6 +344,7 @@ func _play_all_battles() -> void:
 func _check_first_run() -> void:
 	var battle := Balance.battle(1)
 	var engine := BattleEngine.new(int(battle["cols"]), int(battle["rows"]))
+	engine.enemy_skill = Balance.battle_ai_skill(battle)
 	var cells: Array = engine.grid.free_enemy_cells()
 	var enemy_count := 0
 	for type in Balance.UNIT_TYPES:
@@ -329,6 +375,7 @@ func _check_first_run() -> void:
 ## passage par composition suffit.
 func _play_battle(battle: Dictionary, castle_level: int, unit_level: int, style: String = "variee") -> bool:
 	var engine := BattleEngine.new(int(battle["cols"]), int(battle["rows"]))
+	engine.enemy_skill = Balance.battle_ai_skill(battle)
 
 	var level := int(battle["level"])
 	var cells: Array = engine.grid.free_enemy_cells()
@@ -380,7 +427,7 @@ func _play_battle(battle: Dictionary, castle_level: int, unit_level: int, style:
 ## types, puis pions devant et pieces lourdes derriere. Retourne le nombre de
 ## pieces posees.
 ## `capacity` est un budget de poids (cf. CASTLE_DATA.deploy_capacity), pas un
-## nombre de pieces : chaque type ajoute pese Balance.unit_value(type).
+## nombre de pieces : chaque type ajoute pese Balance.deploy_weight(type).
 func _deploy(engine: BattleEngine, pool: Dictionary, capacity: int, level: int) -> int:
 	var order: Array = []
 	var weight := 0
@@ -389,7 +436,7 @@ func _deploy(engine: BattleEngine, pool: Dictionary, capacity: int, level: int) 
 		var type := _pick_round_robin(pool, order.size(), exhausted)
 		if type.is_empty():
 			break
-		var type_weight := Balance.unit_value(type)
+		var type_weight := Balance.deploy_weight(type)
 		if weight + type_weight > capacity:
 			exhausted[type] = true
 			continue
@@ -397,7 +444,7 @@ func _deploy(engine: BattleEngine, pool: Dictionary, capacity: int, level: int) 
 		weight += type_weight
 		pool[type] = int(pool[type]) - 1
 
-	order.sort_custom(func(a, b): return Balance.unit_value(a) < Balance.unit_value(b))
+	order.sort_custom(func(a, b): return Balance.deploy_weight(a) < Balance.deploy_weight(b))
 
 	var cells: Array = engine.grid.free_player_cells()
 	var placed := mini(order.size(), cells.size())

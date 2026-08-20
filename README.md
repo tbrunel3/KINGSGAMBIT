@@ -33,9 +33,16 @@ depuis Safari donne une icône et un affichage plein écran en portrait.
 ### Le parcours à tester
 
 **BATAILLE** → choisis une bataille → **PRÉPARER L'ARMÉE** → **Auto** (ou choisis
-un type et touche les cases vertes) → **COMBATTRE**. Le combat se joue seul,
-passe en **x4**. Retour au village, ouvre un bâtiment, recrute, lance une
-amélioration : le compte à rebours continue même jeu fermé.
+un type et touche les cases de ta zone) → **COMBATTRE**. Puis **tu joues chaque
+coup** : touche une pièce, ses déplacements s'allument, touche la case d'arrivée —
+ou fais-la glisser directement. L'IA répond avec une de ses pièces, et ainsi de
+suite. Le bouton **AUTO** confie les deux camps à l'IA si tu veux juste refaire
+de l'or. Retour au village, ouvre un bâtiment, recrute, lance une amélioration :
+le compte à rebours continue même jeu fermé.
+
+Mène un pion jusqu'au fond du plateau adverse et **ramène-le vivant** : il
+devient une Dame, rangée à la **Tour de la Dame** au village, redéployable aux
+batailles suivantes.
 
 Seule la Caserne des Pions est disponible au tout début. Écuries, Cloître et
 Donjon apparaissent gratuitement quand le Château Royal atteint le niveau
@@ -78,10 +85,16 @@ Une Tour ou un Fou s'arrête devant une pièce alliée, et s'arrête **en prenan
 la première pièce ennemie rencontrée. Un Cavalier saute par-dessus tout.
 
 **Promotion** : un pion qui atteint le fond du plateau adverse devient
-**Dame**, comme aux échecs, **le temps du combat seulement**. Elle garde le
-niveau du pion qui a promu — une Dame issue d'un pion Nv.1 se déplace donc
-bien moins loin que celle d'un pion Nv.10. De retour au village, elle
-redevient le pion qu'elle était.
+**Dame**, comme aux échecs. Elle garde le niveau du pion qui a promu — une Dame
+issue d'un pion Nv.1 se déplace donc bien moins loin que celle d'un pion Nv.10.
+
+**Si elle survit à la bataille, elle reste une Dame** : le pion quitte la
+caserne et la Dame s'installe à la **Tour de la Dame**, un bâtiment du village
+qui apparaît à la première d'entre elles. Elle se redéploie ensuite comme
+n'importe quelle autre pièce, pour **5 de charge de déploiement** — le prix
+d'une Tour. Sa *valeur* reste 9 : c'est ce que voit l'IA, qui la traite comme la
+pièce la plus chère du plateau. Une Dame capturée est perdue comme le pion
+qu'elle était.
 
 **Les pertes sont définitives.** Une pièce capturée quitte l'armée et devra être
 recrutée à nouveau. C'est ce qui donne son poids au placement — et la raison
@@ -91,15 +104,44 @@ pour refaire de l'or (à 40 % de la récompense). Une **garnison minimale** de
 balayée sans or rendrait la partie impossible à reprendre.
 
 Un combat se termine quand un camp n'a plus de pièce. Si les deux armées ne
-peuvent plus s'atteindre (8 tours complets sans la moindre prise), la victoire
-va au camp qui conserve le plus de matériel, à la valeur des pièces.
+peuvent plus s'atteindre (20 tours complets sans la moindre prise en jeu manuel,
+8 en résolution automatique), la victoire va au camp qui conserve le plus de
+matériel, à la valeur des pièces. Un camp qui n'a aucun coup légal passe son
+tour ; deux passes d'affilée et le match est tranché de la même façon.
 
-### Aperçu des ouvertures
+### Le niveau de jeu de l'IA
 
-Pendant le placement, une flèche part de chaque pièce vers la case où elle irait
-à sa première activation — vertes pour les tiennes, rouges pour l'ennemi, dorées
-quand c'est une prise. Chaque pièce est évaluée indépendamment : ce sont les
-intentions d'ouverture, pas la séquence exacte du combat.
+Chaque bataille déclare celui de l'**armée ennemie** (`ai` dans
+`Balance.CAMPAIGN`). Ces niveaux ne changent aucune règle : ils retirent des
+précautions à l'IA, ils ne lui donnent aucun privilège.
+
+| Niveau | Batailles | Ce qu'elle fait |
+|---|---|---|
+| **Novice** | 1 à 3 | Fonce. Prend tout ce qui passe, même à perte, et avance sans regarder qui couvre la case |
+| **Aguerri** | 4 à 7 | Compte ses échanges, préfère les cases sûres, mais ne sauve pas une pièce déjà attaquée |
+| **Expert** | 8 à 10 | Joue tout : échanges, fuite des pièces menacées, pions poussés seulement là où un allié peut reprendre |
+
+Le camp du joueur, quand le bouton **AUTO** le confie à l'IA, joue toujours au
+niveau Expert : la résolution automatique doit montrer ce que le placement vaut.
+
+### Jouer son tour
+
+Le combat est **tour par tour, une pièce par camp**, comme aux échecs : tu
+déplaces une pièce, l'IA répond avec une des siennes. Rien ne tourne pendant que
+tu réfléchis.
+
+Deux gestes, tous deux au doigt :
+
+- **Taper** une pièce l'allume — pastilles bleues sur les cases libres où elle
+  peut aller, anneaux dorés autour des pièces qu'elle peut prendre. Taper une de
+  ces cases joue le coup.
+- **Glisser** la pièce jusqu'à sa case fait la même chose d'un seul geste ; la
+  case survolée s'allume en or quand le coup est légal.
+
+Le dernier coup joué reste surligné : sur un petit écran, c'est ce qui permet de
+voir ce que l'adversaire vient de faire. Pendant le placement, les mêmes gestes
+servent à poser (tape), retirer (tape sur une pièce posée) et repositionner
+(glisse — deux pièces qui se croisent échangent leur case).
 
 ---
 
@@ -168,13 +210,16 @@ tools/
 
 ### Le point important : moteur et vitesse
 
-`BattleEngine.step()` résout **une activation complète** et retourne la liste des
-événements correspondants (`move`, `capture`, `promotion`, `end`). La vue les
-rejoue ensuite avec des délais.
+Deux entrées pour un même chemin de résolution : `BattleEngine.play_move(unit,
+cell)` joue le coup choisi par le joueur, `BattleEngine.step()` demande à l'IA de
+choisir **et** de jouer celui du camp courant. Les deux retournent la liste des
+événements correspondants (`move`, `capture`, `promotion`, `pass`, `end`), que la
+vue rejoue ensuite avec des délais.
 
-Conséquence : **x1, x2, x4 et Pause ne modifient jamais le résultat d'un combat.**
-Ils ne touchent que les durées d'affichage. Une bataille est entièrement
-déterminée par le placement.
+Conséquence : **x1, x2, x4 ne modifient jamais le résultat d'un combat.** Ils ne
+touchent que les durées d'affichage — et donc uniquement la réponse de l'IA et la
+résolution automatique, puisque le reste du temps c'est le joueur qui décide
+quand le coup part.
 
 ### Trois choix à connaître
 
@@ -250,16 +295,21 @@ le premier combat du jeu était perdu.
   continue jeu fermé**
 - Écran de campagne : batailles débloquées, rejouables à récompense réduite
 - Écran de préparation : composition ennemie, récompense, armée disponible
-- Grille de taille variable par bataille (6×8 à 9×12), zones de déploiement
-- Placement au clic, retrait, Auto, Réinitialiser, limite liée au château
-- **Aperçu des premiers déplacements** pendant le placement
-- Combat automatique tour par tour, capture par déplacement, sans points de vie
+- Grille de taille variable par bataille (5×7 à 8×9), zones de déploiement
+- Placement au doigt : poser, retirer, **repositionner en glissant**, Auto,
+  Réinitialiser, limite de charge liée au château
+- **Combat joué coup par coup contre l'IA** : une pièce par camp et par tour,
+  sélection à la tape ou **glisser-déposer**, coups légaux surlignés, dernier
+  coup adverse mis en évidence
+- Bouton **AUTO** : l'IA joue les deux camps jusqu'au bout (farm d'or)
 - 5 types de déplacement, mobilité liée au niveau, **promotion en Dame**
-  (pion → Dame du même niveau, le temps du combat)
+- **Tour de la Dame** : une Dame ramenée vivante est stockée au village et
+  redéployable ensuite
 - **Pertes définitives** avec garnison minimale de sécurité
-- IA modulaire : prise la plus rentable, refus des mauvais échanges, avancée
-  sur case sûre quand c'est possible
-- Contrôles x1 / x2 / x4 / Pause sans effet sur les règles
+- **IA à trois niveaux de jeu**, déclarés par bataille : novice (1-3), aguerri
+  (4-7), expert (8-10) — prise la plus rentable, refus des mauvais échanges,
+  refus de laisser une pièce en prise sans défense, course à la promotion
+- Contrôles x1 / x2 / x4 sans effet sur les règles
 - Victoire/défaite, or crédité, bataille suivante débloquée, pertes affichées
 - Sauvegarde JSON locale + bouton de remise à zéro
 - Trois outils de développement : tests headless, test d'interface, captures
@@ -268,7 +318,6 @@ le premier combat du jeu était perdu.
 
 - Remplacer les placeholders par les assets Figma : sprites de pièces, décor du
   village, fond de plateau, icônes de bâtiments
-- Drag & drop au placement (le clic-puis-case reste en secours)
 - Animations de capture et de promotion dignes de ce nom
 - Sons et retours haptiques
 - Carte de campagne illustrée à la place de la liste
@@ -277,7 +326,8 @@ le premier combat du jeu était perdu.
 
 ### Limites connues du MVP
 
-- La pause ne s'applique qu'entre deux activations, pas au milieu d'une animation.
+- L'IA choisit son coup un tour à l'avance, sans anticiper la réponse : elle ne
+  voit pas les fourchettes ni les pièces clouées.
 - Le Roi n'est pas une pièce jouable : le château fixe le nombre de pièces
   déployables.
 - L'IA ne raisonne qu'à un coup : elle évite une reprise immédiate, mais ne voit

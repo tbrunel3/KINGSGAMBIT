@@ -1,6 +1,10 @@
 # KING'S GAMBIT — Handoff Figma → Godot 4
 
-Tu arrives sur un projet de jeu mobile King's Gambit, un jeu de stratégie fantasy inspiré des échecs. Le Roi a perdu sa Dame (la Reine) ; il reconstruit son armée et enchaîne des batailles automatiques pour la retrouver. Le joueur ne joue que le placement avant chaque combat — le combat se résout tout seul.
+Tu arrives sur un projet de jeu mobile King's Gambit, un jeu de stratégie fantasy inspiré des échecs. Le Roi a perdu sa Dame (la Reine) ; il reconstruit son armée et enchaîne des batailles pour la retrouver.
+
+Le joueur place son armée avant le combat, puis **joue lui-même chaque coup contre l'IA**, une pièce par camp et par tour, comme aux échecs (tape ou glisser-déposer). Un bouton AUTO laisse l'IA jouer les deux camps pour rejouer vite une bataille déjà gagnée. Un pion mené au bout du plateau devient Dame ; ramenée vivante, elle est stockée à la Tour de la Dame au village et redéployable ensuite.
+
+Le niveau de jeu de l'armée ennemie monte avec la campagne (novice → aguerri → expert, déclaré bataille par bataille dans `Balance.CAMPAIGN`) : les premiers combats doivent être gagnables par quelqu'un qui découvre le jeu.
 
 Ton : fantasy médiéval, mélancolique mais pas sombre. Aucune violence graphique.
 
@@ -92,6 +96,7 @@ Tout est en Inter (Google Fonts, gratuite). Poids utilisés :
   - Chaque label a un sub-frame avec pill de niveau + barre de progression (effectif/max)
   - Label verrouillé (x:50, y:685) : "🔒 Forge" grisé + "Château Nv.6 requis" en petit
 - Bouton BATAILLE (x:87, y:748, w:219, h:59) : fond or #ffd11a, radius 18, stroke 2px, texte "⚔ BATAILLE" noir 19px bold
+- **Code actuel** : l'emplacement verrouillé (x:50, y:685) sert à la **Tour de la Dame** — grisé et "Promeus un pion au bout du plateau" tant qu'aucune Dame n'a été ramenée, puis "N Dames au repos" une fois le bâtiment ouvert. Il n'y a pas de Forge.
 - Bouton DEV (x:362, y:14) : discret, 24×24, radius 4, emoji 🛠
 
 ### 02_Campagne (carte de progression)
@@ -118,15 +123,17 @@ Tout est en Inter (Google Fonts, gratuite). Poids utilisés :
 ### 04_Bataille_Placement
 
 - Background : battlefield_background.png + overlay noir semi-transparent + fondus 4 bords
-- Grille (x:17, y:155, w:360, h:496) : 10 colonnes × 16 rangées, cellW=36, cellH=31
-  - Zone bleue joueur (rangées 12-14) : fond bleu opacity 0.28, bordure bleue pointillée 2.5px
-  - Zone rouge ennemi (rangées 1-3) : fond rouge opacity 0.28, bordure rouge pointillée 2.5px
+- Grille (x:17, y:155, w:360, h:496). **La maquette montre 10 × 16 cases ; le code n'utilise pas ces chiffres** : la taille vient de `Balance.CAMPAIGN` (5×7 pour la première bataille, jusqu'à 8×9 pour la dernière) et la taille de case est calculée à partir de la place disponible. Des plateaux réduits sont indispensables depuis que le joueur joue chaque coup au doigt — une case fait alors 45 à 72 points de côté
+  - Zone bleue joueur (dernières rangées) : fond bleu opacity 0.28, bordure bleue pointillée 2.5px
+  - Zone rouge ennemi (premières rangées) : fond rouge opacity 0.28, bordure rouge pointillée 2.5px
+  - Nombre de rangées de déploiement : `Balance.DEPLOY_ROWS` (2)
 - Tour-Badge (x:12, y:52, w:169, h:35) : fond bleu #268cd9, radius 12, stroke 1.5px — "PLACEMENT — Tour 0"
 - Stats-HUD (x:333, y:390, w:56, h:67) : fond #0d0f1a, radius 12, stroke 1px — compteurs ennemis/alliés
 - Control-Panel (y:635, h:189, fond #0f121f) :
   - Header row : "Sélectionne tes unités" texte
-  - Chips row : 6 chips de pièces (Pion×8, Cavalier×2, Fou×2, Tour×2, Dame×0, Roi×1) avec icône + compteur
-  - Buttons row : "COMBATTRE" (or), "AUTO" (bleu), "RÉINITIALISER" (gris)
+  - Chips row : un chip par type possédé (Pion, Cavalier, Fou, Tour — plus Dame si le joueur en a une en réserve) avec icône + compteur
+  - Buttons row : "AUTO", "RÉINITIALISER", "COMBATTRE" (or)
+  - Gestes : tape une case de la zone bleue pour poser, tape une pièce posée pour la reprendre, glisse-la pour la repositionner (deux pièces qui se croisent échangent leur case)
 
 ### 05_Bataille_Combat
 
@@ -135,7 +142,8 @@ Tout est en Inter (Google Fonts, gratuite). Poids utilisés :
 - Stats-HUD (x:333, y:390, w:52, h:73) : compteurs "×6 / ×7"
 - Control-Panel (y:747, h:77, fond #111319) :
   - Separator line
-  - Controls : PAUSE, vitesses (×1/×2/×4), FIN TOUR
+  - **Code actuel** : "À toi de jouer" / "L'ennemi joue…", bouton AUTO (bascule en MANUEL quand il est actif) et vitesses (×1/×2/×4). Pas de PAUSE ni de FIN TOUR : le combat attend déjà le joueur entre deux coups
+  - Coups légaux de la pièce sélectionnée : pastille bleue sur une case libre, anneau doré autour d'une pièce à prendre ; la case de départ et la case d'arrivée du dernier coup restent surlignées
 
 ### 06_Bataille_Victoire
 
@@ -270,7 +278,8 @@ res://
 ## Notes importantes
 
 - Les écrans 04 (Placement) et 05 (Combat) partagent exactement la même grille et le même background pour éviter tout "saut" visuel lors de la transition
-- La Dame n'est pas recrutée — elle apparaît uniquement par promotion (un pion qui atteint le bout du plateau)
+- La Dame n'est pas recrutée — elle apparaît uniquement par promotion (un pion qui atteint le bout du plateau), et n'est conservée que si elle survit à la bataille : elle rejoint alors la Tour de la Dame au village
 - Le Roi est unique et lié au Château Royal
 - Les SVG sont les assets finaux — ne les remplace pas par des placeholders
+- Aucune valeur de gameplay ne doit être écrite ailleurs que dans `scripts/data/balance.gd` (tailles de plateau, compositions ennemies, portées, coûts, durées d'animation)
 - Tous les fondus (edge fades) sont des gradients linéaires noir→transparent sur les 4 bords de l'écran

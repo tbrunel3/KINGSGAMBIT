@@ -50,12 +50,103 @@ const _STANDOFF_RATIO := 0.5
 const _STANDOFF_MIN_PIECES := 4
 
 
+## Coup du camp entier : QUELLE piece jouer, et ou. Depuis que le combat se
+## joue coup par coup, un camp ne deplace qu'une seule piece par tour - il
+## faut donc choisir la meilleure, exactement comme le joueur en face choisit
+## la sienne. On demande son intention a chaque piece (decide), on note le
+## coup obtenu (_move_score), et on garde le meilleur.
+##
+## Retourne {"unit": BattleUnit|null, "move": Vector2i}. unit vaut null quand
+## le camp n'a strictement aucun coup a jouer : le moteur passe alors la main.
+static func decide_team(team: int, grid: GridModel, units: Array, stalled: int = 0,
+		stalemate_limit: int = 999999, skill: int = Balance.AI_EXPERT) -> Dictionary:
+	var best := _best_of_team(team, grid, units, stalled, stalemate_limit, skill)
+	if best["unit"] != null:
+		return best
+
+	# Personne ne veut bouger : toutes les pieces jugent leur position
+	# meilleure que n'importe quel deplacement. Rester plante fait perdre la
+	# bataille a l'usure, alors on rejoue la decision en mode "desperation"
+	# (cf. _STANDOFF_RATIO), qui accepte la case la moins exposee.
+	return _best_of_team(team, grid, units, stalemate_limit, stalemate_limit, skill)
+
+
+static func _best_of_team(team: int, grid: GridModel, units: Array, stalled: int,
+		stalemate_limit: int, skill: int) -> Dictionary:
+	var best_unit: BattleUnit = null
+	var best_move := Vector2i(-1, -1)
+	var best_score := -INF
+
+	for unit in units:
+		if not unit.is_alive() or unit.team != team:
+			continue
+		var decision := decide(unit, grid, units, stalled, stalemate_limit, skill)
+		var destination: Vector2i = decision["move"]
+		if destination == unit.cell:
+			continue
+		var score := _move_score(unit, destination, grid, units, skill)
+		if score > best_score:
+			best_score = score
+			best_unit = unit
+			best_move = destination
+
+	return {"unit": best_unit, "move": best_move}
+
+
+## Note d'un coup deja choisi, pour les comparer entre pieces d'un meme camp.
+## Trois urgences, dans cet ordre : prendre du materiel, sauver une piece
+## menacee, sinon avancer - une piece chere avance en dernier, elle a plus a
+## perdre au contact.
+static func _move_score(unit: BattleUnit, destination: Vector2i, grid: GridModel, units: Array,
+		skill: int = Balance.AI_EXPERT) -> float:
+	var enemy_team := BattleUnit.TEAM_ENEMY if unit.team == BattleUnit.TEAM_PLAYER else BattleUnit.TEAM_PLAYER
+	var score := 0.0
+
+	# Une case menacee OU l'on peut etre repris par un allie n'est pas une
+	# case perdue : c'est un echange. Une case menacee sans defense, si.
+	# Une IA novice ne se demande pas si la case est tenue : c'est exactement
+	# ce qui la rend battable.
+	var threatened: bool = skill > Balance.AI_NOVICE \
+		and _would_be_threatened(destination, unit, enemy_team, grid, units)
+	var exposed := threatened and not _would_be_defended(destination, unit, grid, units)
+
+	var target := grid.unit_at(destination)
+	if target != null and unit.is_enemy_of(target):
+		score += 100.0 + float(target.value) * 10.0
+		if exposed:
+			score -= float(unit.value) * 10.0
+	elif exposed:
+		# Avancer une piece la ou l'adversaire la prend gratuitement, c'est
+		# la donner. Le plus gros piege du combat coup par coup : une seule
+		# piece bouge par tour, personne ne vient la couvrir apres coup.
+		score -= float(unit.value) * 12.0
+
+	var fleeing: bool = skill >= Balance.AI_EXPERT \
+		and MovementRules.is_cell_threatened(unit.cell, enemy_team, grid, units)
+	if fleeing and not _would_be_threatened(destination, unit, enemy_team, grid, units):
+		# Fuite reussie : d'autant plus urgente que la piece vaut cher.
+		score += 40.0 + float(unit.value) * 8.0
+
+	var enemies := _living_enemies(unit, units)
+	var gained := _distance_to_nearest(unit.cell, enemies) - _distance_to_nearest(destination, enemies)
+	score += float(gained) * 3.0 - float(unit.value) * 0.5
+
+	# Un pion a une case de la promotion passe avant tout le reste : c'est une
+	# Dame de plus sur le plateau, et une Dame de plus au village.
+	var wants_queen: bool = unit.origin_type == Balance.PION and not unit.promoted
+	if wants_queen and destination.y == unit.promotion_row(grid.rows):
+		score += 80.0
+
+	return score
+
+
 ## Retourne {"move": Vector2i, "capture": BattleUnit|null}.
 ## "move" vaut la case actuelle si la piece reste sur place.
 ## `stalled` = activations consecutives sans capture, `stalemate_limit` = le
 ## seuil d'enlisement du moteur pour cette bataille (cf. BattleEngine),
 ## transmis pour la desperation ci-dessus.
-static func decide(unit: BattleUnit, grid: GridModel, units: Array, stalled: int = 0, stalemate_limit: int = 999999) -> Dictionary:
+static func decide(unit: BattleUnit, grid: GridModel, units: Array, stalled: int = 0,
+		stalemate_limit: int = 999999, skill: int = Balance.AI_EXPERT) -> Dictionary:
 	var enemies := _living_enemies(unit, units)
 	if enemies.is_empty():
 		return {"move": unit.cell, "capture": null}
@@ -68,7 +159,10 @@ static func decide(unit: BattleUnit, grid: GridModel, units: Array, stalled: int
 
 	# Une piece deja attaquee sera prise si elle ne fait rien : ses calculs
 	# changent completement, elle n'a plus rien a proteger.
-	var in_danger := MovementRules.is_cell_threatened(unit.cell, enemy_team, grid, units)
+	# Seule une IA experte sauve une piece deja attaquee ; en dessous, elle
+	# poursuit son plan et encaisse.
+	var in_danger: bool = skill >= Balance.AI_EXPERT \
+		and MovementRules.is_cell_threatened(unit.cell, enemy_team, grid, units)
 
 	# 1. Les prises, evaluees comme un echange : ce que je gagne moins ce que je
 	#    risque de perdre si la case est reprise juste apres.
@@ -80,7 +174,7 @@ static func decide(unit: BattleUnit, grid: GridModel, units: Array, stalled: int
 		if target == null or not unit.is_enemy_of(target):
 			continue
 		var trade := float(target.value)
-		if _would_be_threatened(cell, unit, enemy_team, grid, units):
+		if skill > Balance.AI_NOVICE and _would_be_threatened(cell, unit, enemy_team, grid, units):
 			trade -= float(unit.value)
 		if trade > best_trade:
 			best_trade = trade
@@ -126,10 +220,14 @@ static func decide(unit: BattleUnit, grid: GridModel, units: Array, stalled: int
 	var least_exposed_cell := Vector2i(-1, -1)
 	var least_threats := 999
 	var least_exposed_score := -INF
+	## Case qui promeut immediatement, si elle est atteignable ce tour-ci.
+	var promotion_cell := Vector2i(-1, -1)
 
 	for cell in moves:
 		if grid.unit_at(cell) != null:
 			continue
+		if wants_promotion and cell.y == promotion_row:
+			promotion_cell = cell
 		var score := (current_distance - _distance_to_nearest(cell, enemies)) * 4
 		var promotion_gain := 0
 		if wants_promotion:
@@ -165,12 +263,29 @@ static func decide(unit: BattleUnit, grid: GridModel, units: Array, stalled: int
 			safe_score = score
 			safe_cell = cell
 
+	# Une IA novice prend la case qui la rapproche le plus, sans se demander
+	# qui la couvre : elle laisse des pieces en prise, et c'est la sa faiblesse.
+	if skill == Balance.AI_NOVICE and any_cell != Vector2i(-1, -1):
+		return {"move": any_cell, "capture": null}
+
 	if safe_cell != Vector2i(-1, -1):
 		return {"move": safe_cell, "capture": null}
 
-	# 3. Aucune case sure. Les pieces de faible valeur avancent quand meme :
-	#    c'est le role du pion d'ouvrir le contact et d'etre echange.
-	if any_cell != Vector2i(-1, -1) and unit.value <= _EXPENDABLE_VALUE:
+	# 2bis. Promotion a portee de main : le pion y va, meme sur une case
+	#       menacee et sans personne pour le reprendre. Une Dame vaut neuf
+	#       pions ; refuser le dernier pas serait garder le pion et perdre la
+	#       Dame. C'est aussi la seule facon d'en ramener une au village.
+	if promotion_cell != Vector2i(-1, -1):
+		return {"move": promotion_cell, "capture": null}
+
+	# 3. Aucune case sure. Les pieces de faible valeur avancent quand meme,
+	#    mais SEULEMENT si une piece amie peut reprendre derriere : c'est le
+	#    role du pion d'ouvrir le contact et d'etre echange, pas d'etre donne.
+	#    Depuis que le combat se joue coup par coup, un pion pousse seul sur
+	#    une case couverte par l'adversaire ne revient jamais - la ligne
+	#    entiere y passait, un pion par tour.
+	var covered: bool = any_cell != Vector2i(-1, -1) and _would_be_defended(any_cell, unit, grid, units)
+	if covered and unit.value <= _EXPENDABLE_VALUE:
 		return {"move": any_cell, "capture": null}
 
 	# 4. Enlisement confirme (cf. _STANDOFF_RATIO) : quelle que soit sa valeur
@@ -230,6 +345,35 @@ static func _would_be_threatened(cell: Vector2i, unit: BattleUnit, enemy_team: i
 	grid.place(unit, origin)
 
 	return threatened
+
+
+## Vrai si une piece AMIE pourrait reprendre sur cette case, autrement dit si
+## s'y faire capturer serait un echange et non un cadeau.
+##
+## Astuce : on y pose la piece en la faisant passer temporairement pour une
+## piece adverse. Sans ca, aucune de nos pieces ne "menacerait" la case - on
+## ne capture jamais un allie, et le pion ne genere sa diagonale que s'il y a
+## quelque chose a prendre.
+static func _would_be_defended(cell: Vector2i, unit: BattleUnit, grid: GridModel, units: Array) -> bool:
+	var origin := unit.cell
+	var victim := grid.unit_at(cell)
+	var real_team := unit.team
+
+	grid.remove_unit(unit)
+	if victim != null:
+		grid.remove_unit(victim)
+	unit.team = BattleUnit.TEAM_ENEMY if real_team == BattleUnit.TEAM_PLAYER else BattleUnit.TEAM_PLAYER
+	grid.place(unit, cell)
+
+	var defended := MovementRules.is_cell_threatened(cell, real_team, grid, units)
+
+	grid.remove_unit(unit)
+	unit.team = real_team
+	if victim != null:
+		grid.place(victim, cell)
+	grid.place(unit, origin)
+
+	return defended
 
 
 ## Nombre d'ennemis capables d'atteindre cette case si la piece s'y installe -

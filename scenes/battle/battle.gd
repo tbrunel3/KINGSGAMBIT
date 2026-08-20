@@ -5,9 +5,14 @@ extends Control
 ## Une scene unique plutot que trois : l'etat du placement n'a ainsi jamais a
 ## transiter entre deux scenes, et le moteur de combat est construit une fois.
 ##
-## Ce fichier ne contient aucune regle de combat : il place les unites, appelle
-## engine.step() en boucle, et rejoue les evenements retournes. La vitesse
-## (x1 / x2 / x4 / Pause) n'agit que sur les durees d'affichage.
+## Ce fichier ne contient aucune regle de combat. Il pose les unites, transmet
+## au moteur le coup choisi par le joueur (tape ou glisser-deposer), demande a
+## l'IA le coup adverse, et rejoue les evenements retournes.
+##
+## Le combat se joue coup par coup : une piece du joueur, une piece de l'IA.
+## Le bouton AUTO laisse l'IA jouer les deux camps jusqu'au bout - pratique
+## pour refaire de l'or sur une bataille deja gagnee. La vitesse (x1/x2/x4)
+## n'agit que sur les durees d'affichage, jamais sur l'issue d'un coup.
 ##
 
 enum Phase { PLACEMENT, COMBAT, RESULT }
@@ -42,8 +47,6 @@ const _BLOCKAGE_WARNING_RATIO := 0.5
 var _battle: Dictionary = {}
 var _engine: BattleEngine = null
 var _phase: int = Phase.PLACEMENT
-var _turn_activations: int = 0
-var _combat_unit_count: int = 1
 
 # Placement
 var _remaining: Dictionary = {}   # type -> unites encore disponibles
@@ -52,19 +55,26 @@ var _placed: Array = []           # BattleUnit du joueur poses sur la grille
 
 # Combat
 var _speed: float = 1.0
-var _paused: bool = false
 var _running: bool = false
 
-# "Fin tour" (cf. Btn-EndTurn Figma 05) : avance instantanement jusqu'a la fin
-# de l'activation de tour en cours, puis revient a la vitesse choisie.
-var _fast_forward_target_turn: int = -1
-var _speed_before_fast_forward: float = 1.0
+## Piece du joueur actuellement selectionnee (tape ou saisie au doigt).
+var _selected_unit: BattleUnit = null
+
+## Vrai pendant qu'une animation ou le tour de l'IA se joue : le plateau
+## n'accepte alors aucun geste, sinon un joueur rapide jouerait deux coups.
+var _busy: bool = false
+
+## Resolution automatique : l'IA joue les DEUX camps jusqu'a la fin.
+var _auto: bool = false
 
 # Elements rafraichis souvent, gardes sous la main.
 var _status_label: Label = null
 var _type_buttons: Dictionary = {}
 var _speed_buttons: Dictionary = {}
 var _fight_button: Button = null
+var _auto_button: PanelContainer = null
+var _auto_label: Label = null
+var _turn_label: Label = null
 
 
 func _ready() -> void:
@@ -78,15 +88,39 @@ func _ready() -> void:
 	_quit_button.pressed.connect(_on_quit)
 
 	_engine = BattleEngine.new(int(_battle["cols"]), int(_battle["rows"]))
+	_engine.enemy_skill = Balance.battle_ai_skill(_battle)
 	_spawn_enemies()
 
-	for type in Balance.UNIT_TYPES:
+	for type in Balance.ARMY_TYPES:
 		_remaining[type] = Game.units_owned(type)
 
 	_grid_view.setup(_engine)
 	_grid_view.cell_clicked.connect(_on_cell_clicked)
+	_grid_view.cell_pressed.connect(_on_cell_pressed)
+	_grid_view.piece_dropped.connect(_on_piece_dropped)
+	_grid_view.draggable_team = BattleUnit.TEAM_PLAYER
 
 	_enter_placement()
+
+
+## Niveau auquel une piece part au combat : celui de son batiment. La Dame
+## n'ayant pas de caserne qui s'ameliore, elle garde le niveau de la Caserne
+## des Pions - elle EST un pion promu, sa mobilite suit celle des pions.
+func _unit_level(type: String) -> int:
+	if type == Balance.DAME:
+		return maxi(1, Game.building_level(Balance.PION))
+	return Game.building_level(type)
+
+
+## Types que le joueur peut poser sur la grille : ses casernes, plus la Dame
+## s'il en a ramene une vivante d'une bataille precedente.
+func _deployable_types() -> Array:
+	var types: Array = []
+	for type in Balance.ARMY_TYPES:
+		if type == Balance.DAME and Game.units_owned(Balance.DAME) <= 0:
+			continue
+		types.append(type)
+	return types
 
 
 ## Badge de tour (haut-gauche) : bleu "PHASE DE PLACEMENT" pendant la pose,
@@ -147,6 +181,11 @@ func _style_stats_hud() -> void:
 	box.shadow_offset = Vector2(0, 2)
 	_stats_hud.add_theme_stylebox_override("panel", box)
 
+	# Le HUD flotte AU-DESSUS du plateau (cf. maquettes 04/05) : sur un
+	# plateau reduit il recouvre la colonne de droite. Il doit donc laisser
+	# passer le doigt, sinon les pieces qu'il survole deviennent injouables.
+	UiTheme.ignore_mouse_recursive(_stats_hud)
+
 
 func _exit_tree() -> void:
 	_running = false
@@ -176,13 +215,21 @@ func _enter_placement() -> void:
 	_phase = Phase.PLACEMENT
 	_style_placement_badge()
 	_style_bottom_panel(Color("0f121f", 0.92), 16, 0)
-	_bottom_panel.position = Vector2(0, 635)
-	_bottom_panel.size = Vector2(393, 189)
+	_place_bottom_panel(635, 189)
 	_grid_view.show_zones = true
 	_grid_view.queue_redraw()
 	_build_placement_ui()
 	_refresh_placement()
 	_refresh_stats_hud()
+
+
+## Le panneau du bas occupe toute la largeur disponible : ses ancres sont
+## posees dans la scene, on ne touche donc qu'a sa hauteur. Lui donner une
+## largeur en dur (les 393 points de la maquette) le ferait deborder de la
+## zone sure, qui retire deja 16 points de chaque cote.
+func _place_bottom_panel(top: float, height: float) -> void:
+	_bottom_panel.offset_top = top
+	_bottom_panel.offset_bottom = top + height
 
 
 ## Panneau bas (Control-Panel, ecrans 04 et 05) : coins arrondis en haut
@@ -220,10 +267,17 @@ func _build_placement_ui() -> void:
 	header_spacer.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	header.add_child(header_spacer)
 
-	_status_label = UiTheme.make_label("Tape pour poser", 10, Color("e5bf4d"))
+	_status_label = UiTheme.make_label("Tape ou glisse", 10, Color("e5bf4d"))
 	_status_label.autowrap_mode = TextServer.AUTOWRAP_OFF
 	_status_label.size_flags_horizontal = Control.SIZE_SHRINK_END
 	_status_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
+	# Sans clip_text, un message un peu long pousse hors du panneau (393 pt de
+	# large, marges comprises) et se fait couper par le bord de l'ecran.
+	_status_label.clip_text = true
+	# clip_text ramene la largeur minimale a zero : sans ce plancher, l'espaceur
+	# de l'en-tete prend toute la place et le message n'a plus rien pour
+	# s'afficher.
+	_status_label.custom_minimum_size = Vector2(120, 0)
 	header.add_child(_status_label)
 
 	var row := HBoxContainer.new()
@@ -232,7 +286,7 @@ func _build_placement_ui() -> void:
 	_bottom.add_child(row)
 
 	_type_buttons.clear()
-	for type in Balance.UNIT_TYPES:
+	for type in _deployable_types():
 		var chip: SelectionChip = SelectionChipScene.instantiate()
 		var path := "res://assets/pieces/bleu/%s.png" % type
 		var texture: Texture2D = load(path) if ResourceLoader.exists(path) else null
@@ -257,9 +311,10 @@ func _build_placement_ui() -> void:
 	reset.pressed.connect(_on_reset_placement)
 	actions.add_child(reset)
 
-	var fight_spacer := Control.new()
-	fight_spacer.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	actions.add_child(fight_spacer)
+	# Pas d'espaceur ici : sur 393 points de large, pousser COMBATTRE contre le
+	# bord droit le fait sortir du panneau. C'est REINITIALISER, le bouton le
+	# plus large, qui absorbe la place restante.
+	reset.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 
 	_fight_button = UiTheme.make_button("COMBATTRE", UiTheme.GOLD, 12)
 	_fight_button.add_theme_font_override("font", UiTheme.font_bold())
@@ -267,19 +322,19 @@ func _build_placement_ui() -> void:
 	actions.add_child(_fight_button)
 
 	# Selectionne d'office le premier type disponible.
-	for type in Balance.UNIT_TYPES:
+	for type in _deployable_types():
 		if int(_remaining[type]) > 0:
 			_selected_type = type
 			break
 
 
-## Poids total (cf. Balance.unit_value) des pieces deja posees - c'est ce
+## Poids total (cf. Balance.deploy_weight) des pieces deja posees - c'est ce
 ## qu'on compare a Game.deploy_capacity(), pas un nombre de pieces : voir
 ## CASTLE_DATA.deploy_capacity dans balance.gd.
 func _placed_weight() -> int:
 	var weight := 0
 	for unit in _placed:
-		weight += Balance.unit_value(unit.type)
+		weight += Balance.deploy_weight(unit.type)
 	return weight
 
 
@@ -288,7 +343,7 @@ func _refresh_placement() -> void:
 	if _placed_weight() >= capacity:
 		_status_label.text = "Charge maximale atteinte"
 	else:
-		_status_label.text = "Tape pour poser"
+		_status_label.text = "Tape ou glisse"
 
 	for type in _type_buttons.keys():
 		var chip: SelectionChip = _type_buttons[type]
@@ -321,6 +376,21 @@ func _refresh_stats_hud() -> void:
 		_stats_box.add_child(_hud_separator())
 		_stats_box.add_child(_hud_row(UiTheme.ACCENT, Color("99ccff"), _engine.living(BattleUnit.TEAM_PLAYER).size()))
 
+	UiTheme.ignore_mouse_recursive(_stats_hud)
+	_keep_hud_on_screen.call_deferred()
+
+
+## Le HUD est pose en coordonnees absolues (cf. maquette Figma), mais sa
+## largeur depend de son contenu et la zone sure retire 16 points de chaque
+## cote : sans ce recalage sur la largeur REELLE du parent, "Charge 12/16"
+## sort de l'ecran par la droite.
+func _keep_hud_on_screen() -> void:
+	if not is_instance_valid(_stats_hud):
+		return
+	_stats_hud.reset_size()
+	var available: float = _stats_hud.get_parent().size.x
+	_stats_hud.position.x = available - _stats_hud.size.x - 8.0
+
 
 func _hud_separator() -> ColorRect:
 	var line := ColorRect.new()
@@ -345,25 +415,11 @@ func _hud_row(dot_color: Color, text_color: Color, count: int) -> HBoxContainer:
 	return row
 
 
-## Apercu : ou chaque piece irait a sa premiere activation, dans la position
-## actuelle. Chaque piece est evaluee independamment des autres - les fleches
-## montrent les intentions d'ouverture, pas la sequence exacte du combat.
+## Le plateau ne montre plus de fleches d'intention : depuis que chaque camp
+## ne joue qu'UNE piece par tour, un faisceau de fleches "si tout le monde
+## bougeait en meme temps" annoncerait un combat qui n'aura pas lieu.
 func _update_preview() -> void:
-	var preview: Array = []
-	for unit in _engine.units:
-		if not unit.is_alive():
-			continue
-		var decision := BattleAI.decide(unit, _engine.grid, _engine.units)
-		var destination: Vector2i = decision["move"]
-		if destination == unit.cell:
-			continue
-		preview.append({
-			"from": unit.cell,
-			"to": destination,
-			"team": unit.team,
-			"capture": decision["capture"] != null,
-		})
-	_grid_view.preview_moves = preview
+	_grid_view.preview_moves = []
 	_grid_view.queue_redraw()
 
 
@@ -374,11 +430,70 @@ func _on_type_selected(type: String) -> void:
 	_refresh_placement()
 
 
-func _on_cell_clicked(cell: Vector2i) -> void:
-	if _phase != Phase.PLACEMENT:
+# ------------------------------- GESTES SUR LE PLATEAU -----------------------
+#
+#  Trois entrees, deux gestes : on tape une piece puis sa case d'arrivee, ou
+#  on la fait glisser directement. cell_pressed sert a allumer les cases
+#  possibles des que le doigt se pose, avant meme de savoir lequel des deux
+#  gestes le joueur est en train de faire.
+
+func _on_cell_pressed(cell: Vector2i) -> void:
+	var unit: BattleUnit = _engine.grid.unit_at(cell)
+	if unit == null or unit.team != BattleUnit.TEAM_PLAYER:
 		return
 
-	# Une unite deja posee : on la retire (repositionnement).
+	if _phase == Phase.PLACEMENT:
+		# Pendant le placement, une piece posee peut aller sur n'importe quelle
+		# case de la zone de deploiement : libre, ou occupee par une autre de
+		# nos pieces - les deux echangent alors leur place.
+		_grid_view.legal_targets = _placement_targets()
+		_grid_view.selected_cell = cell
+		_grid_view.queue_redraw()
+	elif _phase == Phase.COMBAT:
+		_select_unit(unit)
+
+
+## Toute la zone de deploiement, sauf les cases occupees par l'ennemi (il n'y
+## en a pas, mais rien ne l'interdit dans une bataille future).
+func _placement_targets() -> Array:
+	var cells: Array = []
+	for y in range(_engine.grid.player_zone_first_row(), _engine.grid.rows):
+		for x in range(_engine.grid.cols):
+			var cell := Vector2i(x, y)
+			var occupant: BattleUnit = _engine.grid.unit_at(cell)
+			if occupant == null or occupant.team == BattleUnit.TEAM_PLAYER:
+				cells.append(cell)
+	return cells
+
+
+func _on_cell_clicked(cell: Vector2i) -> void:
+	match _phase:
+		Phase.PLACEMENT:
+			_on_placement_tap(cell)
+		Phase.COMBAT:
+			_on_combat_tap(cell)
+		_:
+			pass
+
+
+func _on_piece_dropped(from: Vector2i, to: Vector2i) -> void:
+	match _phase:
+		Phase.PLACEMENT:
+			_move_placed_unit(from, to)
+		Phase.COMBAT:
+			var unit: BattleUnit = _engine.grid.unit_at(from)
+			if unit != null and unit.team == BattleUnit.TEAM_PLAYER:
+				_try_player_move(unit, to)
+		_:
+			pass
+
+
+# ------------------------------- PLACEMENT : GESTES --------------------------
+
+func _on_placement_tap(cell: Vector2i) -> void:
+	_clear_selection()
+
+	# Une unite deja posee : on la retire (elle retourne dans la reserve).
 	var existing: BattleUnit = _engine.grid.unit_at(cell)
 	if existing != null:
 		if existing.team == BattleUnit.TEAM_PLAYER:
@@ -394,15 +509,42 @@ func _on_cell_clicked(cell: Vector2i) -> void:
 	if _selected_type.is_empty() or int(_remaining[_selected_type]) <= 0:
 		return
 	var capacity := Game.deploy_capacity()
-	if _placed_weight() + Balance.unit_value(_selected_type) > capacity:
-		_status_label.text = "Chateau Nv.%d : %d de charge maximum." % [
-			Game.castle_level(), capacity]
+	if _placed_weight() + Balance.deploy_weight(_selected_type) > capacity:
+		_status_label.text = "Charge max : %d" % capacity
 		return
 
-	var unit := _engine.add_unit(_selected_type, Game.building_level(_selected_type),
+	var unit := _engine.add_unit(_selected_type, _unit_level(_selected_type),
 		BattleUnit.TEAM_PLAYER, cell)
 	_placed.append(unit)
 	_remaining[_selected_type] = int(_remaining[_selected_type]) - 1
+	_grid_view.queue_redraw()
+	_refresh_placement()
+
+
+## Repositionnement au doigt : une piece deja posee glisse vers une autre case
+## de la zone de deploiement. Si la case est occupee par une autre de nos
+## pieces, les deux echangent leur place - c'est ce qu'on attend en reordonnant
+## une formation, plutot qu'un geste refuse.
+func _move_placed_unit(from: Vector2i, to: Vector2i) -> void:
+	_clear_selection()
+	var unit: BattleUnit = _engine.grid.unit_at(from)
+	if unit == null or unit.team != BattleUnit.TEAM_PLAYER:
+		return
+	if not _engine.grid.is_player_zone(to):
+		_status_label.text = "Zone bleue uniquement"
+		return
+
+	var occupant: BattleUnit = _engine.grid.unit_at(to)
+	if occupant == null:
+		_engine.grid.move_unit(unit, to)
+	elif occupant.team == BattleUnit.TEAM_PLAYER:
+		_engine.grid.remove_unit(unit)
+		_engine.grid.remove_unit(occupant)
+		_engine.grid.place(unit, to)
+		_engine.grid.place(occupant, from)
+	else:
+		return
+
 	_grid_view.queue_redraw()
 	_refresh_placement()
 
@@ -434,7 +576,7 @@ func _on_auto_place() -> void:
 		var type := _pick_available_type(order, exhausted)
 		if type.is_empty():
 			break
-		var type_weight := Balance.unit_value(type)
+		var type_weight := Balance.deploy_weight(type)
 		if weight + type_weight > capacity:
 			exhausted[type] = true
 			continue
@@ -442,12 +584,12 @@ func _on_auto_place() -> void:
 		weight += type_weight
 
 	# Les pions passent devant, le reste garde son ordre d'alternance.
-	order.sort_custom(func(a, b): return Balance.unit_value(a) < Balance.unit_value(b))
+	order.sort_custom(func(a, b): return Balance.deploy_weight(a) < Balance.deploy_weight(b))
 
 	var cells: Array = _engine.grid.free_player_cells()
 	for i in range(mini(order.size(), cells.size())):
 		var type: String = order[i]
-		var unit := _engine.add_unit(type, Game.building_level(type),
+		var unit := _engine.add_unit(type, _unit_level(type),
 			BattleUnit.TEAM_PLAYER, cells[i])
 		_placed.append(unit)
 		_remaining[type] = int(_remaining[type]) - 1
@@ -463,7 +605,7 @@ func _on_auto_place() -> void:
 ## le compte avant que les pieces soient reellement posees. `exhausted` exclut
 ## les types qui ne rentrent plus dans la charge restante (cf. _on_auto_place).
 func _pick_available_type(taken: Array = [], exhausted: Dictionary = {}) -> String:
-	var types: Array = Balance.UNIT_TYPES
+	var types: Array = _deployable_types()
 	for offset in range(types.size()):
 		var type: String = types[(taken.size() + offset) % types.size()]
 		if exhausted.has(type):
@@ -474,26 +616,29 @@ func _pick_available_type(taken: Array = [], exhausted: Dictionary = {}) -> Stri
 
 
 # ------------------------------- PHASE COMBAT --------------------------------
+#
+#  Le joueur joue une piece, l'IA repond avec une des siennes. Tant que c'est
+#  au joueur, le plateau attend : aucune horloge ne tourne, il peut reflechir
+#  aussi longtemps qu'il veut. Le bouton AUTO confie les deux camps a l'IA.
 
 func _start_combat() -> void:
 	if _placed.is_empty():
 		return
 	_phase = Phase.COMBAT
-	_turn_activations = 0
-	_combat_unit_count = maxi(1,
-		_engine.living(BattleUnit.TEAM_PLAYER).size() + _engine.living(BattleUnit.TEAM_ENEMY).size())
+	_running = true
+	# Le joueur tient un des deux camps : les garde-fous anti-blocage calibres
+	# sur des secondes d'animation ne s'appliquent plus (cf. BattleEngine).
+	_engine.auto_mode = false
 	_style_combat_badge()
 	_style_bottom_panel(Color("111319", 0.85), 0, 0)
-	_bottom_panel.position = Vector2(0, 747)
-	_bottom_panel.size = Vector2(393, 77)
+	_place_bottom_panel(747, 77)
 	_grid_view.preview_moves = []
 	_grid_view.show_zones = false
-	_grid_view.selected_cell = Vector2i(-1, -1)
-	_grid_view.queue_redraw()
+	_clear_selection()
 	_build_combat_ui()
 	_build_blockage_badge()
 	_refresh_stats_hud()
-	_run_combat()
+	_hand_over_to_player()
 
 
 ## Petit badge rouge sous le Tour-Badge, cache par defaut : cf.
@@ -549,25 +694,27 @@ func _build_combat_ui() -> void:
 	separator.custom_minimum_size = Vector2(0, 1)
 	_bottom.add_child(separator)
 
-	# Pas de label de statut ici : le tour et les forces en vie sont deja
-	# affiches dans le badge et le HUD lateral (cf. captures Figma 05).
 	var row := HBoxContainer.new()
-	row.add_theme_constant_override("separation", 6)
+	row.add_theme_constant_override("separation", 8)
 	_bottom.add_child(row)
 
-	var pause_label: Label = null
-	var pause := _icon_button("pause", "PAUSE", Color("262c3f"), Color("3a4060"), Color("a0aabf"), 16, 11)
-	pause.gui_input.connect(func(event: InputEvent):
-		if event is InputEventMouseButton and event.pressed and event.button_index == MOUSE_BUTTON_LEFT:
-			_paused = not _paused
-			pause_label.text = "REPRENDRE" if _paused else "PAUSE"
-	)
-	pause_label = pause.find_child("Label", true, false)
-	row.add_child(pause)
+	# A gauche : a qui de jouer. C'est la seule information dont le joueur a
+	# besoin en permanence - le tour et les effectifs sont deja dans le badge
+	# et le HUD lateral (cf. captures Figma 05).
+	_turn_label = UiTheme.make_label("", 12, Color("e5e5f0"))
+	_turn_label.add_theme_font_override("font", UiTheme.font_bold())
+	_turn_label.autowrap_mode = TextServer.AUTOWRAP_OFF
+	_turn_label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	_turn_label.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	row.add_child(_turn_label)
 
-	var pause_spacer := Control.new()
-	pause_spacer.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	row.add_child(pause_spacer)
+	_auto_button = _icon_button("skip", "AUTO", Color("1c2135"), Color("2a2f45"), Color("a0aabf"), 14, 11)
+	_auto_label = _auto_button.find_child("Label", true, false)
+	_auto_button.gui_input.connect(func(event: InputEvent):
+		if event is InputEventMouseButton and event.pressed and event.button_index == MOUSE_BUTTON_LEFT:
+			_on_auto_pressed()
+	)
+	row.add_child(_auto_button)
 
 	var toggle := PanelContainer.new()
 	var toggle_box := StyleBoxFlat.new()
@@ -590,11 +737,10 @@ func _build_combat_ui() -> void:
 		pill_label.autowrap_mode = TextServer.AUTOWRAP_OFF
 		pill_label.mouse_filter = Control.MOUSE_FILTER_IGNORE
 		pill.add_child(pill_label)
-		pill.custom_minimum_size = Vector2(0, 0)
 		var margin := StyleBoxFlat.new()
 		margin.set_corner_radius_all(8)
-		margin.content_margin_left = 12
-		margin.content_margin_right = 12
+		margin.content_margin_left = 10
+		margin.content_margin_right = 10
 		margin.content_margin_top = 7
 		margin.content_margin_bottom = 7
 		margin.bg_color = Color("1c2135")
@@ -605,17 +751,6 @@ func _build_combat_ui() -> void:
 		)
 		toggle_row.add_child(pill)
 		_speed_buttons[speed] = pill
-
-	var end_spacer := Control.new()
-	end_spacer.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	row.add_child(end_spacer)
-
-	var end_turn := _icon_button("skip", "FIN TOUR", Color("1c2135"), Color("2a2f45"), Color("a0aabf"), 14, 11)
-	end_turn.gui_input.connect(func(event: InputEvent):
-		if event is InputEventMouseButton and event.pressed and event.button_index == MOUSE_BUTTON_LEFT:
-			_on_end_turn()
-	)
-	row.add_child(end_turn)
 
 	_refresh_combat_status()
 
@@ -663,44 +798,160 @@ func _icon_button(icon_name: String, text: String, bg: Color, border: Color, fg:
 
 func _on_speed_selected(speed: float) -> void:
 	_speed = speed
-	_paused = false
 	_refresh_combat_status()
 
 
-## "Fin tour" (Btn-EndTurn, ecran 05) : accelere jusqu'a la fin des activations
-## du tour en cours, puis restaure la vitesse choisie - cf. _refresh_combat_status().
-func _on_end_turn() -> void:
-	if _fast_forward_target_turn != -1 or _engine.finished:
+# ------------------------------- COMBAT : LE COUP DU JOUEUR ------------------
+
+## Selectionne une piece et allume ses coups possibles. Pour changer d'avis,
+## on tape une autre piece ou une case vide (cf. _on_combat_tap).
+func _select_unit(unit: BattleUnit) -> void:
+	if _busy or _auto or unit == null or unit.team != BattleUnit.TEAM_PLAYER:
 		return
-	_speed_before_fast_forward = _speed
-	_fast_forward_target_turn = _turn_activations / _combat_unit_count + 1
-	_speed = 200.0
-	_paused = false
+	if _selected_unit == unit:
+		return
+	_selected_unit = unit
+	_grid_view.selected_cell = unit.cell
+	_grid_view.legal_targets = _engine.legal_moves(unit)
+	_grid_view.queue_redraw()
+
+
+func _clear_selection() -> void:
+	_selected_unit = null
+	_grid_view.selected_cell = Vector2i(-1, -1)
+	_grid_view.legal_targets = []
+	_grid_view.queue_redraw()
+
+
+## Tape sur le plateau pendant le combat : soit on choisit une piece, soit on
+## envoie la piece deja choisie sur la case tapee.
+func _on_combat_tap(cell: Vector2i) -> void:
+	if _busy or _auto:
+		return
+
+	if _selected_unit != null and _grid_view.legal_targets.has(cell):
+		_try_player_move(_selected_unit, cell)
+		return
+
+	# _select_unit ignore une piece deja selectionnee : taper deux fois la meme
+	# piece ne l'eteint donc pas. C'est voulu - l'appui qui precede ce tap l'a
+	# selectionnee il y a une fraction de seconde (cf. _on_cell_pressed), la
+	# deselectionner aussitot donnerait un plateau qui ne repond pas.
+	var unit: BattleUnit = _engine.grid.unit_at(cell)
+	if unit != null and unit.team == BattleUnit.TEAM_PLAYER:
+		_select_unit(unit)
+	else:
+		_clear_selection()
+
+
+## Joue le coup demande par le joueur, puis laisse l'IA repondre. Un coup
+## illegal ne consomme rien : le moteur retourne une liste vide et la piece
+## reste selectionnee.
+func _try_player_move(unit: BattleUnit, destination: Vector2i) -> void:
+	if _busy or _auto or _phase != Phase.COMBAT:
+		return
+
+	var events: Array = _engine.play_move(unit, destination)
+	if events.is_empty():
+		_status_message("Ce coup n'est pas possible")
+		return
+
+	_busy = true
+	_clear_selection()
+	_grid_view.draggable_team = -1
+	await _play_events(events)
+	await _resume_until_player_turn()
+
+
+## Enchaine tous les coups qui ne demandent rien au joueur : la reponse de
+## l'IA, et un eventuel tour passe faute de coup legal. En mode AUTO, la
+## boucle ne rend jamais la main et resout la bataille entiere.
+func _resume_until_player_turn() -> void:
+	while _running and not _engine.finished:
+		_refresh_combat_status()
+		var player_turn: bool = _engine.current_team == BattleUnit.TEAM_PLAYER
+		if player_turn and not _auto and _engine.has_any_move(BattleUnit.TEAM_PLAYER):
+			break
+
+		await _wait(float(Balance.COMBAT["ai_think_delay"]))
+		if not _running:
+			return
+		await _play_events(_engine.step())
+
+	if not _running:
+		return
+	if _engine.finished:
+		_show_result()
+	else:
+		_hand_over_to_player()
+
+
+## Rend la main au joueur : ses pieces redeviennent saisissables.
+func _hand_over_to_player() -> void:
+	_busy = false
+	_grid_view.draggable_team = BattleUnit.TEAM_PLAYER
 	_refresh_combat_status()
+
+	# Cas limite : c'est au joueur mais aucune de ses pieces ne peut bouger.
+	# Le moteur passe alors son tour tout seul plutot que de figer la partie.
+	if not _engine.finished and not _engine.has_any_move(BattleUnit.TEAM_PLAYER):
+		_busy = true
+		_grid_view.draggable_team = -1
+		_status_message("Aucun coup possible - tu passes ton tour")
+		await _resume_until_player_turn()
+
+
+func _on_auto_pressed() -> void:
+	_auto = not _auto
+	if not _auto:
+		_refresh_combat_status()
+		return
+
+	_clear_selection()
+	if _busy or _engine.finished or _phase != Phase.COMBAT:
+		_refresh_combat_status()
+		return
+
+	_busy = true
+	_grid_view.draggable_team = -1
+	await _resume_until_player_turn()
+
+
+## Message temporaire dans le bandeau du bas ; le prochain rafraichissement
+## de statut reprend la main.
+func _status_message(text: String) -> void:
+	if _turn_label != null:
+		_turn_label.text = text
 
 
 func _refresh_combat_status() -> void:
-	var turn := _turn_activations / _combat_unit_count + 1
-	_phase_label.text = str(turn)
+	_phase_label.text = str(_engine.turn)
 	_refresh_stats_hud()
 	_refresh_blockage_badge()
+	_update_speed_pills(_speed)
 
-	# La vitesse d'avant "Fin tour" revient des que le tour suivant commence -
-	# cf. _on_end_turn().
-	if _fast_forward_target_turn != -1 and turn != _fast_forward_target_turn:
-		_speed = _speed_before_fast_forward
-		_fast_forward_target_turn = -1
+	if _auto_label != null:
+		_auto_label.text = "MANUEL" if _auto else "AUTO"
 
-	var shown_speed := _speed_before_fast_forward if _fast_forward_target_turn != -1 else _speed
-	_update_speed_pills(shown_speed)
+	if _turn_label == null:
+		return
+	if _engine.finished:
+		_turn_label.text = "Bataille terminee"
+	elif _auto:
+		_turn_label.text = "Resolution automatique..."
+	elif _engine.current_team == BattleUnit.TEAM_PLAYER and not _busy:
+		_turn_label.text = "A toi de jouer"
+	else:
+		_turn_label.text = "L'ennemi joue..."
 
 
 ## N'apparait que passe _BLOCKAGE_WARNING_RATIO du seuil d'enlisement (cf.
 ## BattleEngine.stalemate_ratio) : le combat doit etre visiblement bloque
 ## depuis un moment, pas juste en train de manoeuvrer sans prise recente.
-## Le texte reflete le temps reel avant resolution a la vitesse en cours,
-## coherent avec le fait que seul l'AFFICHAGE depend de la vitesse (cf.
-## BattleEngine.stalemate_seconds_remaining).
+##
+## En resolution automatique le compte a rebours s'exprime en secondes (le
+## joueur regarde), en mode manuel en coups restants (le joueur joue, une
+## seconde ne veut plus rien dire).
 func _refresh_blockage_badge() -> void:
 	if _blockage_badge == null or _engine.finished:
 		return
@@ -708,8 +959,11 @@ func _refresh_blockage_badge() -> void:
 		_blockage_badge.visible = false
 		return
 	_blockage_badge.visible = true
-	var seconds := _engine.stalemate_seconds_remaining() / _speed
-	_blockage_label.text = "Blocage — %ds" % maxi(1, int(ceil(seconds)))
+	if _auto:
+		var seconds := _engine.stalemate_seconds_remaining() / _speed
+		_blockage_label.text = "Blocage - %ds" % maxi(1, int(ceil(seconds)))
+	else:
+		_blockage_label.text = "Blocage - %d coups" % maxi(1, _engine.stalemate_moves_remaining())
 
 
 func _update_speed_pills(shown_speed: float) -> void:
@@ -718,8 +972,8 @@ func _update_speed_pills(shown_speed: float) -> void:
 		var active: bool = speed == shown_speed
 		var box := StyleBoxFlat.new()
 		box.set_corner_radius_all(8)
-		box.content_margin_left = 12
-		box.content_margin_right = 12
+		box.content_margin_left = 10
+		box.content_margin_right = 10
 		box.content_margin_top = 7
 		box.content_margin_bottom = 7
 		box.bg_color = Color("ffd700") if active else Color("1c2135")
@@ -728,31 +982,8 @@ func _update_speed_pills(shown_speed: float) -> void:
 		label.add_theme_color_override("font_color", Color("0f111a") if active else Color("5a6480"))
 
 
-## Boucle principale du combat. Une iteration = une activation d'unite.
-func _run_combat() -> void:
-	_running = true
-	while _running and not _engine.finished:
-		while _running and _paused:
-			_refresh_combat_status()
-			await get_tree().process_frame
-		if not _running:
-			return
-
-		var events: Array = _engine.step()
-		_turn_activations += 1
-		await _play_events(events)
-		if not _running:
-			return
-
-		_refresh_combat_status()
-		await _wait(float(Balance.COMBAT["step_delay"]))
-
-	if _running:
-		_show_result()
-
-
-## Rejoue les evenements d'une activation. Seules les DUREES dependent de la
-## vitesse choisie : les evenements, eux, sont deja resolus.
+## Rejoue les evenements d'un coup. Seules les DUREES dependent de la vitesse
+## choisie : les evenements, eux, sont deja resolus.
 func _play_events(events: Array) -> void:
 	for event in events:
 		if not _running:
@@ -762,6 +993,7 @@ func _play_events(events: Array) -> void:
 				await _grid_view.play_capture(
 					event["cell"], float(Balance.COMBAT["capture_duration"]) / _speed)
 			"move":
+				_grid_view.last_move = {"from": event["from"], "to": event["to"]}
 				await _grid_view.play_move(
 					int(event["unit"]), event["from"], event["to"],
 					float(Balance.COMBAT["move_duration"]) / _speed)
@@ -769,6 +1001,9 @@ func _play_events(events: Array) -> void:
 				await _grid_view.play_promotion(
 					event["cell"], String(event["result"]),
 					float(Balance.COMBAT["promotion_duration"]) / _speed)
+			"pass":
+				_status_message("Camp bloque : tour passe")
+				await _wait(float(Balance.COMBAT["step_delay"]))
 			_:
 				pass
 
@@ -788,10 +1023,18 @@ func _show_result() -> void:
 	var reward := Game.reward_for(int(_battle["id"]))
 	var battle_id := int(_battle["id"])
 
+	_grid_view.draggable_team = -1
+	_grid_view.legal_targets = []
+
 	# Les pertes sont definitives, victoire ou defaite : les pieces capturees
 	# quittent l'armee et devront etre recrutees a nouveau.
 	var losses: Dictionary = _engine.losses(BattleUnit.TEAM_PLAYER)
 	Game.apply_losses(losses)
+
+	# Les pions promus RENTRES VIVANTS deviennent des Dames stockees a la Tour
+	# de la Dame : le joueur pourra les redeployer aux batailles suivantes.
+	# Une Dame tombee au combat, elle, est perdue comme le pion qu'elle etait.
+	var dames_gained := Game.store_promotions(_engine.promoted_survivors(BattleUnit.TEAM_PLAYER))
 
 	# Recompense de consolation en cas de defaite - cf. capture Figma 07
 	# (Consolation-Row) : meme perdue, une bataille rapporte un peu.
@@ -839,6 +1082,11 @@ func _show_result() -> void:
 		stats_body.add_child(_stats_separator())
 		stats_body.add_child(UiTheme.stat_row("Ennemis vaincus",
 			_plain_value(str(enemies_defeated), Color("f0f3f8"), 14)))
+		if dames_gained > 0:
+			stats_body.add_child(_stats_separator())
+			stats_body.add_child(UiTheme.stat_row("Dames ramenées",
+				_icon_value("crown", Color("d8a0d0"),
+					"+%d à la Tour de la Dame" % dames_gained, Color("d8a0d0"), 13)))
 		if not losses.is_empty():
 			stats_body.add_child(_stats_separator())
 			stats_body.add_child(UiTheme.stat_row("Pertes", _plain_value(_format_losses(losses), Color("a0aabf"), 14)))
@@ -849,6 +1097,11 @@ func _show_result() -> void:
 			stats_body.add_child(_stats_separator())
 		var loss_text := "Aucune - toute l'armee rentre" if losses.is_empty() else _format_losses(losses)
 		stats_body.add_child(UiTheme.stat_row("Pertes subies", _plain_value(loss_text, Color("a0aabf"), 14)))
+		if dames_gained > 0:
+			stats_body.add_child(_stats_separator())
+			stats_body.add_child(UiTheme.stat_row("Dames ramenées",
+				_icon_value("crown", Color("d8a0d0"),
+					"+%d à la Tour de la Dame" % dames_gained, Color("d8a0d0"), 13)))
 
 	# Boutons - cf. Button-Stack Figma 06/07 : victoire met en avant l'or
 	# (bataille suivante) puis Reessayer ; defaite met Reessayer en avant sans
@@ -977,7 +1230,7 @@ func _icon_value(icon_name: String, icon_color: Color, text: String, text_color:
 ## cf. Losses-Row des nouvelles captures Figma 06/07.
 func _format_losses(losses: Dictionary) -> String:
 	var details: Array = []
-	for type in Balance.UNIT_TYPES:
+	for type in Balance.ARMY_TYPES:
 		if losses.has(type):
 			details.append("%d %s" % [int(losses[type]), Balance.unit_name(type)])
 	return ", ".join(details)

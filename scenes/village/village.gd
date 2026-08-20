@@ -18,12 +18,17 @@ const BUILDING_POS := {
 	"cavalier": Vector2(258, 272),
 	"fou": Vector2(30, 542),
 	"tour": Vector2(248, 542),
+	# La Tour de la Dame occupe l'emplacement que CLAUDE.md reservait a la
+	# Forge : meme coin de carte, meme traitement "verrouille" tant que le
+	# joueur n'a pas ramene sa premiere Dame.
+	"dame": Vector2(50, 685),
 }
 const BUILDING_TITLES := {
 	"pion": "Caserne des Pions",
 	"cavalier": "Ecuries",
 	"fou": "Cloitre des Fous",
 	"tour": "Donjon des Tours",
+	"dame": "Tour de la Dame",
 }
 ## Teinte de chaque label de batiment (bordure + pastille de niveau) - une
 ## palette propre a l'UI du Village, distincte des couleurs d'equipe utilisees
@@ -34,10 +39,10 @@ const BUILDING_ACCENT := {
 	"cavalier": "4dcc66",
 	"fou": "b266e5",
 	"tour": "e5594d",
+	"dame": "d8a0d0",
 }
 const SCREEN_WIDTH := 393.0
 const SCREEN_MARGIN := 8.0
-const FORGE_POS := Vector2(50, 685)
 const BATTLE_RECT := Rect2(87, 748, 219, 59)
 const TOP_BAR_Y := 38.0
 const TOP_BAR_HEIGHT := 46.0
@@ -62,7 +67,7 @@ func _ready() -> void:
 	_build_castle_label()
 	for type in Balance.UNIT_TYPES:
 		_build_building_label(type)
-	_build_forge_label()
+	_build_building_label(Balance.DAME)
 	_build_battle_button()
 	_build_dev_button()
 
@@ -217,49 +222,6 @@ func _make_clickable(panel: PanelContainer, action: Callable) -> void:
 			action.call())
 
 
-## Batiment fictif, jamais debloquable en Phase 1 - simple clin d'oeil au
-## contenu a venir, cf. CLAUDE.md ("Label verrouille : Forge").
-func _build_forge_label() -> void:
-	var panel := PanelContainer.new()
-	var box := StyleBoxFlat.new()
-	box.bg_color = Color("0a0d14", 0.8)
-	box.set_corner_radius_all(10)
-	box.border_color = Color("595966", 0.35)
-	box.set_border_width_all(1)
-	box.content_margin_left = 10
-	box.content_margin_right = 10
-	box.content_margin_top = 6
-	box.content_margin_bottom = 6
-	panel.add_theme_stylebox_override("panel", box)
-	_overlay.add_child(panel)
-
-	var vbox := VBoxContainer.new()
-	vbox.add_theme_constant_override("separation", 3)
-	vbox.alignment = BoxContainer.ALIGNMENT_CENTER
-	panel.add_child(vbox)
-
-	var row := HBoxContainer.new()
-	row.alignment = BoxContainer.ALIGNMENT_CENTER
-	row.add_theme_constant_override("separation", 4)
-	var lock := Icon.new()
-	lock.icon_name = "lock"
-	lock.color = Color("80808c")
-	lock.custom_minimum_size = Vector2(10, 10)
-	row.add_child(lock)
-	var title := UiTheme.make_label("Forge", 10, Color("80808c"))
-	title.autowrap_mode = TextServer.AUTOWRAP_OFF
-	row.add_child(title)
-	vbox.add_child(row)
-
-	var hint := UiTheme.make_label("Chateau Nv.6 requis", 8, Color("666673"))
-	hint.autowrap_mode = TextServer.AUTOWRAP_OFF
-	hint.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	vbox.add_child(hint)
-
-	panel.size = panel.get_combined_minimum_size()
-	panel.position = FORGE_POS
-
-
 ## Panneau clic-able (pas un Button) : seul moyen d'inserer une Icon
 ## vectorielle (epee) a cote du texte, cf. _icon_button() dans battle.gd pour
 ## le meme besoin sur l'ecran de combat.
@@ -376,6 +338,7 @@ func _refresh() -> void:
 	_refresh_castle()
 	for type in Balance.UNIT_TYPES:
 		_refresh_building(type)
+	_refresh_building(Balance.DAME)
 
 	if Game.is_campaign_complete():
 		_battle_label.text = "REJOUER LA DERNIERE"
@@ -423,10 +386,23 @@ func _refresh_building(type: String) -> void:
 
 	if not Game.is_building_unlocked(type):
 		panel.modulate.a = 0.6
-		var hint := UiTheme.make_label(
-			"Chateau Nv.%d requis" % Balance.unlock_castle_level(type), 11, UiTheme.TEXT_DIM)
+		# La Tour de la Dame ne s'achete ni ne se debloque au niveau de
+		# chateau : elle apparait le jour ou une Dame y entre.
+		var hint_text := "Chateau Nv.%d requis" % Balance.unlock_castle_level(type)
+		if type == Balance.DAME:
+			hint_text = "Promeus un pion au bout du plateau"
+		var hint := UiTheme.make_label(hint_text, 11, UiTheme.TEXT_DIM)
 		hint.autowrap_mode = TextServer.AUTOWRAP_OFF
 		sub_row.add_child(hint)
+	elif type == Balance.DAME:
+		# Pas de pastille de niveau : la Tour de la Dame ne s'ameliore pas,
+		# elle compte les Dames qui y logent.
+		panel.modulate.a = 1.0
+		var dames := Game.dames_owned()
+		var dame_count := UiTheme.make_label(
+			"%d Dame%s au repos" % [dames, "" if dames <= 1 else "s"], 11, color)
+		dame_count.autowrap_mode = TextServer.AUTOWRAP_OFF
+		sub_row.add_child(dame_count)
 	else:
 		panel.modulate.a = 1.0
 		var level_pill: Pill = preload("res://scenes/ui/components/pill.tscn").instantiate()

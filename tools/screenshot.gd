@@ -46,11 +46,45 @@ func _ready() -> void:
 		instance.queue_free()
 		await get_tree().process_frame
 
+	await _capture_dame_tower()
 	await _capture_combat()
 	await _capture_defeat()
 	await _capture_splash()
 	await _capture_intro()
 	get_tree().quit()
+
+
+## La Tour de la Dame, ouverte : le seul ecran qui n'apparait qu'apres avoir
+## ramene un pion promu vivant d'une bataille. On force la Dame par le
+## raccourci de test plutot que de jouer la bataille qui la donne.
+func _capture_dame_tower() -> void:
+	Game.reset_progress()
+	Game.dev_grant_dame()
+	var village: Node = load("res://scenes/village/village.tscn").instantiate()
+	add_child(village)
+	for i in range(4):
+		await RenderingServer.frame_post_draw
+	village._on_building_pressed(Balance.DAME)
+	for i in range(4):
+		await RenderingServer.frame_post_draw
+	_save(village, "1b_tour_dame.png")
+	village.queue_free()
+	await get_tree().process_frame
+
+	# Et le placement avec la Dame en reserve : son chip apparait a cote des
+	# casernes, et elle pese 5 de charge (cf. Balance.deploy_weight).
+	Router.current_battle_id = 3
+	var battle: Node = load("res://scenes/battle/battle.tscn").instantiate()
+	add_child(battle)
+	for i in range(4):
+		await RenderingServer.frame_post_draw
+	battle._on_auto_place()
+	for i in range(4):
+		await RenderingServer.frame_post_draw
+	_save(battle, "1c_dame_au_placement.png")
+	battle.queue_free()
+	await get_tree().process_frame
+	Game.reset_progress()
 
 
 ## Meme passage que _capture_combat(), mais contre la derniere bataille (Nv.6)
@@ -71,6 +105,7 @@ func _capture_defeat() -> void:
 	battle._on_cell_clicked(only_cell)
 	battle._speed = 4.0
 	battle._start_combat()
+	battle._on_auto_pressed()
 
 	var guard := 0
 	while battle._phase != 2 and guard < 6000:
@@ -123,18 +158,33 @@ func _capture_combat() -> void:
 	for i in range(4):
 		await RenderingServer.frame_post_draw
 
-	# Armee posee : c'est ici que les fleches d'apercu doivent apparaitre.
+	# Armee posee : zones de deploiement, chips et charge du chateau.
 	battle._on_auto_place()
 	for i in range(4):
 		await RenderingServer.frame_post_draw
-	_save(battle, "5_apercu.png")
+	_save(battle, "5_placement.png")
 
 	battle._speed = 4.0
 	battle._start_combat()
+	for i in range(4):
+		await RenderingServer.frame_post_draw
 
+	# Piece selectionnee : c'est l'ecran que le joueur voit le plus souvent
+	# maintenant qu'il joue chaque coup - pastilles de deplacement, anneaux
+	# de capture, case de depart surlignee.
+	for unit in battle._engine.living(BattleUnit.TEAM_PLAYER):
+		if not battle._engine.legal_moves(unit).is_empty():
+			battle._on_cell_pressed(unit.cell)
+			break
+	for i in range(4):
+		await RenderingServer.frame_post_draw
+	_save(battle, "6_coups_possibles.png")
+
+	# Le reste de la bataille tourne en resolution automatique.
+	battle._on_auto_pressed()
 	for i in range(40):
 		await RenderingServer.frame_post_draw
-	_save(battle, "6_combat.png")
+	_save(battle, "6b_combat.png")
 
 	var guard := 0
 	while battle._phase != 2 and guard < 6000:

@@ -31,6 +31,7 @@ func _build() -> void:
 	_add_action("Debloquer tous les batiments", func(): Game.dev_unlock_all_buildings())
 	_add_action("Terminer toutes les ameliorations", func(): Game.dev_finish_all_upgrades())
 	_add_action("Debloquer toutes les batailles", func(): Game.dev_unlock_all_battles())
+	_add_action("+1 Dame (Tour de la Dame)", func(): Game.dev_grant_dame())
 
 	_content.add_child(HSeparator.new())
 	var reset := UiTheme.make_button("RAZ - effacer la sauvegarde", UiTheme.DANGER.darkened(0.25), 15)

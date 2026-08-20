@@ -11,9 +11,38 @@ extends Control
 ## - aucune des tailles fixes du mockup Figma n'est codee en dur ici.
 ##
 
+## Tape simple sur une case (appui puis relachement au meme endroit).
 signal cell_clicked(cell: Vector2i)
+## Appui, avant meme de savoir si ce sera un tap ou un glisser : c'est ce qui
+## permet de surligner les coups d'une piece des qu'on pose le doigt dessus.
+signal cell_pressed(cell: Vector2i)
+## Piece relachee sur une AUTRE case que celle de depart.
+signal piece_dropped(from: Vector2i, to: Vector2i)
 
 var engine: BattleEngine = null
+
+## Cases ou la piece selectionnee peut aller (pastille) ou capturer (anneau).
+## Remplies par l'ecran de bataille, qui seul connait les regles.
+var legal_targets: Array = []
+
+## Camp dont les pieces peuvent etre saisies au doigt. -1 = plateau en lecture
+## seule (tour de l'IA, resolution automatique, ecran de resultat).
+var draggable_team: int = -1
+
+## Dernier coup joue, surligne discretement : sur un plateau ou l'adversaire
+## repond entre deux de nos coups, on doit pouvoir voir ce qui a bouge.
+## {"from": Vector2i, "to": Vector2i}
+var last_move: Dictionary = {}
+
+## Distance en pixels au-dela de laquelle un appui devient un glisser plutot
+## qu'une tape. Assez large pour tolerer le tremblement d'un doigt.
+const _DRAG_THRESHOLD := 8.0
+
+var _press_cell: Vector2i = Vector2i(-1, -1)
+var _press_point: Vector2 = Vector2.ZERO
+var _pointer: Vector2 = Vector2.ZERO
+var _dragging: bool = false
+var _drag_unit_id: int = -1
 
 ## Zones de deploiement (pointilles rouge/bleu) : visibles pendant le
 ## placement, masquees pendant le combat - cf. captures Figma 04 vs 05, ou le
@@ -101,14 +130,75 @@ func position_to_cell(point: Vector2) -> Vector2i:
 
 
 # ------------------------------- ENTREE --------------------------------------
+#
+#  Deux gestes pour un meme coup, parce que les deux sont naturels au doigt :
+#  taper la piece puis taper la case d'arrivee, ou faire glisser la piece
+#  jusqu'a sa case. La vue ne fait qu'emettre le geste ; c'est l'ecran de
+#  bataille qui decide s'il est legal.
 
 func _gui_input(event: InputEvent) -> void:
 	if engine == null:
 		return
-	if event is InputEventMouseButton and event.pressed and event.button_index == MOUSE_BUTTON_LEFT:
-		var cell := position_to_cell(event.position)
-		if engine.grid.in_bounds(cell):
-			cell_clicked.emit(cell)
+
+	if event is InputEventMouseButton and event.button_index == MOUSE_BUTTON_LEFT:
+		if event.pressed:
+			_begin_press(event.position)
+		else:
+			_end_press(event.position)
+	elif event is InputEventMouseMotion and _press_cell.x >= 0:
+		_pointer = event.position
+		if not _dragging and _pointer.distance_to(_press_point) > _DRAG_THRESHOLD:
+			_dragging = _drag_unit_id != -1
+		if _dragging:
+			queue_redraw()
+
+
+func _begin_press(point: Vector2) -> void:
+	_reset_press()
+	var cell := position_to_cell(point)
+	if not engine.grid.in_bounds(cell):
+		return
+
+	_press_cell = cell
+	_press_point = point
+	_pointer = point
+
+	# Seule une piece du camp jouable se souleve : le decor, lui, ne bouge pas.
+	if draggable_team >= 0:
+		var unit := engine.grid.unit_at(cell)
+		if unit != null and unit.is_alive() and unit.team == draggable_team:
+			_drag_unit_id = unit.id
+
+	cell_pressed.emit(cell)
+
+
+func _end_press(point: Vector2) -> void:
+	var from := _press_cell
+	var was_dragging := _dragging
+	var had_piece := _drag_unit_id != -1
+	_reset_press()
+	queue_redraw()
+
+	if from.x < 0:
+		return
+
+	var cell := position_to_cell(point)
+	if was_dragging and had_piece and engine.grid.in_bounds(cell) and cell != from:
+		piece_dropped.emit(from, cell)
+	elif not was_dragging:
+		cell_clicked.emit(from)
+
+
+func _reset_press() -> void:
+	_press_cell = Vector2i(-1, -1)
+	_dragging = false
+	_drag_unit_id = -1
+
+
+## Vrai pendant qu'une piece suit le doigt : l'ecran de bataille s'en sert
+## pour ne pas relancer d'animation par-dessus le geste en cours.
+func is_dragging() -> bool:
+	return _dragging
 
 
 # ------------------------------- DESSIN --------------------------------------
@@ -121,10 +211,13 @@ func _draw() -> void:
 		# La grille n'a pas encore de taille utile (premiere image du layout).
 		return
 	_draw_cells()
+	_draw_last_move()
 	_draw_preview()
+	_draw_legal_targets()
 	for unit in engine.units:
 		if unit.is_alive():
 			_draw_unit(unit)
+	_draw_dragged_piece()
 	_draw_capture()
 	_draw_promotion()
 
@@ -215,17 +308,28 @@ func _draw_arrow(from: Vector2, to: Vector2, color: Color) -> void:
 
 
 func _draw_unit(unit: BattleUnit) -> void:
+	# La piece portee au doigt est dessinee a part, tout en haut de la pile.
+	if unit.id == _drag_unit_id and _dragging:
+		return
+
 	var center := cell_center(unit.cell)
 
 	# Deplacement en cours : on interpole entre les deux cases.
 	if unit.id == _anim_unit:
 		center = cell_center(_anim_from).lerp(cell_center(_anim_to), _anim_t)
 
+	_draw_piece(unit, center, 1.0)
+
+
+## Dessine une piece a un endroit donne du plateau. Le centre est passe en
+## parametre plutot que deduit de la case : une piece peut etre en train de
+## glisser d'une case a l'autre, ou de suivre le doigt du joueur.
+func _draw_piece(unit: BattleUnit, center: Vector2, scale: float) -> void:
 	# Hauteur relative a la case (18/24 sur une case de 31, cf. maquette
 	# Figma 04/05) : le pion reste nettement plus petit que les autres
 	# pieces, qui partagent toutes la meme hauteur.
 	var height_fraction := (18.0 / 31.0) if unit.type == Balance.PION else (24.0 / 31.0)
-	var height := _cell_size * height_fraction
+	var height := _cell_size * height_fraction * scale
 	var radius := height * 0.5
 	var team_folder := "bleu" if unit.team == BattleUnit.TEAM_PLAYER else "rouge"
 	var texture: Texture2D = _piece_textures.get("%s_%s" % [team_folder, unit.type])
@@ -247,7 +351,7 @@ func _draw_unit(unit: BattleUnit) -> void:
 		draw_arc(center, radius, 0.0, TAU, 24,
 			UiTheme.TEXT if unit.team == BattleUnit.TEAM_PLAYER else UiTheme.ENEMY.lightened(0.3),
 			maxf(1.5, _cell_size * 0.05))
-		var font_size := maxi(8, int(_cell_size * 0.42))
+		var font_size := maxi(8, int(_cell_size * 0.42 * scale))
 		draw_string(ThemeDB.fallback_font, center + Vector2(-radius, font_size * 0.36),
 			Balance.unit_letter(unit.type),
 			HORIZONTAL_ALIGNMENT_CENTER, radius * 2.0, font_size, UiTheme.TEXT)
@@ -257,6 +361,52 @@ func _draw_unit(unit: BattleUnit) -> void:
 	# d'origine (voir BattleUnit.origin_type).
 	if unit.promoted:
 		draw_arc(center, radius * 1.18, 0.0, TAU, 24, UiTheme.GOLD, maxf(1.5, _cell_size * 0.04))
+
+
+## Coups legaux de la piece selectionnee : une pastille sur une case vide, un
+## anneau autour d'une piece a prendre. Deux formes distinctes plutot que deux
+## couleurs : au doigt, sur un petit ecran, la forme se lit mieux.
+func _draw_legal_targets() -> void:
+	for cell in legal_targets:
+		var center := cell_center(cell)
+		var occupant := engine.grid.unit_at(cell)
+		if occupant != null:
+			draw_arc(center, _cell_size * 0.42, 0.0, TAU, 28,
+				Color(UiTheme.GOLD, 0.9), maxf(2.0, _cell_size * 0.07))
+		else:
+			draw_circle(center, _cell_size * 0.14, Color(0.4, 0.75, 1.0, 0.75))
+
+
+## Case de depart et case d'arrivee du dernier coup joue - surtout utile pour
+## voir ce que l'adversaire vient de faire.
+func _draw_last_move() -> void:
+	if not last_move.has("from") or not last_move.has("to"):
+		return
+	var color := Color(1.0, 0.85, 0.3, 0.16)
+	for key in ["from", "to"]:
+		var cell: Vector2i = last_move[key]
+		if engine.grid.in_bounds(cell):
+			draw_rect(Rect2(cell_to_position(cell), Vector2(_cell_size, _cell_size)), color)
+
+
+## Piece soulevee : elle suit le doigt, legerement agrandie, et la case
+## survolee s'allume dessous.
+func _draw_dragged_piece() -> void:
+	if not _dragging or _drag_unit_id < 0:
+		return
+	var unit := engine.unit_by_id(_drag_unit_id)
+	if unit == null or not unit.is_alive():
+		return
+
+	var hovered := position_to_cell(_pointer)
+	if engine.grid.in_bounds(hovered):
+		var rect := Rect2(cell_to_position(hovered), Vector2(_cell_size, _cell_size))
+		var valid: bool = legal_targets.has(hovered)
+		draw_rect(rect, Color(1.0, 0.82, 0.1, 0.22) if valid else Color(1, 1, 1, 0.06))
+		if valid:
+			draw_rect(rect, UiTheme.GOLD, false, maxf(2.0, _cell_size * 0.06))
+
+	_draw_piece(unit, _pointer, 1.25)
 
 
 ## Marque brievement la case ou une piece vient d'etre capturee.
