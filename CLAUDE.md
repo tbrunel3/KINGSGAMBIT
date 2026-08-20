@@ -10,6 +10,34 @@ Un bouton **i** sur l'écran de bataille ouvre l'aide correspondant à la phase 
 
 Ton : fantasy médiéval, mélancolique mais pas sombre. Aucune violence graphique.
 
+## V2 Figma : écarts à trancher avant l'import
+
+La maquette V2 décrit un jeu qui n'est plus tout à fait celui qui tourne. Ces
+points doivent être arbitrés **avant** de reproduire les écrans, sinon le
+visuel contredira le gameplay :
+
+1. **Écran Combat** — la maquette dit « pas de panneau de contrôle, le joueur
+   observe le combat automatique ». Le combat se joue désormais **coup par
+   coup au doigt** : l'écran a besoin de son bandeau (« À toi de jouer », AUTO,
+   vitesses) et du point i.
+2. **Taille du plateau** — la maquette annonce 8×11 cases. Les plateaux vont de
+   5×6 à 8×9, volontairement réduits pour qu'une case reste cliquable au pouce
+   (45 à 72 points de côté). 8×11 rendrait les cases trop petites.
+3. **« Déploiement : 12/15 unités »** — ce n'est pas un nombre d'unités mais un
+   **budget de poids** (Pion 1, Cavalier 3, Fou 3, Tour 5, Dame 5). Le libellé
+   doit parler de charge, pas d'effectif.
+4. **Noms des bâtiments** — la maquette parle d'Atelier, Académie, Chapelle,
+   Cathédrale. Le jeu a Caserne des Pions, Écuries, Cloître des Fous, Donjon des
+   Tours, plus la **Tour de la Dame** (absente de la maquette) qui abrite les
+   Dames ramenées vivantes.
+5. **Village avec / sans Dame** — les deux états existent bien dans le jeu, mais
+   la différence se joue sur le **halo doré du Château Royal** et le label de la
+   Tour de la Dame, pas sur la présence d'une pièce sur le château.
+
+Écrans de la maquette qui n'existent pas encore côté code : Codex du Royaume,
+modale de confirmation d'amélioration, écran plein Château Royal. Le popup des
+missions, lui, existe déjà et suit la maquette (liste, progression, RÉCLAMER).
+
 ## Contraintes techniques
 
 - Godot 4 (gl_compatibility), portrait uniquement

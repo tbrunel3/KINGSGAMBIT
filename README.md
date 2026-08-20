@@ -51,7 +51,14 @@ gratuitement quand le Château Royal atteint le niveau requis (2 et 3).
 
 Le **point i**, à gauche de la croix en haut de l'écran de bataille, écrit les
 règles noir sur blanc : la pose et le barème des poids pendant le placement, le
-tour par tour, la capture et la promotion pendant le combat. Le bouton **DEV** (en haut à droite, à la place de l'ancien
+tour par tour, la capture et la promotion pendant le combat.
+
+Le bouton **MISSIONS** de la barre du haut porte le fil rouge du jeu : onze
+objectifs qui se déverrouillent **en chaîne** (une mission n'apparaît que
+lorsque celles de son `requires` ont été réclamées) et paient en or. Les cinq
+premières se suivent une à une et forment le tutoriel — gagner, recruter,
+améliorer, enchaîner, gagner proprement. Une pastille dorée sur le bouton
+signale les récompenses qui attendent. Le bouton **DEV** (en haut à droite, à la place de l'ancien
 RAZ) ouvre un panneau de raccourcis de test : or, déblocages, améliorations
 instantanées, et **RAZ** pour effacer la sauvegarde.
 
@@ -242,7 +249,22 @@ tools/
   ui_test.tscn           appuie sur les vrais boutons du jeu
   debug_battle.tscn      trace une bataille coup par coup
   screenshot.tscn        génération des captures
+  resolutions.tscn       le même écran rendu à cinq définitions de téléphone
 ```
+
+### Vérifier la mise à l'échelle
+
+```bash
+godot --path . tools/resolutions.tscn
+```
+
+Rend le village, la campagne, la préparation et le placement en 393×852,
+360×800, 375×812, 412×915 et 430×932, et enregistre une capture par
+combinaison dans `tools/screenshots/echelle/`. C'est la façon la plus rapide de
+voir ce qui déborde : le jeu est calé sur 393×852, et en `stretch/aspect =
+expand` un téléphone d'un autre format ne redimensionne pas, il **révèle** de la
+hauteur en plus (873 points sur un 360×800). Tout ce qui est posé en
+coordonnées absolues s'y décale.
 
 ### Le point important : moteur et vitesse
 
