@@ -168,6 +168,18 @@ func _capture_combat() -> void:
 		await RenderingServer.frame_post_draw
 	_save(battle, "5_placement.png")
 
+	# Le point i : les regles ecrites noir sur blanc, seul endroit du jeu ou
+	# le bareme des poids est visible.
+	battle._open_help()
+	for i in range(4):
+		await RenderingServer.frame_post_draw
+	_save(battle, "5b_aide_placement.png")
+	for child in battle.get_children():
+		if child is Modal:
+			child.close()
+	for i in range(4):
+		await RenderingServer.frame_post_draw
+
 	battle._speed = 4.0
 	battle._start_combat()
 	for i in range(4):
@@ -183,6 +195,16 @@ func _capture_combat() -> void:
 	for i in range(4):
 		await RenderingServer.frame_post_draw
 	_save(battle, "6_coups_possibles.png")
+
+	battle._open_help()
+	for i in range(4):
+		await RenderingServer.frame_post_draw
+	_save(battle, "6a_aide_combat.png")
+	for child in battle.get_children():
+		if child is Modal:
+			child.close()
+	for i in range(4):
+		await RenderingServer.frame_post_draw
 
 	# Le reste de la bataille tourne en resolution automatique.
 	battle._on_auto_pressed()

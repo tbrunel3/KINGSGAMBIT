@@ -155,6 +155,22 @@ func _test_battle() -> void:
 		_check(moved.cell == target, "glisser une piece posee la repositionne")
 		_check(battle._placed.size() == placed, "le repositionnement ne cree ni ne perd d'unite")
 
+	# Le point i : les regles doivent etre accessibles depuis le plateau, et
+	# le bareme des poids y figurer - c'est le seul endroit du jeu ou on peut
+	# le lire.
+	battle._open_help()
+	await _frames(3)
+	var help: Modal = null
+	for child in battle.get_children():
+		if child is Modal:
+			help = child
+	_check(help != null, "le point i ouvre l'aide")
+	if help != null:
+		_check(_contains_text(help, "SURVEILLE LA CHARGE"), "l'aide explique la charge")
+		_check(_contains_text(help, "POIDS"), "l'aide dit que la charge est un poids")
+		help.close()
+		await _frames(3)
+
 	# Combat : le joueur joue lui-meme son premier coup
 	var gold_before := Game.gold
 	battle._speed = 4.0
@@ -244,6 +260,18 @@ func _find_clickable(root: Node, text: String) -> Control:
 		if found != null:
 			return found
 	return null
+
+
+## Vrai si un Label quelque part sous ce noeud contient ce texte (casse et
+## accents ignores).
+func _contains_text(root: Node, needle: String) -> bool:
+	var wanted := _normalize(needle)
+	for child in root.get_children():
+		if child is Label and _normalize(String(child.text)).contains(wanted):
+			return true
+		if _contains_text(child, needle):
+			return true
+	return false
 
 
 ## Texte porte par le premier Label d'un panneau cliquable.

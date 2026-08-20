@@ -91,6 +91,7 @@ func _ready() -> void:
 	_style_stats_hud()
 	_quit_button.add_theme_font_size_override("font_size", 13)
 	_quit_button.pressed.connect(_on_quit)
+	_build_help_button()
 
 	_engine = BattleEngine.new(int(_battle["cols"]), int(_battle["rows"]))
 	_engine.enemy_skill = Balance.battle_ai_skill(_battle)
@@ -129,6 +130,183 @@ func _deployable_types() -> Array:
 			continue
 		types.append(type)
 	return types
+
+
+# ------------------------------- AIDE ----------------------------------------
+#
+#  Un jeu d'echecs qui n'est pas tout a fait un jeu d'echecs a besoin de dire
+#  ses regles quelque part. Le "i" est le seul endroit du jeu ou on les ecrit
+#  noir sur blanc : ce qu'est la charge, comment on joue un coup, ce qui
+#  arrive a un pion qui traverse le plateau.
+#
+#  Le contenu suit la phase en cours - pendant le placement on ne parle pas
+#  encore de captures, et pendant le combat on ne reparle pas de la zone
+#  bleue.
+
+const _HELP_RECT := Rect2(0, 12, 30, 30)
+
+
+## Petit rond discret, cale a gauche de la croix de sortie.
+func _build_help_button() -> void:
+	var help := PanelContainer.new()
+	var box := StyleBoxFlat.new()
+	box.bg_color = Color("0d0f1a", 0.75)
+	box.set_corner_radius_all(15)
+	box.border_color = Color(1, 1, 1, 0.18)
+	box.set_border_width_all(1)
+	box.set_content_margin_all(6)
+	help.add_theme_stylebox_override("panel", box)
+	help.mouse_filter = Control.MOUSE_FILTER_STOP
+
+	var icon := Icon.new()
+	icon.icon_name = "info"
+	icon.color = Color("ccd1e0")
+	icon.custom_minimum_size = Vector2(16, 16)
+	icon.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	help.add_child(icon)
+
+	_quit_button.get_parent().add_child(help)
+
+	# Ancre au bord droit, comme la croix de sortie : lire la position de
+	# celle-ci ici ne marcherait pas, la mise en page n'a pas encore tourne au
+	# moment du _ready() et elle vaut encore son offset negatif.
+	var gap := 8.0
+	var quit_width := absf(_quit_button.offset_left)
+	help.anchor_left = 1.0
+	help.anchor_right = 1.0
+	help.grow_horizontal = Control.GROW_DIRECTION_BEGIN
+	help.offset_left = -(quit_width + gap + _HELP_RECT.size.x)
+	help.offset_right = -(quit_width + gap)
+	help.offset_top = _HELP_RECT.position.y
+	help.offset_bottom = _HELP_RECT.position.y + _HELP_RECT.size.y
+	help.gui_input.connect(func(event: InputEvent):
+		if event is InputEventMouseButton and event.pressed and event.button_index == MOUSE_BUTTON_LEFT:
+			_open_help()
+	)
+
+
+func _open_help() -> void:
+	var modal: Modal = ModalScene.instantiate()
+	add_child(modal)
+	modal.open("COMMENT JOUER", Modal.Context.BLUE, "info")
+
+	if _phase == Phase.PLACEMENT:
+		_fill_placement_help(modal.body)
+	else:
+		_fill_combat_help(modal.body)
+
+
+func _fill_placement_help(body: VBoxContainer) -> void:
+	body.add_child(_help_step("1", "Choisis un type, tape la zone bleue",
+		"Chaque tape pose une piece. Tape une piece deja posee pour la reprendre, " +
+		"ou fais-la glisser pour la deplacer - deux pieces qui se croisent echangent leur case."))
+	body.add_child(_help_step("2", "Surveille la charge",
+		"Le chateau ne porte pas un nombre de pieces mais un POIDS total, affiche a " +
+		"droite du plateau. Une piece forte pese plus lourd :"))
+	body.add_child(_help_weights())
+	body.add_child(_help_step("3", "COMBATTRE quand tu es pret",
+		"Tes pieces partent exactement d'ou tu les as posees. L'ennemi, lui, est " +
+		"deja en place dans la zone rouge."))
+
+
+func _fill_combat_help(body: VBoxContainer) -> void:
+	body.add_child(_help_step("1", "Une piece par tour, chacun son tour",
+		"Tu joues un coup, l'ennemi repond. Rien ne tourne pendant que tu reflechis."))
+	body.add_child(_help_step("2", "Tape une piece, puis sa case",
+		"Une pastille bleue marque une case libre, un anneau dore une piece a prendre. " +
+		"Tu peux aussi faire glisser la piece directement jusqu'a sa case."))
+	body.add_child(_help_step("3", "On capture en se deplacant",
+		"Il n'y a ni degats ni points de vie : aller sur la case d'un adversaire le " +
+		"capture. Une piece capturee est perdue pour de bon, des deux cotes."))
+	body.add_child(_help_step("4", "Mene un pion au bout du plateau",
+		"Il devient Dame sur-le-champ. Ramene-la vivante et elle s'installe a la Tour " +
+		"de la Dame, au village."))
+	body.add_child(_help_note(
+		"AUTO confie les deux camps a l'IA jusqu'a la fin du combat - pratique pour " +
+		"rejouer vite une bataille deja gagnee."))
+
+
+## Une etape numerotee : pastille ronde a gauche, titre + explication a droite.
+func _help_step(number: String, title: String, text: String) -> HBoxContainer:
+	var row := HBoxContainer.new()
+	row.add_theme_constant_override("separation", 10)
+
+	var badge := PanelContainer.new()
+	var badge_box := StyleBoxFlat.new()
+	badge_box.bg_color = Color(UiTheme.ACCENT, 0.22)
+	badge_box.border_color = Color(UiTheme.ACCENT, 0.7)
+	badge_box.set_border_width_all(1)
+	badge_box.set_corner_radius_all(11)
+	badge.add_theme_stylebox_override("panel", badge_box)
+	badge.custom_minimum_size = Vector2(22, 22)
+	badge.size_flags_vertical = Control.SIZE_SHRINK_BEGIN
+	var badge_label := UiTheme.make_label(number, 11, Color("cce4ff"))
+	badge_label.add_theme_font_override("font", UiTheme.font_bold())
+	badge_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	badge_label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	badge.add_child(badge_label)
+	row.add_child(badge)
+
+	var texts := VBoxContainer.new()
+	texts.add_theme_constant_override("separation", 2)
+	texts.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	var head := UiTheme.make_label(title, 12, Color("f0f3f8"))
+	head.add_theme_font_override("font", UiTheme.font_bold())
+	head.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	texts.add_child(head)
+	var detail := UiTheme.make_label(text, 11, Color("a0aabf"))
+	detail.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	texts.add_child(detail)
+	row.add_child(texts)
+
+	return row
+
+
+## Le bareme des poids, lu directement dans Balance : c'est LA chose que le
+## joueur ne peut deviner nulle part ailleurs dans le jeu.
+func _help_weights() -> PanelContainer:
+	var panel := PanelContainer.new()
+	var box := StyleBoxFlat.new()
+	box.bg_color = Color("1c1f2e")
+	box.set_corner_radius_all(8)
+	box.set_content_margin_all(10)
+	panel.add_theme_stylebox_override("panel", box)
+
+	var row := HBoxContainer.new()
+	row.alignment = BoxContainer.ALIGNMENT_CENTER
+	row.add_theme_constant_override("separation", 14)
+	panel.add_child(row)
+
+	for type in Balance.ARMY_TYPES:
+		if type == Balance.DAME and Game.units_owned(Balance.DAME) <= 0:
+			continue
+		var column := VBoxContainer.new()
+		column.alignment = BoxContainer.ALIGNMENT_CENTER
+		column.add_theme_constant_override("separation", 2)
+
+		var path := "res://assets/pieces/bleu/%s.png" % type
+		if ResourceLoader.exists(path):
+			var sprite := TextureRect.new()
+			sprite.texture = load(path)
+			sprite.custom_minimum_size = Vector2(26, 26)
+			sprite.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+			sprite.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+			column.add_child(sprite)
+
+		var weight := UiTheme.make_label(str(Balance.deploy_weight(type)), 13, UiTheme.GOLD)
+		weight.add_theme_font_override("font", UiTheme.font_bold())
+		weight.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+		weight.autowrap_mode = TextServer.AUTOWRAP_OFF
+		column.add_child(weight)
+		row.add_child(column)
+
+	return panel
+
+
+func _help_note(text: String) -> Label:
+	var label := UiTheme.make_label(text, 11, Color("8fa0b8"))
+	label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	return label
 
 
 ## Badge de tour (haut-gauche) : bleu "PHASE DE PLACEMENT" pendant la pose,

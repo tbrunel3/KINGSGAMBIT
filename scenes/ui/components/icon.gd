@@ -16,7 +16,7 @@ extends Control
 ##   icon.color = UiTheme.TEXT_DIM
 ##
 
-@export_enum("lock", "wrench", "star", "check", "close", "diamond", "sword", "house", "crown", "crown_broken", "compass", "coin", "dot", "pause", "skip", "arrow_left", "clock") var icon_name: String = "star"
+@export_enum("lock", "wrench", "star", "check", "close", "diamond", "sword", "house", "crown", "crown_broken", "compass", "coin", "dot", "pause", "skip", "arrow_left", "clock", "info") var icon_name: String = "star"
 @export var color: Color = Color.WHITE
 @export var line_width: float = 1.8
 
@@ -73,6 +73,8 @@ func _draw() -> void:
 			_draw_arrow_left(c, s, lw)
 		"clock":
 			_draw_clock(c, s, lw)
+		"info":
+			_draw_info(c, s, lw)
 
 
 func _draw_lock(c: Vector2, s: float, lw: float) -> void:
@@ -262,6 +264,15 @@ func _draw_clock(c: Vector2, s: float, lw: float) -> void:
 	draw_arc(c, s * 0.4, 0.0, TAU, 24, color, lw, true)
 	draw_line(c, c + Vector2(0, -s * 0.26), color, lw, true)
 	draw_line(c, c + Vector2(s * 0.2, s * 0.08), color, lw, true)
+
+
+## Cercle + point + barre - le "i" des ecrans d'aide. Trace a la main plutot
+## qu'ecrit avec une police : la lettre i d'Inter en 12px, centree dans un
+## cercle, ne tombe jamais juste sur l'axe optique.
+func _draw_info(c: Vector2, s: float, lw: float) -> void:
+	draw_arc(c, s * 0.42, 0.0, TAU, 28, color, lw, true)
+	draw_circle(c + Vector2(0, -s * 0.19), maxf(1.0, lw * 0.62), color)
+	draw_line(c + Vector2(0, -s * 0.03), c + Vector2(0, s * 0.21), color, lw, true)
 
 
 ## Triangle + barre - bouton "Fin tour" du controle de combat (ecran 05).
