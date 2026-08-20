@@ -4,7 +4,9 @@ Tu arrives sur un projet de jeu mobile King's Gambit, un jeu de stratégie fanta
 
 Le joueur place son armée avant le combat, puis **joue lui-même chaque coup contre l'IA**, une pièce par camp et par tour, comme aux échecs (tape ou glisser-déposer). Un bouton AUTO laisse l'IA jouer les deux camps pour rejouer vite une bataille déjà gagnée. Un pion mené au bout du plateau devient Dame ; ramenée vivante, elle est stockée à la Tour de la Dame au village et redéployable ensuite.
 
-Le niveau de jeu de l'armée ennemie monte avec la campagne (novice → aguerri → expert, déclaré bataille par bataille dans `Balance.CAMPAIGN`) : les premiers combats doivent être gagnables par quelqu'un qui découvre le jeu.
+Le niveau de jeu de l'armée ennemie monte avec la campagne (novice → aguerri → expert, déclaré bataille par bataille dans `Balance.CAMPAIGN`) : les premiers combats doivent être gagnables par quelqu'un qui découvre le jeu. L'armée de départ comprend un cavalier — une armée de pions seuls est une finale d'échecs, donc un mauvais tutoriel — et la dernière bataille offre une Dame à la première victoire.
+
+Un bouton **i** sur l'écran de bataille ouvre l'aide correspondant à la phase en cours (pose et barème des poids ; tour par tour, capture et promotion). C'est le seul endroit du jeu où les règles sont écrites.
 
 Ton : fantasy médiéval, mélancolique mais pas sombre. Aucune violence graphique.
 

@@ -294,10 +294,18 @@ func stalemate_seconds_remaining() -> float:
 	return maxf(0.0, float(remaining) * float(Balance.COMBAT["step_delay"]))
 
 
-## Departage a la valeur totale des pieces restantes. En cas d'egalite parfaite,
-## l'avantage va a l'ennemi : au joueur d'aller chercher la victoire.
+## Departage a la valeur totale des pieces restantes.
+##
+## L'egalite parfaite revient au JOUEUR des lors qu'il a joue lui-meme ses
+## coups : perdre une bataille de plusieurs minutes sur un match nul est une
+## punition que personne ne comprend. En resolution automatique, ou le
+## placement fait tout, l'avantage reste a l'ennemi - au joueur d'aller
+## chercher la victoire plutot que de miser sur le verdict.
 func _finish_on_material(reason: String, events: Array) -> void:
-	_finish(TEAM_PLAYER if material(TEAM_PLAYER) > material(TEAM_ENEMY) else TEAM_ENEMY, reason, events)
+	var mine := material(TEAM_PLAYER)
+	var theirs := material(TEAM_ENEMY)
+	var player_wins := mine > theirs or (mine == theirs and not auto_mode)
+	_finish(TEAM_PLAYER if player_wins else TEAM_ENEMY, reason, events)
 
 
 func material(team: int) -> int:

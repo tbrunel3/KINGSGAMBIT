@@ -445,16 +445,31 @@ func dev_finish_all_upgrades() -> void:
 	check_upgrades()
 
 
-## Offre une Dame sans passer par la promotion : le seul moyen de tester la
-## Tour de la Dame et le deploiement d'une Dame sans jouer une bataille
-## entiere jusqu'au bout du plateau.
-func dev_grant_dame() -> void:
-	_state["units"][Balance.DAME] = dames_owned() + 1
+## Ajoute des Dames a la Tour sans consommer de pion : c'est une Dame
+## RETROUVEE, pas promue. Sert a la recompense de fin de campagne (cf.
+## Balance.battle_dame_reward). Retourne le nombre reellement stocke.
+func grant_dames(count: int) -> int:
+	if count <= 0:
+		return 0
+	var room := Balance.capacity(Balance.DAME, maxi(1, building_level(Balance.DAME))) - dames_owned()
+	var stored := clampi(count, 0, maxi(0, room))
+	if stored <= 0:
+		return 0
+
+	_state["units"][Balance.DAME] = dames_owned() + stored
 	if not is_building_unlocked(Balance.DAME):
 		_state["buildings"][Balance.DAME] = 1
 		buildings_changed.emit()
 	save()
 	units_changed.emit()
+	return stored
+
+
+## Offre une Dame sans passer par la promotion : le seul moyen de tester la
+## Tour de la Dame et le deploiement d'une Dame sans jouer une bataille
+## entiere jusqu'au bout du plateau.
+func dev_grant_dame() -> void:
+	grant_dames(1)
 
 
 ## Rend toutes les batailles selectionnables sans les marquer gagnees : la

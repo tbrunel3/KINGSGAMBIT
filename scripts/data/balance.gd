@@ -45,23 +45,24 @@ const ARMY_TYPES := [PION, CAVALIER, FOU, TOUR, DAME]
 # ------------------------------- DEMARRAGE -----------------------------------
 
 const STARTING_GOLD := 300
-## Seul le pion est disponible au tout debut : les autres casernes sont a
-## debloquer au village (voir UNLOCK_COST). Ca donne un premier combat lisible,
-## et ca correspond a la seule composition qui gagne la bataille 1. 6 pions
-## remplissent exactement les emplacements de deploiement du chateau niveau 1.
-const STARTING_UNITS := {PION: 6}
 
-## Batiments deja construits au demarrage. Le chateau et la caserne des pions
-## sont toujours presents ; les autres apparaissent au niveau de chateau
-## indique dans UNLOCK_CASTLE_LEVEL.
-const STARTING_BUILDINGS := [CASTLE, PION]
+## L'armee du tout premier combat. Un cavalier accompagne les pions des le
+## depart, et ce n'est pas un cadeau : une armee de pions seuls, c'est une
+## finale de pions - la situation la plus subtile des echecs - servie en guise
+## de tutoriel. Le cavalier saute, ne se bloque jamais, et apprend d'un coup
+## d'oeil que toutes les pieces ne se deplacent pas pareil.
+const STARTING_UNITS := {PION: 4, CAVALIER: 1}
+
+## Batiments deja construits au demarrage. Les Ecuries en font partie, sans
+## quoi le cavalier de depart n'aurait ni maison ni remplacant.
+const STARTING_BUILDINGS := [CASTLE, PION, CAVALIER]
 
 ## Niveau de chateau a partir duquel ce batiment apparait, gratuitement, au
 ## village. Absent de ce dictionnaire = deja disponible au depart.
+
 const UNLOCK_CASTLE_LEVEL := {
-	CAVALIER: 2,
-	FOU: 3,
-	TOUR: 4,
+	FOU: 2,
+	TOUR: 3,
 }
 
 const MAX_LEVEL := 10
@@ -268,7 +269,7 @@ const CASTLE_DATA := {
 	"name": "Chateau Royal",
 	"letter": "R",
 	"color": "c6a84f",
-	"deploy_capacity": [ 16, 24, 25, 28, 36, 37, 40, 43, 48, 52],
+	"deploy_capacity": [ 16, 19, 21, 23, 26, 28, 30, 32, 34, 36],
 	"upgrade_cost":     [300, 560,  900, 1320, 1820, 2400, 3060, 3800, 4620],
 	"upgrade_seconds":  [120, 300,  660, 1320, 2400, 4200, 6600, 9900,14400],
 }
@@ -310,8 +311,8 @@ const AI_EXPERT := 2
 #  level     : niveau de TOUTES les pieces ennemies de cette bataille
 
 const CAMPAIGN := [
-	{"id": 1,  "name": "L Oree du Bois",     "cols": 5, "rows": 7, "reward": 90,  "level": 1, "ai": AI_NOVICE, "enemies": {PION: 3}},
-	{"id": 2,  "name": "Le Gue de Pierre",   "cols": 5, "rows": 7, "reward": 120, "level": 1, "ai": AI_NOVICE, "enemies": {PION: 2, FOU: 1}},
+	{"id": 1,  "name": "L Oree du Bois",     "cols": 5, "rows": 6, "reward": 90,  "level": 1, "ai": AI_NOVICE, "enemies": {PION: 3}},
+	{"id": 2,  "name": "Le Gue de Pierre",   "cols": 5, "rows": 6, "reward": 120, "level": 1, "ai": AI_NOVICE, "enemies": {PION: 2, FOU: 1}},
 	{"id": 3,  "name": "La Route du Sel",    "cols": 6, "rows": 7, "reward": 160, "level": 2, "ai": AI_NOVICE, "enemies": {PION: 3, CAVALIER: 1, TOUR: 1}},
 	{"id": 4,  "name": "Les Champs Brules",  "cols": 6, "rows": 7, "reward": 200, "level": 2, "ai": AI_AGUERRI, "enemies": {PION: 3, FOU: 1, CAVALIER: 1}},
 	{"id": 5,  "name": "Le Pont Noir",       "cols": 6, "rows": 8, "reward": 260, "level": 3, "ai": AI_AGUERRI, "enemies": {PION: 4, TOUR: 1, FOU: 1}},
@@ -319,7 +320,13 @@ const CAMPAIGN := [
 	{"id": 7,  "name": "Les Marches Grises", "cols": 7, "rows": 8, "reward": 400, "level": 4, "ai": AI_AGUERRI, "enemies": {PION: 4, FOU: 1, CAVALIER: 1}},
 	{"id": 8,  "name": "Le Col du Corbeau",  "cols": 7, "rows": 8, "reward": 500, "level": 4, "ai": AI_EXPERT, "enemies": {PION: 5, TOUR: 2, CAVALIER: 1}},
 	{"id": 9,  "name": "Les Ruines Hautes",  "cols": 7, "rows": 9, "reward": 640, "level": 5, "ai": AI_EXPERT, "enemies": {PION: 5, FOU: 2, TOUR: 1, CAVALIER: 1}},
-	{"id": 10, "name": "La Tour de la Dame", "cols": 8, "rows": 9, "reward": 900, "level": 6, "ai": AI_EXPERT, "enemies": {PION: 6, FOU: 2, TOUR: 2, CAVALIER: 1}},
+	# "dame" : Dames offertes a la PREMIERE victoire seulement (cf.
+	# battle.gd > _show_result). Le Roi a perdu sa Dame au premier ecran du
+	# jeu ; il la retrouve au bout de sa campagne, meme si aucun de ses pions
+	# n'a jamais traverse un plateau. Sans ce filet, la moitie du jeu - Tour
+	# de la Dame, aura, ameliorations - reste eteinte pour la plupart des
+	# joueurs : une promotion reussie reste un exploit rare.
+	{"id": 10, "name": "La Tour de la Dame", "cols": 8, "rows": 9, "reward": 900, "level": 6, "ai": AI_EXPERT, "dame": 1, "enemies": {PION: 6, FOU: 2, TOUR: 2, CAVALIER: 1}},
 ]
 
 # ------------------------------- COMBAT --------------------------------------
@@ -517,6 +524,12 @@ func battle(id: int) -> Dictionary:
 		if int(b["id"]) == id:
 			return b
 	return {}
+
+
+## Dames offertes par la premiere victoire sur cette bataille. Zero partout
+## sauf au bout de la campagne.
+func battle_dame_reward(battle: Dictionary) -> int:
+	return int(battle.get("dame", 0))
 
 
 ## Niveau de jeu de l'armee ennemie pour cette bataille. Une bataille qui ne

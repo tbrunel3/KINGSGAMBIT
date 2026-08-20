@@ -29,7 +29,7 @@ const DEFEAT_BG_PATH := "res://assets/results/defeat_modal_bg.png"
 @onready var _quit_button: Button = $Safe/Overlay/QuitButton
 @onready var _grid_view: Control = $Safe/Overlay/Grid
 @onready var _stats_hud: PanelContainer = $Safe/Overlay/StatsHud
-@onready var _stats_box: VBoxContainer = $Safe/Overlay/StatsHud/StatsBox
+@onready var _stats_box: HBoxContainer = $Safe/Overlay/StatsHud/StatsBox
 @onready var _bottom_panel: PanelContainer = $Safe/Overlay/BottomPanel
 @onready var _bottom: VBoxContainer = $Safe/Overlay/BottomPanel/BottomBox
 
@@ -557,7 +557,7 @@ func _refresh_stats_hud() -> void:
 		child.queue_free()
 
 	if _phase == Phase.PLACEMENT:
-		var label := UiTheme.make_label("Charge", 10, Color("b2b2cc"))
+		var label := UiTheme.make_label("CHARGE", 10, Color("b2b2cc"))
 		label.autowrap_mode = TextServer.AUTOWRAP_OFF
 		label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 		_stats_box.add_child(label)
@@ -575,22 +575,30 @@ func _refresh_stats_hud() -> void:
 	_keep_hud_on_screen.call_deferred()
 
 
-## Le HUD est pose en coordonnees absolues (cf. maquette Figma), mais sa
-## largeur depend de son contenu et la zone sure retire 16 points de chaque
-## cote : sans ce recalage sur la largeur REELLE du parent, "Charge 12/16"
-## sort de l'ecran par la droite.
+## Bande libre entre les boutons du haut (qui s'arretent a 42) et le plateau
+## (qui commence a 100).
+const _HUD_TOP := 54.0
+
+
+## Le HUD se recale a droite apres chaque changement de contenu : sa largeur
+## depend de ce qu'il affiche, et la zone sure retire 16 points de chaque
+## cote. Sans ce calcul sur la largeur REELLE du parent, "Charge 12/16" sort
+## de l'ecran par la droite.
 func _keep_hud_on_screen() -> void:
 	if not is_instance_valid(_stats_hud):
 		return
 	_stats_hud.reset_size()
 	var available: float = _stats_hud.get_parent().size.x
-	_stats_hud.position.x = available - _stats_hud.size.x - 8.0
+	_stats_hud.position = Vector2(available - _stats_hud.size.x - 8.0, _HUD_TOP)
 
 
+## Trait vertical : le HUD est une LIGNE posee au-dessus du plateau, pas une
+## colonne posee dessus - sur les petits plateaux de la campagne, la grille
+## occupe toute la largeur et un HUD lateral finissait par cacher une piece.
 func _hud_separator() -> ColorRect:
 	var line := ColorRect.new()
 	line.color = Color(1, 1, 1, 0.15)
-	line.custom_minimum_size = Vector2(30, 1)
+	line.custom_minimum_size = Vector2(1, 18)
 	return line
 
 
@@ -1228,6 +1236,12 @@ func _show_result() -> void:
 	var dame_bonus := Game.dame_gold_bonus(reward, _dames_deployed) if victory else 0
 	var dames_resting := Game.dames_at_rest(_dames_deployed)
 
+	# Dame offerte par la campagne, a la premiere victoire seulement : rejouer
+	# la derniere bataille ne doit pas devenir une fabrique a Dames.
+	var dames_found := 0
+	if victory and not Game.is_battle_won(battle_id):
+		dames_found = Game.grant_dames(Balance.battle_dame_reward(_battle))
+
 	_grid_view.draggable_team = -1
 	_grid_view.legal_targets = []
 
@@ -1297,6 +1311,11 @@ func _show_result() -> void:
 			stats_body.add_child(UiTheme.stat_row("Dames ramenées",
 				_icon_value("crown", Color("d8a0d0"),
 					"+%d à la Tour de la Dame" % dames_gained, Color("d8a0d0"), 13)))
+		if dames_found > 0:
+			stats_body.add_child(_stats_separator())
+			stats_body.add_child(_result_highlight_row("La Dame retrouvée",
+				_icon_value("crown", Color("d8a0d0"),
+					"+%d Dame" % dames_found, Color("d8a0d0"), 14), Color("d8a0d0")))
 		if not losses.is_empty():
 			stats_body.add_child(_stats_separator())
 			stats_body.add_child(UiTheme.stat_row("Pertes", _plain_value(_format_losses(losses), Color("a0aabf"), 14)))

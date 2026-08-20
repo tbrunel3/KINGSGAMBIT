@@ -77,7 +77,11 @@ func _check_balance() -> void:
 	# n'est possible avant le premier niveau de chateau.
 	if Balance.is_unlockable(Balance.PION):
 		_fail("le pion ne devrait pas avoir de seuil de deblocage")
-	for type in [Balance.CAVALIER, Balance.FOU, Balance.TOUR]:
+	# Le cavalier accompagne les pions des le depart : seuls le Cloitre et le
+	# Donjon restent a debloquer au niveau de chateau.
+	if Balance.is_unlockable(Balance.CAVALIER):
+		_fail("les ecuries ne devraient plus avoir de seuil de deblocage")
+	for type in [Balance.FOU, Balance.TOUR]:
 		var required := Balance.unlock_castle_level(type)
 		if required < 2 or required > Balance.max_level(Balance.CASTLE):
 			_fail("%s : seuil de deblocage chateau incoherent (%d)" % [type, required])
@@ -148,6 +152,14 @@ func _check_save() -> void:
 		_fail("l'or n'a pas ete debite correctement")
 
 	Game.add_gold(50000)
+
+	# La campagne doit offrir une Dame au moins une fois : sans ca, tout le
+	# systeme de la Tour de la Dame peut rester eteint une partie entiere.
+	var dames_offered := 0
+	for battle in Balance.CAMPAIGN:
+		dames_offered += Balance.battle_dame_reward(battle)
+	if dames_offered <= 0:
+		_fail("aucune bataille de la campagne n'offre de Dame")
 
 	# Le donjon n'existe pas au depart : il apparait seul quand le chateau
 	# atteint le niveau requis (Balance.UNLOCK_CASTLE_LEVEL), sans achat.
@@ -220,6 +232,13 @@ func _check_losses() -> void:
 	Game.reset_progress()
 	if Game.is_building_unlocked(Balance.DAME):
 		_fail("la Tour de la Dame existe avant la premiere promotion")
+
+	# Au-dessus du plancher de garnison, sinon les pions convertis en Dames
+	# seraient aussitot rendus gratuitement et le test ne prouverait rien.
+	Game.add_gold(5000)
+	while Game.units_owned(Balance.PION) < 6:
+		if not Game.recruit(Balance.PION):
+			break
 	var pions_before := Game.units_owned(Balance.PION)
 	if Game.dame_gold_bonus(100) != 0:
 		_fail("une aura de Dame s'applique alors qu'aucune n'est rentree")

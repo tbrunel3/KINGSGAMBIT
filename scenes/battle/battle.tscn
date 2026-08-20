@@ -104,7 +104,7 @@ offset_top = 330.0
 offset_right = 381.0
 offset_bottom = 390.0
 
-[node name="StatsBox" type="VBoxContainer" parent="Safe/Overlay/StatsHud"]
+[node name="StatsBox" type="HBoxContainer" parent="Safe/Overlay/StatsHud"]
 layout_mode = 2
 alignment = 1
 theme_override_constants/separation = 8

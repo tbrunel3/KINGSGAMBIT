@@ -44,9 +44,14 @@ Mène un pion jusqu'au fond du plateau adverse et **ramène-le vivant** : il
 devient une Dame, rangée à la **Tour de la Dame** au village, redéployable aux
 batailles suivantes.
 
-Seule la Caserne des Pions est disponible au tout début. Écuries, Cloître et
-Donjon apparaissent gratuitement quand le Château Royal atteint le niveau
-requis (2, 3 et 4). Le bouton **DEV** (en haut à droite, à la place de l'ancien
+Tu démarres avec **4 pions et un cavalier** : une armée de pions seuls est une
+finale d'échecs, ce qui fait le pire des tutoriels. La Caserne des Pions et les
+Écuries sont donc ouvertes d'entrée ; le Cloître et le Donjon apparaissent
+gratuitement quand le Château Royal atteint le niveau requis (2 et 3).
+
+Le **point i**, à gauche de la croix en haut de l'écran de bataille, écrit les
+règles noir sur blanc : la pose et le barème des poids pendant le placement, le
+tour par tour, la capture et la promotion pendant le combat. Le bouton **DEV** (en haut à droite, à la place de l'ancien
 RAZ) ouvre un panneau de raccourcis de test : or, déblocages, améliorations
 instantanées, et **RAZ** pour effacer la sauvegarde.
 
@@ -110,6 +115,13 @@ l'or qu'elle rapporte en restant à la maison. Au village, le château se met à
 **rayonner** tant qu'une Dame au moins est là, et son halo s'élargit un peu à
 chaque nouvelle.
 
+**La Dame retrouvée** : la dernière bataille de la campagne s'appelle « La Tour
+de la Dame » et en offre une à la **première victoire** (`"dame"` dans
+`Balance.CAMPAIGN`). Le Roi a perdu sa Dame au premier écran du jeu ; il la
+retrouve au bout de sa quête, même si aucun de ses pions n'a jamais traversé un
+plateau. Sans ce filet, une promotion réussie restant un exploit rare, la moitié
+du jeu resterait éteinte pour la plupart des joueurs.
+
 **Améliorer les Dames** : la Tour de la Dame monte en niveau à l'or comme les
 autres bâtiments, mais chaque palier exige d'avoir **N Dames en réserve**
 (`Balance.DAME_UPGRADE_DAMES` : 2 pour le niveau 2, 3 pour le niveau 3…). Les
@@ -128,7 +140,9 @@ balayée sans or rendrait la partie impossible à reprendre.
 Un combat se termine quand un camp n'a plus de pièce. Si les deux armées ne
 peuvent plus s'atteindre (20 tours complets sans la moindre prise en jeu manuel,
 8 en résolution automatique), la victoire va au camp qui conserve le plus de
-matériel, à la valeur des pièces. Un camp qui n'a aucun coup légal passe son
+matériel, à la valeur des pièces — **l'égalité parfaite revient au joueur** dès
+lors qu'il a joué ses coups lui-même : perdre une bataille de plusieurs minutes
+sur un match nul est une punition que personne ne comprend. Un camp qui n'a aucun coup légal passe son
 tour ; deux passes d'affilée et le match est tranché de la même façon.
 
 ### Le niveau de jeu de l'IA
@@ -317,7 +331,7 @@ le premier combat du jeu était perdu.
   continue jeu fermé**
 - Écran de campagne : batailles débloquées, rejouables à récompense réduite
 - Écran de préparation : composition ennemie, récompense, armée disponible
-- Grille de taille variable par bataille (5×7 à 8×9), zones de déploiement
+- Grille de taille variable par bataille (5×6 à 8×9), zones de déploiement
 - Placement au doigt : poser, retirer, **repositionner en glissant**, Auto,
   Réinitialiser, limite de charge liée au château ; chips de tous les types de
   l'armée, silhouette grisée pour ce qu'on ne possède pas encore
@@ -326,6 +340,8 @@ le premier combat du jeu était perdu.
   coup adverse mis en évidence
 - Bouton **AUTO** : l'IA joue les deux camps jusqu'au bout (farm d'or)
 - 5 types de déplacement, mobilité liée au niveau, **promotion en Dame**
+- **Point i** sur l'écran de bataille : règles, gestes et barème des poids,
+  adaptés à la phase en cours
 - **Tour de la Dame** : une Dame ramenée vivante est stockée au village,
   redéployable, et rapporte +15 % d'or par bataille tant qu'elle y reste ; la
   Tour s'améliore à l'or dès qu'on en collectionne assez, et le Château Royal
