@@ -64,6 +64,17 @@ func _capture_dame_tower() -> void:
 	add_child(village)
 	for i in range(4):
 		await RenderingServer.frame_post_draw
+	# Le panneau des missions, avec une mission terminee prete a etre encaissee.
+	Game.record_battle(true, 0, 5, 0)
+	village._on_missions_pressed()
+	for i in range(4):
+		await RenderingServer.frame_post_draw
+	_save(village, "1d_missions.png")
+	if is_instance_valid(village._popup):
+		village._popup.queue_free()
+	for i in range(3):
+		await RenderingServer.frame_post_draw
+
 	# Le village AVANT d'ouvrir le popup : c'est la qu'on voit le halo dore du
 	# Chateau Royal, allume par la Dame rentree.
 	_save(village, "1a_chateau_qui_brille.png")

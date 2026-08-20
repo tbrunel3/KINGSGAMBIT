@@ -106,6 +106,34 @@ func _test_village() -> void:
 		await _frames(3)
 		_check(not is_instance_valid(village._popup), "le popup se ferme")
 
+	# Les missions : le bouton de la barre du haut ouvre le panneau, et une
+	# mission terminee se reclame d'un clic. A tester popup de batiment ferme,
+	# le village n'en affichant qu'un a la fois.
+	Game.record_battle(true, 0, 3, 0)
+	await _frames(3)
+	village._on_missions_pressed()
+	await _frames(3)
+	_check(is_instance_valid(village._popup), "le bouton MISSIONS ouvre le panneau")
+	if is_instance_valid(village._popup):
+		var claim := _find_clickable(village._popup, "RECLAMER")
+		_check(claim != null, "une mission terminee propose de reclamer")
+		if claim != null:
+			var before_claim := Game.gold
+			_press(claim)
+			await _frames(4)
+			_check(Game.gold > before_claim, "reclamer une mission verse l'or")
+			# La mission suivante peut etre deja remplie (le test a recrute
+			# plus haut) : ce qui compte est que celle qu'on vient d'encaisser
+			# disparaisse.
+			var first_id := String(Balance.MISSIONS[0]["id"])
+			var still_listed := false
+			for mission in Game.missions_visible():
+				if String(mission["id"]) == first_id:
+					still_listed = true
+			_check(Game.is_mission_claimed(first_id) and not still_listed,
+				"la mission reclamee quitte la liste")
+			_check(not Game.missions_visible().is_empty(), "la mission suivante se devoile")
+
 	village.queue_free()
 	await _frames(2)
 

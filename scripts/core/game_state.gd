@@ -14,6 +14,7 @@ signal units_changed
 signal buildings_changed
 signal progress_changed
 signal upgrade_finished(type: String)
+signal missions_changed
 
 var _state: Dictionary = {}
 
@@ -41,6 +42,17 @@ func _default_state() -> Dictionary:
 		"battles_won": [],
 		"upgrades": {},  # type -> timestamp Unix de fin
 		"seen_intro": false,
+		# Compteurs suivis par les missions (cf. Balance.MISSIONS). Ils ne
+		# retombent jamais : ce sont des totaux de carriere, pas un etat.
+		"stats": {
+			"battles_won": 0,
+			"units_recruited": 0,
+			"upgrades": 0,
+			"flawless_wins": 0,
+			"captures": 0,
+			"promotions": 0,
+		},
+		"missions_claimed": [],
 	}
 
 
@@ -87,6 +99,17 @@ func _normalize() -> void:
 		upgrades[key] = int(upgrades[key])
 	_state["upgrades"] = upgrades
 
+	var stats: Dictionary = _state.get("stats", {})
+	for key in _default_state()["stats"].keys():
+		stats[key] = int(stats.get(key, 0))
+	_state["stats"] = stats
+
+	var claimed: Array = _state.get("missions_claimed", [])
+	var clean_claims: Array = []
+	for id in claimed:
+		clean_claims.append(String(id))
+	_state["missions_claimed"] = clean_claims
+
 	var won: Array = _state.get("battles_won", [])
 	var clean: Array = []
 	for id in won:
@@ -107,6 +130,7 @@ func reset_progress() -> void:
 	units_changed.emit()
 	buildings_changed.emit()
 	progress_changed.emit()
+	missions_changed.emit()
 
 
 # ------------------------------- OR ------------------------------------------
@@ -217,6 +241,7 @@ func store_promotions(count: int) -> int:
 	_ensure_playable()
 	save()
 	units_changed.emit()
+	missions_changed.emit()
 	return stored
 
 
@@ -241,9 +266,109 @@ func recruit(type: String) -> bool:
 	if not spend_gold(recruit_cost(type)):
 		return false
 	_state["units"][type] = units_owned(type) + 1
+	_bump("units_recruited")
 	save()
 	units_changed.emit()
+	missions_changed.emit()
 	return true
+
+
+# ------------------------------- MISSIONS ------------------------------------
+#
+#  Les missions ne stockent aucun etat propre : elles lisent des compteurs de
+#  carriere et la liste de celles deja reclamees. Ajouter une mission dans
+#  Balance.MISSIONS suffit donc a la faire exister, sans toucher a la
+#  sauvegarde.
+
+func _bump(key: String, amount: int = 1) -> void:
+	if amount <= 0:
+		return
+	_state["stats"][key] = int(_state["stats"].get(key, 0)) + amount
+
+
+## Valeur actuelle d'un compteur de mission. Les valeurs derivees (Dames au
+## repos, niveau de chateau, campagne finie) se lisent directement dans
+## l'etat plutot que d'etre comptees a part : impossible qu'elles derivent.
+func mission_progress(goal: String) -> int:
+	match goal:
+		"dames":
+			return dames_owned()
+		"castle_level":
+			return castle_level()
+		"campaign":
+			return 1 if is_campaign_complete() else 0
+		_:
+			return int(_state["stats"].get(goal, 0))
+
+
+func is_mission_claimed(id: String) -> bool:
+	return _state["missions_claimed"].has(id)
+
+
+## Vrai quand toutes les missions prealables ont ete RECLAMEES : c'est ce qui
+## fait apparaitre les missions en chaine plutot que toutes d'un coup.
+func is_mission_unlocked(mission: Dictionary) -> bool:
+	for required in mission.get("requires", []):
+		if not is_mission_claimed(String(required)):
+			return false
+	return true
+
+
+func is_mission_complete(mission: Dictionary) -> bool:
+	return mission_progress(String(mission["goal"])) >= int(mission["target"])
+
+
+## Missions a montrer au joueur : deverrouillees et pas encore reclamees,
+## dans l'ordre de Balance.MISSIONS.
+func missions_visible() -> Array:
+	var visible: Array = []
+	for mission in Balance.MISSIONS:
+		var id := String(mission["id"])
+		if is_mission_claimed(id) or not is_mission_unlocked(mission):
+			continue
+		visible.append(mission)
+	return visible
+
+
+## Nombre de missions terminees dont la recompense attend d'etre prise. Sert
+## a la pastille du village.
+func claimable_missions() -> int:
+	var count := 0
+	for mission in missions_visible():
+		if is_mission_complete(mission):
+			count += 1
+	return count
+
+
+## Encaisse la recompense. Retourne l'or verse, ou 0 si la mission n'est pas
+## terminee, deja reclamee, ou pas encore deverrouillee.
+func claim_mission(id: String) -> int:
+	var mission := Balance.mission(id)
+	if mission.is_empty() or is_mission_claimed(id):
+		return 0
+	if not is_mission_unlocked(mission) or not is_mission_complete(mission):
+		return 0
+
+	_state["missions_claimed"].append(id)
+	var reward := int(mission["gold"])
+	_state["gold"] = gold + reward
+	save()
+	gold_changed.emit(gold)
+	missions_changed.emit()
+	return reward
+
+
+## Resultat d'une bataille, du point de vue des compteurs. Appele une fois
+## par bataille depuis l'ecran de combat, victoire ou defaite.
+func record_battle(victory: bool, pieces_lost: int, captures: int, promotions: int) -> void:
+	_bump("captures", captures)
+	_bump("promotions", promotions)
+	if victory:
+		_bump("battles_won")
+		if pieces_lost <= 0:
+			_bump("flawless_wins")
+	save()
+	missions_changed.emit()
 
 
 # ------------------------------- BATIMENTS -----------------------------------
@@ -366,9 +491,11 @@ func check_upgrades() -> void:
 	for type in finished:
 		_state["upgrades"].erase(type)
 		_state["buildings"][type] = building_level(type) + 1
+		_bump("upgrades")
 
 	save()
 	buildings_changed.emit()
+	missions_changed.emit()
 	for type in finished:
 		upgrade_finished.emit(type)
 
@@ -408,6 +535,7 @@ func win_battle(id: int, reward: int) -> void:
 	save()
 	gold_changed.emit(gold)
 	progress_changed.emit()
+	missions_changed.emit()
 
 
 # ------------------------------- INTRODUCTION --------------------------------
@@ -462,6 +590,7 @@ func grant_dames(count: int) -> int:
 		buildings_changed.emit()
 	save()
 	units_changed.emit()
+	missions_changed.emit()
 	return stored
 
 

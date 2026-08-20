@@ -329,6 +329,75 @@ const CAMPAIGN := [
 	{"id": 10, "name": "La Tour de la Dame", "cols": 8, "rows": 9, "reward": 900, "level": 6, "ai": AI_EXPERT, "dame": 1, "enemies": {PION: 6, FOU: 2, TOUR: 2, CAVALIER: 1}},
 ]
 
+# ------------------------------- MISSIONS ------------------------------------
+#
+#  Les missions sont le fil qui guide le joueur : elles repondent en
+#  permanence a la seule question qui compte au village - "et maintenant, je
+#  fais quoi ?". Elles remplacent un tutoriel, qu'on oublie apres trois
+#  ecrans, et paient en OR, la monnaie que le jeu utilise deja.
+#
+#  Elles se DEVERROUILLENT EN CHAINE : une mission n'apparait que lorsque
+#  celles listees dans "requires" ont ete reclamees. Le joueur decouvre donc
+#  le jeu dans l'ordre ou il est fait pour etre decouvert, sans jamais voir
+#  un objectif qu'il ne peut pas encore atteindre.
+#
+#  Champs :
+#    id        identifiant stable, utilise dans la sauvegarde
+#    text      libelle affiche
+#    goal      compteur suivi (cf. GameState.mission_progress)
+#    target    valeur a atteindre
+#    gold      recompense
+#    requires  missions a avoir reclamees avant que celle-ci apparaisse
+#
+#  Compteurs disponibles :
+#    battles_won      batailles gagnees (rejouer une bataille compte)
+#    units_recruited  pieces recrutees au village
+#    upgrades         ameliorations de batiment terminees
+#    flawless_wins    victoires sans perdre une seule piece
+#    captures         pieces ennemies capturees, toutes batailles confondues
+#    promotions       pions menes au bout du plateau
+#    dames            Dames actuellement au repos a la Tour de la Dame
+#    castle_level     niveau du Chateau Royal
+#    campaign         1 quand la campagne est terminee, 0 sinon
+
+const MISSIONS := [
+	# --- Les cinq premieres SONT le tutoriel : elles se suivent une a une.
+	{"id": "first_win", "text": "Remporte ta premiere bataille",
+		"goal": "battles_won", "target": 1, "gold": 60, "requires": []},
+	{"id": "recruit", "text": "Recrute une piece au village",
+		"goal": "units_recruited", "target": 1, "gold": 40, "requires": ["first_win"]},
+	{"id": "upgrade", "text": "Ameliore un batiment",
+		"goal": "upgrades", "target": 1, "gold": 80, "requires": ["recruit"]},
+	{"id": "three_wins", "text": "Remporte 3 batailles",
+		"goal": "battles_won", "target": 3, "gold": 120, "requires": ["upgrade"]},
+	{"id": "flawless", "text": "Gagne sans perdre une seule piece",
+		"goal": "flawless_wins", "target": 1, "gold": 140, "requires": ["three_wins"]},
+
+	# --- Puis deux branches en parallele : la guerre et le royaume.
+	{"id": "captures", "text": "Capture 20 pieces ennemies",
+		"goal": "captures", "target": 20, "gold": 160, "requires": ["flawless"]},
+	{"id": "promotion", "text": "Mene un pion jusqu'au bout du plateau",
+		"goal": "promotions", "target": 1, "gold": 220, "requires": ["flawless"]},
+	{"id": "castle3", "text": "Porte le Chateau Royal au niveau 3",
+		"goal": "castle_level", "target": 3, "gold": 260, "requires": ["upgrade"]},
+
+	# --- Le bout du chemin.
+	{"id": "dame", "text": "Ramene une Dame vivante au village",
+		"goal": "dames", "target": 1, "gold": 300, "requires": ["promotion"]},
+	{"id": "two_dames", "text": "Abrite 2 Dames a la Tour de la Dame",
+		"goal": "dames", "target": 2, "gold": 400, "requires": ["dame"]},
+	{"id": "campaign", "text": "Termine la campagne",
+		"goal": "campaign", "target": 1, "gold": 500, "requires": ["castle3", "captures"]},
+]
+
+
+func mission(id: String) -> Dictionary:
+	for m in MISSIONS:
+		if String(m["id"]) == id:
+			return m
+	return {}
+
+
 # ------------------------------- COMBAT --------------------------------------
 #
 #  Le combat se joue au tour par tour : le joueur deplace UNE piece, l'IA

@@ -72,6 +72,11 @@ var _auto: bool = false
 ## d'or (cf. GameState.dame_gold_bonus).
 var _dames_deployed: int = 0
 
+## Pions menes au bout du plateau pendant cette bataille, qu'ils en soient
+## revenus ou non : la mission "mene un pion jusqu'au bout" recompense
+## l'exploit, pas la chance de survivre au coup suivant.
+var _promotions_this_battle: int = 0
+
 # Elements rafraichis souvent, gardes sous la main.
 var _status_label: Label = null
 var _type_buttons: Dictionary = {}
@@ -1205,6 +1210,8 @@ func _play_events(events: Array) -> void:
 					int(event["unit"]), event["from"], event["to"],
 					float(Balance.COMBAT["move_duration"]) / _speed)
 			"promotion":
+				if _engine.unit_by_id(int(event["unit"])).team == BattleUnit.TEAM_PLAYER:
+					_promotions_this_battle += 1
 				await _grid_view.play_promotion(
 					event["cell"], String(event["result"]),
 					float(Balance.COMBAT["promotion_duration"]) / _speed)
@@ -1267,6 +1274,18 @@ func _show_result() -> void:
 
 	_phase_prefix.text = ""
 	_phase_label.text = "Victoire" if victory else "Defaite"
+
+	# Compteurs de carriere pour les missions (cf. Balance.MISSIONS) : une
+	# seule fois par bataille, victoire ou defaite.
+	var pieces_lost := 0
+	for count in losses.values():
+		pieces_lost += int(count)
+	# losses() compte par TYPE de piece : il faut sommer, pas prendre size(),
+	# qui donnerait le nombre de types differents captures.
+	var pieces_captured := 0
+	for count in _engine.losses(BattleUnit.TEAM_ENEMY).values():
+		pieces_captured += int(count)
+	Game.record_battle(victory, pieces_lost, pieces_captured, _promotions_this_battle)
 
 	var total_enemies := 0
 	var enemy_data: Dictionary = _battle["enemies"]

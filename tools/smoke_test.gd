@@ -17,6 +17,7 @@ var _promotions_seen: int = 0
 func _ready() -> void:
 	print("=== KING'S GAMBIT - banc de test ===")
 	_check_balance()
+	_check_missions()
 	_check_save()
 	_check_losses()
 	_check_rules()
@@ -131,6 +132,79 @@ func _check_balance() -> void:
 
 	print("  %d pieces sur %d niveaux, %d batailles verifiees" % [
 		Balance.UNIT_TYPES.size(), levels, Balance.battle_count()])
+
+
+# ------------------------------- MISSIONS ------------------------------------
+
+## Les missions guident tout le debut du jeu : une chaine cassee (mission qui
+## exige une mission inexistante, ou boucle de dependances) laisserait le
+## joueur sans objectif, sans que rien ne plante.
+func _check_missions() -> void:
+	print("
+[2] Missions")
+
+	var ids: Dictionary = {}
+	for mission in Balance.MISSIONS:
+		var id := String(mission["id"])
+		if ids.has(id):
+			_fail("deux missions portent l'identifiant %s" % id)
+		ids[id] = true
+		if int(mission["target"]) <= 0:
+			_fail("mission %s : objectif nul" % id)
+		if int(mission["gold"]) <= 0:
+			_fail("mission %s : aucune recompense" % id)
+
+	# Chaque prerequis doit exister ET etre declare AVANT : sans cet ordre,
+	# une mission pourrait n'apparaitre jamais.
+	var seen: Dictionary = {}
+	for mission in Balance.MISSIONS:
+		for required in mission.get("requires", []):
+			var key := String(required)
+			if not ids.has(key):
+				_fail("mission %s exige %s, qui n'existe pas" % [String(mission["id"]), key])
+			elif not seen.has(key):
+				_fail("mission %s exige %s, declaree apres elle" % [String(mission["id"]), key])
+		seen[String(mission["id"])] = true
+
+	Game.reset_progress()
+
+	# Au demarrage, une seule mission doit etre visible : celle qui n'exige
+	# rien. Un mur d'objectifs au premier lancement, c'est l'inverse du but.
+	var visible := Game.missions_visible()
+	if visible.size() != 1:
+		_fail("%d missions visibles au premier lancement, une seule attendue" % visible.size())
+	if Game.claimable_missions() != 0:
+		_fail("une mission est deja reclamable avant d'avoir joue")
+
+	# Gagner une bataille termine la premiere mission, la reclamer paie et
+	# devoile la suivante.
+	Game.record_battle(true, 0, 4, 0)
+	if Game.claimable_missions() != 1:
+		_fail("la premiere mission n'est pas reclamable apres une victoire")
+
+	var first := String(Balance.MISSIONS[0]["id"])
+	var gold_before := Game.gold
+	var reward := Game.claim_mission(first)
+	if reward != int(Balance.MISSIONS[0]["gold"]):
+		_fail("la recompense versee (%d) ne correspond pas a la mission" % reward)
+	if Game.gold != gold_before + reward:
+		_fail("l'or de la mission n'a pas ete credite")
+	if Game.claim_mission(first) != 0:
+		_fail("une mission deja reclamee paie une seconde fois")
+	if Game.missions_visible().is_empty():
+		_fail("aucune mission ne prend la suite de la premiere")
+
+	# Une victoire sans perte compte aussi comme une victoire tout court.
+	if Game.mission_progress("flawless_wins") != 1:
+		_fail("la victoire sans perte n'a pas ete comptee")
+	if Game.mission_progress("captures") != 4:
+		_fail("les captures ne sont pas comptees")
+
+	Game.reset_progress()
+	if not Game.missions_visible().is_empty() and Game.is_mission_claimed(first):
+		_fail("la remise a zero n'efface pas les missions reclamees")
+
+	print("  chaine de deverrouillage, progression, reclamation : OK")
 
 
 # ------------------------------- SAUVEGARDE ----------------------------------

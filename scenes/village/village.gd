@@ -9,6 +9,7 @@ extends Control
 ##
 
 const BuildingPopupScene := preload("res://scenes/village/building_popup.tscn")
+const MissionPopupScene := preload("res://scenes/village/mission_popup.tscn")
 const DevPanelScene := preload("res://scenes/village/dev_panel.tscn")
 
 ## Coordonnees CLAUDE.md > 01_Village (x, y du coin haut-gauche du label).
@@ -58,7 +59,9 @@ const DEV_BUTTON_RECT := Rect2(362, 14, 24, 24)
 var _popup: Control = null
 var _gold_pill: Pill
 var _level_pill: Pill
-var _gems_pill: Pill
+var _missions_button: PanelContainer
+var _missions_label: Label
+var _missions_badge: PanelContainer
 var _castle_label: PanelContainer
 var _castle_glow: TextureRect
 var _castle_glow_tween: Tween
@@ -85,6 +88,7 @@ func _ready() -> void:
 	Game.units_changed.connect(_refresh)
 	Game.buildings_changed.connect(_refresh)
 	Game.progress_changed.connect(_refresh)
+	Game.missions_changed.connect(_refresh)
 
 	Game.check_upgrades()
 	var ticker := Timer.new()
@@ -126,9 +130,7 @@ func _build_top_bar() -> void:
 	_level_pill.set_data("crown", "", Pill.Variant.TOPBAR, Color("ffe580"))
 	_level_pill.set_text_color(Color("ffe580"))
 
-	_gems_pill = _place_pill(246, pill_y, "0", Pill.Variant.TOPBAR)
-	_gems_pill.set_data("dot", "0", Pill.Variant.TOPBAR, UiTheme.ACCENT.lightened(0.2))
-	_gems_pill.set_bold(true)
+	_build_missions_button(pill_y)
 
 	var settings := PanelContainer.new()
 	var box := StyleBoxFlat.new()
@@ -144,6 +146,91 @@ func _build_top_bar() -> void:
 	_overlay.add_child(settings)
 	settings.position = Vector2(353, TOP_BAR_Y + 9)
 	settings.size = Vector2(28, 28)
+
+
+## Bouton MISSIONS de la barre du haut. C'est le seul endroit du village qui
+## dise au joueur quoi faire ensuite : il porte une pastille doree des qu'une
+## recompense attend d'etre prise, sinon personne ne l'ouvrirait jamais.
+func _build_missions_button(y: float) -> void:
+	_missions_button = PanelContainer.new()
+	var box := StyleBoxFlat.new()
+	box.bg_color = Color("0a0d14", 0.75)
+	box.set_corner_radius_all(10)
+	box.border_color = Color(UiTheme.GOLD, 0.35)
+	box.set_border_width_all(1)
+	box.content_margin_left = 10
+	box.content_margin_right = 10
+	box.content_margin_top = 5
+	box.content_margin_bottom = 5
+	_missions_button.add_theme_stylebox_override("panel", box)
+	_overlay.add_child(_missions_button)
+	_missions_button.position.y = y
+
+	var row := HBoxContainer.new()
+	row.add_theme_constant_override("separation", 5)
+	_missions_button.add_child(row)
+
+	var icon := Icon.new()
+	icon.icon_name = "star"
+	icon.color = UiTheme.GOLD
+	icon.custom_minimum_size = Vector2(13, 13)
+	row.add_child(icon)
+
+	_missions_label = UiTheme.make_label("MISSIONS", 11, Color("ffe580"))
+	_missions_label.add_theme_font_override("font", UiTheme.font_bold())
+	_missions_label.autowrap_mode = TextServer.AUTOWRAP_OFF
+	row.add_child(_missions_label)
+
+	# Pastille de notification. VOISINE du bouton, jamais son enfant : un
+	# PanelContainer etire tous ses enfants a sa taille, la pastille
+	# recouvrirait le libelle.
+	_missions_badge = PanelContainer.new()
+	var badge_box := StyleBoxFlat.new()
+	badge_box.bg_color = UiTheme.GOLD
+	badge_box.set_corner_radius_all(7)
+	badge_box.content_margin_left = 5
+	badge_box.content_margin_right = 5
+	badge_box.content_margin_top = 1
+	badge_box.content_margin_bottom = 1
+	_missions_badge.add_theme_stylebox_override("panel", badge_box)
+	_missions_badge.visible = false
+	_overlay.add_child(_missions_badge)
+
+	var badge_label := UiTheme.make_label("", 9, Color("331f00"))
+	badge_label.name = "Count"
+	badge_label.add_theme_font_override("font", UiTheme.font_bold())
+	badge_label.autowrap_mode = TextServer.AUTOWRAP_OFF
+	_missions_badge.add_child(badge_label)
+
+	UiTheme.ignore_mouse_recursive(row)
+	UiTheme.ignore_mouse_recursive(_missions_badge)
+	_missions_button.mouse_filter = Control.MOUSE_FILTER_STOP
+	_missions_button.gui_input.connect(func(event: InputEvent):
+		if event is InputEventMouseButton and event.pressed and event.button_index == MOUSE_BUTTON_LEFT:
+			_on_missions_pressed()
+	)
+
+
+func _refresh_missions_button() -> void:
+	if not is_instance_valid(_missions_button):
+		return
+	var claimable := Game.claimable_missions()
+	_missions_badge.visible = claimable > 0
+	if claimable > 0:
+		var count: Label = _missions_badge.get_node("Count")
+		count.text = str(claimable)
+		_missions_badge.reset_size()
+		# Coin haut-droit du bouton, legerement debordant.
+		_missions_badge.position = _missions_button.position + Vector2(
+			_missions_button.size.x - _missions_badge.size.x * 0.6,
+			-_missions_badge.size.y * 0.35)
+
+
+func _on_missions_pressed() -> void:
+	if is_instance_valid(_popup):
+		return
+	_popup = MissionPopupScene.instantiate()
+	add_child(_popup)
 
 
 func _place_pill(x: float, y: float, text: String, variant: Pill.Variant) -> Pill:
@@ -414,8 +501,10 @@ func _refresh() -> void:
 	_level_pill.size = _level_pill.get_combined_minimum_size()
 	_level_pill.position = Vector2(_gold_pill.position.x + _gold_pill.size.x + 16, pill_y)
 
-	_gems_pill.size = _gems_pill.get_combined_minimum_size()
-	_gems_pill.position = Vector2(_level_pill.position.x + _level_pill.size.x + 16, pill_y)
+	_missions_button.reset_size()
+	_missions_button.position = Vector2(
+		_level_pill.position.x + _level_pill.size.x + 16, pill_y - 2)
+	_refresh_missions_button.call_deferred()
 
 	_refresh_castle_glow()
 	_refresh_castle()
