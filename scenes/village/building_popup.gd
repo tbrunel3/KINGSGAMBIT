@@ -90,26 +90,31 @@ func _refresh() -> void:
 		_add_upgrade_section(body)
 
 
-## La Tour de la Dame n'est pas une caserne : rien a recruter, rien a
-## ameliorer. Elle raconte ce qu'est une Dame, combien on en abrite, et
-## comment en obtenir une - c'est-a-dire en ramenant vivant un pion promu.
+## La Tour de la Dame n'est pas une caserne : rien a recruter. Elle raconte ce
+## qu'est une Dame, combien on en abrite, ce qu'elles rapportent en restant au
+## village - et s'ameliore a l'or des qu'on en a assez.
+##
+## Contenu tenu court volontairement : la modale ne defile pas, tout doit
+## tenir dans les 852 points de l'ecran.
 func _add_dame_screen(body: VBoxContainer) -> void:
 	var owned := Game.dames_owned()
 	var unlocked := Game.is_building_unlocked(Balance.DAME)
+	var level := maxi(1, Game.building_level(Balance.DAME))
 
 	_modal.open(Balance.building_name(_type).to_upper(),
 		Modal.Context.GOLD if unlocked else Modal.Context.NEUTRAL,
 		"crown" if unlocked else "lock")
 	if unlocked:
 		body.add_child(_centered_pill(
-			"%d DAME%s AU REPOS" % [owned, "" if owned <= 1 else "S"], Pill.Variant.INFO))
+			"NIVEAU %d  -  %d DAME%s" % [level, owned, "" if owned <= 1 else "S"],
+			Pill.Variant.INFO))
 	else:
 		body.add_child(_centered_pill("AUCUNE DAME", Pill.Variant.DEFAULT))
 	body.add_child(DividerScene.instantiate())
 
+	# La piece elle-meme.
 	var card: PanelContainer = CardScene.instantiate()
 	var card_body: VBoxContainer = card.get_node("%Body")
-
 	var row := HBoxContainer.new()
 	row.add_theme_constant_override("separation", 10)
 	row.add_child(_piece_badge(56))
@@ -119,35 +124,91 @@ func _add_dame_screen(body: VBoxContainer) -> void:
 	var name_label := UiTheme.make_label("LA DAME", 12, UiTheme.GOLD)
 	name_label.add_theme_font_override("font", UiTheme.font_bold())
 	texts.add_child(name_label)
-	var level := maxi(1, Game.building_level(Balance.PION))
 	var desc := UiTheme.make_label(Balance.move_description(Balance.DAME, level), 11, Color("f0f3f8"))
 	desc.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	texts.add_child(desc)
 	var origin := UiTheme.make_label(
-		"Elle garde la mobilite de la Caserne des Pions : c'est un pion qui a traverse le plateau.",
-		11, UiTheme.TEXT_DIM)
+		"Sa portee suit le niveau de cette Tour. Une Dame promue en pleine " +
+		"bataille, elle, garde le niveau du pion qu'elle etait.", 11, UiTheme.TEXT_DIM)
 	origin.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	texts.add_child(origin)
 	row.add_child(texts)
 	card_body.add_child(row)
 	body.add_child(card)
 
-	var how: PanelContainer = CardScene.instantiate()
-	var how_body: VBoxContainer = how.get_node("%Body")
-	how_body.add_child(UiTheme.make_label("COMMENT EN OBTENIR UNE", 12, UiTheme.GOLD))
-	how_body.get_child(0).add_theme_font_override("font", UiTheme.font_bold())
-	var steps := UiTheme.make_label(
-		"Mene un pion jusqu'a la derniere rangee ennemie : il devient Dame sur-le-champ. " +
-		"Ramene-la vivante et elle s'installe ici, prete a repartir au combat.",
-		11, Color("f0f3f8"))
-	steps.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	how_body.add_child(steps)
-	how_body.add_child(HSeparator.new())
-	how_body.add_child(UiTheme.stat_row("Charge au deploiement",
+	# Les deux chiffres qui decident du placement : ce qu'elle coute a poser,
+	# et ce qu'elle rapporte si on la laisse ici.
+	var stats: PanelContainer = CardScene.instantiate()
+	var stats_body: VBoxContainer = stats.get_node("%Body")
+	stats_body.add_child(UiTheme.stat_row("Charge au deploiement",
 		UiTheme.make_label("%d" % Balance.deploy_weight(Balance.DAME), 14, UiTheme.GOLD)))
-	how_body.add_child(UiTheme.stat_row("Aura au Chateau Royal",
-		UiTheme.make_label("+%d de charge" % Balance.DAME_AURA_DEPLOY, 14, Color("d8a0d0"))))
-	body.add_child(how)
+	stats_body.add_child(HSeparator.new())
+	var per_dame := int(Balance.DAME_GOLD_BONUS * 100.0)
+	stats_body.add_child(UiTheme.stat_row("Aura, par Dame au repos",
+		UiTheme.make_label("+%d %% d'or" % per_dame, 14, Color("d8a0d0"))))
+	if owned > 0:
+		stats_body.add_child(HSeparator.new())
+		var total := UiTheme.make_label("+%d %% d'or" % (per_dame * owned), 14, Color("d8a0d0"))
+		total.add_theme_font_override("font", UiTheme.font_bold())
+		stats_body.add_child(UiTheme.stat_row("Aura actuelle", total))
+	body.add_child(stats)
+
+	var explanation := UiTheme.make_label(
+		"Une Dame laissee au village tient la cour et rapporte l'or ci-dessus a " +
+		"chaque victoire. Celle que tu emmenes au combat renonce a sa part.",
+		11, Color("ccd1e0"))
+	explanation.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	body.add_child(explanation)
+
+	if not unlocked:
+		# Tant qu'aucune Dame n'est rentree, la seule chose a expliquer est
+		# comment en obtenir une.
+		var how: PanelContainer = CardScene.instantiate()
+		var how_body: VBoxContainer = how.get_node("%Body")
+		how_body.add_child(UiTheme.make_label("COMMENT EN OBTENIR UNE", 12, UiTheme.GOLD))
+		how_body.get_child(0).add_theme_font_override("font", UiTheme.font_bold())
+		var steps := UiTheme.make_label(
+			"Mene un pion jusqu'a la derniere rangee ennemie : il devient Dame " +
+			"sur-le-champ. Ramene-la vivante et elle s'installe ici.", 11, Color("f0f3f8"))
+		steps.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+		how_body.add_child(steps)
+		body.add_child(how)
+		return
+
+	body.add_child(DividerScene.instantiate())
+	_add_dame_upgrade(body)
+
+
+## Amelioration de la Tour de la Dame : meme mecanique que les casernes (or +
+## duree), plus une condition de collection. Les Dames ne sont jamais
+## depensees - c'est le nombre qu'on possede qui ouvre le palier.
+func _add_dame_upgrade(body: VBoxContainer) -> void:
+	if Game.is_upgrading(Balance.DAME) or Game.is_max_level(Balance.DAME):
+		_add_upgrade_section(body)
+		return
+
+	var required := Game.dames_required_for_upgrade()
+	var owned := Game.dames_owned()
+	var level := Game.building_level(Balance.DAME)
+	var cost := Balance.upgrade_cost(Balance.DAME, level)
+
+	if owned < required:
+		var card: PanelContainer = CardScene.instantiate()
+		var card_body: VBoxContainer = card.get_node("%Body")
+		card_body.add_child(UiTheme.make_label(
+			"NIVEAU %d : %d DAMES REQUISES" % [level + 1, required], 12, UiTheme.GOLD))
+		card_body.get_child(0).add_theme_font_override("font", UiTheme.font_bold())
+		var hint := UiTheme.make_label(
+			"Tu en abrites %d. Ramene-en %d de plus et la Tour pourra s'ameliorer, " % [
+				owned, required - owned] +
+			"pour %d Or : toutes tes Dames y gagneront en portee." % cost,
+			11, UiTheme.TEXT_DIM)
+		hint.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+		card_body.add_child(hint)
+		body.add_child(card)
+		return
+
+	_add_upgrade_section(body)
 
 
 func _centered_pill(text: String, variant: Pill.Variant) -> CenterContainer:
@@ -250,20 +311,9 @@ func _add_castle_card(body: VBoxContainer) -> void:
 	card_body.add_child(UiTheme.stat_row("Deploiement actuel",
 		UiTheme.make_label("%d de charge" % Game.deploy_capacity(), 14, Color("f0f3f8"))))
 
-	# L'aura n'apparait qu'une fois meritee : avant la premiere Dame, cette
-	# ligne n'aurait rien a raconter.
-	if Game.dame_aura() > 0:
-		card_body.add_child(HSeparator.new())
-		var aura := UiTheme.make_label(
-			"+%d (%d Dame%s au repos)" % [
-				Game.dame_aura(), Game.dames_owned(), "" if Game.dames_owned() <= 1 else "s"],
-			14, Color("d8a0d0"))
-		aura.add_theme_font_override("font", UiTheme.font_bold())
-		aura.autowrap_mode = TextServer.AUTOWRAP_OFF
-		card_body.add_child(UiTheme.stat_row("Aura de la Dame", aura))
 	if not Game.is_max_level(Balance.CASTLE):
 		card_body.add_child(HSeparator.new())
-		var next_slots := Game.deploy_capacity_at(Game.castle_level() + 1)
+		var next_slots := Balance.deploy_capacity(Game.castle_level() + 1)
 		# "15 -> 22 de charge" plutot que la seule valeur suivante, pour
 		# montrer le gain d'un coup d'oeil - cf. Stat-Line-Next (capture Figma 08).
 		var compare := HBoxContainer.new()

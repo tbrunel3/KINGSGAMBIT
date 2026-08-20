@@ -67,6 +67,11 @@ var _busy: bool = false
 ## Resolution automatique : l'IA joue les DEUX camps jusqu'a la fin.
 var _auto: bool = false
 
+## Dames emmenees au combat, relevees au moment ou la bataille commence. Une
+## Dame partie se battre ne tient plus la cour : elle ne rapporte pas sa part
+## d'or (cf. GameState.dame_gold_bonus).
+var _dames_deployed: int = 0
+
 # Elements rafraichis souvent, gardes sous la main.
 var _status_label: Label = null
 var _type_buttons: Dictionary = {}
@@ -108,7 +113,10 @@ func _ready() -> void:
 ## des Pions - elle EST un pion promu, sa mobilite suit celle des pions.
 func _unit_level(type: String) -> int:
 	if type == Balance.DAME:
-		return maxi(1, Game.building_level(Balance.PION))
+		# Les Dames s'entrainent a la Tour de la Dame, qui monte en niveau avec
+		# la collection (cf. Balance.DAME_UPGRADE_DAMES). Une Dame promue EN
+		# COURS de bataille, elle, garde le niveau du pion qu'elle etait.
+		return maxi(1, Game.building_level(Balance.DAME))
 	return Game.building_level(type)
 
 
@@ -285,10 +293,15 @@ func _build_placement_ui() -> void:
 	row.add_theme_constant_override("separation", 8)
 	_bottom.add_child(row)
 
+	# Tous les types de l'armee ont leur chip, y compris ceux qu'on ne possede
+	# pas encore : la Dame doit se voir AVANT d'en avoir une, sinon le jour ou
+	# elle apparait personne ne comprend d'ou sort ce bouton. Un type absent
+	# porte la silhouette grisee (assets/pieces/absent) et un compteur a zero.
 	_type_buttons.clear()
-	for type in _deployable_types():
+	for type in Balance.ARMY_TYPES:
 		var chip: SelectionChip = SelectionChipScene.instantiate()
-		var path := "res://assets/pieces/bleu/%s.png" % type
+		var folder := "bleu" if int(_remaining[type]) > 0 else "absent"
+		var path := "res://assets/pieces/%s/%s.png" % [folder, type]
 		var texture: Texture2D = load(path) if ResourceLoader.exists(path) else null
 		row.add_child(chip)
 		chip.set_piece.call_deferred(texture, Balance.unit_name(type).to_upper(), int(_remaining[type]))
@@ -349,6 +362,10 @@ func _refresh_placement() -> void:
 		var chip: SelectionChip = _type_buttons[type]
 		chip.set_count(int(_remaining[type]))
 		chip.selected = (type == _selected_type)
+		var folder := "bleu" if int(_remaining[type]) > 0 else "absent"
+		var path := "res://assets/pieces/%s/%s.png" % [folder, type]
+		if ResourceLoader.exists(path):
+			chip.set_icon(load(path))
 
 	_fight_button.disabled = _placed.is_empty()
 	_update_preview()
@@ -626,6 +643,10 @@ func _start_combat() -> void:
 		return
 	_phase = Phase.COMBAT
 	_running = true
+	_dames_deployed = 0
+	for unit in _placed:
+		if unit.type == Balance.DAME:
+			_dames_deployed += 1
 	# Le joueur tient un des deux camps : les garde-fous anti-blocage calibres
 	# sur des secondes d'animation ne s'appliquent plus (cf. BattleEngine).
 	_engine.auto_mode = false
@@ -1023,6 +1044,12 @@ func _show_result() -> void:
 	var reward := Game.reward_for(int(_battle["id"]))
 	var battle_id := int(_battle["id"])
 
+	# Aura des Dames restees au village - calculee AVANT d'appliquer les
+	# pertes, sinon une Dame tombee au combat viendrait fausser le compte de
+	# celles qui n'ont jamais quitte la Tour.
+	var dame_bonus := Game.dame_gold_bonus(reward, _dames_deployed) if victory else 0
+	var dames_resting := Game.dames_at_rest(_dames_deployed)
+
 	_grid_view.draggable_team = -1
 	_grid_view.legal_targets = []
 
@@ -1040,7 +1067,7 @@ func _show_result() -> void:
 	# (Consolation-Row) : meme perdue, une bataille rapporte un peu.
 	var consolation := 0
 	if victory:
-		Game.win_battle(battle_id, reward)
+		Game.win_battle(battle_id, reward + dame_bonus)
 	else:
 		consolation = int(round(reward * Balance.DEFEAT_CONSOLATION_RATIO))
 		if consolation > 0:
@@ -1079,6 +1106,11 @@ func _show_result() -> void:
 	if victory:
 		stats_body.add_child(_result_highlight_row("Récompense",
 			_icon_value("coin", UiTheme.GOLD, "+%d Or" % reward, UiTheme.GOLD, 16), UiTheme.GOLD))
+		if dame_bonus > 0:
+			stats_body.add_child(_stats_separator())
+			stats_body.add_child(UiTheme.stat_row(
+				"Aura de %d Dame%s" % [dames_resting, "" if dames_resting <= 1 else "s"],
+				_icon_value("crown", Color("d8a0d0"), "+%d Or" % dame_bonus, Color("d8a0d0"), 13)))
 		stats_body.add_child(_stats_separator())
 		stats_body.add_child(UiTheme.stat_row("Ennemis vaincus",
 			_plain_value(str(enemies_defeated), Color("f0f3f8"), 14)))

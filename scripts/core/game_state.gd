@@ -203,7 +203,7 @@ func store_promotions(count: int) -> int:
 	if count <= 0:
 		return 0
 
-	var room := Balance.capacity(Balance.DAME, 1) - dames_owned()
+	var room := Balance.capacity(Balance.DAME, maxi(1, building_level(Balance.DAME))) - dames_owned()
 	var stored := clampi(count, 0, maxi(0, room))
 	if stored <= 0:
 		return 0
@@ -276,22 +276,27 @@ func castle_level() -> int:
 	return building_level(Balance.CASTLE)
 
 
-## Charge de deploiement disponible : celle du chateau, plus l'aura des Dames
-## ramenees (cf. Balance.DAME_AURA_DEPLOY).
 func deploy_capacity() -> int:
-	return deploy_capacity_at(castle_level())
+	return Balance.deploy_capacity(castle_level())
 
 
-## La meme, pour un niveau de chateau donne : sert a montrer ce que
-## rapporterait la prochaine amelioration sans oublier l'aura en cours.
-func deploy_capacity_at(level: int) -> int:
-	return Balance.deploy_capacity(level) + dame_aura()
+# ------------------------------- AURA DE LA DAME -----------------------------
+#
+#  Une Dame laissee au village tient la cour pendant que le Roi se bat : elle
+#  rapporte une part d'or en plus sur la bataille (Balance.DAME_GOLD_BONUS).
+#  Celle qu'on emmene au combat ne rapporte rien - c'est tout l'arbitrage du
+#  bouton DAME au placement.
+
+## Dames restees au village pendant une bataille ou `deployed` d'entre elles
+## sont parties se battre.
+func dames_at_rest(deployed: int = 0) -> int:
+	return maxi(0, dames_owned() - deployed)
 
 
-## Part de la charge de deploiement qui vient des Dames au repos. Zero tant
-## qu'aucune n'a ete ramenee vivante d'une bataille.
-func dame_aura() -> int:
-	return dames_owned() * Balance.DAME_AURA_DEPLOY
+## Or supplementaire rapporte par ces Dames pour une recompense donnee.
+func dame_gold_bonus(reward: int, deployed: int = 0) -> int:
+	var share := Balance.DAME_GOLD_BONUS * float(dames_at_rest(deployed))
+	return int(round(float(reward) * share))
 
 
 func is_max_level(type: String) -> bool:
@@ -315,9 +320,25 @@ func upgrade_remaining(type: String) -> int:
 	return maxi(0, end_time - int(Time.get_unix_time_from_system()))
 
 
-## Lance une amelioration. Retourne false si deja en cours, au max, ou trop cher.
+## Dames necessaires pour ameliorer la Tour de la Dame depuis son niveau
+## actuel, et vrai si la collection est reunie. Les Dames ne sont pas
+## consommees : c'est la collection qui debloque le palier, cf.
+## Balance.DAME_UPGRADE_DAMES.
+func dames_required_for_upgrade() -> int:
+	return Balance.dames_required(building_level(Balance.DAME))
+
+
+func can_upgrade_dame_tower() -> bool:
+	var required := dames_required_for_upgrade()
+	return required > 0 and dames_owned() >= required
+
+
+## Lance une amelioration. Retourne false si deja en cours, au max, trop cher,
+## ou - pour la Tour de la Dame - si les Dames requises manquent.
 func start_upgrade(type: String) -> bool:
 	if is_upgrading(type) or is_max_level(type):
+		return false
+	if type == Balance.DAME and not can_upgrade_dame_tower():
 		return false
 	var cost := Balance.upgrade_cost(type, building_level(type))
 	if cost < 0 or not spend_gold(cost):

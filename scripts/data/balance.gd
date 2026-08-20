@@ -80,17 +80,28 @@ const DEPLOY_ROWS := 2
 ## au-dessus du plancher, la ou se joue la vraie gestion.
 const GARRISON_MINIMUM := {PION: 3}
 
-## AURA DE LA DAME - le bonus que rapporte une Dame ramenee vivante.
+## AURA DE LA DAME - ce que rapporte une Dame RESTEE AU VILLAGE.
 ##
-## Le Roi a perdu sa Dame : toute la campagne consiste a la retrouver. Chaque
-## Dame rangee a la Tour de la Dame rend donc le Chateau Royal plus fort, et
-## ce bonus s'ajoute a la charge de deploiement quoi qu'il arrive - que la
-## Dame reparte au combat ou qu'elle reste au village.
+## Le Roi a perdu sa Dame : toute la campagne consiste a la retrouver. Une
+## Dame rangee a la Tour de la Dame tient la cour pendant que le Roi se bat,
+## et chaque bataille rapporte cette fraction d'or en plus.
 ##
-## Volontairement inferieur au poids de deploiement d'une Dame (5) : la
-## ramener rend l'armee plus nombreuse, mais ne remplace pas ce qu'elle coute
-## a poser sur le plateau. A elle seule, l'aura vaut trois pions de plus.
-const DAME_AURA_DEPLOY := 3
+## Le bonus se compte par Dame AU REPOS : deployer une Dame, c'est renoncer a
+## sa part pour la bataille en cours, pas au bonus des autres. C'est tout le
+## choix du placement - une piece de plus sur le plateau, ou l'or qu'elle
+## rapporte en restant a la maison.
+##
+## Exprime en fraction de la recompense plutot qu'en or fixe : +13 or sur la
+## premiere bataille, +135 sur la derniere. Le bonus reste interessant du
+## debut a la fin de la campagne.
+const DAME_GOLD_BONUS := 0.15
+
+## Nombre de Dames a posseder pour ameliorer la Tour de la Dame jusqu'a chaque
+## niveau (indice 0 = passage au niveau 2). L'amelioration se paie en or comme
+## partout ailleurs, mais elle demande EN PLUS d'avoir la collection : c'est ce
+## que veut dire "cumuler des Dames permet de les ameliorer". Les Dames ne sont
+## jamais consommees - une piece durement gagnee ne se sacrifie pas.
+const DAME_UPGRADE_DAMES := [2, 3, 4, 5, 6, 7, 8, 9, 10]
 
 ## Une bataille deja gagnee rapporte moins : on peut farmer, mais progresser
 ## reste plus rentable que repasser sur un terrain conquis.
@@ -127,8 +138,19 @@ const UNITS := {
 		"value": 1,
 		"recruit_cost_base": 35,
 		"recruit_cost_step": 8,  # cout = base + step * (nb deja possede)
+		#
+		# Le pion progresse d'abord sur son OUVERTURE, comme aux echecs : au
+		# niveau 1 il avance d'une case et rien d'autre, au niveau 2 il gagne
+		# le double pas du premier coup. Sa portee ordinaire, elle, ne monte
+		# que tres tard - un pion qui avance de deux cases a chaque tour n'est
+		# plus un pion.
 		#            Nv  1  2  3  4  5  6  7  8  9 10
-		"move_range": [ 1, 1, 1, 1, 2, 2, 2, 3, 3, 4],
+		"move_range": [ 1, 1, 1, 1, 1, 1, 2, 2, 2, 2],
+		# Portee du TOUT PREMIER coup de la piece (cf. MovementRules._pawn).
+		# Ne s'applique qu'une fois, et ne permet toujours pas de sauter
+		# par-dessus quoi que ce soit.
+		"first_move_range":
+		              [ 1, 2, 2, 2, 3, 3, 3, 4, 4, 4],
 		"capacity":   [ 8,10,12,14,16,18,20,22,24,26],
 		"upgrade_cost":    [150, 300,  500,  750, 1050, 1400, 1800, 2250, 2750],
 		"upgrade_seconds": [ 30,  90,  240,  600, 1200, 2400, 4200, 7200,10800],
@@ -207,13 +229,16 @@ const UNITS := {
 		# Tour : au chateau Nv.1 (16 de charge), 9 aurait mange plus de la
 		# moitie du budget et rendu son unique recompense impossible a jouer.
 		"deploy_weight": 5,
-		# La Tour de la Dame n'est pas une caserne : elle ne recrute ni ne
-		# s'ameliore, elle ABRITE les Dames rentrees vivantes de bataille.
-		# Capacite volontairement large : perdre une Dame durement promue
-		# parce que le batiment est plein serait la pire des punitions.
-		"capacity":   [ 9, 9, 9, 9, 9, 9, 9, 9, 9, 9],
-		"upgrade_cost": [],
-		"upgrade_seconds": [],
+		# La Tour de la Dame ne recrute pas - une Dame ne s'achete pas - mais
+		# elle s'ameliore, a condition d'avoir la collection qui va avec
+		# (cf. DAME_UPGRADE_DAMES). Capacite volontairement large : perdre une
+		# Dame durement promue parce que le batiment est plein serait la pire
+		# des punitions.
+		"capacity":   [10,10,10,10,10,10,10,10,10,10],
+		# Plus cher que le Donjon : c'est la piece la plus forte du jeu, et
+		# chaque palier demande deja une Dame de plus en reserve.
+		"upgrade_cost":    [300, 560,  900, 1300, 1760, 2280, 2860, 3500, 4200],
+		"upgrade_seconds": [120, 300,  660, 1320, 2400, 4200, 6600, 9900,14400],
 	},
 }
 
@@ -396,6 +421,21 @@ func move_range(type: String, level: int) -> int:
 	return 0 if value == null else int(value)
 
 
+## Portee du tout premier coup de la piece. Vaut sa portee ordinaire si le
+## type n'a pas d'ouverture particuliere : seul le pion en a une aujourd'hui.
+func first_move_range(type: String, level: int) -> int:
+	var value: Variant = _at_level(UNITS[type].get("first_move_range", []), level)
+	return move_range(type, level) if value == null else int(value)
+
+
+## Dames a posseder pour ameliorer la Tour de la Dame depuis ce niveau.
+## 0 quand le batiment est deja au maximum.
+func dames_required(current_level: int) -> int:
+	if current_level < 1 or current_level - 1 >= DAME_UPGRADE_DAMES.size():
+		return 0
+	return int(DAME_UPGRADE_DAMES[current_level - 1])
+
+
 func jump_offsets(type: String, level: int) -> Array:
 	var value: Variant = _at_level(UNITS[type].get("jump_offsets", []), level)
 	return [] if value == null else value
@@ -413,7 +453,12 @@ func move_description(type: String, level: int) -> String:
 		"jump":
 			return "saut, %d figures" % jump_offsets(type, level).size()
 		_:
-			return "en avant %d case(s), capture en diagonale" % move_range(type, level)
+			var reach := move_range(type, level)
+			var opening := first_move_range(type, level)
+			if opening > reach:
+				return "en avant %d case(s), %d au premier coup, capture en diagonale" % [
+					reach, opening]
+			return "en avant %d case(s), capture en diagonale" % reach
 
 
 ## Vrai si ce batiment n'existe pas au depart et apparait plus tard.

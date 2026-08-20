@@ -162,6 +162,15 @@ func _fill() -> void:
 	_style_card($Safe/Root/Scroll/BodyMargin/Body/InfoCard, Color(0, 0, 0, 0), false)
 	var reward := Game.reward_for(int(_battle["id"]))
 	_info_body.add_child(_info_row("Recompense totale", "%d Or" % reward, UiTheme.GOLD, true))
+
+	# Ce que rapporteraient les Dames si elles restaient toutes au village :
+	# c'est ici, avant le placement, que le choix se prepare.
+	var dame_bonus := Game.dame_gold_bonus(reward)
+	if dame_bonus > 0:
+		var dames := Game.dames_owned()
+		_info_body.add_child(_info_row(
+			"Aura de %d Dame%s au repos" % [dames, "" if dames <= 1 else "s"],
+			"+%d Or" % dame_bonus, Color("d8a0d0"), false))
 	var sep := ColorRect.new()
 	sep.color = Color(1, 1, 1, 0.08)
 	sep.custom_minimum_size = Vector2(0, 1)

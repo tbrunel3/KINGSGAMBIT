@@ -446,13 +446,6 @@ func _refresh_castle() -> void:
 	deploy.autowrap_mode = TextServer.AUTOWRAP_OFF
 	_castle_sub_row.add_child(deploy)
 
-	# La part apportee par les Dames au repos, dans leur propre teinte : le
-	# joueur doit voir d'ou vient le bonus, pas seulement qu'il existe.
-	if Game.dame_aura() > 0:
-		var aura := UiTheme.make_label("+%d" % Game.dame_aura(), 10, Color("d8a0d0"))
-		aura.add_theme_font_override("font", UiTheme.font_bold())
-		aura.autowrap_mode = TextServer.AUTOWRAP_OFF
-		_castle_sub_row.add_child(aura)
 
 	if Game.is_upgrading(Balance.CASTLE):
 		var eta := UiTheme.make_label(UiTheme.format_duration(Game.upgrade_remaining(Balance.CASTLE)),
@@ -494,10 +487,23 @@ func _refresh_building(type: String) -> void:
 		# elle compte les Dames qui y logent.
 		panel.modulate.a = 1.0
 		var dames := Game.dames_owned()
+		var level_pill: Pill = preload("res://scenes/ui/components/pill.tscn").instantiate()
+		sub_row.add_child(level_pill)
+		level_pill.set_custom("", "Nv.%d" % Game.building_level(type), Color(color, 0.2), color)
+		level_pill.get_node("%Text").add_theme_font_size_override("font_size", 10)
+
 		var dame_count := UiTheme.make_label(
-			"%d Dame%s au repos" % [dames, "" if dames <= 1 else "s"], 11, color)
+			"%d Dame%s" % [dames, "" if dames <= 1 else "s"], 11, Color("e5d9e5"))
 		dame_count.autowrap_mode = TextServer.AUTOWRAP_OFF
 		sub_row.add_child(dame_count)
+
+		# L'or que rapporte la collection : c'est le vrai interet de laisser
+		# une Dame a la maison, il doit se lire depuis la carte.
+		var aura := UiTheme.make_label(
+			"+%d%% or" % int(Balance.DAME_GOLD_BONUS * 100.0 * dames), 11, color)
+		aura.add_theme_font_override("font", UiTheme.font_bold())
+		aura.autowrap_mode = TextServer.AUTOWRAP_OFF
+		sub_row.add_child(aura)
 	else:
 		panel.modulate.a = 1.0
 		var level_pill: Pill = preload("res://scenes/ui/components/pill.tscn").instantiate()

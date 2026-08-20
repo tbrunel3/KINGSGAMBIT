@@ -33,6 +33,13 @@ func set_piece(icon: Texture2D, piece_name: String, count: int) -> void:
 	set_count(count)
 
 
+## Change la seule silhouette, sans toucher au nom ni au compteur : l'ecran de
+## placement bascule entre la piece coloree et sa version grisee selon qu'il
+## reste ou non des exemplaires a poser.
+func set_icon(icon: Texture2D) -> void:
+	_icon.texture = icon
+
+
 func set_count(count: int) -> void:
 	_count.text = "×%d" % count
 	modulate.a = 1.0 if count > 0 else 0.5

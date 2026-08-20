@@ -97,7 +97,7 @@ Tout est en Inter (Google Fonts, gratuite). Poids utilisés :
   - Label verrouillé (x:50, y:685) : "🔒 Forge" grisé + "Château Nv.6 requis" en petit
 - Bouton BATAILLE (x:87, y:748, w:219, h:59) : fond or #ffd11a, radius 18, stroke 2px, texte "⚔ BATAILLE" noir 19px bold
 - **Code actuel** : l'emplacement verrouillé (x:50, y:685) sert à la **Tour de la Dame** — grisé et "Promeus un pion au bout du plateau" tant qu'aucune Dame n'a été ramenée, puis "N Dames au repos" une fois le bâtiment ouvert. Il n'y a pas de Forge.
-- **Halo du Château Royal** : dès qu'une Dame est au repos, un dégradé radial doré en mélange additif (300×300 à partir de x:46, y:246, élargi de 12 % par Dame supplémentaire) respire lentement sous les labels, et le label du château affiche l'aura (+3 de charge par Dame).
+- **Halo du Château Royal** : dès qu'une Dame est au repos, un dégradé radial doré en mélange additif (300×300 à partir de x:46, y:246, élargi de 12 % par Dame supplémentaire) respire lentement sous les labels. Le label de la Tour de la Dame affiche le niveau, le nombre de Dames et l'or qu'elles rapportent (+15 % par Dame au repos).
 - Bouton DEV (x:362, y:14) : discret, 24×24, radius 4, emoji 🛠
 
 ### 02_Campagne (carte de progression)
@@ -279,7 +279,8 @@ res://
 ## Notes importantes
 
 - Les écrans 04 (Placement) et 05 (Combat) partagent exactement la même grille et le même background pour éviter tout "saut" visuel lors de la transition
-- La Dame n'est pas recrutée — elle apparaît uniquement par promotion (un pion qui atteint le bout du plateau), et n'est conservée que si elle survit à la bataille : elle rejoint alors la Tour de la Dame au village
+- La Dame n'est pas recrutée — elle apparaît uniquement par promotion (un pion qui atteint le bout du plateau), et n'est conservée que si elle survit à la bataille : elle rejoint alors la Tour de la Dame au village. Laissée au village elle rapporte +15 % d'or par bataille ; collectionnée, elle permet d'améliorer la Tour (N Dames requises par palier, jamais dépensées)
+- Le niveau d'un bâtiment débloque des CAPACITÉS, pas seulement des chiffres : le pion gagne le double pas d'ouverture au niveau 2 (`first_move_range` dans Balance), le cavalier de nouvelles figures de saut
 - Le Roi est unique et lié au Château Royal
 - Les SVG sont les assets finaux — ne les remplace pas par des placeholders
 - Aucune valeur de gameplay ne doit être écrite ailleurs que dans `scripts/data/balance.gd` (tailles de plateau, compositions ennemies, portées, coûts, durées d'animation)

@@ -9,7 +9,8 @@ class_name MovementRules
 ##   Fou       diagonales, bloque par les pieces
 ##   Cavalier  saut, ignore les pieces sur le trajet
 ##   Dame      lignes, colonnes et diagonales (obtenue par promotion d'un pion)
-##   Pion      avance tout droit sur des cases VIDES, capture en diagonale avant
+##   Pion      avance tout droit sur des cases VIDES, capture en diagonale avant,
+##             et dispose d'une OUVERTURE plus longue a son premier coup
 ##
 ## CAPTURE : il n'y a pas d'attaque separee ni de portee de tir. Une piece
 ## capture en se DEPLACANT sur la case occupee par un adversaire. Une case
@@ -75,13 +76,19 @@ static func _slide(unit: BattleUnit, grid: GridModel, directions: Array) -> Arra
 ## Pion : avance tout droit sur des cases vides, prend uniquement sur ses deux
 ## diagonales avant, a une case. Comme aux echecs.
 ##
+## OUVERTURE : a son tout premier coup, il peut avancer plus loin (deux cases
+## des que sa caserne est de niveau 2, cf. Balance.first_move_range) - le
+## double pas classique. Il ne saute personne pour autant : la premiere case
+## occupee arrete la poussee. Ensuite, il reprend son pas ordinaire.
+##
 ## Il ne recule pas : s'il atteint le fond adverse, il promeut en Dame, ce qui
 ## evite qu'un pion se retrouve coince a jamais derriere les lignes.
 static func _pawn(unit: BattleUnit, grid: GridModel) -> Array:
 	var cells: Array = []
 	var ahead := Vector2i(0, unit.forward())
+	var reach := unit.move_range if unit.has_moved else maxi(unit.move_range, unit.first_move_range)
 
-	for distance in range(1, unit.move_range + 1):
+	for distance in range(1, reach + 1):
 		var cell: Vector2i = unit.cell + ahead * distance
 		if not grid.in_bounds(cell) or grid.unit_at(cell) != null:
 			break

@@ -29,7 +29,15 @@ var cell: Vector2i = Vector2i.ZERO
 var captured: bool = false
 var promoted: bool = false  ## vrai pour un pion promu (cavalier, fou ou dame)
 
+## Vrai des que la piece a joue un coup. Sert au double pas d'ouverture du
+## pion (cf. MovementRules._pawn) : comme aux echecs, il ne s'offre qu'une
+## fois, au tout premier deplacement de la piece.
+var has_moved: bool = false
+
 var move_range: int = 1
+## Portee du tout premier coup. Egale a move_range pour toutes les pieces
+## sauf le pion, dont l'ouverture s'allonge avec le niveau de sa caserne.
+var first_move_range: int = 1
 var move_type: String = "forward"
 var jump_offsets: Array = []
 var value: int = 1
@@ -52,6 +60,7 @@ func _apply_type(new_type: String) -> void:
 	type = new_type
 	move_type = Balance.move_type(new_type)
 	move_range = Balance.move_range(new_type, level)
+	first_move_range = Balance.first_move_range(new_type, level)
 	jump_offsets = Balance.jump_offsets(new_type, level)
 	value = Balance.unit_value(new_type)
 

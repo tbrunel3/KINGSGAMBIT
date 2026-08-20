@@ -199,6 +199,7 @@ func _resolve(unit: BattleUnit, destination: Vector2i) -> Array:
 		})
 
 	grid.move_unit(unit, destination)
+	unit.has_moved = true
 	events.append({"type": "move", "unit": unit.id, "from": from, "to": destination})
 
 	# Promotion : un pion qui atteint le fond adverse devient Dame, comme aux

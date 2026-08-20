@@ -82,6 +82,17 @@ func _check_balance() -> void:
 		if required < 2 or required > Balance.max_level(Balance.CASTLE):
 			_fail("%s : seuil de deblocage chateau incoherent (%d)" % [type, required])
 
+	# L'ouverture du pion : une case au niveau 1, le double pas ensuite.
+	if Balance.first_move_range(Balance.PION, 1) != Balance.move_range(Balance.PION, 1):
+		_fail("le pion niveau 1 a deja une ouverture allongee")
+	if Balance.first_move_range(Balance.PION, 2) < 2:
+		_fail("le pion niveau 2 n'a pas gagne son double pas d'ouverture")
+	for level in range(2, levels + 1):
+		if Balance.first_move_range(Balance.PION, level) < Balance.first_move_range(Balance.PION, level - 1):
+			_fail("l'ouverture du pion recule au niveau %d" % level)
+		if Balance.first_move_range(Balance.PION, level) < Balance.move_range(Balance.PION, level):
+			_fail("le pion niveau %d ouvre moins loin qu'il n'avance" % level)
+
 	# La Dame doit rester la piece la plus CHERE pour l'IA, tout en restant
 	# posable : son poids de deploiement ne peut pas depasser la charge d'un
 	# chateau niveau 1, sinon la recompense d'une promotion est injouable.
@@ -210,9 +221,8 @@ func _check_losses() -> void:
 	if Game.is_building_unlocked(Balance.DAME):
 		_fail("la Tour de la Dame existe avant la premiere promotion")
 	var pions_before := Game.units_owned(Balance.PION)
-	var capacity_before := Game.deploy_capacity()
-	if Game.dame_aura() != 0:
-		_fail("le chateau rayonne deja alors qu'aucune Dame n'est rentree")
+	if Game.dame_gold_bonus(100) != 0:
+		_fail("une aura de Dame s'applique alors qu'aucune n'est rentree")
 	var stored := Game.store_promotions(2)
 	if stored != 2:
 		_fail("2 pions promus et rentres vivants n'ont pas donne 2 Dames (%d)" % stored)
@@ -223,18 +233,41 @@ func _check_losses() -> void:
 	if not Game.is_building_unlocked(Balance.DAME):
 		_fail("la Tour de la Dame n'apparait pas apres une promotion")
 
-	# Aura de la Dame : chaque Dame au repos renforce le chateau.
-	if Game.dame_aura() != 2 * Balance.DAME_AURA_DEPLOY:
-		_fail("l'aura des Dames ne s'applique pas (%d)" % Game.dame_aura())
-	if Game.deploy_capacity() != capacity_before + 2 * Balance.DAME_AURA_DEPLOY:
-		_fail("la charge de deploiement ignore l'aura des Dames")
+	# Aura : deux Dames au repos rapportent deux parts, une Dame deployee
+	# renonce a la sienne, et une Dame emmenee ne rapporte plus rien.
+	var expected := int(round(1000.0 * Balance.DAME_GOLD_BONUS * 2.0))
+	if Game.dame_gold_bonus(1000) != expected:
+		_fail("l'aura de deux Dames au repos vaut %d au lieu de %d" % [
+			Game.dame_gold_bonus(1000), expected])
+	if Game.dame_gold_bonus(1000, 1) != int(round(1000.0 * Balance.DAME_GOLD_BONUS)):
+		_fail("deployer une Dame ne retire pas sa seule part de l'aura")
+	if Game.dame_gold_bonus(1000, 2) != 0:
+		_fail("des Dames toutes deployees rapportent encore de l'or")
+
+	# La Tour de la Dame s'ameliore avec la collection, pas en la depensant.
+	Game.add_gold(50000)
+	if Game.dames_required_for_upgrade() != int(Balance.DAME_UPGRADE_DAMES[0]):
+		_fail("le palier de Dames requis pour le niveau 2 est incoherent")
+	if not Game.can_upgrade_dame_tower():
+		_fail("2 Dames ne suffisent pas a ouvrir le niveau 2 de la Tour")
+	if not Game.start_upgrade(Balance.DAME):
+		_fail("l'amelioration de la Tour de la Dame est refusee")
+	Game.force_finish_upgrade(Balance.DAME)
+	if Game.building_level(Balance.DAME) != 2:
+		_fail("la Tour de la Dame n'est pas passee niveau 2")
+	if Game.dames_owned() != 2:
+		_fail("l'amelioration a consomme des Dames, elle ne devrait pas")
+	if Game.can_upgrade_dame_tower():
+		_fail("le niveau 3 s'ouvre sans la troisieme Dame")
+	if Game.start_upgrade(Balance.DAME):
+		_fail("la Tour s'ameliore sans la collection requise")
 
 	# Une Dame capturee se perd comme n'importe quelle piece - et son aura
 	# avec elle.
 	Game.apply_losses({Balance.DAME: 1})
 	if Game.dames_owned() != 1:
 		_fail("une Dame capturee n'a pas ete retiree de l'armee")
-	if Game.deploy_capacity() != capacity_before + Balance.DAME_AURA_DEPLOY:
+	if Game.dame_gold_bonus(1000) != int(round(1000.0 * Balance.DAME_GOLD_BONUS)):
 		_fail("l'aura n'a pas baisse apres la perte d'une Dame")
 
 	# Et elle ne s'achete a aucun prix.

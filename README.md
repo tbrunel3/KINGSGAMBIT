@@ -70,14 +70,19 @@ en se **déplaçant sur la case adverse**. Aucune attaque à distance.
 
 | Pièce | Déplacement | Nv.1 | Nv.10 |
 |---|---|---|---|
-| **Pion** | avance tout droit, capture en diagonale avant | 1 case | 4 cases |
+| **Pion** | avance tout droit, capture en diagonale avant | 1 case, ouverture 1 | 2 cases, ouverture 4 |
 | **Cavalier** | sauts, ignore les pièces du trajet | petit saut (1,1) | 7 figures, jusqu'à (3,4) |
 | **Fou** | diagonales, bloqué par les pièces | 2 cases | 8 cases |
 | **Tour** | lignes et colonnes, bloquée par les pièces | 2 cases | 8 cases |
 | **Dame** | toutes directions — uniquement par promotion | 2 cases | 9 cases |
 
-Le cavalier démarre avec un **petit saut diagonal** et n'obtient le L classique
-qu'au niveau 2, puis des figures de plus en plus longues. La tour et le fou
+Le niveau d'un bâtiment débloque des **capacités**, pas seulement des chiffres.
+Le pion niveau 1 avance d'une case et rien d'autre ; dès le niveau 2 il gagne le
+**double pas d'ouverture** des échecs — deux cases à son tout premier coup, sans
+pouvoir sauter par-dessus quoi que ce soit, puis il reprend son pas normal.
+L'ouverture s'allonge encore (3 cases au Nv.5, 4 au Nv.8) et sa portée ordinaire
+ne monte qu'au Nv.7. Le cavalier suit la même logique : **petit saut diagonal** au
+niveau 1, le L classique au niveau 2, puis des figures de plus en plus longues. La tour et le fou
 restent à 2 cases au niveau 1 : à 1 case ils seraient plus faibles qu'un pion,
 incapables de riposter à une pièce postée en diagonale.
 
@@ -96,11 +101,22 @@ d'une Tour. Sa *valeur* reste 9 : c'est ce que voit l'IA, qui la traite comme la
 pièce la plus chère du plateau. Une Dame capturée est perdue comme le pion
 qu'elle était.
 
-**L'aura de la Dame** : chaque Dame rangée à la Tour de la Dame donne **+3 de
-charge de déploiement** au Château Royal (`Balance.DAME_AURA_DEPLOY`), qu'elle
-reparte au combat ou qu'elle reste au village — le Roi commande mieux quand sa
-Dame est rentrée. Au village, le château se met à **rayonner** tant qu'une Dame
-au moins est là, et son halo s'élargit un peu à chaque nouvelle.
+**L'aura de la Dame** : une Dame **laissée au village** tient la cour pendant que
+le Roi se bat et rapporte **+15 % d'or** sur chaque victoire
+(`Balance.DAME_GOLD_BONUS`). Le bonus se compte par Dame au repos — en déployer
+une renonce à sa part pour cette bataille, pas à celle des autres. C'est tout
+l'arbitrage du chip **DAME** au placement : une pièce de plus sur le plateau, ou
+l'or qu'elle rapporte en restant à la maison. Au village, le château se met à
+**rayonner** tant qu'une Dame au moins est là, et son halo s'élargit un peu à
+chaque nouvelle.
+
+**Améliorer les Dames** : la Tour de la Dame monte en niveau à l'or comme les
+autres bâtiments, mais chaque palier exige d'avoir **N Dames en réserve**
+(`Balance.DAME_UPGRADE_DAMES` : 2 pour le niveau 2, 3 pour le niveau 3…). Les
+Dames ne sont jamais dépensées — c'est la collection qui ouvre le palier, et
+toutes y gagnent en portée. Une Dame déployée depuis le village prend le niveau
+de la Tour ; une Dame promue en pleine bataille garde, elle, le niveau du pion
+qu'elle était.
 
 **Les pertes sont définitives.** Une pièce capturée quitte l'armée et devra être
 recrutée à nouveau. C'est ce qui donne son poids au placement — et la raison
@@ -303,15 +319,17 @@ le premier combat du jeu était perdu.
 - Écran de préparation : composition ennemie, récompense, armée disponible
 - Grille de taille variable par bataille (5×7 à 8×9), zones de déploiement
 - Placement au doigt : poser, retirer, **repositionner en glissant**, Auto,
-  Réinitialiser, limite de charge liée au château
+  Réinitialiser, limite de charge liée au château ; chips de tous les types de
+  l'armée, silhouette grisée pour ce qu'on ne possède pas encore
 - **Combat joué coup par coup contre l'IA** : une pièce par camp et par tour,
   sélection à la tape ou **glisser-déposer**, coups légaux surlignés, dernier
   coup adverse mis en évidence
 - Bouton **AUTO** : l'IA joue les deux camps jusqu'au bout (farm d'or)
 - 5 types de déplacement, mobilité liée au niveau, **promotion en Dame**
-- **Tour de la Dame** : une Dame ramenée vivante est stockée au village et
-  redéployable ensuite ; le Château Royal rayonne et gagne +3 de charge de
-  déploiement par Dame au repos
+- **Tour de la Dame** : une Dame ramenée vivante est stockée au village,
+  redéployable, et rapporte +15 % d'or par bataille tant qu'elle y reste ; la
+  Tour s'améliore à l'or dès qu'on en collectionne assez, et le Château Royal
+  rayonne
 - **Pertes définitives** avec garnison minimale de sécurité
 - **IA à trois niveaux de jeu**, déclarés par bataille : novice (1-3), aguerri
   (4-7), expert (8-10) — prise la plus rentable, refus des mauvais échanges,
