@@ -406,7 +406,7 @@ func _enter_placement() -> void:
 	_phase = Phase.PLACEMENT
 	_style_placement_badge()
 	_style_bottom_panel(Color("0f121f", 0.92), 16, 0)
-	_place_bottom_panel(635, 189)
+	_place_bottom_panel(189)
 	_grid_view.show_zones = true
 	_grid_view.queue_redraw()
 	_build_placement_ui()
@@ -414,13 +414,18 @@ func _enter_placement() -> void:
 	_refresh_stats_hud()
 
 
-## Le panneau du bas occupe toute la largeur disponible : ses ancres sont
-## posees dans la scene, on ne touche donc qu'a sa hauteur. Lui donner une
-## largeur en dur (les 393 points de la maquette) le ferait deborder de la
-## zone sure, qui retire deja 16 points de chaque cote.
-func _place_bottom_panel(top: float, height: float) -> void:
-	_bottom_panel.offset_top = top
-	_bottom_panel.offset_bottom = top + height
+## Le panneau du bas est colle au bord inferieur de l'ecran et occupe toute
+## la largeur : on ne lui donne que sa HAUTEUR. Le poser en coordonnees
+## absolues (les 635 / 747 de la maquette) le decollait du bas des que
+## l'appareil n'avait pas exactement le format 393 x 852.
+##
+## La grille recupere tout ce qui reste entre les badges du haut et ce
+## panneau : sur un ecran plus grand, les cases grandissent au lieu de
+## laisser une bande vide.
+func _place_bottom_panel(height: float) -> void:
+	_bottom_panel.offset_top = -height
+	_bottom_panel.offset_bottom = 0.0
+	_grid_view.offset_bottom = -(height + 10.0)
 
 
 ## Panneau bas (Control-Panel, ecrans 04 et 05) : coins arrondis en haut
@@ -558,8 +563,13 @@ func _refresh_placement() -> void:
 ## HUD lateral (cf. CLAUDE.md > Stats-HUD) : effectif pose pendant le
 ## placement, forces en vie de chaque camp pendant le combat.
 func _refresh_stats_hud() -> void:
+	# free() immediat plutot que queue_free() : un enfant libere en differe
+	# compte ENCORE dans la taille minimale du conteneur pendant l'image en
+	# cours. Le HUD se retrouvait large de la somme de son ancien et de son
+	# nouveau contenu, et debordait sur le plateau.
 	for child in _stats_box.get_children():
-		child.queue_free()
+		_stats_box.remove_child(child)
+		child.free()
 
 	if _phase == Phase.PLACEMENT:
 		var label := UiTheme.make_label("CHARGE", 10, Color("b2b2cc"))
@@ -843,7 +853,7 @@ func _start_combat() -> void:
 	_engine.auto_mode = false
 	_style_combat_badge()
 	_style_bottom_panel(Color("111319", 0.85), 0, 0)
-	_place_bottom_panel(747, 77)
+	_place_bottom_panel(77)
 	_grid_view.preview_moves = []
 	_grid_view.show_zones = false
 	_clear_selection()

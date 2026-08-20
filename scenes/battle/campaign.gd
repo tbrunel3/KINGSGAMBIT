@@ -134,6 +134,26 @@ func _build_path_dots() -> void:
 	_path_dots.set_path(NODE_POS)
 
 
+## Pastille de progression calee sur le bord droit REEL du calque, une image
+## apres le rafraichissement : sa largeur depend du texte, et juste apres
+## set_custom() elle vaut encore zero.
+func _place_progress_pill() -> void:
+	if not is_instance_valid(_progress_pill):
+		return
+	# Ancree au bord droit plutot que posee a une abscisse calculee : sa
+	# largeur depend du texte et n'est connue qu'apres la mise en page. Avec
+	# les deux bords ancres a droite et grow_horizontal = BEGIN, c'est le
+	# moteur qui lui donne sa largeur minimale et la fait grandir vers la
+	# gauche - plus rien a calculer, a aucun moment.
+	_progress_pill.anchor_left = 1.0
+	_progress_pill.anchor_right = 1.0
+	_progress_pill.grow_horizontal = Control.GROW_DIRECTION_BEGIN
+	_progress_pill.offset_left = -16.0
+	_progress_pill.offset_right = -16.0
+	_progress_pill.offset_top = 20.0
+	_progress_pill.offset_bottom = 20.0 + _progress_pill.get_combined_minimum_size().y
+
+
 func _build_progress_pill() -> void:
 	_progress_pill = preload("res://scenes/ui/components/pill.tscn").instantiate()
 	_fixed_overlay.add_child(_progress_pill)
@@ -240,8 +260,11 @@ func _refresh() -> void:
 			won += 1
 	_progress_pill.set_custom("", "%d/%d" % [won, total], Color(0, 0, 0, 0.4), Color("ccbf99"), 10, 8, 4)
 	_progress_pill.get_node("%Text").add_theme_font_size_override("font_size", 11)
-	_progress_pill.size = _progress_pill.get_combined_minimum_size()
-	_progress_pill.position = Vector2(CONTENT_WIDTH - 16 - _progress_pill.size.x, 20)
+	# Positionnement DIFFERE, et sur la largeur reelle du calque : juste apres
+	# set_custom(), la pastille n'a pas encore de taille minimale calculee -
+	# on la posait donc a 16 points du bord droit avec une largeur nulle,
+	# c'est-a-dire hors de l'ecran.
+	_place_progress_pill.call_deferred()
 
 	for data in Balance.CAMPAIGN:
 		var id := int(data["id"])

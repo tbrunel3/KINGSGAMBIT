@@ -72,7 +72,14 @@ var _battle_button: PanelContainer
 var _battle_label: Label
 
 
+## Hauteur de reference du village. Tous les labels sont poses aux
+## coordonnees de la maquette Figma, qui suppose un ecran de 393 x 852.
+const DESIGN_HEIGHT := 852.0
+
+
 func _ready() -> void:
+	_fit_overlay_to_design()
+
 	# Avant tout le reste : premier enfant de l'Overlay, donc dessine DERRIERE
 	# les labels de batiments.
 	_build_castle_glow()
@@ -103,6 +110,27 @@ func _ready() -> void:
 
 
 # ------------------------------- CONSTRUCTION --------------------------------
+
+## Le village est entierement pose en coordonnees absolues, calees sur la
+## maquette 393 x 852 : chaque label est colle a son batiment sur le fond
+## illustre. Sur un telephone d'un autre format, le mode d'etirement du
+## projet REVELE de la hauteur en plus (873, 880...) et ces coordonnees ne
+## veulent plus rien dire - le bouton BATAILLE flotte, les labels glissent.
+##
+## On garde donc au calque une bande de 852 points de haut, centree
+## verticalement : les coordonnees Figma restent vraies partout, et l'espace
+## supplementaire montre simplement un peu plus de decor en haut et en bas.
+## Le fond illustre, lui, couvre tout l'ecran (il est en dehors de ce calque).
+func _fit_overlay_to_design() -> void:
+	_overlay.anchor_left = 0.0
+	_overlay.anchor_right = 1.0
+	_overlay.anchor_top = 0.5
+	_overlay.anchor_bottom = 0.5
+	_overlay.offset_left = 0.0
+	_overlay.offset_right = 0.0
+	_overlay.offset_top = -DESIGN_HEIGHT * 0.5
+	_overlay.offset_bottom = DESIGN_HEIGHT * 0.5
+
 
 ## Bandeau plein (rgba(10,13,20,0.75), h46, y38) derriere les pastilles -
 ## cf. capture Figma 01 "Top-Bar" : sans lui les pastilles flottent seules

@@ -101,6 +101,7 @@ func _fill() -> void:
 		return
 
 	_title.text = "BATAILLE %d — %s" % [int(_battle["id"]), String(_battle["name"]).to_upper()]
+	_fit_title()
 
 	_style_card($Safe/Root/Scroll/BodyMargin/Body/EnemiesCard, UiTheme.DANGER, true)
 	_enemies_body.add_child(UiTheme.make_label("ARMEE ENNEMIE", 14, UiTheme.DANGER))
@@ -179,6 +180,20 @@ func _fill() -> void:
 	_info_body.add_child(_info_row("Terrain de bataille", terrain, Color("f0f3f8"), false))
 	if Game.is_battle_won(int(_battle["id"])):
 		_info_body.add_child(UiTheme.make_label("(bataille deja gagnee)", 12, UiTheme.TEXT_DIM))
+
+
+## Le titre tient sur une ligne, quelle que soit la longueur du nom de la
+## bataille et la largeur du telephone : il est centre et coupe des deux
+## cotes s'il deborde ("BATAILLE 10 — LA TOUR DE LA DAME" fait 32 signes).
+## On reduit donc le corps plutot que de laisser tronquer.
+func _fit_title() -> void:
+	var length := _title.text.length()
+	var font_size := 18
+	if length > 30:
+		font_size = 13
+	elif length > 24:
+		font_size = 15
+	_title.add_theme_font_size_override("font_size", font_size)
 
 
 ## Poids total de l'armee possedee - cf. CASTLE_DATA.deploy_capacity dans

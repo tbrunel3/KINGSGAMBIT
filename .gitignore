@@ -14,3 +14,6 @@ Thumbs.db
 
 # Etat local d'outils d'assistance (non lie au projet)
 .claude/
+
+# Captures du banc de mise a l'echelle (regenerees a la demande)
+tools/screenshots/echelle/
