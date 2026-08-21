@@ -37,6 +37,9 @@ const PAD := 12
 ## secours de Godot plutot que de planter.
 const INTER_PATH := "res://assets/fonts/Inter.ttf"
 const DIALOGUE_PATH := "res://assets/fonts/ComicRelief-Regular.ttf"
+## Jaro : l'ecriture d'enseigne de la maquette, reservee aux NOMS DE LIEUX -
+## les labels de batiments du village. Partout ailleurs c'est Inter.
+const DISPLAY_PATH := "res://assets/fonts/Jaro.ttf"
 
 const WEIGHT_REGULAR := 400
 const WEIGHT_BOLD := 700
@@ -44,6 +47,7 @@ const WEIGHT_BOLD := 700
 static var _font: Font = null
 static var _font_bold: Font = null
 static var _font_dialogue: Font = null
+static var _font_display: Font = null
 
 
 static func font() -> Font:
@@ -66,6 +70,16 @@ static func font_dialogue() -> Font:
 		else:
 			_font_dialogue = font()
 	return _font_dialogue
+
+
+## Police d'enseigne des batiments. Retombe sur Inter gras si Jaro manque.
+static func font_display() -> Font:
+	if _font_display == null:
+		if ResourceLoader.exists(DISPLAY_PATH):
+			_font_display = load(DISPLAY_PATH)
+		else:
+			_font_display = font_bold()
+	return _font_display
 
 
 static func _inter_at_weight(weight: int) -> Font:

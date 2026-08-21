@@ -12,17 +12,22 @@ const BuildingPopupScene := preload("res://scenes/village/building_popup.tscn")
 const MissionPopupScene := preload("res://scenes/village/mission_popup.tscn")
 const DevPanelScene := preload("res://scenes/village/dev_panel.tscn")
 
-## Coordonnees CLAUDE.md > 01_Village (x, y du coin haut-gauche du label).
-const CASTLE_POS := Vector2(120, 445)
+## Coordonnees relevees sur la maquette V2 (frame village-avec-dame) : chaque
+## label est colle au batiment qu'il designe sur le fond illustre.
+##
+## Les NOMS restent ceux du jeu : la maquette parle d'Atelier, d'Academie et
+## de Chapelle, mais le joueur recrute des pions, des cavaliers et des fous.
+## Regle de l'import (cf. CLAUDE.md) : le visuel vient de Figma, les regles du
+## code.
+const CASTLE_POS := Vector2(120, 425)
 const BUILDING_POS := {
-	"pion": Vector2(20, 272),
-	"cavalier": Vector2(258, 272),
-	"fou": Vector2(30, 542),
-	"tour": Vector2(248, 542),
-	# La Tour de la Dame occupe l'emplacement que CLAUDE.md reservait a la
-	# Forge : meme coin de carte, meme traitement "verrouille" tant que le
-	# joueur n'a pas ramene sa premiere Dame.
-	"dame": Vector2(50, 685),
+	"pion": Vector2(57, 240),        # batiment haut-gauche
+	"cavalier": Vector2(235, 230),   # batiment haut-droit
+	"fou": Vector2(45, 628),         # batiment bas-gauche
+	"tour": Vector2(252, 619),       # batiment bas-droit
+	# La Tour de la Dame n'a pas de batiment dessine sur l'ile V2 : son label
+	# se pose sous le Chateau Royal, la ou vivent les Dames retrouvees.
+	"dame": Vector2(126, 496),
 }
 const BUILDING_TITLES := {
 	"pion": "Caserne des Pions",
@@ -42,16 +47,29 @@ const BUILDING_ACCENT := {
 	"tour": "e5594d",
 	"dame": "d8a0d0",
 }
-## Zone du chateau sur le fond illustre : c'est la que se pose le halo dore
-## des Dames retrouvees (cf. _build_castle_glow). Coordonnees relevees sur
-## assets/backgrounds/village_background.png, pas sur le label.
-const CASTLE_GLOW_RECT := Rect2(46, 246, 300, 300)
+## Halo du chateau et lumieres qui s'allument aux fenetres quand une Dame est
+## rentree : c'est la difference entre les frames village-sans-dame et
+## village-avec-dame de la maquette. Positions relevees sur celle-ci.
+const CASTLE_GLOW_RECT := Rect2(106, 290, 180, 200)
+const GLOW_LIGHTS := [
+	{"asset": "glow_window_side.svg", "rect": Rect2(168, 375, 14, 18)},
+	{"asset": "glow_window_center.svg", "rect": Rect2(186, 385, 20, 24)},
+	{"asset": "glow_window_side.svg", "rect": Rect2(212, 375, 14, 18)},
+	{"asset": "glow_tower.svg", "rect": Rect2(173, 345, 10, 14)},
+	{"asset": "glow_tower.svg", "rect": Rect2(213, 345, 10, 14)},
+	{"asset": "glow_crown.svg", "rect": Rect2(182, 305, 28, 20)},
+]
 
 const SCREEN_WIDTH := 393.0
 const SCREEN_MARGIN := 8.0
-const BATTLE_RECT := Rect2(87, 748, 219, 59)
-const TOP_BAR_Y := 38.0
-const TOP_BAR_HEIGHT := 46.0
+const BATTLE_RECT := Rect2(102, 765, 189, 59)
+const TOP_BAR_Y := 44.0
+const TOP_BAR_HEIGHT := 30.0
+## Fondus haut et bas de la maquette, qui detachent les pastilles et le bouton
+## du decor sans assombrir toute l'ile.
+const TOP_FADE_HEIGHT := 143.0
+const BOTTOM_FADE_TOP := 720.0
+const BOTTOM_FADE_HEIGHT := 132.0
 const DEV_BUTTON_RECT := Rect2(362, 14, 24, 24)
 
 @onready var _overlay: Control = $Overlay
@@ -135,20 +153,17 @@ func _fit_overlay_to_design() -> void:
 ## Bandeau plein (rgba(10,13,20,0.75), h46, y38) derriere les pastilles -
 ## cf. capture Figma 01 "Top-Bar" : sans lui les pastilles flottent seules
 ## sur le fond illustre plutot que de reposer sur une barre continue.
+## La maquette V2 ne pose plus de bandeau plein en haut : les pastilles
+## reposent sur un simple fondu sombre, qui laisse voir l'ile.
 func _build_top_bar() -> void:
-	var bar := PanelContainer.new()
-	var bar_box := StyleBoxFlat.new()
-	bar_box.bg_color = Color("0a0d14", 0.75)
-	bar_box.shadow_color = Color(0, 0, 0, 0.3)
-	bar_box.shadow_size = 4
-	bar_box.shadow_offset = Vector2(0, 1)
-	bar.add_theme_stylebox_override("panel", bar_box)
-	_overlay.add_child(bar)
-	bar.position = Vector2(0, TOP_BAR_Y)
-	bar.size = Vector2(393, TOP_BAR_HEIGHT)
-	bar.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_overlay.add_child(_fade_rect(
+		Vector2(0, 0), Vector2(SCREEN_WIDTH, TOP_FADE_HEIGHT),
+		Color("0a0d14", 0.65), Color("0a0d14", 0.0)))
+	_overlay.add_child(_fade_rect(
+		Vector2(0, BOTTOM_FADE_TOP), Vector2(SCREEN_WIDTH, BOTTOM_FADE_HEIGHT),
+		Color("0a0d14", 0.0), Color("0a0d14", 0.95)))
 
-	var pill_y := TOP_BAR_Y + 11.5
+	var pill_y := TOP_BAR_Y
 
 	_gold_pill = _place_pill(12, pill_y, "", Pill.Variant.TOPBAR)
 	_gold_pill.set_data("dot", "", Pill.Variant.TOPBAR, UiTheme.GOLD)
@@ -162,7 +177,7 @@ func _build_top_bar() -> void:
 
 	var settings := PanelContainer.new()
 	var box := StyleBoxFlat.new()
-	box.bg_color = Color(1, 1, 1, 0.12)
+	box.bg_color = Color("174971")
 	box.set_corner_radius_all(14)
 	box.set_content_margin_all(7)
 	settings.add_theme_stylebox_override("panel", box)
@@ -172,8 +187,30 @@ func _build_top_bar() -> void:
 	gear.custom_minimum_size = Vector2(14, 14)
 	settings.add_child(gear)
 	_overlay.add_child(settings)
-	settings.position = Vector2(353, TOP_BAR_Y + 9)
+	settings.position = Vector2(353, TOP_BAR_Y)
 	settings.size = Vector2(28, 28)
+
+
+## Bandeau degrade vertical, pose sur le decor.
+func _fade_rect(pos: Vector2, size: Vector2, from_color: Color, to_color: Color) -> TextureRect:
+	var gradient := Gradient.new()
+	gradient.colors = PackedColorArray([from_color, to_color])
+
+	var texture := GradientTexture2D.new()
+	texture.gradient = gradient
+	texture.fill_from = Vector2(0, 0)
+	texture.fill_to = Vector2(0, 1)
+	texture.width = 4
+	texture.height = int(size.y)
+
+	var rect := TextureRect.new()
+	rect.texture = texture
+	rect.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+	rect.stretch_mode = TextureRect.STRETCH_SCALE
+	rect.position = pos
+	rect.size = size
+	rect.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	return rect
 
 
 ## Bouton MISSIONS de la barre du haut. C'est le seul endroit du village qui
@@ -182,9 +219,9 @@ func _build_top_bar() -> void:
 func _build_missions_button(y: float) -> void:
 	_missions_button = PanelContainer.new()
 	var box := StyleBoxFlat.new()
-	box.bg_color = Color("0a0d14", 0.75)
+	box.bg_color = Color(0, 0, 0, 0.25)
 	box.set_corner_radius_all(10)
-	box.border_color = Color(UiTheme.GOLD, 0.35)
+	box.border_color = Color(UiTheme.GOLD, 0.3)
 	box.set_border_width_all(1)
 	box.content_margin_left = 10
 	box.content_margin_right = 10
@@ -204,8 +241,8 @@ func _build_missions_button(y: float) -> void:
 	icon.custom_minimum_size = Vector2(13, 13)
 	row.add_child(icon)
 
-	_missions_label = UiTheme.make_label("MISSIONS", 11, Color("ffe580"))
-	_missions_label.add_theme_font_override("font", UiTheme.font_bold())
+	_missions_label = UiTheme.make_label("Missions", 14, Color.WHITE)
+	_missions_label.add_theme_font_override("font", UiTheme.font_display())
 	_missions_label.autowrap_mode = TextServer.AUTOWRAP_OFF
 	row.add_child(_missions_label)
 
@@ -277,38 +314,59 @@ func _place_pill(x: float, y: float, text: String, variant: Pill.Variant) -> Pil
 ## Un degrade radial plutot qu'une image : ca ne coute aucun asset, ca se
 ## teinte librement, et ca reste net a n'importe quelle definition d'ecran.
 func _build_castle_glow() -> void:
+	# Le grand halo reste discret : c'est la lueur qui deborde du chateau.
+	_castle_glow = _glow_rect(0.34, CASTLE_GLOW_RECT)
+	_overlay.add_child(_castle_glow)
+
+	# Les lumieres des fenetres et de la couronne s'allument avec le halo :
+	# c'est ce qui separe village-avec-dame de village-sans-dame dans la
+	# maquette. Elles suivent l'opacite du halo, dont elles sont enfants.
+	# Les lumieres des fenetres sont petites : il leur faut un coeur plus
+	# franc pour se voir, et un cadre elargi pour que leur halo deborde.
+	for light in GLOW_LIGHTS:
+		var rect: Rect2 = light["rect"]
+		var spread: Vector2 = rect.size * 1.6
+		var lamp := _glow_rect(0.7, Rect2(
+			rect.position - CASTLE_GLOW_RECT.position - (spread - rect.size) * 0.5, spread))
+		_castle_glow.add_child(lamp)
+
+
+## Un halo de la maquette, reproduit en degrade radial plutot qu'importe tel
+## quel : les SVG fournis sont des ellipses #FFD94D floutees par un
+## feGaussianBlur, et l'import vectoriel de Godot n'applique pas les filtres
+## SVG - la lumiere ne s'allumait pas du tout. Un degrade rend exactement le
+## meme resultat, sans asset a embarquer et net a toute definition.
+##
+## Melange additif, comme le "mix-blend-mode: screen" de la maquette : le halo
+## AJOUTE de la lumiere au decor au lieu de peindre un voile jaune par-dessus.
+## C'est la difference entre un chateau qui brille et un chateau sali.
+func _glow_rect(core_alpha: float, rect: Rect2) -> TextureRect:
 	var gradient := Gradient.new()
-	gradient.set_color(0, Color("fff0b2", 0.5))
-	gradient.set_color(1, Color("ffd933", 0.0))
-	# Deux points d'inflexion : un coeur chaud et resserre autour des tours,
-	# puis une longue retombee. Sans eux le halo forme un disque net pose sur
-	# la carte au lieu de se fondre dans le decor.
-	gradient.add_point(0.30, Color("ffd966", 0.30))
-	gradient.add_point(0.60, Color("ffbf40", 0.11))
+	gradient.set_color(0, Color("ffd94d", core_alpha))
+	gradient.set_color(1, Color("ffd94d", 0.0))
+	gradient.add_point(0.45, Color("ffd94d", core_alpha * 0.45))
 
 	var texture := GradientTexture2D.new()
 	texture.gradient = gradient
 	texture.fill = GradientTexture2D.FILL_RADIAL
 	texture.fill_from = Vector2(0.5, 0.5)
 	texture.fill_to = Vector2(1.0, 0.5)
-	texture.width = 256
-	texture.height = 256
+	texture.width = 128
+	texture.height = 128
 
-	_castle_glow = TextureRect.new()
-	_castle_glow.texture = texture
-	# Melange additif : le halo AJOUTE de la lumiere au decor au lieu de
-	# peindre un voile jaune par-dessus. C'est ce qui fait la difference entre
-	# un chateau qui brille et un chateau sali.
+	var glow := TextureRect.new()
+	glow.texture = texture
+
 	var material := CanvasItemMaterial.new()
 	material.blend_mode = CanvasItemMaterial.BLEND_MODE_ADD
-	_castle_glow.material = material
-	_castle_glow.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
-	_castle_glow.stretch_mode = TextureRect.STRETCH_SCALE
-	_castle_glow.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	_castle_glow.visible = false
-	_overlay.add_child(_castle_glow)
-	_castle_glow.position = CASTLE_GLOW_RECT.position
-	_castle_glow.size = CASTLE_GLOW_RECT.size
+	glow.material = material
+
+	glow.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+	glow.stretch_mode = TextureRect.STRETCH_SCALE
+	glow.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	glow.position = rect.position
+	glow.size = rect.size
+	return glow
 
 
 ## Le halo respire lentement tant qu'il y a une Dame au village, et s'eteint
@@ -343,7 +401,7 @@ func _refresh_castle_glow() -> void:
 
 func _build_castle_label() -> void:
 	_castle_label = PanelContainer.new()
-	_style_building_panel(_castle_label, Color("ffd933"), 14)
+	_style_building_panel(_castle_label, Color("ffd933", 1.22), 14)
 	_overlay.add_child(_castle_label)
 
 	var margin := MarginContainer.new()
@@ -357,8 +415,8 @@ func _build_castle_label() -> void:
 	vbox.add_theme_constant_override("separation", 4)
 	margin.add_child(vbox)
 
-	var title := UiTheme.make_label("CHATEAU ROYAL", 12, Color("ffd933"))
-	title.add_theme_font_override("font", UiTheme.font_bold())
+	var title := UiTheme.make_label("CHATEAU ROYAL", 16, Color("ffd933"))
+	title.add_theme_font_override("font", UiTheme.font_display())
 	title.autowrap_mode = TextServer.AUTOWRAP_OFF
 	title.size_flags_horizontal = Control.SIZE_SHRINK_BEGIN
 	title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
@@ -390,8 +448,8 @@ func _build_building_label(type: String) -> void:
 	vbox.add_theme_constant_override("separation", 4)
 	margin.add_child(vbox)
 
-	var title := UiTheme.make_label(String(BUILDING_TITLES[type]), 11, Color.WHITE)
-	title.add_theme_font_override("font", UiTheme.font_bold())
+	var title := UiTheme.make_label(String(BUILDING_TITLES[type]), 15, Color.WHITE)
+	title.add_theme_font_override("font", UiTheme.font_display())
 	title.autowrap_mode = TextServer.AUTOWRAP_OFF
 	title.size_flags_horizontal = Control.SIZE_SHRINK_BEGIN
 	title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
@@ -424,12 +482,12 @@ func _make_clickable(panel: PanelContainer, action: Callable) -> void:
 func _build_battle_button() -> void:
 	_battle_button = PanelContainer.new()
 	var box := StyleBoxFlat.new()
-	box.bg_color = UiTheme.GOLD
-	box.set_corner_radius_all(18)
-	box.border_color = Color("d9a600", 0.5)
+	box.bg_color = Color("ffd700")
+	box.set_corner_radius_all(12)
+	box.border_color = Color("b8860b")
 	box.set_border_width_all(2)
-	box.shadow_color = Color("ffbf00", 0.45)
-	box.shadow_size = 18
+	box.shadow_color = Color(0, 0, 0, 0.35)
+	box.shadow_size = 10
 	box.shadow_offset = Vector2(0, 4)
 	_battle_button.add_theme_stylebox_override("panel", box)
 	_overlay.add_child(_battle_button)
@@ -489,16 +547,19 @@ func _build_dev_button() -> void:
 ## rouge) different par cette seule couleur d'accent. Le halo reprend cette
 ## meme teinte plutot qu'une ombre noire generique - il s'estompe de lui-meme
 ## sur un batiment verrouille via le modulate applique dans _refresh_building().
+## Enseigne de batiment de la maquette V2 : fond presque noir, fine bordure
+## a la teinte du batiment, ombre portee franche. Plus de halo colore - la
+## V2 est plus sobre que la V1.
 func _style_building_panel(panel: PanelContainer, accent: Color, radius: int,
-		shadow: float = 14.0) -> void:
+		shadow: float = 10.0) -> void:
 	var box := StyleBoxFlat.new()
-	box.bg_color = Color("0a0d14", 0.88)
+	box.bg_color = Color("0a0d14", 0.85)
 	box.set_corner_radius_all(radius)
-	box.border_color = Color(accent, 0.5)
-	box.set_border_width_all(2)
-	box.shadow_color = Color(accent, 0.45)
+	box.border_color = Color(accent, 0.45)
+	box.set_border_width_all(1.5)
+	box.shadow_color = Color(0, 0, 0, 0.5)
 	box.shadow_size = int(shadow)
-	box.shadow_offset = Vector2(0, 2)
+	box.shadow_offset = Vector2(0, 3)
 	panel.add_theme_stylebox_override("panel", box)
 
 
