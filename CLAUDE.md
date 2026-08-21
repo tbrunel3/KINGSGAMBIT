@@ -10,6 +10,50 @@ Un bouton **i** sur l'écran de bataille ouvre l'aide correspondant à la phase 
 
 Ton : fantasy médiéval, mélancolique mais pas sombre. Aucune violence graphique.
 
+## Import V2 : où on en est
+
+Fichier Figma : `rqEdH4O2R21TuUFv7OUlF7`. Les écrans se lisent avec
+`get_design_context` en passant le node-id ci-dessous (le compte connecté a un
+siège Full sur l'équipe, aucun droit à demander).
+
+| Écran | node-id | État |
+|---|---|---|
+| splash-screen | 123:7 | **fait** |
+| king-intro-before-dialogue | 169:136 | **fait** (nouvel état d'approche) |
+| king-intro-dialogue | 123:32 | **fait** (révision du 21/08 incluse) |
+| village-avec-dame | 162:4 | **fait** |
+| village-sans-dame | 188:2 | **fait** (c'est le même écran sans les halos) |
+| 02_Campagne | 58:90 | à faire |
+| preparation-bataille-v2 | 169:4 | à faire |
+| 04_Bataille_Placement | 49:2 | à faire |
+| 05_Bataille_Combat | 2:407 | à faire |
+| 06_Bataille_Victoire | 2:546 | à faire |
+| 07-bataille-defaite | 2:835 | à faire |
+| mission-popup | 228:9 | à faire (le panneau existe déjà côté code) |
+| 09-popup-batiment | 2:1048 | à faire |
+| 10-popup-batiment-verrouille | 2:1115 | à faire |
+| 11-popup-amelioration | 2:1165 | à faire |
+| confirm-upgrade-modal | 103:15 | à créer (pas de code aujourd'hui) |
+| chateau-royal-avec-dame | 178:5 | à créer |
+| chateau-royal-sans-dame | 178:51 | à créer |
+| codex-popup | 194:4 | à créer |
+| 12-composants | 2:1224 | planche de référence |
+| Pièces d'échecs SVG | 32:2 | déjà en jeu |
+
+Trois pièges rencontrés, à ne pas redécouvrir :
+
+1. **Les halos de la maquette sont des ellipses floutées** (`feGaussianBlur`).
+   L'import vectoriel de Godot n'applique pas les filtres SVG : importés tels
+   quels, ils ne s'allument pas. Les reproduire en `GradientTexture2D` radial
+   avec un `CanvasItemMaterial` en `BLEND_MODE_ADD` (cf. `village.gd`).
+2. **Godot ne réimporte pas un asset remplacé** quand on lance le jeu en ligne
+   de commande. Après avoir écrasé un PNG ou un TTF, lancer
+   `godot --headless --path . --import` avant toute capture.
+3. **Polices** : Inter (variable, toutes les graisses dans un fichier), Comic
+   Relief (la voix du Roi) et Jaro (les enseignes) sont dans `assets/fonts`.
+   La maquette utilise aussi **Jua** pour le bouton Missions — 2,1 Mo pour un
+   seul mot, remplacé par Jaro.
+
 ## V2 Figma : la maquette est VISUELLE, le gameplay vient du code
 
 **Règle absolue de l'import : Figma apporte l'apparence, jamais les règles.**
