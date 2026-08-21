@@ -1,6 +1,7 @@
-[gd_scene load_steps=2 format=3]
+[gd_scene load_steps=3 format=3]
 
 [ext_resource type="Script" path="res://scenes/intro/splash_screen.gd" id="1_splash"]
+[ext_resource type="Script" path="res://scripts/ui/safe_area.gd" id="2_safe"]
 
 [node name="SplashScreen" type="Control"]
 layout_mode = 3
@@ -11,16 +12,7 @@ grow_horizontal = 2
 grow_vertical = 2
 script = ExtResource("1_splash")
 
-[node name="Background" type="ColorRect" parent="."]
-layout_mode = 1
-anchors_preset = 15
-anchor_right = 1.0
-anchor_bottom = 1.0
-grow_horizontal = 2
-grow_vertical = 2
-color = Color(0.047058824, 0.023529412, 0.078431375, 1)
-
-[node name="Content" type="Control" parent="."]
+[node name="Background" type="TextureRect" parent="."]
 layout_mode = 1
 anchors_preset = 15
 anchor_right = 1.0
@@ -28,6 +20,23 @@ anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
 mouse_filter = 2
+expand_mode = 1
+stretch_mode = 1
+
+[node name="Safe" type="MarginContainer" parent="."]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+script = ExtResource("2_safe")
+
+[node name="Content" type="VBoxContainer" parent="Safe"]
+layout_mode = 2
+mouse_filter = 2
+theme_override_constants/separation = 0
 
 [node name="FadeOverlay" type="ColorRect" parent="."]
 layout_mode = 1
