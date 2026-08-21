@@ -254,7 +254,16 @@ func _test_battle() -> void:
 	# plusieurs combats d'affilee (cf. CampaignRun) : gagner le premier ne
 	# paie rien et ne debloque rien - tout attend la fin de la serie.
 	var fights := Balance.battle_fights(data)
-	if victory:
+	if victory and fights == 1:
+		# Les premieres batailles se jouent en un seul combat : la victoire
+		# paie et debloque tout de suite, sans serie a poursuivre.
+		_check(Game.gold == gold_before + int(data["reward"]),
+			"la recompense de %d or est creditee" % int(data["reward"]))
+		_check(Game.unlocked_battle() == 2, "la bataille 2 est debloquee")
+		_check(_find_clickable(battle, "BATAILLE SUIVANTE") != null,
+			"le bouton Bataille suivante existe")
+		_check(Game.current_run() == null, "la serie d'un seul combat est cloturee")
+	elif victory:
 		_check(Game.gold == gold_before,
 			"le premier combat gagne ne paie pas encore (serie de %d)" % fights)
 		_check(Game.unlocked_battle() == 1,

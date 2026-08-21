@@ -356,9 +356,21 @@ func ai_depth(skill: int) -> int:
 #  8 colonnes encore 45.
 #  enemies   : composition ennemie {type: quantite}
 #  level     : niveau de TOUTES les pieces ennemies de cette bataille
-#  fights    : nombre de combats de la SERIE (cf. CampaignRun). Un niveau de
-#              campagne ne se gagne pas en une bataille mais en 3 a 5 d'affilee,
-#              sans retour au village entre les deux.
+#  fights    : nombre de combats de la SERIE (cf. CampaignRun), sans retour au
+#              village entre les deux.
+#
+#              C'EST LE BOUTON DE LA DUREE D'UNE SEANCE. Un combat joue a la
+#              main prend cinq a dix minutes sur les grands plateaux : a cinq
+#              combats, un niveau demandait quarante minutes d'affilee, sans
+#              point de sauvegarde en cours de combat. Trop long pour un jeu
+#              qu'on ouvre sur un telephone.
+#
+#              Les trois premieres batailles se jouent donc en UN combat - on
+#              y decouvre le jeu, on ne s'y epuise pas - et la serie ne monte
+#              qu'ensuite, jusqu'a trois. A 1, toute la machinerie de serie
+#              devient invisible : le badge redit PLACEMENT, la preparation
+#              annonce un seul combat, et la victoire paie et debloque
+#              immediatement.
 
 ## PROMOTION - part du materiel engage que l'adversaire doit encore avoir
 ## debout pour qu'un pion arrive au fond devienne une DAME.
@@ -421,22 +433,22 @@ const PROMOTION_THRONE_WIDTH := 0
 const RUN_REINFORCE_WEIGHT := 2
 
 const CAMPAIGN := [
-	{"id": 1,  "name": "L Oree du Bois",     "cols": 5, "rows": 6, "reward": 90,  "level": 1, "ai": AI_NOVICE, "fights": 3, "enemies": {PION: 3}},
-	{"id": 2,  "name": "Le Gue de Pierre",   "cols": 5, "rows": 6, "reward": 120, "level": 1, "ai": AI_NOVICE, "fights": 3, "enemies": {PION: 2, FOU: 1}},
-	{"id": 3,  "name": "La Route du Sel",    "cols": 6, "rows": 7, "reward": 160, "level": 2, "ai": AI_AGUERRI, "fights": 3, "enemies": {PION: 3, CAVALIER: 1, TOUR: 1}},
-	{"id": 4,  "name": "Les Champs Brules",  "cols": 6, "rows": 7, "reward": 200, "level": 2, "ai": AI_AGUERRI, "fights": 4, "enemies": {PION: 3, FOU: 1, CAVALIER: 1}},
-	{"id": 5,  "name": "Le Pont Noir",       "cols": 6, "rows": 8, "reward": 260, "level": 3, "ai": AI_AGUERRI, "fights": 4, "enemies": {PION: 4, TOUR: 1, FOU: 1}},
-	{"id": 6,  "name": "La Carriere",        "cols": 6, "rows": 8, "reward": 320, "level": 3, "ai": AI_AGUERRI, "fights": 4, "enemies": {PION: 4, CAVALIER: 1, TOUR: 1}},
-	{"id": 7,  "name": "Les Marches Grises", "cols": 7, "rows": 8, "reward": 400, "level": 4, "ai": AI_EXPERT, "fights": 4, "enemies": {PION: 4, FOU: 1, CAVALIER: 1}},
-	{"id": 8,  "name": "Le Col du Corbeau",  "cols": 7, "rows": 8, "reward": 500, "level": 4, "ai": AI_EXPERT, "fights": 5, "enemies": {PION: 5, TOUR: 2, CAVALIER: 1}},
-	{"id": 9,  "name": "Les Ruines Hautes",  "cols": 7, "rows": 9, "reward": 640, "level": 5, "ai": AI_EXPERT, "fights": 5, "enemies": {PION: 5, FOU: 2, TOUR: 1, CAVALIER: 1}},
+	{"id": 1,  "name": "L Oree du Bois",     "cols": 5, "rows": 6, "reward": 90,  "level": 1, "ai": AI_NOVICE, "fights": 1, "enemies": {PION: 3}},
+	{"id": 2,  "name": "Le Gue de Pierre",   "cols": 5, "rows": 6, "reward": 120, "level": 1, "ai": AI_NOVICE, "fights": 1, "enemies": {PION: 2, FOU: 1}},
+	{"id": 3,  "name": "La Route du Sel",    "cols": 6, "rows": 7, "reward": 160, "level": 2, "ai": AI_AGUERRI, "fights": 1, "enemies": {PION: 3, CAVALIER: 1, TOUR: 1}},
+	{"id": 4,  "name": "Les Champs Brules",  "cols": 6, "rows": 7, "reward": 200, "level": 2, "ai": AI_AGUERRI, "fights": 2, "enemies": {PION: 3, FOU: 1, CAVALIER: 1}},
+	{"id": 5,  "name": "Le Pont Noir",       "cols": 6, "rows": 8, "reward": 260, "level": 3, "ai": AI_AGUERRI, "fights": 2, "enemies": {PION: 4, TOUR: 1, FOU: 1}},
+	{"id": 6,  "name": "La Carriere",        "cols": 6, "rows": 8, "reward": 320, "level": 3, "ai": AI_AGUERRI, "fights": 2, "enemies": {PION: 4, CAVALIER: 1, TOUR: 1}},
+	{"id": 7,  "name": "Les Marches Grises", "cols": 7, "rows": 8, "reward": 400, "level": 4, "ai": AI_EXPERT, "fights": 2, "enemies": {PION: 4, FOU: 1, CAVALIER: 1}},
+	{"id": 8,  "name": "Le Col du Corbeau",  "cols": 7, "rows": 8, "reward": 500, "level": 4, "ai": AI_EXPERT, "fights": 3, "enemies": {PION: 5, TOUR: 2, CAVALIER: 1}},
+	{"id": 9,  "name": "Les Ruines Hautes",  "cols": 7, "rows": 9, "reward": 640, "level": 5, "ai": AI_EXPERT, "fights": 3, "enemies": {PION: 5, FOU: 2, TOUR: 1, CAVALIER: 1}},
 	# "dame" : Dames offertes a la PREMIERE victoire seulement (cf.
 	# battle.gd > _show_result). Le Roi a perdu sa Dame au premier ecran du
 	# jeu ; il la retrouve au bout de sa campagne, meme si aucun de ses pions
 	# n'a jamais traverse un plateau. Sans ce filet, la moitie du jeu - Tour
 	# de la Dame, aura, ameliorations - reste eteinte pour la plupart des
 	# joueurs : une promotion reussie reste un exploit rare.
-	{"id": 10, "name": "La Tour de la Dame", "cols": 8, "rows": 9, "reward": 900, "level": 6, "ai": AI_EXPERT, "dame": 1, "fights": 5, "enemies": {PION: 6, FOU: 2, TOUR: 2, CAVALIER: 1}},
+	{"id": 10, "name": "La Tour de la Dame", "cols": 8, "rows": 9, "reward": 900, "level": 6, "ai": AI_EXPERT, "dame": 1, "fights": 3, "enemies": {PION: 6, FOU: 2, TOUR: 2, CAVALIER: 1}},
 ]
 
 # ------------------------------- MISSIONS ------------------------------------

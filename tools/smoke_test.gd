@@ -48,15 +48,23 @@ func _check_run() -> void:
 [3b] Serie de combats")
 	Game.reset_progress()
 
-	var battle := Balance.battle(1)
-	var fights := Balance.battle_fights(battle)
-	if fights < 2:
-		_fail("la bataille 1 devrait se jouer en plusieurs combats")
+	# On teste la serie sur la premiere bataille qui EN EST une : les premieres
+	# se jouent volontairement en un seul combat (cf. Balance, "fights").
+	var series_id := 0
+	for id in range(1, Balance.battle_count() + 1):
+		if Balance.battle_fights(Balance.battle(id)) > 1:
+			series_id = id
+			break
+	if series_id == 0:
+		_fail("aucune bataille ne se joue en serie")
 		return
+
+	var battle := Balance.battle(series_id)
+	var fights := Balance.battle_fights(battle)
 
 	var pions_before := Game.units_owned(Balance.PION)
 	var gold_before := Game.gold
-	var run := Game.begin_run(1)
+	var run := Game.begin_run(series_id)
 
 	if int(run.roster.get(Balance.PION, 0)) != pions_before:
 		_fail("la serie doit partir avec l'armee du village au complet")
@@ -87,13 +95,13 @@ func _check_run() -> void:
 
 	# Aller-retour par la sauvegarde : une serie doit survivre a la fermeture.
 	Game.save_run(run)
-	var reloaded := Game.current_run(1)
+	var reloaded := Game.current_run(series_id)
 	if reloaded == null or reloaded.fight != run.fight or reloaded.reward != run.reward:
 		_fail("la serie ne se relit pas correctement depuis la sauvegarde")
 	elif int(reloaded.roster.get(Balance.PION, 0)) != int(run.roster.get(Balance.PION, 0)):
 		_fail("l'effectif de la serie ne se relit pas correctement")
-	if Game.current_run(2) != null:
-		_fail("une serie ouverte sur la bataille 1 ne doit pas valoir pour la 2")
+	if Game.current_run(series_id + 1) != null:
+		_fail("une serie ouverte sur une bataille ne doit pas valoir pour une autre")
 
 	# Cloture : c'est la, et seulement la, que tout tombe.
 	var promised := run.reward
@@ -103,7 +111,7 @@ func _check_run() -> void:
 			Game.gold - gold_before, promised])
 	if Game.units_owned(Balance.TOUR) != maxi(0, _tours_at_start() - 1):
 		_fail("la tour perdue doit quitter l'armee a la fin de la serie")
-	if not Game.is_battle_won(1):
+	if not Game.is_battle_won(series_id):
 		_fail("la serie gagnee doit marquer la bataille comme gagnee")
 	if Game.current_run() != null:
 		_fail("une serie finie doit etre effacee")

@@ -227,15 +227,17 @@ func _build_info_panel() -> void:
 	# appuyant sur le bouton. L'or annonce est celui de la serie ENTIERE - il
 	# n'est verse qu'au dernier combat gagne, et un seul combat perdu le fait
 	# tomber (cf. CampaignRun).
-	var run := Game.current_run(int(_battle["id"]))
-	var fights_label := UiTheme.make_label(
-		"%d combats d'affilée" % fights if fights > 1 else "un seul combat",
-		14, TEXT_BRIGHT)
-	fights_label.add_theme_font_override("font", UiTheme.font_black())
-	fights_label.autowrap_mode = TextServer.AUTOWRAP_OFF
-	column.add_child(_info_row(
-		"Série en cours (%d/%d)" % [run.fight, fights] if run != null else "Série",
-		fights_label))
+	# Une bataille qui se joue en un seul combat n'a pas de serie a annoncer :
+	# la ligne disparait plutot que d'ecrire "serie : un seul combat".
+	if fights > 1:
+		var run := Game.current_run(int(_battle["id"]))
+		var fights_label := UiTheme.make_label(
+			"%d combats d'affilée" % fights, 14, TEXT_BRIGHT)
+		fights_label.add_theme_font_override("font", UiTheme.font_black())
+		fights_label.autowrap_mode = TextServer.AUTOWRAP_OFF
+		column.add_child(_info_row(
+			"Série en cours (%d/%d)" % [run.fight, fights] if run != null else "Série",
+			fights_label))
 
 	var gold_value := HBoxContainer.new()
 	gold_value.add_theme_constant_override("separation", 6)
@@ -247,7 +249,8 @@ func _build_info_panel() -> void:
 	coin.size_flags_vertical = Control.SIZE_SHRINK_CENTER
 	gold_value.add_child(coin)
 	gold_value.add_child(UiTheme.gold_label("%d Or" % (reward * fights), 15))
-	column.add_child(_info_row("Récompense de la série", gold_value))
+	column.add_child(_info_row(
+		"Récompense de la série" if fights > 1 else "Récompense totale", gold_value))
 
 	# Ce que rapporteraient les Dames si elles restaient toutes au village :
 	# c'est ici, avant le placement, que le choix se prepare.

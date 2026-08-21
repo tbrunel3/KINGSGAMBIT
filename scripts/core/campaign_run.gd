@@ -3,8 +3,10 @@ extends RefCounted
 ##
 ## SERIE DE COMBATS - un niveau de campagne ne se gagne plus en une bataille.
 ##
-## Chaque niveau se joue en 3 a 5 combats d'affilee (cf. Balance "fights"),
-## sans retour au village entre les deux. Ce qui fait la difficulte n'est pas
+## Les derniers niveaux se jouent en plusieurs combats d'affilee (cf. Balance
+## "fights"), sans retour au village entre les deux. Les trois premiers n'en
+## comptent qu'un : on y decouvre le jeu, on ne s'y epuise pas - et a un seul
+## combat, tout ce fichier devient transparent. Ce qui fait la difficulte n'est pas
 ## une armee ennemie qui grossit - elle est la meme a chaque combat - mais
 ## l'USURE : l'ennemi revient au complet, le joueur revient avec ses
 ## survivants.

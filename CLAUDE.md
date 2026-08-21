@@ -4,7 +4,7 @@ Tu arrives sur un projet de jeu mobile King's Gambit, un jeu de stratégie fanta
 
 Le joueur place son armée avant le combat, puis **joue lui-même chaque coup contre l'IA**, une pièce par camp et par tour, comme aux échecs (tape ou glisser-déposer). Un bouton AUTO laisse l'IA jouer les deux camps pour rejouer vite une bataille déjà gagnée. Un pion mené au bout du plateau devient Dame ; ramenée vivante, elle rejoint le **Château Royal** — le trône vide du début de l'histoire — et redevient déployable.
 
-Un niveau de campagne ne se gagne pas en une bataille mais en **3 à 5 combats d'affilée**, sans retour au village. L'armée ennemie revient au complet à chaque combat, le joueur revient avec ses survivants : c'est l'usure qui fait la difficulté, pas une armée qui grossit. L'or n'est versé qu'à la fin de la série, et un seul combat perdu la fait tomber entière.
+À partir de la quatrième bataille, un niveau de campagne ne se gagne plus en un combat mais en **une série** — deux d'affilée, puis trois pour les trois dernières, sans retour au village. Les trois premières restent en un seul combat : on y découvre le jeu. L'armée ennemie revient au complet à chaque combat, le joueur revient avec ses survivants : c'est l'usure qui fait la difficulté, pas une armée qui grossit. L'or n'est versé qu'à la fin de la série, et un seul combat perdu la fait tomber entière.
 
 Le niveau de jeu de l'armée ennemie monte avec la campagne (novice → aguerri → expert, déclaré bataille par bataille dans `Balance.CAMPAIGN`) : les premiers combats doivent être gagnables par quelqu'un qui découvre le jeu. L'armée de départ comprend un cavalier — une armée de pions seuls est une finale d'échecs, donc un mauvais tutoriel — et la dernière bataille offre une Dame à la première victoire.
 
@@ -44,7 +44,9 @@ Résultat mesuré sur la campagne : **8 Dames → 2**, les huit autres promotion
 
 ## La série de combats
 
-`scripts/core/campaign_run.gd` tient l'état d'une série ; `Balance` déclare `fights` par bataille (3 au début, 5 à la fin). Trois règles fixent l'enjeu :
+`scripts/core/campaign_run.gd` tient l'état d'une série ; `Balance` déclare `fights` par bataille (1 au début, 3 à la fin).
+
+**`fights` est le bouton de la durée d'une séance.** Un combat joué à la main prend cinq à dix minutes sur les grands plateaux : à cinq combats, un niveau demandait quarante minutes d'affilée sans point de sauvegarde en cours de combat — trop long pour un jeu qu'on ouvre sur un téléphone. À `1`, toute la machinerie de série devient invisible : le badge redit « PLACEMENT », la préparation n'annonce pas de série, et la victoire paie et débloque immédiatement. Trois règles fixent l'enjeu :
 
 1. Les pertes ne quittent l'armée du village **qu'à la fin de la série** — une série est une seule unité économique, pas trois batailles côte à côte.
 2. Entre deux combats, le joueur relève `Balance.RUN_REINFORCE_WEIGHT` de poids parmi ses pertes, les moins chères d'abord : **deux pions se relèvent, jamais une tour**. C'est ce qui empêche la spirale de la mort.
