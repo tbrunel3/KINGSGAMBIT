@@ -10,11 +10,21 @@ Un bouton **i** sur l'écran de bataille ouvre l'aide correspondant à la phase 
 
 Ton : fantasy médiéval, mélancolique mais pas sombre. Aucune violence graphique.
 
-## V2 Figma : écarts à trancher avant l'import
+## V2 Figma : la maquette est VISUELLE, le gameplay vient du code
 
-La maquette V2 décrit un jeu qui n'est plus tout à fait celui qui tourne. Ces
-points doivent être arbitrés **avant** de reproduire les écrans, sinon le
-visuel contredira le gameplay :
+**Règle absolue de l'import : Figma apporte l'apparence, jamais les règles.**
+Couleurs, typographie, illustrations, mise en page, hiérarchie visuelle,
+composants : tout ça se prend dans la maquette. Le comportement du jeu — ce
+qu'on peut faire, quand, avec quel effet — reste celui de `scripts/` et de
+`balance.gd`, quoi qu'en dise le fichier Figma.
+
+Concrètement : si une frame montre un écran sans le bouton dont le gameplay a
+besoin, on garde le bouton et on l'habille au style de la maquette. Si un
+libellé de la maquette annonce une règle différente de celle du code, c'est le
+libellé qu'on corrige, pas la règle.
+
+Les points où la maquette V2 dit autre chose que le jeu — et où c'est donc **le
+jeu qui gagne**, en reprenant seulement l'habillage :
 
 1. **Écran Combat** — la maquette dit « pas de panneau de contrôle, le joueur
    observe le combat automatique ». Le combat se joue désormais **coup par
@@ -35,8 +45,10 @@ visuel contredira le gameplay :
    Tour de la Dame, pas sur la présence d'une pièce sur le château.
 
 Écrans de la maquette qui n'existent pas encore côté code : Codex du Royaume,
-modale de confirmation d'amélioration, écran plein Château Royal. Le popup des
-missions, lui, existe déjà et suit la maquette (liste, progression, RÉCLAMER).
+modale de confirmation d'amélioration, écran plein Château Royal. Ceux-là sont
+à créer, et comme ils n'ont pas de gameplay derrière, la maquette y fait
+autorité de bout en bout. Le popup des missions, lui, existe déjà et suit la
+maquette (liste, progression, RÉCLAMER).
 
 ## Contraintes techniques
 
