@@ -17,6 +17,11 @@ const OUTPUT_PATH := "res://assets/theme/kings_gambit_theme.tres"
 func _ready() -> void:
 	var theme := Theme.new()
 	theme.default_font_size = 15
+	# Sans police par defaut, TOUT le jeu s'affiche dans la police de secours
+	# de Godot : les tailles de la maquette sont calees sur Inter.
+	var default_font := UiTheme.font()
+	if default_font != null:
+		theme.default_font = default_font
 
 	_setup_buttons(theme)
 	_setup_panels(theme)
@@ -82,8 +87,11 @@ func _button_variant(theme: Theme, variation: String, bg: Color, font_color: Col
 	theme.set_color("font_pressed_color", variation, font_color)
 	theme.set_color("font_disabled_color", variation, UiTheme.TEXT_DIM)
 	theme.set_font_size("font_size", variation, font_size)
+	# Inter etant une police variable, ses graisses sont des FontVariation
+	# construites a la volee : elles n'ont pas de resource_path, il ne faut
+	# donc pas s'en servir comme condition.
 	var font := UiTheme.font_bold() if bold else UiTheme.font()
-	if font != null and font.resource_path != "":
+	if font != null:
 		theme.set_font("font", variation, font)
 
 

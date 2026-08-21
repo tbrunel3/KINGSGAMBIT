@@ -23,22 +23,58 @@ const ENEMY := Color("b5514f")
 const RADIUS := 10
 const PAD := 12
 
-## Police Inter, chargee depuis assets/fonts si presente ; sinon la police de
-## secours de Godot (evite de planter si les fichiers n'ont pas encore ete
-## ajoutes au projet).
-static var _font: FontFile = null
-static var _font_bold: FontFile = null
+## POLICES
+##
+## Inter est livree en fichier VARIABLE : un seul .ttf porte toutes les
+## graisses, de Thin a Black. Regulier et gras sont donc deux FontVariation
+## du meme fichier plutot que deux fichiers - c'est ce que recommande Godot 4,
+## et ca evite d'embarquer huit .ttf pour deux graisses utilisees.
+##
+## Comic Relief ne sert qu'aux repliques du Roi (cf. la maquette : c'est la
+## seule voix du jeu, elle a droit a sa propre ecriture).
+##
+## Tout est optionnel : si les fichiers manquent, on retombe sur la police de
+## secours de Godot plutot que de planter.
+const INTER_PATH := "res://assets/fonts/Inter.ttf"
+const DIALOGUE_PATH := "res://assets/fonts/ComicRelief-Regular.ttf"
+
+const WEIGHT_REGULAR := 400
+const WEIGHT_BOLD := 700
+
+static var _font: Font = null
+static var _font_bold: Font = null
+static var _font_dialogue: Font = null
+
 
 static func font() -> Font:
-	if _font == null and ResourceLoader.exists("res://assets/fonts/Inter-Regular.ttf"):
-		_font = load("res://assets/fonts/Inter-Regular.ttf")
-	return _font if _font != null else ThemeDB.fallback_font
+	if _font == null:
+		_font = _inter_at_weight(WEIGHT_REGULAR)
+	return _font
 
 
 static func font_bold() -> Font:
-	if _font_bold == null and ResourceLoader.exists("res://assets/fonts/Inter-Bold.ttf"):
-		_font_bold = load("res://assets/fonts/Inter-Bold.ttf")
-	return _font_bold if _font_bold != null else ThemeDB.fallback_font
+	if _font_bold == null:
+		_font_bold = _inter_at_weight(WEIGHT_BOLD)
+	return _font_bold
+
+
+## Police des dialogues du Roi. Retombe sur Inter si Comic Relief manque.
+static func font_dialogue() -> Font:
+	if _font_dialogue == null:
+		if ResourceLoader.exists(DIALOGUE_PATH):
+			_font_dialogue = load(DIALOGUE_PATH)
+		else:
+			_font_dialogue = font()
+	return _font_dialogue
+
+
+static func _inter_at_weight(weight: int) -> Font:
+	if not ResourceLoader.exists(INTER_PATH):
+		return ThemeDB.fallback_font
+	var variation := FontVariation.new()
+	variation.base_font = load(INTER_PATH)
+	variation.variation_opentype = {"wght": weight}
+	return variation
 
 
 static func panel_box(color: Color = PANEL, border: Color = BORDER) -> StyleBoxFlat:

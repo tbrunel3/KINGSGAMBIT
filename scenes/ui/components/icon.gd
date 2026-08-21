@@ -16,7 +16,7 @@ extends Control
 ##   icon.color = UiTheme.TEXT_DIM
 ##
 
-@export_enum("lock", "wrench", "star", "check", "close", "diamond", "sword", "house", "crown", "crown_broken", "compass", "coin", "dot", "pause", "skip", "arrow_left", "clock", "info") var icon_name: String = "star"
+@export_enum("lock", "wrench", "star", "check", "close", "diamond", "sword", "house", "crown", "crown_broken", "compass", "coin", "dot", "pause", "skip", "arrow_left", "clock", "info", "chevron_right") var icon_name: String = "star"
 @export var color: Color = Color.WHITE
 @export var line_width: float = 1.8
 
@@ -75,6 +75,8 @@ func _draw() -> void:
 			_draw_clock(c, s, lw)
 		"info":
 			_draw_info(c, s, lw)
+		"chevron_right":
+			_draw_chevron_right(c, s, lw)
 
 
 func _draw_lock(c: Vector2, s: float, lw: float) -> void:
@@ -257,6 +259,14 @@ func _draw_arrow_left(c: Vector2, s: float, lw: float) -> void:
 	draw_line(c + Vector2(-half, 0), c + Vector2(half, 0), color, lw, true)
 	draw_line(c + Vector2(-half, 0), c + Vector2(-half * 0.15, -half * 0.85), color, lw, true)
 	draw_line(c + Vector2(-half, 0), c + Vector2(-half * 0.15, half * 0.85), color, lw, true)
+
+
+## Chevron ">" - invite a continuer ("S'approcher du Trone" de l'intro).
+## Meme trace que la fleche de retour, sans sa hampe et retourne.
+func _draw_chevron_right(c: Vector2, s: float, lw: float) -> void:
+	var half := s * 0.24
+	draw_line(c + Vector2(-half * 0.4, -half), c + Vector2(half * 0.5, 0), color, lw, true)
+	draw_line(c + Vector2(half * 0.5, 0), c + Vector2(-half * 0.4, half), color, lw, true)
 
 
 ## Cadran + aiguilles - chrono de blocage de l'ecran de combat (battle.gd).

@@ -5,10 +5,21 @@ extends Control
 ## Ne se montre qu'une fois (cf. GameState.has_seen_intro, verifie par
 ## splash_screen.gd) : un joueur qui revient au village ne le revoit pas.
 ##
-## Sequence : l'illustration du Roi commence a zoomer lentement des l'ouverture,
-## la bulle de dialogue apparait par dessus, le texte s'ecrit lettre par
-## lettre, puis le bouton "COMMENCER" se debloque une fois le texte fini.
+## Deux temps, comme la maquette V2 (frames king-intro-before-dialogue et
+## king-intro-dialogue) :
 ##
+##   1. APPROCHE  le Roi seul sur son trone, et une invite discrete en bas :
+##                "S'APPROCHER DU TRONE >". L'ecran attend le doigt du joueur,
+##                rien ne se declenche tout seul.
+##   2. DIALOGUE  au premier contact, l'illustration part en zoom lent, la
+##                bulle apparait, le texte s'ecrit lettre par lettre, puis le
+##                bouton "COMMENCER" se debloque.
+##
+## Ne se montre qu'une fois (cf. GameState.has_seen_intro, verifie par
+## splash_screen.gd) : un joueur qui revient au village ne le revoit pas.
+##
+
+signal _tapped
 
 const BG_PATH := "res://assets/intro/king_throne_background.png"
 
@@ -24,6 +35,8 @@ const FADE_DURATION := 0.4
 const BUBBLE_COLOR := Color("f5efe2", 0.878)
 const BUBBLE_STROKE := Color("ffd700", 0.451)
 
+const HINT_TEXT := "S'APPROCHER DU TRÔNE"
+
 @onready var _background_wrap: Control = $BackgroundWrap
 @onready var _background: TextureRect = $BackgroundWrap/Background
 @onready var _overlay: Control = $Overlay
@@ -32,11 +45,19 @@ const BUBBLE_STROKE := Color("ffd700", 0.451)
 var _dialogue_label: Label
 var _commencer_button: PanelContainer
 var _commencer_ready: bool = false
+var _tap_catcher: Control = null
+var _hint_pulse: Tween = null
 
 
 func _ready() -> void:
 	_build_background()
 	_build_gradients()
+
+	# Premier temps : le Roi attend qu'on vienne a lui.
+	var hint := _build_approach_hint()
+	_tap_catcher = _build_tap_catcher()
+	await _tapped
+	await _dismiss_approach(hint)
 
 	var area := _build_dialogue_area()
 	var panel: PanelContainer = area["panel"]
@@ -92,6 +113,83 @@ func _gradient_rect(pos: Vector2, size: Vector2, top_color: Color, bottom_color:
 	rect.size = size
 	rect.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	return rect
+
+
+## Invite du premier temps : un libelle discret et un chevron, en bas de
+## l'ecran, qui respirent doucement pour montrer que l'ecran attend un geste
+## (cf. "Action Hint Container" de la maquette, opacite 70 %).
+func _build_approach_hint() -> Control:
+	var row := HBoxContainer.new()
+	row.alignment = BoxContainer.ALIGNMENT_CENTER
+	row.add_theme_constant_override("separation", 8)
+	row.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	row.set_anchors_preset(Control.PRESET_BOTTOM_WIDE)
+	row.offset_top = -70.0
+	row.offset_bottom = -34.0
+	row.modulate.a = 0.7
+	_overlay.add_child(row)
+
+	var label := UiTheme.make_label(HINT_TEXT, 13, Color(1, 1, 1, 0.8))
+	label.add_theme_font_override("font", UiTheme.font_bold())
+	label.autowrap_mode = TextServer.AUTOWRAP_OFF
+	# make_label() renvoie un libelle en EXPAND_FILL : dans une rangee large
+	# comme l'ecran, il pousserait le chevron a l'autre bout au lieu de rester
+	# groupe avec lui au centre.
+	label.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
+	label.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	row.add_child(label)
+
+	var chevron := Icon.new()
+	chevron.icon_name = "chevron_right"
+	chevron.color = Color(1, 1, 1, 0.8)
+	chevron.custom_minimum_size = Vector2(12, 12)
+	chevron.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	row.add_child(chevron)
+
+	_hint_pulse = create_tween()
+	_hint_pulse.set_loops()
+	_hint_pulse.tween_property(row, "modulate:a", 0.35, 1.1).set_trans(Tween.TRANS_SINE)
+	_hint_pulse.tween_property(row, "modulate:a", 0.7, 1.1).set_trans(Tween.TRANS_SINE)
+
+	return row
+
+
+## Capte le premier contact n'importe ou sur l'ecran - la maquette rend la
+## frame entiere cliquable. Il disparait ensuite, sinon il avalerait les
+## clics destines au bouton COMMENCER.
+func _build_tap_catcher() -> Control:
+	var catcher := Control.new()
+	catcher.set_anchors_preset(Control.PRESET_FULL_RECT)
+	catcher.mouse_filter = Control.MOUSE_FILTER_STOP
+	catcher.gui_input.connect(func(event: InputEvent):
+		if event is InputEventMouseButton and event.pressed and event.button_index == MOUSE_BUTTON_LEFT:
+			_tapped.emit()
+	)
+	add_child(catcher)
+	return catcher
+
+
+func _dismiss_approach(hint: Control) -> void:
+	# Arreter la respiration AVANT de liberer l'invite : une boucle de tween
+	# dont la cible a disparu boucle en temps nul, et Godot la signale comme
+	# une boucle infinie.
+	if _hint_pulse != null and _hint_pulse.is_valid():
+		_hint_pulse.kill()
+	_hint_pulse = null
+
+	if is_instance_valid(_tap_catcher):
+		_tap_catcher.queue_free()
+		_tap_catcher = null
+	var tween := create_tween()
+	tween.tween_property(hint, "modulate:a", 0.0, 0.25).set_trans(Tween.TRANS_SINE)
+	await tween.finished
+	hint.queue_free()
+
+
+## Raccourci pour les outils de developpement (captures, tests) : declenche
+## l'approche sans passer par un vrai clic.
+func skip_approach() -> void:
+	_tapped.emit()
 
 
 ## Bulle de dialogue (fond clair, pas de cadre dore, petite pointe vers le
@@ -159,6 +257,7 @@ func _build_dialogue_panel() -> PanelContainer:
 	_dialogue_label = Label.new()
 	_dialogue_label.text = DIALOGUE_TEXT
 	_dialogue_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	_dialogue_label.add_theme_font_override("font", UiTheme.font_dialogue())
 	_dialogue_label.add_theme_font_size_override("font_size", 22)
 	_dialogue_label.add_theme_color_override("font_color", Color("0c0614"))
 	_dialogue_label.add_theme_constant_override("line_spacing", 10)
@@ -190,14 +289,8 @@ func _build_commencer_button() -> PanelContainer:
 	var label := UiTheme.make_label("COMMENCER", 19, Color("0c0614"))
 	label.add_theme_font_override("font", UiTheme.font_bold())
 	label.autowrap_mode = TextServer.AUTOWRAP_OFF
-	label.size_flags_horizontal = Control.SIZE_SHRINK_BEGIN
+	label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	row.add_child(label)
-
-	var swords := Icon.new()
-	swords.icon_name = "sword"
-	swords.color = Color("0c0614")
-	swords.custom_minimum_size = Vector2(20, 20)
-	row.add_child(swords)
 
 	UiTheme.ignore_mouse_recursive(row)
 	button.mouse_filter = Control.MOUSE_FILTER_STOP

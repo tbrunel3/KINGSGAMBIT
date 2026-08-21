@@ -155,6 +155,13 @@ func _capture_intro() -> void:
 	Game.reset_progress()
 	var intro: Node = load("res://scenes/intro/king_intro_dialogue.tscn").instantiate()
 	add_child(intro)
+
+	# Premier temps : le Roi seul, et l'invite a s'approcher.
+	await get_tree().create_timer(0.6).timeout
+	_save(intro, "9a_intro_approche.png")
+
+	# Puis le dialogue, declenche comme le ferait un doigt sur l'ecran.
+	intro.skip_approach()
 	await get_tree().create_timer(1.4).timeout
 	_save(intro, "9_intro_typing.png")
 	await get_tree().create_timer(3.2).timeout
