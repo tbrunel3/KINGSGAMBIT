@@ -1,9 +1,16 @@
 class_name BattleAI
 ##
-## IA - decide ce que fait une piece quand c'est son tour.
+## IA HEURISTIQUE - decide ce que fait une piece quand c'est son tour.
 ##
-## Les deux camps utilisent la meme IA : le combat est automatique des qu'il
-## commence, le joueur ne joue que le placement.
+## C'est l'IA du DEBUTANT : elle note son propre coup et verifie une seule
+## chose, que sa case d'arrivee ne soit pas attaquee. Elle ne joue jamais la
+## reponse adverse, donc elle ne voit pas venir une fourchette : la case ou
+## elle pose sa tour est sure, elle y va, et le cavalier prend au coup suivant.
+##
+## C'est voulu. A partir d'AGUERRI c'est BattleSearch qui decide, en deroulant
+## l'arbre des coups ; ce fichier reste la pour les premieres batailles, qu'un
+## joueur qui decouvre le jeu doit pouvoir gagner - et pour ordonner les coups
+## quand la recherche n'a pas le temps de finir.
 ##
 ## Ordre de priorite (volontairement simple et previsible) :
 ##   1. capturer, en visant la piece la plus chere
@@ -60,6 +67,16 @@ const _STANDOFF_MIN_PIECES := 4
 ## le camp n'a strictement aucun coup a jouer : le moteur passe alors la main.
 static func decide_team(team: int, grid: GridModel, units: Array, stalled: int = 0,
 		stalemate_limit: int = 999999, skill: int = Balance.AI_EXPERT) -> Dictionary:
+	# Des qu'on lui accorde plus d'un demi-coup, c'est la recherche qui decide
+	# (cf. BattleSearch et Balance.AI_DEPTH). Elle joue toujours un coup quand
+	# il en existe un : la desperation ci-dessous ne la concerne pas, un
+	# negamax choisit le moins mauvais coup plutot que de rester plante.
+	if Balance.ai_depth(skill) > 1:
+		var searched := BattleSearch.best_move(
+			team, grid, units, Balance.ai_depth(skill), Balance.AI_BUDGET_MS)
+		if searched["unit"] != null:
+			return searched
+
 	var best := _best_of_team(team, grid, units, stalled, stalemate_limit, skill)
 	if best["unit"] != null:
 		return best

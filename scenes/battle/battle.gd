@@ -20,9 +20,6 @@ enum Phase { PLACEMENT, COMBAT, RESULT }
 const ModalScene := preload("res://scenes/ui/components/modal.tscn")
 const SelectionChipScene := preload("res://scenes/ui/components/selection_chip.tscn")
 
-const VICTORY_BG_PATH := "res://assets/results/victory_modal_bg.png"
-const DEFEAT_BG_PATH := "res://assets/results/defeat_modal_bg.png"
-
 @onready var _tour_badge: PanelContainer = $Safe/Overlay/TourBadge
 @onready var _phase_prefix: Label = $Safe/Overlay/TourBadge/TourRow/PhasePrefixLabel
 @onready var _phase_label: Label = $Safe/Overlay/TourBadge/TourRow/PhaseLabel
@@ -47,6 +44,11 @@ const _BLOCKAGE_WARNING_RATIO := 0.5
 var _battle: Dictionary = {}
 var _engine: BattleEngine = null
 var _phase: int = Phase.PLACEMENT
+
+## Serie de combats en cours (cf. CampaignRun). Un niveau de campagne se joue
+## en 3 a 5 combats d'affilee : l'armee posable vient de la serie, pas du
+## village, et les pertes n'atteignent le village qu'a la toute fin.
+var _run: CampaignRun = null
 
 # Placement
 var _remaining: Dictionary = {}   # type -> unites encore disponibles
@@ -98,12 +100,20 @@ func _ready() -> void:
 	_quit_button.pressed.connect(_on_quit)
 	_build_help_button()
 
+	# Serie : on reprend celle en cours sur cette bataille, sinon on en ouvre
+	# une. Quitter en plein combat fait donc RECOMMENCER ce combat-la, avec
+	# l'effectif qu'il avait au depart - pas la serie entiere.
+	var battle_id := int(_battle["id"])
+	_run = Game.current_run(battle_id)
+	if _run == null:
+		_run = Game.begin_run(battle_id)
+
 	_engine = BattleEngine.new(int(_battle["cols"]), int(_battle["rows"]))
 	_engine.enemy_skill = Balance.battle_ai_skill(_battle)
 	_spawn_enemies()
 
 	for type in Balance.ARMY_TYPES:
-		_remaining[type] = Game.units_owned(type)
+		_remaining[type] = int(_run.roster.get(type, 0))
 
 	_grid_view.setup(_engine)
 	_grid_view.cell_clicked.connect(_on_cell_clicked)
@@ -129,13 +139,24 @@ func _unit_level(type: String) -> int:
 
 ## Types que le joueur peut poser sur la grille : ses casernes, plus la Dame
 ## s'il en a ramene une vivante d'une bataille precedente.
+##
+## C'est l'effectif de la SERIE qui decide, pas l'armee du village : une Dame
+## tombee au premier combat ne se repose pas au deuxieme.
 func _deployable_types() -> Array:
 	var types: Array = []
 	for type in Balance.ARMY_TYPES:
-		if type == Balance.DAME and Game.units_owned(Balance.DAME) <= 0:
+		if type == Balance.DAME and _owned(Balance.DAME) <= 0:
 			continue
 		types.append(type)
 	return types
+
+
+## Pieces de ce type engagees dans la serie, posees ou non. `_remaining` ne
+## compte que celles qui restent en main pendant le placement.
+func _owned(type: String) -> int:
+	if _run == null:
+		return Game.units_owned(type)
+	return int(_run.roster.get(type, 0))
 
 
 # ------------------------------- AIDE ----------------------------------------
@@ -284,7 +305,7 @@ func _help_weights() -> PanelContainer:
 	panel.add_child(row)
 
 	for type in Balance.ARMY_TYPES:
-		if type == Balance.DAME and Game.units_owned(Balance.DAME) <= 0:
+		if type == Balance.DAME and _owned(Balance.DAME) <= 0:
 			continue
 		var column := VBoxContainer.new()
 		column.alignment = BoxContainer.ALIGNMENT_CENTER
@@ -324,7 +345,7 @@ func _style_tour_badge(bg: Color, border: Color, radius: int, prefix_color: Colo
 	box.bg_color = bg
 	box.set_corner_radius_all(radius)
 	box.border_color = border
-	box.set_border_width_all(1)
+	box.set_border_width_all(2)
 	box.content_margin_left = 14
 	box.content_margin_right = 14
 	box.content_margin_top = 8
@@ -345,7 +366,14 @@ func _style_tour_badge(bg: Color, border: Color, radius: int, prefix_color: Colo
 func _style_placement_badge() -> void:
 	_style_tour_badge(UiTheme.ACCENT, Color("1a66b2", 0.7), 12,
 		Color.WHITE, 10, Color.WHITE, 13)
-	_phase_prefix.text = "PHASE DE"
+	# Le badge dit ou l'on en est dans la SERIE : c'est le seul endroit de
+	# l'ecran de placement qui le rappelle, et c'est ce qui change la facon de
+	# poser son armee - on ne place pas pareil au premier combat sur trois et
+	# au dernier.
+	if _run != null and _run.total > 1:
+		_phase_prefix.text = "COMBAT %d/%d —" % [_run.fight, _run.total]
+	else:
+		_phase_prefix.text = "PHASE DE"
 	_phase_label.text = "PLACEMENT"
 	_tour_badge.custom_minimum_size = Vector2(169, 35)
 	_tour_badge.size = Vector2(169, 35)
@@ -389,6 +417,27 @@ func _spawn_enemies() -> void:
 	var level := int(_battle["level"])
 	var enemies: Dictionary = _battle["enemies"]
 	var cells: Array = _engine.grid.free_enemy_cells()
+
+	# L'armee ennemie revient AU COMPLET a chaque combat de la serie - c'est
+	# l'usure du joueur qui fait la difficulte, pas une armee qui grossit.
+	# Mais elle ne se range pas deux fois pareil : sans ca, rejouer le meme
+	# plateau trois a cinq fois d'affilee, ce serait rejouer la meme partie.
+	#
+	# Le premier combat garde le rangement de reference (masse au centre, cf.
+	# GridModel.free_enemy_cells), qui est celui pense pour decouvrir le
+	# plateau. Le tirage des suivants est SEME sur le numero du combat : la
+	# meme serie redonne toujours la meme disposition, donc reprendre apres
+	# avoir ferme le jeu ne rebat pas les cartes.
+	var fight: int = _run.fight if _run != null else 1
+	if fight > 1:
+		var rng := RandomNumberGenerator.new()
+		rng.seed = hash([int(_battle["id"]), fight])
+		for i in range(cells.size() - 1, 0, -1):
+			var j := rng.randi_range(0, i)
+			var swap = cells[i]
+			cells[i] = cells[j]
+			cells[j] = swap
+
 	var index := 0
 	for type in Balance.UNIT_TYPES:
 		if not enemies.has(type):
@@ -507,7 +556,7 @@ func _build_placement_ui() -> void:
 	auto.pressed.connect(_on_auto_place)
 	actions.add_child(auto)
 
-	var reset := UiTheme.make_button("REINITIALISER", Color(1, 1, 1, 0.08), 12)
+	var reset := UiTheme.make_button("RÉINITIALISER", Color(1, 1, 1, 0.08), 12)
 	reset.add_theme_font_override("font", UiTheme.font_bold())
 	reset.add_theme_color_override("font_color", Color("ccccd9"))
 	reset.pressed.connect(_on_reset_placement)
@@ -520,6 +569,7 @@ func _build_placement_ui() -> void:
 
 	_fight_button = UiTheme.make_button("COMBATTRE", UiTheme.GOLD, 12)
 	_fight_button.add_theme_font_override("font", UiTheme.font_bold())
+	_style_fight_button()
 	_fight_button.pressed.connect(_start_combat)
 	actions.add_child(_fight_button)
 
@@ -528,6 +578,35 @@ func _build_placement_ui() -> void:
 		if int(_remaining[type]) > 0:
 			_selected_type = type
 			break
+
+
+## Le bouton COMBATTRE de la maquette n'est pas un bouton or ordinaire : il
+## est SERTI - un liseré d'or brun autour de l'or vif, un coin plus rond que
+## les autres boutons, et une ombre portee qui le decolle du panneau.
+func _style_fight_button() -> void:
+	for state in ["normal", "hover", "pressed", "focus", "disabled"]:
+		var tint := UiTheme.GOLD
+		match state:
+			"hover":
+				tint = UiTheme.GOLD.lightened(0.12)
+			"pressed":
+				tint = UiTheme.GOLD.darkened(0.18)
+			"disabled":
+				tint = UiTheme.GOLD.darkened(0.45)
+		var box := StyleBoxFlat.new()
+		box.bg_color = tint
+		box.set_corner_radius_all(12)
+		box.border_color = Color("b8860b")
+		box.set_border_width_all(2)
+		box.content_margin_left = 14
+		box.content_margin_right = 14
+		box.content_margin_top = 10
+		box.content_margin_bottom = 10
+		box.shadow_color = Color(0, 0, 0, 0.35)
+		box.shadow_size = 6
+		box.shadow_offset = Vector2(0, 4)
+		_fight_button.add_theme_stylebox_override(state, box)
+	_fight_button.add_theme_color_override("font_color", Color("261a00"))
 
 
 ## Poids total (cf. Balance.deploy_weight) des pieces deja posees - c'est ce
@@ -1226,11 +1305,33 @@ func _play_events(events: Array) -> void:
 				await _grid_view.play_promotion(
 					event["cell"], String(event["result"]),
 					float(Balance.COMBAT["promotion_duration"]) / _speed)
+			"crowning":
+				# Le sacre prend un tour : le pion est arrive, il n'est pas
+				# encore Dame. On le signale et on marque la case - c'est
+				# maintenant que les deux camps doivent la regarder.
+				_refresh_crowning()
+				var mine := _engine.unit_by_id(
+					int(event["unit"])).team == BattleUnit.TEAM_PLAYER
+				_status_message("Sacre au prochain tour — protège-la !" if mine
+					else "L'ennemi va faire une Dame — empêche-le !")
+				await _wait(float(Balance.COMBAT["promotion_duration"]))
 			"pass":
 				_status_message("Camp bloque : tour passe")
 				await _wait(float(Balance.COMBAT["step_delay"]))
 			_:
 				pass
+	_refresh_crowning()
+
+
+## Cases des pions qui attendent leur couronne. La vue les entoure d'un anneau
+## qui bat : une Dame annoncee est aussi une cible designee.
+func _refresh_crowning() -> void:
+	var cells: Array = []
+	for unit in _engine.units:
+		if unit.awaiting_crown and unit.is_alive():
+			cells.append(unit.cell)
+	_grid_view.crowning_cells = cells
+	_grid_view.queue_redraw()
 
 
 func _wait(seconds: float) -> void:
@@ -1244,50 +1345,21 @@ func _show_result() -> void:
 	_phase = Phase.RESULT
 	_running = false
 	_clear_blockage_badge()
+
 	var victory := _engine.winner == BattleUnit.TEAM_PLAYER
-	var reward := Game.reward_for(int(_battle["id"]))
+	var draw := _engine.is_draw()
 	var battle_id := int(_battle["id"])
-
-	# Aura des Dames restees au village - calculee AVANT d'appliquer les
-	# pertes, sinon une Dame tombee au combat viendrait fausser le compte de
-	# celles qui n'ont jamais quitte la Tour.
-	var dame_bonus := Game.dame_gold_bonus(reward, _dames_deployed) if victory else 0
-	var dames_resting := Game.dames_at_rest(_dames_deployed)
-
-	# Dame offerte par la campagne, a la premiere victoire seulement : rejouer
-	# la derniere bataille ne doit pas devenir une fabrique a Dames.
-	var dames_found := 0
-	if victory and not Game.is_battle_won(battle_id):
-		dames_found = Game.grant_dames(Balance.battle_dame_reward(_battle))
 
 	_grid_view.draggable_team = -1
 	_grid_view.legal_targets = []
 
-	# Les pertes sont definitives, victoire ou defaite : les pieces capturees
-	# quittent l'armee et devront etre recrutees a nouveau.
+	# Les pertes de CE combat. Elles quittent l'effectif de la serie tout de
+	# suite, mais n'atteindront l'armee du village qu'a la fin de la serie
+	# (cf. GameState.finish_run) : une serie est une seule unite economique.
 	var losses: Dictionary = _engine.losses(BattleUnit.TEAM_PLAYER)
-	Game.apply_losses(losses)
-
-	# Les pions promus RENTRES VIVANTS deviennent des Dames stockees a la Tour
-	# de la Dame : le joueur pourra les redeployer aux batailles suivantes.
-	# Une Dame tombee au combat, elle, est perdue comme le pion qu'elle etait.
-	var dames_gained := Game.store_promotions(_engine.promoted_survivors(BattleUnit.TEAM_PLAYER))
-
-	# Recompense de consolation en cas de defaite - cf. capture Figma 07
-	# (Consolation-Row) : meme perdue, une bataille rapporte un peu.
-	var consolation := 0
-	if victory:
-		Game.win_battle(battle_id, reward + dame_bonus)
-	else:
-		consolation = int(round(reward * Balance.DEFEAT_CONSOLATION_RATIO))
-		if consolation > 0:
-			Game.add_gold(consolation)
-
-	_phase_prefix.text = ""
-	_phase_label.text = "Victoire" if victory else "Defaite"
 
 	# Compteurs de carriere pour les missions (cf. Balance.MISSIONS) : une
-	# seule fois par bataille, victoire ou defaite.
+	# seule fois par combat, victoire ou defaite.
 	var pieces_lost := 0
 	for count in losses.values():
 		pieces_lost += int(count)
@@ -1304,185 +1376,198 @@ func _show_result() -> void:
 		total_enemies += int(enemy_data[type])
 	var enemies_defeated := total_enemies - _engine.living(BattleUnit.TEAM_ENEMY).size()
 
-	# Modale generique (cf. scenes/ui/components/modal.gd) + illustration de
-	# fond (confettis en victoire, braises en defaite) - cf. captures Figma
-	# 06/07. Le blason (couronne / couronne brisee) a son propre halo circulaire,
-	# trop specifique pour rester dans le header_icon integre de Modal : on le
-	# construit ici plutot que de le forcer dans le composant generique.
-	var modal: Modal = ModalScene.instantiate()
-	modal.show_close_button = false
-	modal.close_on_dim_click = false
-	add_child(modal)
-	modal.open("", Modal.Context.GOLD if victory else Modal.Context.RED)
-	var bg_path := VICTORY_BG_PATH if victory else DEFEAT_BG_PATH
-	if ResourceLoader.exists(bg_path):
-		modal.set_background(load(bg_path), 0.35 if victory else 0.3)
-	var body := modal.body
-
-	body.add_child(_result_badge(victory))
-
-	var stats_panel := _result_stats_panel()
-	var stats_body: VBoxContainer = stats_panel.get_child(0)
-	body.add_child(stats_panel)
-
-	if victory:
-		stats_body.add_child(_result_highlight_row("Récompense",
-			_icon_value("coin", UiTheme.GOLD, "+%d Or" % reward, UiTheme.GOLD, 16), UiTheme.GOLD))
-		if dame_bonus > 0:
-			stats_body.add_child(_stats_separator())
-			stats_body.add_child(UiTheme.stat_row(
-				"Aura de %d Dame%s" % [dames_resting, "" if dames_resting <= 1 else "s"],
-				_icon_value("crown", Color("d8a0d0"), "+%d Or" % dame_bonus, Color("d8a0d0"), 13)))
-		stats_body.add_child(_stats_separator())
-		stats_body.add_child(UiTheme.stat_row("Ennemis vaincus",
-			_plain_value(str(enemies_defeated), Color("f0f3f8"), 14)))
-		if dames_gained > 0:
-			stats_body.add_child(_stats_separator())
-			stats_body.add_child(UiTheme.stat_row("Dames ramenées",
-				_icon_value("crown", Color("d8a0d0"),
-					"+%d au Château Royal" % dames_gained, Color("d8a0d0"), 13)))
-		if dames_found > 0:
-			stats_body.add_child(_stats_separator())
-			stats_body.add_child(_result_highlight_row("La Dame retrouvée",
-				_icon_value("crown", Color("d8a0d0"),
-					"+%d Dame" % dames_found, Color("d8a0d0"), 14), Color("d8a0d0")))
-		if not losses.is_empty():
-			stats_body.add_child(_stats_separator())
-			stats_body.add_child(UiTheme.stat_row("Pertes", _plain_value(_format_losses(losses), Color("a0aabf"), 14)))
+	_phase_prefix.text = ""
+	if draw:
+		_phase_label.text = "Match nul"
 	else:
-		if consolation > 0:
-			stats_body.add_child(_result_highlight_row("Consolation",
-				_icon_value("coin", Color("d4af37"), "+%d Or" % consolation, Color("d4af37"), 14), UiTheme.DANGER))
-			stats_body.add_child(_stats_separator())
-		var loss_text := "Aucune - toute l'armee rentre" if losses.is_empty() else _format_losses(losses)
-		stats_body.add_child(UiTheme.stat_row("Pertes subies", _plain_value(loss_text, Color("a0aabf"), 14)))
-		if dames_gained > 0:
-			stats_body.add_child(_stats_separator())
-			stats_body.add_child(UiTheme.stat_row("Dames ramenées",
-				_icon_value("crown", Color("d8a0d0"),
-					"+%d au Château Royal" % dames_gained, Color("d8a0d0"), 13)))
+		_phase_label.text = "Victoire" if victory else "Defaite"
 
-	# Boutons - cf. Button-Stack Figma 06/07 : victoire met en avant l'or
-	# (bataille suivante) puis Reessayer ; defaite met Reessayer en avant sans
-	# alternative. "Retour au village" et "Carte de campagne" restent
-	# communs aux deux issues.
-	if victory:
-		if battle_id < Balance.battle_count():
-			body.add_child(_result_primary_button("BATAILLE SUIVANTE",
-				func(): Router.goto_prep(battle_id + 1)))
-		body.add_child(_result_secondary_button("RÉESSAYER", Color("262c3f"), Color("2a2f45"),
-			func(): Router.goto_battle(battle_id)))
+	# NUL : personne n'a gagne. Les survivants rentrent, les morts restent
+	# morts, ce combat ne rapporte rien - mais la serie n'est pas rompue.
+	# C'est un tour d'usure paye pour rien, pas une deroute.
+	if draw:
+		_run.record_draw(losses, enemies_defeated, _promotions_this_battle,
+			_engine.promoted_survivors(BattleUnit.TEAM_PLAYER))
+		_show_fight_drawn(losses)
+		return
+
+	if not victory:
+		_run.record_defeat(losses)
+		_show_run_lost()
+		return
+
+	# Or promis par ce combat. L'aura ne compte que les Dames restees au
+	# village - celles qu'on a emmenees se battent, elles ne tiennent pas la
+	# cour (cf. GameState.dame_gold_bonus).
+	var gold := Game.reward_for(battle_id)
+	var dame_bonus := Game.dame_gold_bonus(gold, _dames_deployed)
+	_run.record_victory(losses, enemies_defeated, _promotions_this_battle,
+		_engine.promoted_survivors(BattleUnit.TEAM_PLAYER), gold + dame_bonus)
+
+	if _run.is_last_fight():
+		_show_run_won(dame_bonus)
 	else:
-		body.add_child(_result_danger_button("RÉESSAYER", func(): Router.goto_battle(battle_id)))
-
-	body.add_child(_result_amber_button("RETOUR AU VILLAGE", "house", Router.goto_village))
-	body.add_child(_result_amber_button("CARTE DE CAMPAGNE", "compass", Router.goto_campaign))
+		_show_fight_won(losses)
 
 
-## Blason circulaire (couronne en victoire, couronne brisee en defaite) +
-## grand titre - cf. Title-Block des captures Figma 06/07.
-func _result_badge(victory: bool) -> VBoxContainer:
-	var accent := UiTheme.GOLD if victory else UiTheme.DANGER
+## Combat gagne, serie pas finie : le bilan court, les blesses releves, et le
+## bouton qui enchaine. Rien n'est encaisse ici - l'or promis attend la fin.
+func _show_fight_won(losses: Dictionary) -> void:
+	var battle_id := _run.battle_id
+	var done := _run.fight
+	# On avance MAINTENANT plutot qu'au clic : la serie est sauvegardee au
+	# combat suivant, donc fermer le jeu sur cet ecran ne fait pas rejouer le
+	# combat qu'on vient de gagner.
+	var recovered := _run.advance(Balance.RUN_REINFORCE_WEIGHT)
+	Game.save_run(_run)
 
-	var block := VBoxContainer.new()
-	block.alignment = BoxContainer.ALIGNMENT_CENTER
-	block.add_theme_constant_override("separation", 10)
+	var screen := BattleResult.new()
+	add_child(screen)
+	screen.open(true, "COMBAT %d SUR %d" % [done, _run.total])
 
-	var badge := PanelContainer.new()
-	var badge_box := StyleBoxFlat.new()
-	badge_box.bg_color = Color(accent, 0.09)
-	badge_box.border_color = accent
-	badge_box.set_border_width_all(2)
-	badge_box.set_corner_radius_all(36)
-	badge_box.shadow_color = Color(accent, 0.33)
-	badge_box.shadow_size = 10
-	badge.add_theme_stylebox_override("panel", badge_box)
-	badge.custom_minimum_size = Vector2(72, 72)
-	badge.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
-	block.add_child(badge)
+	screen.add_reward_row("Butin promis", _run.reward)
+	screen.add_stat_row("Ennemis vaincus", str(_run.enemies_defeated))
+	screen.add_stat_row("Pertes du combat",
+		"Aucune" if losses.is_empty() else _format_losses(losses), 1)
+	if not recovered.is_empty():
+		screen.add_icon_row("Blessés relevés", "check",
+			_format_losses(recovered), Color("5fb37a"))
+	screen.add_stat_row("Armée restante", "%d pièces" % _run.pieces_left(), 1)
 
-	var glyph_wrap := CenterContainer.new()
-	badge.add_child(glyph_wrap)
-	var glyph := Icon.new()
-	glyph.icon_name = "crown" if victory else "crown_broken"
-	glyph.color = accent
-	glyph.custom_minimum_size = Vector2(44, 44)
-	glyph_wrap.add_child(glyph)
-
-	var title := UiTheme.make_label("VICTOIRE" if victory else "DEFAITE", 32, accent)
-	title.add_theme_font_override("font", UiTheme.font_bold())
-	title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	title.autowrap_mode = TextServer.AUTOWRAP_OFF
-	block.add_child(title)
-
-	return block
+	screen.add_primary_button("COMBAT %d SUR %d" % [_run.fight, _run.total],
+		func(): Router.goto_battle(battle_id))
+	screen.add_action_button("ROYAUME", "castle", Router.goto_village)
+	screen.add_action_button("CAMPAGNE", "compass", Router.goto_campaign)
 
 
-## Carte de stats semi-transparente posee sur l'illustration de fond -
-## cf. Stats-List des captures Figma 06/07.
-func _result_stats_panel() -> PanelContainer:
-	var panel := PanelContainer.new()
-	var box := StyleBoxFlat.new()
-	box.bg_color = Color("1a2035", 0.8)
-	box.border_color = Color("2a2f45")
-	box.set_border_width_all(1)
-	box.set_corner_radius_all(12)
-	box.set_content_margin_all(16)
-	box.shadow_color = Color(0, 0, 0, 0.6)
-	box.shadow_size = 10
-	panel.add_theme_stylebox_override("panel", box)
+## Combat nul. Tant qu'il reste des combats, la serie continue au suivant ;
+## si c'etait le dernier, elle s'acheve sans etre remportee - il ne reste que
+## la consolation sur ce que les combats gagnes avaient promis, et la bataille
+## suivante ne s'ouvre pas.
+func _show_fight_drawn(losses: Dictionary) -> void:
+	var battle_id := _run.battle_id
+	var done := _run.fight
+	var fights := _run.total
+	var last := _run.is_last_fight()
 
-	var body := VBoxContainer.new()
-	body.add_theme_constant_override("separation", 16)
-	panel.add_child(body)
+	var recovered: Dictionary = {}
+	var consolation := 0
+	if last:
+		var promised := _run.reward
+		Game.finish_run(_run, false)
+		consolation = int(round(float(promised) * Balance.DEFEAT_CONSOLATION_RATIO))
+	else:
+		recovered = _run.advance(Balance.RUN_REINFORCE_WEIGHT)
+		Game.save_run(_run)
 
-	return panel
+	var screen := BattleResult.new()
+	add_child(screen)
+	screen.open_draw("SÉRIE NULLE" if last else "COMBAT %d SUR %d — NUL" % [done, fights])
 
+	if consolation > 0:
+		screen.add_reward_row("Consolation", consolation)
+	elif not last:
+		screen.add_reward_row("Butin promis", _run.reward)
+	screen.add_stat_row("Combat nul", "Aucun camp n'a plié")
+	screen.add_stat_row("Pertes du combat",
+		"Aucune" if losses.is_empty() else _format_losses(losses), 1)
+	if not recovered.is_empty():
+		screen.add_icon_row("Blessés relevés", "check",
+			_format_losses(recovered), Color("5fb37a"))
+	if not last:
+		screen.add_stat_row("Armée restante", "%d pièces" % _run.pieces_left(), 1)
 
-## Ligne de stat mise en avant dans son propre encart teinte - cf. Reward-Row
-## (victoire) / Consolation-Row (defaite) des captures Figma 06/07.
-func _result_highlight_row(label_text: String, value: Control, accent: Color) -> PanelContainer:
-	var panel := PanelContainer.new()
-	var box := StyleBoxFlat.new()
-	box.bg_color = Color(accent, 0.06)
-	box.border_color = Color(accent, 0.2)
-	box.set_border_width_all(1)
-	box.set_corner_radius_all(10)
-	box.set_content_margin_all(12)
-	panel.add_theme_stylebox_override("panel", box)
-	panel.add_child(UiTheme.stat_row(label_text, value))
-	return panel
-
-
-func _stats_separator() -> ColorRect:
-	var line := ColorRect.new()
-	line.color = Color(1, 1, 1, 0.08)
-	line.custom_minimum_size = Vector2(0, 1)
-	return line
-
-
-func _plain_value(text: String, color: Color, size: int) -> Label:
-	var label := UiTheme.make_label(text, size, color)
-	label.autowrap_mode = TextServer.AUTOWRAP_OFF
-	label.add_theme_font_override("font", UiTheme.font_bold())
-	return label
+	if last:
+		screen.add_primary_button("REPRENDRE LA SÉRIE",
+			func(): Router.goto_battle(battle_id))
+	else:
+		screen.add_primary_button("COMBAT %d SUR %d" % [_run.fight, fights],
+			func(): Router.goto_battle(battle_id))
+	screen.add_action_button("ROYAUME", "castle", Router.goto_village)
+	screen.add_action_button("CAMPAGNE", "compass", Router.goto_campaign)
 
 
-## Valeur d'une ligne de stats avec une icone devant le texte (recompense,
-## consolation) - cf. captures Figma 06/07.
-func _icon_value(icon_name: String, icon_color: Color, text: String, text_color: Color, size: int) -> HBoxContainer:
-	var box := HBoxContainer.new()
-	box.add_theme_constant_override("separation", 6)
-	var icon := Icon.new()
-	icon.icon_name = icon_name
-	icon.color = icon_color
-	icon.custom_minimum_size = Vector2(size, size)
-	box.add_child(icon)
-	var label := UiTheme.make_label(text, size, text_color)
-	label.add_theme_font_override("font", UiTheme.font_bold())
-	label.autowrap_mode = TextServer.AUTOWRAP_OFF
-	box.add_child(label)
-	return box
+## Dernier combat gagne : la serie paye. C'est ici, et seulement ici, que les
+## pertes atteignent l'armee du village et que la bataille suivante s'ouvre.
+func _show_run_won(dame_bonus: int) -> void:
+	var battle_id := _run.battle_id
+	var promised := _run.reward
+	var enemies := _run.enemies_defeated
+	var fights := _run.total
+	var run_losses := _run.losses.duplicate()
+	var dames_resting := Game.dames_at_rest(_dames_deployed)
+
+	# Dame offerte par la campagne, a la premiere victoire seulement : rejouer
+	# la derniere bataille ne doit pas devenir une fabrique a Dames.
+	var dames_found := 0
+	if not Game.is_battle_won(battle_id):
+		dames_found = Game.grant_dames(Balance.battle_dame_reward(_battle))
+	var dames_gained := Game.finish_run(_run, true)
+
+	var screen := BattleResult.new()
+	add_child(screen)
+	screen.open(true)
+
+	screen.add_reward_row("Récompense totale", promised)
+	screen.add_stat_row("Série remportée", "%d combats sur %d" % [fights, fights])
+	if dame_bonus > 0:
+		screen.add_icon_row(
+			"Aura de %d Dame%s" % [dames_resting, "" if dames_resting <= 1 else "s"],
+			"crown", "+%d Or" % dame_bonus, Color("d8a0d0"))
+	screen.add_stat_row("Ennemis vaincus", str(enemies))
+	if dames_gained > 0:
+		screen.add_icon_row("Dames ramenées", "crown",
+			"+%d au Château Royal" % dames_gained, Color("d8a0d0"))
+	if dames_found > 0:
+		screen.add_icon_row("La Dame retrouvée", "crown",
+			"+%d Dame" % dames_found, Color("d8a0d0"))
+	screen.add_stat_row("Pertes de la série",
+		"Aucune" if run_losses.is_empty() else _format_losses(run_losses), 1)
+
+	if battle_id < Balance.battle_count():
+		screen.add_primary_button("BATAILLE SUIVANTE",
+			func(): Router.goto_prep(battle_id + 1))
+		screen.add_secondary_button("REJOUER LA SÉRIE",
+			func(): Router.goto_battle(battle_id))
+	else:
+		screen.add_primary_button("REJOUER LA SÉRIE",
+			func(): Router.goto_battle(battle_id))
+
+	screen.add_action_button("ROYAUME", "castle", Router.goto_village)
+	screen.add_action_button("CAMPAGNE", "compass", Router.goto_campaign)
+
+
+## Combat perdu : c'est toute la serie qui tombe, et tout l'or promis avec.
+## Il ne reste que la consolation, calculee sur ce que les combats deja gagnes
+## avaient promis - tomber au dernier combat rapporte donc un peu plus que
+## tomber au premier.
+func _show_run_lost() -> void:
+	var battle_id := _run.battle_id
+	var lost_at := _run.fight
+	var fights := _run.total
+	var promised := _run.reward
+	var run_losses := _run.losses.duplicate()
+	var dames_gained := Game.finish_run(_run, false)
+	var consolation := int(round(float(promised) * Balance.DEFEAT_CONSOLATION_RATIO))
+
+	var screen := BattleResult.new()
+	add_child(screen)
+	screen.open(false)
+
+	if consolation > 0:
+		screen.add_reward_row("Consolation", consolation)
+	screen.add_stat_row("Série perdue", "Combat %d sur %d" % [lost_at, fights])
+	screen.add_stat_row("Pertes subies",
+		"Aucune" if run_losses.is_empty() else _format_losses(run_losses))
+	if dames_gained > 0:
+		screen.add_icon_row("Dames ramenées", "crown",
+			"+%d au Château Royal" % dames_gained, Color("d8a0d0"))
+
+	screen.add_primary_button("REPRENDRE LA SÉRIE",
+		func(): Router.goto_battle(battle_id))
+	screen.add_action_button("ROYAUME", "castle", Router.goto_village)
+	screen.add_action_button("CAMPAGNE", "compass", Router.goto_campaign)
+
 
 
 ## "4 Pions, 1 Cavalier" - une seule ligne, plutot que des jetons par type,
@@ -1493,123 +1578,6 @@ func _format_losses(losses: Dictionary) -> String:
 		if losses.has(type):
 			details.append("%d %s" % [int(losses[type]), Balance.unit_name(type)])
 	return ", ".join(details)
-
-
-func _result_primary_button(text: String, on_press: Callable) -> PanelContainer:
-	var button := PanelContainer.new()
-	var box := StyleBoxFlat.new()
-	box.bg_color = UiTheme.GOLD
-	box.border_color = Color("b8860b")
-	box.set_border_width_all(2)
-	box.set_corner_radius_all(12)
-	box.content_margin_top = 15
-	box.content_margin_bottom = 15
-	button.add_theme_stylebox_override("panel", box)
-	button.mouse_filter = Control.MOUSE_FILTER_STOP
-
-	var label := UiTheme.make_label(text, 14, Color("0f111a"))
-	label.add_theme_font_override("font", UiTheme.font_bold())
-	label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	label.autowrap_mode = TextServer.AUTOWRAP_OFF
-	label.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	button.add_child(label)
-
-	button.gui_input.connect(func(event: InputEvent):
-		if event is InputEventMouseButton and event.pressed and event.button_index == MOUSE_BUTTON_LEFT:
-			on_press.call())
-	return button
-
-
-func _result_secondary_button(text: String, bg: Color, border: Color, on_press: Callable) -> PanelContainer:
-	var button := PanelContainer.new()
-	var box := StyleBoxFlat.new()
-	box.bg_color = bg
-	box.border_color = border
-	box.set_border_width_all(1)
-	box.set_corner_radius_all(10)
-	box.content_margin_top = 15
-	box.content_margin_bottom = 15
-	button.add_theme_stylebox_override("panel", box)
-	button.mouse_filter = Control.MOUSE_FILTER_STOP
-
-	var label := UiTheme.make_label(text, 14, Color("f0f3f8"))
-	label.add_theme_font_override("font", UiTheme.font_bold())
-	label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	label.autowrap_mode = TextServer.AUTOWRAP_OFF
-	label.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	button.add_child(label)
-
-	button.gui_input.connect(func(event: InputEvent):
-		if event is InputEventMouseButton and event.pressed and event.button_index == MOUSE_BUTTON_LEFT:
-			on_press.call())
-	return button
-
-
-func _result_danger_button(text: String, on_press: Callable) -> PanelContainer:
-	var button := PanelContainer.new()
-	var box := StyleBoxFlat.new()
-	box.bg_color = Color("c0392b")
-	box.border_color = UiTheme.DANGER
-	box.set_border_width_all(2)
-	box.set_corner_radius_all(10)
-	box.content_margin_top = 15
-	box.content_margin_bottom = 15
-	box.shadow_color = Color(UiTheme.DANGER, 0.27)
-	box.shadow_size = 10
-	button.add_theme_stylebox_override("panel", box)
-	button.mouse_filter = Control.MOUSE_FILTER_STOP
-
-	var label := UiTheme.make_label(text, 14, Color("f0f3f8"))
-	label.add_theme_font_override("font", UiTheme.font_bold())
-	label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	label.autowrap_mode = TextServer.AUTOWRAP_OFF
-	label.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	button.add_child(label)
-
-	button.gui_input.connect(func(event: InputEvent):
-		if event is InputEventMouseButton and event.pressed and event.button_index == MOUSE_BUTTON_LEFT:
-			on_press.call())
-	return button
-
-
-## Bouton ambre discret - "Retour au village" / "Carte de campagne" des
-## captures Figma 06/07, meme habillage que le bouton VILLAGE de l'ecran
-## Campagne (cf. campaign.gd > _build_village_button).
-func _result_amber_button(text: String, icon_name: String, on_press: Callable) -> PanelContainer:
-	var button := PanelContainer.new()
-	var box := StyleBoxFlat.new()
-	box.bg_color = Color("261a0d", 0.9)
-	box.border_color = Color("99804d", 0.4)
-	box.set_border_width_all(1)
-	box.set_corner_radius_all(14)
-	box.content_margin_left = 24
-	box.content_margin_right = 24
-	box.content_margin_top = 12
-	box.content_margin_bottom = 12
-	button.add_theme_stylebox_override("panel", box)
-	button.mouse_filter = Control.MOUSE_FILTER_STOP
-
-	var row := HBoxContainer.new()
-	row.alignment = BoxContainer.ALIGNMENT_CENTER
-	row.add_theme_constant_override("separation", 6)
-	button.add_child(row)
-
-	var icon := Icon.new()
-	icon.icon_name = icon_name
-	icon.color = Color("d9c78c")
-	icon.custom_minimum_size = Vector2(16, 16)
-	row.add_child(icon)
-
-	var label := UiTheme.make_label(text, 13, Color("d9c78c"))
-	label.add_theme_font_override("font", UiTheme.font_bold())
-	label.autowrap_mode = TextServer.AUTOWRAP_OFF
-	row.add_child(label)
-
-	UiTheme.ignore_mouse_recursive(row)
-	button.gui_input.connect(func(event: InputEvent):
-		if event is InputEventMouseButton and event.pressed and event.button_index == MOUSE_BUTTON_LEFT:
-			on_press.call())
-	return button
 
 
 # ------------------------------- DIVERS --------------------------------------

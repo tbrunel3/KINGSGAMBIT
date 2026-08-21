@@ -73,6 +73,12 @@ var _promotion_cell: Vector2i = Vector2i(-1, -1)
 var _promotion_type: String = ""
 var _promotion_t: float = 0.0
 
+## Cases des pions qui ATTENDENT leur couronne (le sacre prend un tour). Ce
+## marqueur reste affiche tant qu'ils attendent - contrairement au badge de
+## promotion, qui passe : le joueur doit voir la case menacee assez longtemps
+## pour la defendre, et l'adversaire assez longtemps pour l'attaquer.
+var crowning_cells: Array = []
+
 
 ## "bleu_pion" -> Texture2D. Charge une seule fois, jamais dans _draw().
 var _piece_textures: Dictionary = {}
@@ -219,6 +225,7 @@ func _draw() -> void:
 			_draw_unit(unit)
 	_draw_dragged_piece()
 	_draw_capture()
+	_draw_crowning()
 	_draw_promotion()
 
 
@@ -420,6 +427,33 @@ func _draw_capture() -> void:
 	var width := maxf(2.0, _cell_size * 0.07)
 	draw_line(center + Vector2(-radius, -radius), center + Vector2(radius, radius), color, width)
 	draw_line(center + Vector2(radius, -radius), center + Vector2(-radius, radius), color, width)
+
+
+## Pion en attente de couronnement : un anneau d'or qui bat autour de la case,
+## et la couronne au-dessus. Il n'a plus aucun coup legal et personne ne le
+## couvre - c'est l'annonce d'une Dame ET la designation d'une cible.
+func _draw_crowning() -> void:
+	if crowning_cells.is_empty():
+		return
+	var pulse := 0.5 + 0.5 * sin(float(Time.get_ticks_msec()) / 260.0)
+	for cell in crowning_cells:
+		var center := cell_center(cell)
+		var radius := _cell_size * 0.44
+		var gold := UiTheme.GOLD
+		gold.a = 0.45 + 0.4 * pulse
+		draw_arc(center, radius, 0.0, TAU, 24, gold, maxf(1.5, _cell_size * 0.06))
+
+		# La lettre de la Dame dans une pastille, comme le badge de promotion :
+		# meme vocabulaire, pour qu'on lise "elle arrive" et non "elle est la".
+		var badge := center + Vector2(0, -radius - _cell_size * 0.20)
+		var badge_radius := _cell_size * 0.18
+		draw_circle(badge, badge_radius, Color(0, 0, 0, 0.55))
+		draw_arc(badge, badge_radius, 0.0, TAU, 16, gold, maxf(1.0, _cell_size * 0.035))
+		var font := ThemeDB.fallback_font
+		var font_size := maxi(7, int(_cell_size * 0.24))
+		draw_string(font, badge + Vector2(-badge_radius, font_size * 0.32),
+			Balance.unit_letter(Balance.DAME),
+			HORIZONTAL_ALIGNMENT_CENTER, badge_radius * 2.0, font_size, gold)
 
 
 ## Petit badge flottant qui monte et s'estompe au-dessus de la case,

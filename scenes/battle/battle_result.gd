@@ -1,0 +1,661 @@
+class_name BattleResult
+extends Control
+##
+## ECRAN DE RESULTAT - victoire et defaite, repris des maquettes V2.
+##
+## Ce n'est plus une modale posee sur le plateau assombri mais un ECRAN PLEIN :
+## l'illustration occupe tout le cadre (la taverne pavoisee en victoire, le
+## camp sous la pluie en defaite), le mot VICTOIRE / DEFAITE est une image
+## gravee, et tout le reste - le bilan, les boutons - tient sur des plaques
+## royales ancrees en bas.
+##
+## Les deux issues partagent exactement la meme construction : seule change la
+## "peau" (fond, bordures, degrades, accents), decrite dans _skin. C'est la
+## maquette elle-meme qui est batie ainsi - le panneau de defaite est le
+## panneau de victoire repeint en rouge.
+##
+## Le CONTENU du bilan, lui, vient de la bataille jouee : la maquette montre
+## trois lignes d'exemple, le jeu en affiche autant qu'il en a (aura des
+## Dames, Dames ramenees au Chateau Royal, Dame offerte par la campagne).
+##
+## Usage :
+##   var screen := BattleResult.new()
+##   add_child(screen)
+##   screen.open(true)
+##   screen.add_reward_row("Récompense totale", 450)
+##   screen.add_stat_row("Ennemis vaincus", "11")
+##   screen.add_primary_button("BATAILLE SUIVANTE", func(): ...)
+##
+
+const VICTORY_BG_PATH := "res://assets/results/victory_bg.jpg"
+const VICTORY_TITLE_PATH := "res://assets/results/victory_title.png"
+const DEFEAT_BG_PATH := "res://assets/results/defeat_bg.jpg"
+const DEFEAT_TITLE_PATH := "res://assets/results/defeat_title.png"
+const COIN_PATH := "res://assets/ui/kg_coin.png"
+const SAFE_AREA_SCRIPT := "res://scripts/ui/safe_area.gd"
+
+## Le mot grave est exporte a 340 x 136 dans la maquette (Victoire-PNG).
+const TITLE_SIZE := Vector2(340, 136)
+## Largeur du filet ornemental sous le titre (Ornament, 260 points).
+const ORNAMENT_WIDTH := 260.0
+
+## Confettis de la maquette (Frame 190:7 a 190:18), en coordonnees du cadre de
+## reference 393 x 852 : centre x, centre y, largeur, hauteur, rotation en
+## degres, teinte, opacite. Ils sont FIXES et non simules - la maquette les a
+## poses un par un, et une nappe de particules coute cher sur mobile.
+const CONFETTI := [
+	[36.4, 85.1, 8.0, 18.0, -35.0, "3b66ff", 0.90],
+	[60.2, 147.6, 6.0, 14.0, 22.0, "ffd700", 0.85],
+	[337.3, 99.5, 8.0, 18.0, 40.0, "3b66ff", 0.90],
+	[315.2, 160.6, 6.0, 14.0, -20.0, "ffd700", 0.80],
+	[91.3, 63.6, 7.0, 16.0, 15.0, "5588ff", 0.75],
+	[361.0, 62.5, 5.0, 12.0, -45.0, "ffd700", 0.90],
+	[14.1, 207.6, 6.0, 14.0, 30.0, "ffd700", 0.70],
+	[376.6, 225.8, 7.0, 16.0, -25.0, "3b66ff", 0.80],
+	[175.0, 49.7, 8.0, 8.0, 45.0, "ffd700", 0.90],
+	[213.5, 43.5, 5.0, 12.0, -10.0, "5588ff", 0.80],
+	[131.1, 74.1, 6.0, 6.0, 30.0, "ffd700", 0.85],
+	[269.5, 67.7, 8.0, 18.0, -50.0, "3b66ff", 0.75],
+]
+
+## Etincelles (spark-1 a spark-4) : de simples disques d'or.
+const SPARKS := [
+	[155.0, 88.0, 2.5], [236.0, 72.0, 2.0], [78.0, 180.0, 2.0], [320.0, 185.0, 2.5],
+]
+
+const REFERENCE_WIDTH := 393.0
+
+var _skin: Dictionary = {}
+var _title_text: String = ""
+var _stats: VBoxContainer
+var _buttons: VBoxContainer
+var _actions_row: HBoxContainer
+
+
+static func victory_skin() -> Dictionary:
+	return {
+		"bg": VICTORY_BG_PATH,
+		"title": VICTORY_TITLE_PATH,
+		"tint": Color("0b1225", 0.28),
+		"vignette_top": Color("0b1225", 0.69),
+		"vignette_bottom": Color("05060a", 0.94),
+		"glow": Color("ffd700", 0.56),
+		"edge": Color("ffe680"),
+		"plate": PackedColorArray([Color("1e3278"), Color("0a1230"), Color("0e1a40")]),
+		"inner_outline": Color("ffd700", 0.31),
+		"diamond": Color("3a7fe8"),
+		"diamond_edge": Color("c8960c"),
+		"shell": PackedColorArray([
+			Color("ffe680"), Color("c8960c"), Color("8b6200"), Color("c8960c")]),
+		"shell_inner_edge": Color("ffd700", 0.25),
+		"action": PackedColorArray([Color("12213e"), Color("0a1230")]),
+		"label": Color("c8a84b"),
+		"text": Color("ffd700"),
+		"separator": Color(1, 1, 1, 0.06),
+		"bullets": [Color("3b66ff"), Color("5588ff")],
+		"highlight_row": Color(0, 0, 0, 0),
+		"ornament_line": Color("d4af37", 0.7),
+		"ornament_jewel": Color("ffd700"),
+		"cta_inner": PackedColorArray([
+			Color("1e3278"), Color("0a1230"), Color("0e1a40")]),
+		"confetti": true,
+	}
+
+
+static func defeat_skin() -> Dictionary:
+	return {
+		"bg": DEFEAT_BG_PATH,
+		"title": DEFEAT_TITLE_PATH,
+		"tint": Color("0b0608", 0.22),
+		"vignette_top": Color("1a0508", 0.75),
+		"vignette_bottom": Color("060204", 0.94),
+		"glow": Color("ff3b30", 0.56),
+		"edge": Color("ff6b6b"),
+		"plate": PackedColorArray([Color("2a0a0a"), Color("150305"), Color("1a0508")]),
+		"inner_outline": Color("ff3b30", 0.25),
+		"diamond": Color("8b1a1a"),
+		"diamond_edge": Color("c0392b"),
+		"shell": PackedColorArray([
+			Color("ff6b6b"), Color("c0392b"), Color("8b1a1a"), Color("c0392b")]),
+		"shell_inner_edge": Color("ff3b30", 0.25),
+		"action": PackedColorArray([Color("1a0a0a"), Color("100305")]),
+		"label": Color("c0392b"),
+		"text": Color("ff6b6b"),
+		"separator": Color("ff3b30", 0.15),
+		"bullets": [Color("c0392b"), Color("8b6060")],
+		"highlight_row": Color("ff3b30", 0.06),
+		"ornament_line": Color("c0392b", 0.7),
+		"ornament_jewel": Color("ff3b30"),
+		"cta_inner": PackedColorArray([
+			Color("3d0a0a"), Color("1a0305"), Color("2a0608")]),
+		"confetti": false,
+	}
+
+
+## Peau du MATCH NUL : celle de la victoire, sans les confettis et sans le
+## grand lettrage. Rien a feter, rien a pleurer - le decor reste le meme,
+## c'est le ton qui change.
+static func draw_skin() -> Dictionary:
+	var skin := victory_skin()
+	skin["confetti"] = false
+	skin["tint"] = Color("0b1225", 0.55)
+	skin["edge"] = Color("c9d3e6")
+	skin["diamond"] = Color("46527a")
+	skin["diamond_edge"] = Color("c9d3e6")
+	skin["text"] = Color("dbe3f2")
+	skin["label"] = Color("9baac0")
+	skin["inner_outline"] = Color("c9d3e6", 0.22)
+	skin["shell"] = PackedColorArray([
+		Color("c9d3e6"), Color("6d7a99"), Color("444f6d"), Color("6d7a99")])
+	skin["shell_inner_edge"] = Color("c9d3e6", 0.25)
+	skin["ornament_line"] = Color("c9d3e6", 0.6)
+	skin["ornament_jewel"] = Color("c9d3e6")
+	return skin
+
+
+# ------------------------------- CONSTRUCTION --------------------------------
+
+## Monte l'ecran : fond, vignettes, confettis, titre grave, plaque de bilan
+## vide et pile de boutons vide. Les lignes et les boutons s'ajoutent ensuite.
+## `title_text` remplace le mot grave par une plaque de titre ecrite. Sert aux
+## combats intermediaires d'une serie ("COMBAT 2 SUR 3") : ceux-la ne meritent
+## pas le grand lettrage de la victoire, qui doit rester pour la fin.
+func open(victory: bool, title_text: String = "") -> void:
+	_open(victory_skin() if victory else defeat_skin(), title_text)
+
+
+## Match nul : ni victoire ni defaite, et donc jamais le grand lettrage.
+func open_draw(title_text: String) -> void:
+	_open(draw_skin(), title_text)
+
+
+func _open(skin: Dictionary, title_text: String) -> void:
+	_skin = skin
+	_title_text = title_text
+
+	set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	# L'ecran de resultat avale les clics : le plateau reste visible au-dessus
+	# du fond mais ne doit plus repondre.
+	mouse_filter = Control.MOUSE_FILTER_STOP
+
+	_build_background()
+	if _skin["confetti"]:
+		_build_confetti()
+
+	var safe := MarginContainer.new()
+	safe.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	safe.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	safe.set_script(load(SAFE_AREA_SCRIPT))
+	safe.set("min_margin_h", 16)
+	safe.set("min_margin_bottom", 20)
+	add_child(safe)
+
+	# Tout est ancre EN BAS : le bilan et les boutons gardent leur place quel
+	# que soit l'allongement de l'ecran, et c'est l'illustration qui respire.
+	var column := VBoxContainer.new()
+	column.alignment = BoxContainer.ALIGNMENT_END
+	column.add_theme_constant_override("separation", 14)
+	column.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	safe.add_child(column)
+
+	column.add_child(_build_title_block())
+	column.add_child(_build_stats_plate())
+
+	_buttons = VBoxContainer.new()
+	_buttons.add_theme_constant_override("separation", 12)
+	_buttons.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	column.add_child(_buttons)
+
+
+func _build_background() -> void:
+	var image := TextureRect.new()
+	image.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	image.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+	image.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_COVERED
+	image.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	if ResourceLoader.exists(_skin["bg"]):
+		image.texture = load(_skin["bg"])
+	add_child(image)
+
+	var tint := ColorRect.new()
+	tint.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	tint.color = _skin["tint"]
+	tint.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	add_child(tint)
+
+	# Vignettes haute et basse de la maquette : le titre se detache du plafond
+	# de la taverne, et les plaques du bas reposent sur du noir franc.
+	add_child(_vignette(_skin["vignette_top"], true, 260.0))
+	add_child(_vignette(_skin["vignette_bottom"], false, 432.0))
+
+
+## Bandeau degrade ancre en haut (`from_top`) ou en bas, opaque du cote de
+## l'ancrage et transparent de l'autre.
+func _vignette(color: Color, from_top: bool, height: float) -> TextureRect:
+	var gradient := Gradient.new()
+	gradient.set_color(0, color if from_top else Color(color, 0.0))
+	gradient.set_color(1, Color(color, 0.0) if from_top else color)
+
+	var texture := GradientTexture2D.new()
+	texture.gradient = gradient
+	texture.fill_from = Vector2(0, 0)
+	texture.fill_to = Vector2(0, 1)
+	texture.width = 4
+	texture.height = 128
+
+	var rect := TextureRect.new()
+	rect.texture = texture
+	rect.stretch_mode = TextureRect.STRETCH_SCALE
+	rect.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+	rect.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	rect.set_anchors_and_offsets_preset(
+		Control.PRESET_TOP_WIDE if from_top else Control.PRESET_BOTTOM_WIDE)
+	if from_top:
+		rect.offset_bottom = height
+	else:
+		rect.offset_top = -height
+	return rect
+
+
+func _build_confetti() -> void:
+	var layer := Control.new()
+	layer.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	layer.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	layer.draw.connect(_draw_confetti.bind(layer))
+	add_child(layer)
+
+
+## Les confettis sont poses en coordonnees du cadre de reference : on les
+## etale horizontalement avec la largeur reelle (un ecran plus large ne doit
+## pas les tasser a gauche), mais on garde leur hauteur telle quelle - ils
+## tombent du haut de l'ecran, pas du milieu.
+func _draw_confetti(layer: Control) -> void:
+	var scale_x := layer.size.x / REFERENCE_WIDTH
+	for piece in CONFETTI:
+		var center := Vector2(float(piece[0]) * scale_x, float(piece[1]))
+		var half := Vector2(float(piece[2]), float(piece[3])) / 2.0
+		var color := Color(piece[5])
+		color.a = float(piece[6])
+		layer.draw_set_transform(center, deg_to_rad(float(piece[4])), Vector2.ONE)
+		layer.draw_colored_polygon(
+			RoyalPlate.rounded_rect(Rect2(-half, half * 2.0), 2.0), color)
+	layer.draw_set_transform(Vector2.ZERO, 0.0, Vector2.ONE)
+	for spark in SPARKS:
+		layer.draw_circle(
+			Vector2(float(spark[0]) * scale_x, float(spark[1])),
+			float(spark[2]), Color("ffd700", 0.9))
+
+
+## Le mot grave (une image : c'est un lettrage dessine, pas du texte) pose sur
+## son halo, et le filet ornemental de la maquette juste dessous.
+func _build_title_block() -> VBoxContainer:
+	var block := VBoxContainer.new()
+	block.add_theme_constant_override("separation", 4)
+	block.mouse_filter = Control.MOUSE_FILTER_IGNORE
+
+	if not _title_text.is_empty():
+		block.add_child(_written_title())
+		block.add_child(_ornament())
+		return block
+
+	var frame := Control.new()
+	frame.custom_minimum_size = Vector2(0, TITLE_SIZE.y)
+	frame.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	block.add_child(frame)
+
+	# Halo : la maquette pose une ombre portee lumineuse autour du mot. Un
+	# flou n'existe pas en 2D dans Godot - on le refait en degrade radial
+	# additif, comme les halos du village (cf. CLAUDE.md).
+	var glow := TextureRect.new()
+	glow.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	glow.offset_left = -60
+	glow.offset_right = 60
+	glow.offset_top = -34
+	glow.offset_bottom = 34
+	glow.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+	glow.stretch_mode = TextureRect.STRETCH_SCALE
+	glow.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	glow.texture = _radial_glow(_skin["glow"])
+	var material := CanvasItemMaterial.new()
+	material.blend_mode = CanvasItemMaterial.BLEND_MODE_ADD
+	glow.material = material
+	frame.add_child(glow)
+
+	var word := TextureRect.new()
+	word.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	word.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+	word.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+	word.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	if ResourceLoader.exists(_skin["title"]):
+		word.texture = load(_skin["title"])
+	frame.add_child(word)
+
+	block.add_child(_ornament())
+	return block
+
+
+func _ornament() -> Control:
+	var ornament := Control.new()
+	ornament.custom_minimum_size = Vector2(0, 12)
+	ornament.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	ornament.draw.connect(_draw_ornament.bind(ornament))
+	return ornament
+
+
+## Titre ecrit des etapes intermediaires : une plaque royale sertie de son
+## losange, comme les bandeaux de la preparation.
+func _written_title() -> RoyalPlate:
+	var plate := _plate(_skin["edge"], 3.0, 14.0, _skin["plate"])
+	plate.set_padding(20, 14, 20, 14)
+	plate.inner_outline_color = _skin["inner_outline"]
+	plate.inner_radius = 9.0
+	plate.ornament_color = _skin["diamond"]
+	plate.ornament_border = _skin["diamond_edge"]
+	plate.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
+
+	var label := _engraved(_title_text, 22, _skin["text"])
+	label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	plate.add_child(label)
+	return plate
+
+
+## Filet du titre : deux traits de 60 points aux extremites d'une largeur de
+## 260, chacun ponctue d'un petit losange vers l'interieur (Ornament, 193:5).
+func _draw_ornament(node: Control) -> void:
+	var width := minf(ORNAMENT_WIDTH, node.size.x)
+	var left := (node.size.x - width) / 2.0
+	var y := node.size.y / 2.0
+	var line: Color = _skin["ornament_line"]
+
+	node.draw_line(Vector2(left, y), Vector2(left + 60.0, y), line, 1.5)
+	node.draw_line(Vector2(left + width - 60.0, y), Vector2(left + width, y), line, 1.5)
+
+	var jewel: Color = _skin["ornament_jewel"]
+	var half := 2.83
+	for x in [left + 71.7, left + width - 71.7]:
+		node.draw_rect(Rect2(x - half, y - half, half * 2.0, half * 2.0), jewel)
+
+
+func _radial_glow(color: Color) -> GradientTexture2D:
+	var gradient := Gradient.new()
+	gradient.set_color(0, color)
+	gradient.set_color(1, Color(color, 0.0))
+
+	var texture := GradientTexture2D.new()
+	texture.gradient = gradient
+	texture.fill = GradientTexture2D.FILL_RADIAL
+	texture.fill_from = Vector2(0.5, 0.5)
+	texture.fill_to = Vector2(1.0, 0.5)
+	texture.width = 128
+	texture.height = 128
+	return texture
+
+
+## Plaque du bilan, sertie de son losange a cheval sur la tranche haute.
+func _build_stats_plate() -> RoyalPlate:
+	var plate := _plate(_skin["edge"], 4.0, 16.0, _skin["plate"])
+	plate.set_padding(14, 28, 14, 18)
+	plate.inner_outline_color = _skin["inner_outline"]
+	plate.inner_radius = 10.0
+	plate.ornament_color = _skin["diamond"]
+	plate.ornament_border = _skin["diamond_edge"]
+
+	var pad := MarginContainer.new()
+	pad.add_theme_constant_override("margin_left", 12)
+	pad.add_theme_constant_override("margin_right", 12)
+	pad.add_theme_constant_override("margin_top", 8)
+	pad.add_theme_constant_override("margin_bottom", 8)
+	pad.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	plate.add_child(pad)
+
+	_stats = VBoxContainer.new()
+	_stats.add_theme_constant_override("separation", 0)
+	_stats.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	pad.add_child(_stats)
+
+	return plate
+
+
+# ------------------------------- LIGNES DE BILAN -----------------------------
+
+## Ligne de tete : le montant gagne, piece a l'appui. En defaite la maquette
+## la pose sur un fond rouge tres pale (Consolation-Row).
+func add_reward_row(label_text: String, amount: int) -> void:
+	_separate()
+
+	var value := HBoxContainer.new()
+	value.add_theme_constant_override("separation", 8)
+
+	var coin := TextureRect.new()
+	coin.custom_minimum_size = Vector2(22, 22)
+	coin.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+	coin.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+	if ResourceLoader.exists(COIN_PATH):
+		coin.texture = load(COIN_PATH)
+	value.add_child(coin)
+	value.add_child(_engraved("+%d Or" % amount, 16, Color("ffd700")))
+
+	var row := _row(_label(label_text, 17, _skin["label"], UiTheme.font_bold()), value, 12)
+	var highlight: Color = _skin["highlight_row"]
+	if highlight.a <= 0.0:
+		_stats.add_child(row)
+		return
+
+	var panel := PanelContainer.new()
+	var box := StyleBoxFlat.new()
+	box.bg_color = highlight
+	box.set_corner_radius_all(6)
+	panel.add_theme_stylebox_override("panel", box)
+	panel.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	panel.add_child(row)
+	_stats.add_child(panel)
+
+
+## Ligne de bilan ordinaire, pointee d'une puce comme dans la maquette.
+func add_stat_row(label_text: String, value_text: String, bullet: int = 0,
+		value_color: Color = Color("f0f3f8")) -> void:
+	_separate()
+
+	var left := HBoxContainer.new()
+	left.add_theme_constant_override("separation", 10)
+	var dot := ColorRect.new()
+	dot.color = _skin["bullets"][clampi(bullet, 0, _skin["bullets"].size() - 1)]
+	dot.custom_minimum_size = Vector2(6, 6)
+	dot.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	left.add_child(dot)
+	left.add_child(_label(label_text, 14, Color("9baac0"), UiTheme.font()))
+
+	var value := _label(value_text, 15, value_color, UiTheme.font_black())
+	_stats.add_child(_row(left, value, 14))
+
+
+## Valeur accompagnee d'une icone (couronne des Dames) plutot que d'une puce.
+func add_icon_row(label_text: String, icon_name: String, value_text: String,
+		accent: Color) -> void:
+	_separate()
+
+	var value := HBoxContainer.new()
+	value.add_theme_constant_override("separation", 6)
+	var icon := Icon.new()
+	icon.icon_name = icon_name
+	icon.color = accent
+	icon.custom_minimum_size = Vector2(14, 14)
+	icon.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	value.add_child(icon)
+	value.add_child(_label(value_text, 14, accent, UiTheme.font_bold()))
+
+	var left := HBoxContainer.new()
+	left.add_theme_constant_override("separation", 10)
+	var dot := ColorRect.new()
+	dot.color = accent
+	dot.custom_minimum_size = Vector2(6, 6)
+	dot.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	left.add_child(dot)
+	left.add_child(_label(label_text, 14, Color("9baac0"), UiTheme.font()))
+
+	_stats.add_child(_row(left, value, 13))
+
+
+## Filet de separation entre deux lignes (border-b de la maquette). Pose AVANT
+## la ligne suivante plutot qu'apres la precedente : la derniere ligne ne doit
+## pas trainer un trait sous elle.
+func _separate() -> void:
+	if _stats.get_child_count() == 0:
+		return
+	var line := ColorRect.new()
+	line.color = _skin["separator"]
+	line.custom_minimum_size = Vector2(0, 1)
+	line.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_stats.add_child(line)
+
+
+func _row(left: Control, right: Control, padding: int) -> MarginContainer:
+	var margin := MarginContainer.new()
+	margin.add_theme_constant_override("margin_left", 8)
+	margin.add_theme_constant_override("margin_right", 8)
+	margin.add_theme_constant_override("margin_top", padding)
+	margin.add_theme_constant_override("margin_bottom", padding)
+	margin.mouse_filter = Control.MOUSE_FILTER_IGNORE
+
+	var row := HBoxContainer.new()
+	left.size_flags_horizontal = Control.SIZE_SHRINK_BEGIN
+	row.add_child(left)
+	var spacer := Control.new()
+	spacer.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	row.add_child(spacer)
+	right.size_flags_horizontal = Control.SIZE_SHRINK_END
+	row.add_child(right)
+
+	margin.add_child(row)
+	UiTheme.ignore_mouse_recursive(margin)
+	return margin
+
+
+# ------------------------------- BOUTONS -------------------------------------
+
+## Bouton d'action principal : une coque doree (ou rouge sang) sertie autour
+## d'une plaque - deux plaques imbriquees, comme le bouton de la preparation.
+func add_primary_button(text: String, on_press: Callable) -> void:
+	var shell := _plate(_skin["edge"], 3.0, 16.0, _skin["shell"])
+	shell.set_padding_all(4)
+	shell.inner_outline_color = Color(0, 0, 0, 0)
+	shell.highlight_alpha = 0.25
+	shell.mouse_filter = Control.MOUSE_FILTER_STOP
+	_connect_press(shell, on_press)
+	_buttons.add_child(shell)
+
+	var inner := _plate(_skin["shell_inner_edge"], 1.5, 12.0, _inner_fill())
+	inner.set_padding(24, 16, 24, 16)
+	inner.inner_outline_color = Color(0, 0, 0, 0)
+	shell.add_child(inner)
+
+	var label := _engraved(text, 17, _skin["text"])
+	label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	inner.add_child(label)
+
+
+## Bouton secondaire : une seule plaque, sans coque.
+func add_secondary_button(text: String, on_press: Callable) -> void:
+	var plate := _plate(_skin["edge"], 2.0, 14.0, _skin["plate"])
+	plate.set_padding(16, 14, 16, 14)
+	plate.inner_outline_color = Color(0, 0, 0, 0)
+	plate.highlight_alpha = 0.08
+	plate.mouse_filter = Control.MOUSE_FILTER_STOP
+	_connect_press(plate, on_press)
+	_buttons.add_child(plate)
+
+	var label := _engraved(text, 14, _skin["text"])
+	label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	plate.add_child(label)
+
+
+## Boutons de sortie (ROYAUME, CAMPAGNE) : cote a cote sur la derniere ligne,
+## a parts egales.
+func add_action_button(text: String, icon_name: String, on_press: Callable) -> void:
+	if _actions_row == null:
+		_actions_row = HBoxContainer.new()
+		_actions_row.add_theme_constant_override("separation", 12)
+		_buttons.add_child(_actions_row)
+
+	var plate := _plate(_skin["edge"], 2.0, 12.0, _skin["action"])
+	plate.set_padding(20, 13, 20, 13)
+	plate.inner_outline_color = Color(0, 0, 0, 0)
+	plate.highlight_alpha = 0.08
+	plate.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	plate.mouse_filter = Control.MOUSE_FILTER_STOP
+	_connect_press(plate, on_press)
+	_actions_row.add_child(plate)
+
+	var row := HBoxContainer.new()
+	row.alignment = BoxContainer.ALIGNMENT_CENTER
+	row.add_theme_constant_override("separation", 8)
+	plate.add_child(row)
+
+	var icon := Icon.new()
+	icon.icon_name = icon_name
+	icon.color = _skin["text"]
+	icon.custom_minimum_size = Vector2(16, 16)
+	icon.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	row.add_child(icon)
+
+	var label := _engraved(text, 13, _skin["text"])
+	label.add_theme_font_override("font", _tracked_font())
+	row.add_child(label)
+
+	UiTheme.ignore_mouse_recursive(row)
+
+
+func _connect_press(node: Control, on_press: Callable) -> void:
+	node.gui_input.connect(func(event: InputEvent):
+		if event is InputEventMouseButton and event.pressed \
+				and event.button_index == MOUSE_BUTTON_LEFT:
+			on_press.call())
+
+
+# ------------------------------- BRIQUES -------------------------------------
+
+func _plate(edge: Color, width: float, radius: float,
+		fill: PackedColorArray) -> RoyalPlate:
+	var plate := RoyalPlate.new()
+	plate.fill_colors = fill
+	plate.border_color = edge
+	plate.border_width = width
+	plate.corner_radius = radius
+	plate.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	return plate
+
+
+## Remplissage du bouton principal : bleu nuit en victoire et au nul, braise
+## en defaite. Une cle a part et non le drapeau des confettis - c'est en le
+## detournant comme "est-ce une victoire" que l'ecran de nul s'etait retrouve
+## avec un bouton rouge sang.
+func _inner_fill() -> PackedColorArray:
+	return _skin["cta_inner"]
+
+
+func _label(text: String, size: int, color: Color, font: Font) -> Label:
+	var label := UiTheme.make_label(text, size, color)
+	label.add_theme_font_override("font", font)
+	label.autowrap_mode = TextServer.AUTOWRAP_OFF
+	label.size_flags_horizontal = Control.SIZE_SHRINK_BEGIN
+	return label
+
+
+## Mot grave : gras noir, ombre portee franche. Meme parti que
+## UiTheme.gold_label, mais la teinte change avec l'issue de la bataille.
+func _engraved(text: String, size: int, color: Color) -> Label:
+	var label := UiTheme.make_label(text, size, color)
+	label.add_theme_font_override("font", UiTheme.font_black())
+	label.add_theme_color_override("font_shadow_color", Color(0, 0, 0, 0.8))
+	label.add_theme_constant_override("shadow_offset_x", 0)
+	label.add_theme_constant_override("shadow_offset_y", 2)
+	label.autowrap_mode = TextServer.AUTOWRAP_OFF
+	return label
+
+
+## Inter gras espace d'un point, l'interlettrage des libelles de sortie.
+static func _tracked_font() -> Font:
+	var variation := FontVariation.new()
+	variation.base_font = UiTheme.font_black()
+	variation.spacing_glyph = 1
+	return variation

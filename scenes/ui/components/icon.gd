@@ -16,7 +16,7 @@ extends Control
 ##   icon.color = UiTheme.TEXT_DIM
 ##
 
-@export_enum("lock", "wrench", "star", "check", "close", "diamond", "sword", "house", "crown", "crown_broken", "compass", "coin", "dot", "pause", "skip", "arrow_left", "clock", "info", "chevron_right") var icon_name: String = "star"
+@export_enum("lock", "wrench", "star", "check", "close", "diamond", "sword", "house", "castle", "crown", "crown_broken", "compass", "coin", "dot", "pause", "skip", "arrow_left", "clock", "info", "chevron_right") var icon_name: String = "star"
 @export var color: Color = Color.WHITE
 @export var line_width: float = 1.8
 
@@ -55,6 +55,8 @@ func _draw() -> void:
 			_draw_sword(c, s, lw)
 		"house":
 			_draw_house(c, s, lw)
+		"castle":
+			_draw_castle(c, s)
 		"crown":
 			_draw_crown(c, s, lw)
 		"crown_broken":
@@ -296,3 +298,39 @@ func _draw_skip(c: Vector2, s: float) -> void:
 	draw_colored_polygon(tri, color)
 	var bar_w := s * 0.14
 	draw_rect(Rect2(c.x + half * 0.55, c.y - half, bar_w, half * 2.0), color, true)
+
+
+## Chateau crenele, repris du Castle-Icon de la maquette V2 (bouton RETOUR
+## CHATEAU de la carte de campagne). Uniquement des rectangles : c'est un
+## blason, pas un dessin - il doit rester lisible a 18 points de cote.
+func _draw_castle(c: Vector2, s: float) -> void:
+	var u := s / 18.0
+	var origin := c - Vector2(s, s) * 0.5
+
+	# Corps, tours d'angle, donjon central.
+	for r in [
+		Rect2(1.8, 7.2, 14.4, 9.9),   # corps de garde
+		Rect2(0.9, 3.6, 3.6, 5.4),    # tour gauche
+		Rect2(13.5, 3.6, 3.6, 5.4),   # tour droite
+		Rect2(6.3, 5.4, 5.4, 3.6),    # courtine centrale
+		Rect2(8.1, 1.8, 1.8, 4.5),    # donjon
+		Rect2(0.9, 1.8, 1.35, 2.7),   # creneaux
+		Rect2(3.15, 1.8, 1.35, 2.7),
+		Rect2(13.5, 1.8, 1.35, 2.7),
+		Rect2(15.75, 1.8, 1.35, 2.7),
+		Rect2(6.75, 3.6, 1.35, 2.7),
+		Rect2(9.9, 3.6, 1.35, 2.7),
+	]:
+		draw_rect(Rect2(origin + r.position * u, r.size * u), color, true)
+
+	# Fanion au sommet du donjon.
+	draw_colored_polygon(PackedVector2Array([
+		origin + Vector2(9.0, 0.0) * u,
+		origin + Vector2(10.8, 1.8) * u,
+		origin + Vector2(7.2, 1.8) * u,
+	]), color.lightened(0.25))
+
+	# La porte, creusee dans le corps de garde : assez sombre pour se lire
+	# comme un vide, quelle que soit la couleur donnee a l'icone.
+	draw_rect(Rect2(origin + Vector2(6.3, 10.8) * u, Vector2(5.4, 6.3) * u),
+		color.darkened(0.72), true)

@@ -4,7 +4,55 @@ Tu arrives sur un projet de jeu mobile King's Gambit, un jeu de stratégie fanta
 
 Le joueur place son armée avant le combat, puis **joue lui-même chaque coup contre l'IA**, une pièce par camp et par tour, comme aux échecs (tape ou glisser-déposer). Un bouton AUTO laisse l'IA jouer les deux camps pour rejouer vite une bataille déjà gagnée. Un pion mené au bout du plateau devient Dame ; ramenée vivante, elle rejoint le **Château Royal** — le trône vide du début de l'histoire — et redevient déployable.
 
+Un niveau de campagne ne se gagne pas en une bataille mais en **3 à 5 combats d'affilée**, sans retour au village. L'armée ennemie revient au complet à chaque combat, le joueur revient avec ses survivants : c'est l'usure qui fait la difficulté, pas une armée qui grossit. L'or n'est versé qu'à la fin de la série, et un seul combat perdu la fait tomber entière.
+
 Le niveau de jeu de l'armée ennemie monte avec la campagne (novice → aguerri → expert, déclaré bataille par bataille dans `Balance.CAMPAIGN`) : les premiers combats doivent être gagnables par quelqu'un qui découvre le jeu. L'armée de départ comprend un cavalier — une armée de pions seuls est une finale d'échecs, donc un mauvais tutoriel — et la dernière bataille offre une Dame à la première victoire.
+
+## L'IA : une recherche, pas des heuristiques
+
+**Les trois niveaux de jeu sont trois PROFONDEURS de recherche**, pas trois jeux de règles (`Balance.AI_DEPTH`, `scripts/battle/battle_search.gd`). Un negamax avec élagage alpha-bêta, en approfondissement itératif sous contrainte de temps.
+
+- **novice = 1 demi-coup** — l'ancienne IA heuristique (`battle_ai.gd`), gardée telle quelle. Elle vérifie que sa case d'arrivée n'est pas attaquée mais ne joue jamais la réponse adverse : elle se fait fourcher. Réservée aux deux premières batailles.
+- **aguerri = 2** — elle voit la réponse immédiate. Elle ne donne plus une pièce.
+- **expert = 3** — elle voit sa réplique : fourchettes, enfilades, échanges à trois temps.
+
+Deux bancs répondent aux deux seules questions qui comptent, et sont à relancer dès qu'on touche à la taille des plateaux, aux portées ou à l'évaluation :
+
+- `tools/ai_bench.tscn` — est-ce que chercher plus loin fait gagner ? Mesuré : chaque demi-coup supplémentaire gagne **les six duels**, dans les deux camps.
+- `tools/ai_probe.tscn` — combien coûte un coup ? Sur le plus grand plateau (8×9, 11 pièces par camp) : profondeur 2 = 10 ms, 3 = 139 ms, 4 = 1 400 ms. **C'est pourquoi l'échelle s'arrête à trois.**
+
+**Pourquoi pas Stockfish, ni aucune base de données d'échecs.** Le jeu n'est pas une partie d'échecs : plateaux de 5×6 à 8×9, armées quelconques, aucun roi, et la victoire consiste à capturer toute l'armée adverse — pas à mater. Un moteur d'échecs évalue autour de la sécurité du roi, et ses bibliothèques d'ouvertures comme ses tables de finale sont des consultations de positions 8×8 standard : rien n'y est consultable ici. Ce qui se transporte, et qui est déjà fait, c'est la mécanique — recherche, élagage, ordre des coups.
+
+## Le match nul
+
+Une bataille enlisée se tranche au matériel restant — mais **à égalité stricte, personne n'a gagné**. Avant, l'égalité était attribuée au joueur en combat manuel : il suffisait de bloquer le plateau et de laisser filer le compteur pour encaisser la récompense pleine.
+
+- Le camp qui **mène** au matériel garde sa victoire : être incapable d'attraper la dernière pièce qui vous fuit ne doit pas effacer un avantage gagné.
+- Au nul, les survivants rentrent, les morts restent morts, le combat ne rapporte rien — mais **la série n'est pas rompue**. C'est un tour d'usure payé pour rien, pas une déroute.
+- Un nul au **dernier** combat achève la série sans qu'elle soit remportée : consolation seulement, et la bataille suivante ne s'ouvre pas.
+- L'écran de résultat a une troisième peau (`BattleResult.draw_skin`) : le décor de la victoire, en acier, sans confettis et sans le grand lettrage.
+
+## La Dame : rare à faire, dure à garder
+
+Trois règles, chacune sur une cause différente. Mesure de départ (`tools/promo_probe.tscn`) : douze promotions par campagne, dont **six de ramassage**.
+
+1. **L'IA défend sa rangée du fond.** Une prime de menace de promotion dans l'évaluation (`BattleSearch.PROMOTION_THREAT`) : sans elle, l'adversaire ne voit le pion que lorsqu'il entre dans l'horizon de recherche, bien trop tard pour aller au-devant. Attention au calibrage — à 400 de base, la prime valait quatre pions et poussait les deux camps à **courir** au fond plutôt qu'à se battre : les promotions doublaient au lieu de se raréfier. Une prime d'évaluation penche la balance, elle ne fait pas le travail de la recherche.
+2. **Une Dame ne se gagne que dans une bataille encore disputée** (`Balance.PROMOTION_CONTESTED_RATIO`, la moitié du matériel engagé). En dessous, le pion promeut quand même — il a traversé le plateau — mais en **Cavalier**, qui ne rejoint pas le Château Royal. C'est le seul bouton à tourner si les Dames redeviennent trop fréquentes ou trop rares.
+3. **Une Dame faite en cours de série reste en ligne** jusqu'au dernier combat (`CampaignRun._enlist_dames`) : elle ne se met pas à l'abri dès qu'elle est couronnée. Si elle tombe, c'est le **pion qu'elle était** qui manque au village, pas une Dame — il n'y en avait aucune là-bas.
+
+Résultat mesuré sur la campagne : **8 Dames → 2**, les huit autres promotions donnant un Cavalier. Le garde-fou à ne pas perdre de vue : elle ne doit pas devenir inaccessible, sinon le Château Royal et l'aura redeviennent du contenu mort — c'est pourquoi la bataille 10 en offre une à la première victoire.
+
+## La série de combats
+
+`scripts/core/campaign_run.gd` tient l'état d'une série ; `Balance` déclare `fights` par bataille (3 au début, 5 à la fin). Trois règles fixent l'enjeu :
+
+1. Les pertes ne quittent l'armée du village **qu'à la fin de la série** — une série est une seule unité économique, pas trois batailles côte à côte.
+2. Entre deux combats, le joueur relève `Balance.RUN_REINFORCE_WEIGHT` de poids parmi ses pertes, les moins chères d'abord : **deux pions se relèvent, jamais une tour**. C'est ce qui empêche la spirale de la mort.
+3. Perdre un combat perd la série, et tout l'or promis avec — il ne reste que la consolation, calculée sur les combats déjà gagnés.
+
+L'armée ennemie est la même à chaque combat, mais **ne se range pas deux fois pareil** (tirage semé sur le numéro du combat) : sans ça, rejouer le même plateau cinq fois d'affilée serait rejouer la même partie. Le premier combat garde le rangement de référence.
+
+Une série survit à la fermeture du jeu et **reprend au combat suivant**. Quitter au milieu d'un combat le fait recommencer, avec l'effectif qu'il avait au départ — pas la série entière.
 
 Un bouton **i** sur l'écran de bataille ouvre l'aide correspondant à la phase en cours (pose et barème des poids ; tour par tour, capture et promotion). C'est le seul endroit du jeu où les règles sont écrites.
 
@@ -16,6 +64,12 @@ Fichier Figma : `rqEdH4O2R21TuUFv7OUlF7`. Les écrans se lisent avec
 `get_design_context` en passant le node-id ci-dessous (le compte connecté a un
 siège Full sur l'équipe, aucun droit à demander).
 
+**Tous les écrans du fichier sont à jour, y compris ceux dont le nom n'a pas
+de suffixe `-v2`.** Le nom de la frame ne dit rien de son âge : `04_Bataille_
+Placement`, `06_Bataille_Victoire`, `09-popup-batiment` et les autres ont été
+retravaillés au même titre que `preparation-bataille-v2`. Il n'y a pas de
+maquette V1 restante à trier — ce que montre Figma aujourd'hui fait foi.
+
 | Écran | node-id | État |
 |---|---|---|
 | splash-screen | 123:7 | **fait** |
@@ -25,12 +79,12 @@ siège Full sur l'équipe, aucun droit à demander).
 | village-sans-dame | 188:2 | **fait** (c'est le même écran sans les halos) |
 | chateau-royal-avec-dame | 178:5 | **fait** — écran plein, remplace la modale |
 | chateau-royal-sans-dame | 178:51 | **fait** (même écran, illustration du trône vide) |
-| 02_Campagne | 58:90 | à faire |
-| preparation-bataille-v2 | 169:4 | à faire |
+| 02_Campagne | 58:90 | **fait** — parchemin défilant de 2300 points |
+| preparation-bataille-v2 | 169:4 | **fait** — introduit la plaque royale |
 | 04_Bataille_Placement | 49:2 | à faire |
 | 05_Bataille_Combat | 2:407 | à faire |
-| 06_Bataille_Victoire | 2:546 | à faire |
-| 07-bataille-defaite | 2:835 | à faire |
+| 06_Bataille_Victoire | 2:546 | **fait** — écran plein, remplace la modale |
+| 07-bataille-defaite | 2:835 | **fait** (même écran repeint en rouge) |
 | mission-popup | 228:9 | à faire (le panneau existe déjà côté code) |
 | 09-popup-batiment | 2:1048 | à faire |
 | 10-popup-batiment-verrouille | 2:1115 | à faire |
@@ -40,7 +94,7 @@ siège Full sur l'équipe, aucun droit à demander).
 | 12-composants | 2:1224 | planche de référence |
 | Pièces d'échecs SVG | 32:2 | déjà en jeu |
 
-Trois pièges rencontrés, à ne pas redécouvrir :
+Quatre pièges rencontrés, à ne pas redécouvrir :
 
 1. **Les halos de la maquette sont des ellipses floutées** (`feGaussianBlur`).
    L'import vectoriel de Godot n'applique pas les filtres SVG : importés tels
@@ -53,6 +107,12 @@ Trois pièges rencontrés, à ne pas redécouvrir :
    Relief (la voix du Roi) et Jaro (les enseignes) sont dans `assets/fonts`.
    La maquette utilise aussi **Jua** pour le bouton Missions — 2,1 Mo pour un
    seul mot, remplacé par Jaro.
+4. **Un PNG exporté depuis Figma n'est pas détouré** : `download_assets` rend
+   le nœud *avec le fond de la frame derrière lui*. Les cachets de la campagne
+   sont donc arrivés en carrés opaques bruns. Il faut redécouper l'alpha après
+   coup (cf. le disque et l'ombre portée reconstruits dans
+   `assets/campaign/`) — ou ne prendre en image que ce qui porte un filtre SVG
+   et redessiner le reste au trait.
 
 ## V2 Figma : la maquette est VISUELLE, le gameplay vient du code
 
@@ -79,7 +139,8 @@ jeu qui gagne**, en reprenant seulement l'habillage :
    (45 à 72 points de côté). 8×11 rendrait les cases trop petites.
 3. **« Déploiement : 12/15 unités »** — ce n'est pas un nombre d'unités mais un
    **budget de poids** (Pion 1, Cavalier 3, Fou 3, Tour 5, Dame 5). Le libellé
-   doit parler de charge, pas d'effectif.
+   doit parler de charge, pas d'effectif. Appliqué : la préparation et le
+   placement disent tous les deux « Charge : 7/16 ».
 4. **Noms des bâtiments** — la maquette parle d'Atelier, Académie, Chapelle,
    Cathédrale. Le jeu a Caserne des Pions, Écuries, Cloître des Fous, Donjon des
    Tours. Les Dames ramenées vivantes n'ont pas de bâtiment : elles vivent au
@@ -88,6 +149,12 @@ jeu qui gagne**, en reprenant seulement l'habillage :
 5. **Village avec / sans Dame** — les deux états existent bien dans le jeu : la
    différence se joue sur le **halo doré du Château Royal** et ses fenêtres
    allumées, exactement comme dans la maquette.
+6. **Carte de campagne** — la maquette montre neuf cachets et coiffe le
+   médaillon du sommet d'un « Bientôt disponible ». Le jeu compte **dix
+   batailles**, et la dixième est justement la Tour de la Dame : le médaillon
+   EST la bataille 10, et le libellé disparaît. La maquette n'écrit pas non
+   plus les noms de bataille sur la carte — le jeu suit, ils s'affichent à la
+   préparation.
 
 Écrans de la maquette qui n'existent pas encore côté code : Codex du Royaume,
 modale de confirmation d'amélioration, écran plein Château Royal. Ceux-là sont
@@ -113,7 +180,7 @@ Les écrans actuels sont posés en **coordonnées absolues** calibrées pour exa
 
 Les marges, les tailles de composants et les rayons restent figés ; seule la hauteur du milieu est libre. Les maquettes doivent donc être dessinées dans un cadre utile de **361 × 824** (393 × 852 moins les marges de zone sûre), ou fournir les positions en pourcentages.
 
-Écrans déjà convertis : `battle.tscn` (grille, croix, bandeau du bas ancrés). Restent à convertir : village, campagne, préparation.
+Écrans déjà convertis : `battle.tscn` (grille, croix, bandeau du bas ancrés) et `campaign.tscn` (carte centrée sur sa largeur de maquette, bouton du bas ancré en bas dans la zone sûre). Restent à convertir : village, préparation.
 
 Solution de repli si la fidélité au pixel prime : passer `window/stretch/aspect` de `expand` à `keep` dans `project.godot` — la zone de jeu fait alors toujours 393 × 852 exactement, avec des bandes noires sur les écrans plus allongés.
 - Exports : sprites/textures PNG avec alpha, pas de blur lourd ni particules complexes
@@ -137,7 +204,7 @@ Fichiers par dossier : `roi.svg`, `dame.svg`, `cavalier.svg`, `fou.svg`, `tour.s
 |---|---|---|
 | village_background.png | Fond de l'écran Village (01) | 393×852 |
 | battlefield_background.png | Fond des écrans Placement (04) et Combat (05) | 393×852 |
-| parchment_map.png | Fond parchemin campagne (02) — posé sur des lattes de bois | 363×780 approx |
+| parchment_map.jpg | Fond de la carte de campagne (02), dans `assets/campaign/` | 786×4600 (2×) |
 
 ### Screenshots des écrans (dans screens/)
 
@@ -205,24 +272,64 @@ Tout est en Inter (Google Fonts, gratuite). Poids utilisés :
 
 ### 02_Campagne (carte de progression)
 
-- Background : lattes de bois horizontales (12 planches h:72, teintes alternées #3b2b1c / #423324 / #4a3b2b, stroke 1px séparation)
-- Parchemin : parchment_map.png posé centré (x:15, y:36, w:363, h:780), radius 4, drop shadow (0,4, blur 16, noir 60%)
-- Chemin en pointillés : ellipses de 5×5px couleur #66401f (opacity 0.7), traçant un sentier sinueux de bas en haut
-- 5 étapes de bataille positionnées sur le chemin :
-  - Gagné (3 premières) : cercle vert 30×30 (#339940), stroke 2px, checkmark "✓" blanc 16px + label nom sur fond #1f140a radius 8, texte #d9cca6
-  - Disponible (4ème) : cercle or 38×38 (#ffd11a), stroke 3px, glow or (blur 14, spread 2), numéro noir 17px + label texte #ffe580
-  - Verrouillé (5ème) : cercle gris 28×28 (#594d38 opacity 0.7), stroke 1.5px, emoji 🔒 11px + label texte #807361
-- Progression (x:345, y:14) : pill noire (radius 10, opacity 0.4), texte "3/8" #ccbf99 11px
-- Bouton VILLAGE (centré bas, y:800) : fond #261a0d opacity 0.9, radius 14, stroke #604d33 1.5px, drop shadow, "🏠 VILLAGE" texte or 13px
+Refaite d'après la maquette V2 : ce n'est plus un parchemin d'un écran mais une
+**carte de 393 × 2300 points qui défile**, du bas — l'Orée du Bois — vers le
+haut, où la Tour de la Dame attend en médaillon.
+
+- Fond : `assets/campaign/parchment_map.jpg`, une seule image de 786 × 4600
+  (le cadre entier rendu à 2×, bords sombres compris). Le parchemin, les
+  montagnes, les forêts **et les cinq scènes de bataille** de la maquette y
+  sont déjà fondus — les scènes étaient des calques en `mix-blend-multiply`,
+  elles ont été cuites dans la texture plutôt que reposées à l'exécution : une
+  texture au lieu de six, et aucun mode de fusion à régler
+- Chemin : `assets/campaign/path.svg`, le tracé en pointillés de la maquette,
+  posé tel quel (dessiné à la main, il ne s'interpole pas)
+- Cachets (`campaign_seal.gd`) : trois états repris des frames `level-N-seal`
+  — cire pâle *gagnée*, cire d'or vif *disponible*, plomb piqué de rouille
+  *verrouillé*. Le fond de cire vient d'un PNG (dégradé + ombre portée + ombre
+  interne, trois filtres SVG que Godot n'applique pas) ; anneau intérieur,
+  gouttes de cire et rouille sont dessinés au trait
+- Dernière bataille : pas un cachet mais un **médaillon** de 160 points, disque
+  sombre cerclé d'or, la tour gravée au centre, avec un halo additif qui
+  respire dès qu'elle est jouable
+- Bouton du bas : « ⛨ RETOUR CHÂTEAU », pleine largeur, fond `#261a0d` à 90 %,
+  radius 14, bordure `#99804d`. La maquette le pose à la fin du parchemin ; le
+  jeu le garde **flottant et ancré en bas**, sinon il disparaît dès qu'on
+  remonte le chemin — en échange il s'efface quand on lit la carte
+- La carte s'ouvre sur la bataille en cours, pas sur le bas du parchemin
 
 ### 03_Preparation_Bataille (briefing)
 
-- Fond #0f111a
-- Header (y:44, h:64) : numéro + nom de bataille
-- Enemies-Card (x:16, y:187, w:361, h:168) : fond #161926, radius 16, stroke 1px — liste des ennemis
-- Player-Card (x:16, y:375, w:361, h:179) : même style — armée du joueur
-- Info-Summary (x:16, y:574, w:361, h:89) : fond #161926, radius 16 — or gagnable, taille terrain
-- Gold-Button (x:24, y:742, w:345, h:54) : fond #c59b27, radius 12, stroke 2px — "PRÉPARER L'ARMÉE"
+Refait d'après `preparation-bataille-v2` (169:4), qui change la **peau** sans
+changer le propos. C'est cet écran qui introduit la **plaque royale**, la
+brique visuelle de la V2 : un rectangle arrondi rempli d'un dégradé bleu nuit
+(`#1e3278` → `#0a1230` → `#0e1a40`), cerclé d'un trait d'or épais `#ffe680`, et
+doublé à l'intérieur d'un filet d'or fin `rgba(255,215,0,.31)` posé exactement
+sur la zone de contenu.
+
+- Composant : `scenes/ui/components/royal_plate.gd` (`RoyalPlate`, un
+  `MarginContainer` qui se dessine). Tout en sort — panneaux, cartes d'unité,
+  bannière rouge, bouton retour, pastille PRÊT, coque dorée du bouton d'action
+  — en changeant seulement couleurs, rayon et épaisseur. Tracé au polygone
+  coloré par sommet plutôt qu'en `StyleBoxFlat` : StyleBoxFlat ne sait pas
+  remplir en dégradé, et c'est le dégradé qui donne son relief à la plaque
+- En-tête : bouton retour 52×52 (bord 3,5px, biseau intérieur) + plaque de
+  titre pleine largeur, sertie d'un **losange** à cheval sur sa tranche haute
+- Panneau ennemi : bannière « ARMÉE ENNEMIE » en dégradé horizontal rouge,
+  puis une carte par type présent (pièce, `Nom ×N`, niveau)
+- Panneau joueur : « TON ARMÉE » + la **charge**, et une carte par type de
+  l'armée — `PRÊT` en pastille bleue si le joueur en possède, `RÉSERVE` grisée
+  sinon. Un bâtiment pas encore apparu au village n'affiche pas de niveau
+  plutôt qu'un « Nv.0 » faux
+- Panneau de l'enjeu : récompense (avec la pièce `kg_coin`), aura des Dames au
+  repos, taille du terrain, et la mention « bataille déjà gagnée »
+- Bouton d'action : une coque d'or sertie autour d'un bouton bleu — deux
+  plaques imbriquées
+- **Texte d'or** : la maquette remplit ses mots d'un dégradé. Godot ne sait pas
+  peindre un `Label` en dégradé sans un shader par glyphe, dont le rendu dépend
+  de la hauteur de chaque lettre ; `UiTheme.gold_label()` garde donc l'or médian
+  à plat, avec l'ombre portée de la maquette. À 9-19 points, la différence ne se
+  voit pas
 
 ### 04_Bataille_Placement
 
@@ -249,21 +356,34 @@ Tout est en Inter (Google Fonts, gratuite). Poids utilisés :
   - **Code actuel** : "À toi de jouer" / "L'ennemi joue…", bouton AUTO (bascule en MANUEL quand il est actif) et vitesses (×1/×2/×4). Pas de PAUSE ni de FIN TOUR : le combat attend déjà le joueur entre deux coups
   - Coups légaux de la pièce sélectionnée : pastille bleue sur une case libre, anneau doré autour d'une pièce à prendre ; la case de départ et la case d'arrivée du dernier coup restent surlignées
 
-### 06_Bataille_Victoire
+### 06_Bataille_Victoire et 07_Bataille_Defaite
 
-- Grille en arrière-plan assombrie (#0a0c14)
-- Victory-Modal (x:24, y:150, w:345, h:507) : fond #161926, radius 20, stroke or 2px
-- Titre "VICTOIRE" doré
-- Stats list (fond #262c3f, radius 12) : or gagné, pièces perdues, tours
-- 3 boutons empilés : Bataille suivante (or), Réessayer (bleu), Village (gris)
+Refaits d'après les maquettes V2 : ce n'est plus une modale posée sur le
+plateau assombri mais un **écran plein** (`scenes/battle/battle_result.gd`).
+Les deux issues partagent exactement la même construction — le panneau de
+défaite est le panneau de victoire repeint en rouge — et c'est ce qui décide
+de la forme du composant : une seule « peau » (`victory_skin()` /
+`defeat_skin()`) change fond, bordures, dégradés et accents.
 
-### 07_Bataille_Defaite
-
-- Même structure que Victoire
-- Defeat-Modal (x:24, y:150, w:345, h:463) : fond #161926, radius 20, stroke rouge 2px
-- Titre "DÉFAITE" rouge
-- Diviseur ornemental
-- Stats + boutons (Réessayer, Village)
+- Illustration plein cadre : `assets/results/victory_bg.jpg` (la taverne
+  pavoisée) et `defeat_bg.jpg` (le camp sous la pluie), plus un voile de
+  teinte et deux vignettes dégradées, haute et basse
+- Le mot **VICTOIRE / DÉFAITE est une image** (`victory_title.png`,
+  `defeat_title.png`, 340 × 136) : c'est un lettrage gravé, pas du texte. Son
+  halo est refait en dégradé radial additif — un flou n'existe pas en 2D
+- Confettis de la victoire : douze rectangles et quatre étincelles **posés un
+  par un** aux coordonnées de la maquette, pas une nappe de particules
+- Bilan sur une plaque royale sertie de son losange, filet d'or intérieur,
+  une ligne par fait de la bataille
+- Boutons : **une seule action dans sa coque sertie** (bataille suivante, ou
+  Réessayer quand il n'y a plus de bataille suivante), puis les deux sorties
+  côte à côte, ROYAUME et CAMPAGNE
+- Le contenu du bilan vient du jeu, pas de la maquette : celle-ci montre trois
+  lignes d'exemple, le jeu en affiche autant qu'il en a — aura des Dames au
+  repos, Dames ramenées au Château Royal, Dame offerte par la campagne
+- Le filet ornemental sous le titre est **visible dans les deux issues**. La
+  maquette de victoire le cache derrière la plaque du bilan ; comme c'est le
+  même ornement dessiné pour les deux écrans, on le laisse respirer
 
 ### 08_Popup_Chateau
 

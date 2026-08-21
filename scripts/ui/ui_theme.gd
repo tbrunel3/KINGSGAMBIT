@@ -45,9 +45,13 @@ const TITLE_PATH := "res://assets/fonts/Lora.ttf"
 
 const WEIGHT_REGULAR := 400
 const WEIGHT_BOLD := 700
+## Inter Extra Bold, la graisse des chiffres graves : cachets de la carte de
+## campagne, titres de section de la planche de composants.
+const WEIGHT_BLACK := 800
 
 static var _font: Font = null
 static var _font_bold: Font = null
+static var _font_black: Font = null
 static var _font_dialogue: Font = null
 static var _font_display: Font = null
 static var _font_title: Font = null
@@ -63,6 +67,12 @@ static func font_bold() -> Font:
 	if _font_bold == null:
 		_font_bold = _inter_at_weight(WEIGHT_BOLD)
 	return _font_bold
+
+
+static func font_black() -> Font:
+	if _font_black == null:
+		_font_black = _inter_at_weight(WEIGHT_BLACK)
+	return _font_black
 
 
 ## Police des dialogues du Roi. Retombe sur Inter si Comic Relief manque.
@@ -160,6 +170,24 @@ static func make_label(text: String, size: int = 16, color: Color = TEXT) -> Lab
 	label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	label.add_theme_font_size_override("font_size", size)
 	label.add_theme_color_override("font_color", color)
+	return label
+
+
+## Libelle d'or grave de la V2 (plaques de titre, montants, boutons d'action).
+##
+## La maquette remplit ces mots d'un degrade #ffe680 -> #ffd700 -> #c8960c :
+## Godot ne sait pas peindre un Label en degrade sans passer par un shader
+## par glyphe, dont le rendu depend de la hauteur de chaque lettre. On garde
+## donc l'or median a plat, avec l'ombre portee de la maquette - a ces corps
+## (9 a 19 points), la difference ne se voit pas, et le relief vient de
+## l'ombre bien plus que du degrade.
+static func gold_label(text: String, size: int) -> Label:
+	var label := make_label(text, size, Color("ffd700"))
+	label.add_theme_font_override("font", font_black())
+	label.add_theme_color_override("font_shadow_color", Color(0, 0, 0, 0.8))
+	label.add_theme_constant_override("shadow_offset_x", 0)
+	label.add_theme_constant_override("shadow_offset_y", 2)
+	label.autowrap_mode = TextServer.AUTOWRAP_OFF
 	return label
 
 

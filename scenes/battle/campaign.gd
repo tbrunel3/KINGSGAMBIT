@@ -1,57 +1,71 @@
 extends Control
 ##
-## CAMPAGNE - carte de progression, chemin trace sur le parchemin.
+## CAMPAGNE - la carte du royaume, deroulee sur un parchemin.
 ##
-## La carte Figma (02_Campagne) fait 1440px de haut pour un ecran de 852 -
-## elle est pensee pour defiler, pas pour tout montrer d'un coup. Cette scene
-## vit donc dans un ScrollContainer : tout ce qui compose la carte (planches,
-## parchemin, pastilles, chemin en pointilles) est a l'interieur et defile ;
-## la pastille de progression, la barre du bas et les fondus de bord restent
-## fixes par dessus.
+## Reprise de la maquette V2 (Figma 02_Campagne) : le parchemin fait desormais
+## 2300 points de haut pour un ecran de 852, soit pres de trois ecrans. Il est
+## pense pour DEFILER, du bas - l'Oree du Bois, la premiere escarmouche - vers
+## le haut, ou la Tour de la Dame attend en medaillon.
+##
+## Le fond est une seule image : parchemin, montagnes, forets et scenes de
+## bataille y sont deja peints (les scenes de la maquette sont fondues dedans
+## en mode multiply, plutot que reposees en calques - une texture au lieu de
+## six, et aucun melange a regler a l'execution). Ne restent en vif que le
+## chemin en pointilles et les dix cachets, qui doivent changer d'etat.
 ##
 ## Sert autant a progresser qu'a REJOUER : une bataille deja gagnee reste
 ## accessible pour refaire de l'or, a taux reduit (Balance.REPLAY_REWARD_RATIO).
 ##
 
-## Hauteur totale de la carte defilante. Les dix pastilles y sont reparties
-## le long de la meme courbe en S que la maquette Figma (5 points mesures,
-## prolonges), mise a l'echelle sur cette hauteur plutot que compressee dans
-## un seul ecran.
-const CONTENT_HEIGHT := 2000.0
+## Cadre de la carte, en unites de la maquette. La carte garde cette largeur
+## quel que soit le telephone : elle est centree, et le bois du decor remplit
+## ce qui depasse (cf. _layout_map).
 const CONTENT_WIDTH := 393.0
+const CONTENT_HEIGHT := 2300.0
 
+## Centre de chaque cachet, releve sur les frames level-N-seal de la maquette.
+## Le dixieme n'est pas un cachet mais le medaillon du sommet.
 const NODE_POS := [
-	Vector2(194.7, 1850.1),
-	Vector2(174.2, 1634.9),
-	Vector2(153.6, 1419.2),
-	Vector2(170.0, 1221.2),
-	Vector2(198.8, 1028.3),
-	Vector2(206.9, 832.9),
-	Vector2(194.7, 634.6),
-	Vector2(177.4, 452.0),
-	Vector2(145.2, 315.9),
-	Vector2(112.9, 180.0),
+	Vector2(207.3, 2052.0),
+	Vector2(168.4, 1817.3),
+	Vector2(109.3, 1586.9),
+	Vector2(225.1, 1382.2),
+	Vector2(275.6, 1153.2),
+	Vector2(161.7, 961.7),
+	Vector2(134.2, 769.1),
+	Vector2(255.6, 583.8),
+	Vector2(186.0, 372.2),
+	Vector2(182.5, 121.5),
 ]
 
-const WON_COLOR := Color("339940")
-const AVAILABLE_COLOR := Color("ffd11a")
-const LOCKED_COLOR := Color("594d38")
+## Chemin en pointilles, exporte tel quel de la maquette (node 209:421). Le
+## trace serpente d'un cachet a l'autre : il est dessine a la main, pas
+## interpole, donc il vient en image plutot qu'en code.
+const PATH_RECT := Rect2(88.2, 174.0, 190.0, 2074.5)
 
-## Position visible / masquee de la barre "VILLAGE", cf. _set_bottom_bar_visible().
-const BOTTOM_BAR_VISIBLE_Y := 800.0
-const BOTTOM_BAR_HIDDEN_Y := 920.0
+## Halo du medaillon de fin de campagne, dessine au degrade additif faute de
+## filtre SVG (meme raison qu'au village, cf. CLAUDE.md).
+const MEDALLION_GLOW_SIZE := Vector2(300, 300)
+
+## Barre "RETOUR CHATEAU" : hauteur du bouton et marge sous lui, et de combien
+## il glisse hors ecran quand on remonte la carte (cf. _set_bottom_bar_visible).
+const BOTTOM_BAR_HEIGHT := 60.0
+const BOTTOM_BAR_MARGIN := 8.0
+const BOTTOM_BAR_SLIDE := 100.0
 
 @onready var _scroll: ScrollContainer = $Scroll
 @onready var _content: Control = $Scroll/Content
-@onready var _planks: Control = $Scroll/Content/Planks
-@onready var _path_dots: Control = $Scroll/Content/PathDots
-@onready var _map_overlay: Control = $Scroll/Content/MapOverlay
-@onready var _fixed_overlay: Control = $FixedOverlay
-@onready var _bottom_bar: Control = $BottomBar
+@onready var _map: Control = $Scroll/Content/Map
+@onready var _parchment: TextureRect = $Scroll/Content/Map/Parchment
+@onready var _glow_layer: Control = $Scroll/Content/Map/Glow
+@onready var _path: TextureRect = $Scroll/Content/Map/Path
+@onready var _seals: Control = $Scroll/Content/Map/Seals
+@onready var _bottom_bar: Control = $Safe/BottomBar
 @onready var _fade_overlay: ColorRect = $FadeOverlay
 
-var _progress_pill: Pill
-var _nodes: Dictionary = {}   # id -> {"circle":.., "label":..}
+var _nodes: Dictionary = {}   # id -> CampaignSeal
+var _medallion_glow: TextureRect
+var _medallion_glow_tween: Tween
 var _village_button: PanelContainer
 
 var _last_scroll_y: float = 0.0
@@ -62,135 +76,144 @@ var _transitioning: bool = false
 
 func _ready() -> void:
 	_content.custom_minimum_size = Vector2(CONTENT_WIDTH, CONTENT_HEIGHT)
-	_size_scroll_children()
-	_build_planks()
-	_build_path_dots()
-	_build_progress_pill()
-	for data in Balance.CAMPAIGN:
-		_build_node(int(data["id"]), String(data["name"]))
+	_content.resized.connect(_layout_map)
+	_layout_map()
+
+	_build_seals()
 	_build_village_button()
 	_refresh()
 
-	# Ouvre la carte sur la bataille en cours plutot que sur le sommet
-	# (batailles verrouillees). On attend que la barre de defilement ait
-	# elle-meme fini de mesurer sa plage complete avant de fixer la position -
-	# un compte de frames fixe n'est pas fiable partout (le Web en particulier
-	# peut prendre plusieurs images pour stabiliser ce layout).
+	# Ouvre la carte sur la bataille en cours plutot que sur un bout de
+	# parchemin au hasard. On attend que la barre de defilement ait fini de
+	# mesurer sa plage complete avant de fixer la position : un compte de
+	# frames fixe n'est pas fiable partout (le Web peut prendre plusieurs
+	# images pour stabiliser ce layout).
 	var vbar := _scroll.get_v_scroll_bar()
 	var guard := 0
 	while vbar.max_value < CONTENT_HEIGHT - 1.0 and guard < 20:
 		await get_tree().process_frame
 		guard += 1
-	_scroll_to_bottom()
-
-
-func _scroll_to_bottom() -> void:
-	_scroll.scroll_vertical = int(maxf(0.0, CONTENT_HEIGHT - _scroll.size.y))
-	_last_scroll_y = _scroll.scroll_vertical
+	_scroll_to_battle(Game.unlocked_battle())
 
 
 func _process(_delta: float) -> void:
 	var current_y := float(_scroll.scroll_vertical)
 	var delta_y := current_y - _last_scroll_y
-	# Un seuil evite que le moindre tremblement (rebond en butee haute/basse,
-	# molette a cran) ne fasse clignoter la barre.
+	# Un seuil evite que le moindre tremblement (rebond en butee, molette a
+	# cran) ne fasse clignoter la barre.
 	if absf(delta_y) > 1.5:
 		_set_bottom_bar_visible(delta_y > 0.0)
 	_last_scroll_y = current_y
 
 
-func _size_scroll_children() -> void:
-	for child in [_planks, _path_dots, _map_overlay]:
-		child.set_anchors_preset(Control.PRESET_FULL_RECT)
-		child.mouse_filter = Control.MOUSE_FILTER_PASS if child == _map_overlay else Control.MOUSE_FILTER_IGNORE
+# ------------------------------- MISE EN PAGE --------------------------------
 
-	var shadow: ColorRect = $Scroll/Content/ParchmentShadow
-	shadow.position = Vector2(19, 40)
-	shadow.size = Vector2(363, CONTENT_HEIGHT - 60)
+## La carte garde sa largeur de maquette et se centre : sur un telephone plus
+## large que 393 points, c'est le bois du decor qui s'elargit, pas le
+## parchemin. Etirer la carte deplacerait les cachets sans deplacer les lieux
+## peints dessous.
+func _layout_map() -> void:
+	_map.position = Vector2(roundf((_content.size.x - CONTENT_WIDTH) / 2.0), 0.0)
+	_map.size = Vector2(CONTENT_WIDTH, CONTENT_HEIGHT)
 
-	var parchment: TextureRect = $Scroll/Content/Parchment
-	parchment.position = Vector2(15, 36)
-	parchment.size = Vector2(363, CONTENT_HEIGHT - 60)
+	_parchment.position = Vector2.ZERO
+	_parchment.size = _map.size
 
-
-## Lattes de bois horizontales derriere le parchemin, cf. CLAUDE.md > 02_Campagne -
-## etirees sur toute la hauteur defilante plutot que sur le seul ecran visible.
-func _build_planks() -> void:
-	var tones := [Color("3b2b1c"), Color("423324"), Color("4a3b2b")]
-	var plank_h := 72.0
-	var count := ceili(CONTENT_HEIGHT / plank_h)
-	for i in range(count):
-		var rect := ColorRect.new()
-		rect.color = tones[i % tones.size()]
-		rect.position = Vector2(0, i * plank_h)
-		rect.size = Vector2(CONTENT_WIDTH, plank_h)
-		_planks.add_child(rect)
+	_path.position = PATH_RECT.position
+	_path.size = PATH_RECT.size
 
 
-## Chemin en pointilles reliant les pastilles - trace au dessin (cf.
-## path_dots.gd) plutot que baque dans l'image, pour suivre NODE_POS quelle
-## que soit la hauteur de la carte.
-func _build_path_dots() -> void:
-	_path_dots.set_path(NODE_POS)
+## Amene la bataille demandee un peu au-dessus du milieu de l'ecran : assez
+## haut pour qu'on la voie, assez bas pour qu'on devine la suite du chemin.
+func _scroll_to_battle(id: int) -> void:
+	var index := clampi(id - 1, 0, NODE_POS.size() - 1)
+	var target: float = NODE_POS[index].y - _scroll.size.y * 0.62
+	_scroll.scroll_vertical = int(clampf(target, 0.0, CONTENT_HEIGHT - _scroll.size.y))
+	_last_scroll_y = _scroll.scroll_vertical
 
 
-## Pastille de progression calee sur le bord droit REEL du calque, une image
-## apres le rafraichissement : sa largeur depend du texte, et juste apres
-## set_custom() elle vaut encore zero.
-func _place_progress_pill() -> void:
-	if not is_instance_valid(_progress_pill):
+# ------------------------------- CACHETS -------------------------------------
+
+func _build_seals() -> void:
+	var final_id := Balance.battle_count()
+	for data in Balance.CAMPAIGN:
+		var id := int(data["id"])
+		var is_final := id == final_id
+		if is_final:
+			_build_medallion_glow(id)
+
+		var seal := CampaignSeal.new()
+		seal.setup(id, is_final)
+		seal.position = _seal_center(id) - seal.custom_minimum_size / 2.0
+		seal.pressed.connect(_on_node_pressed)
+		_seals.add_child(seal)
+		_nodes[id] = seal
+
+
+## Centre du cachet. Les batailles au-dela de la dixieme - s'il en arrive un
+## jour - se poseraient hors des reperes de la maquette : on les empile alors
+## au sommet plutot que de planter.
+func _seal_center(id: int) -> Vector2:
+	return NODE_POS[clampi(id - 1, 0, NODE_POS.size() - 1)]
+
+
+func _build_medallion_glow(id: int) -> void:
+	var gradient := Gradient.new()
+	gradient.set_color(0, Color("ffd94d", 0.30))
+	gradient.set_color(1, Color("ffd94d", 0.0))
+	gradient.add_point(0.4, Color("ffd94d", 0.13))
+
+	var texture := GradientTexture2D.new()
+	texture.gradient = gradient
+	texture.fill = GradientTexture2D.FILL_RADIAL
+	texture.fill_from = Vector2(0.5, 0.5)
+	texture.fill_to = Vector2(1.0, 0.5)
+	texture.width = 128
+	texture.height = 128
+
+	var material := CanvasItemMaterial.new()
+	material.blend_mode = CanvasItemMaterial.BLEND_MODE_ADD
+
+	_medallion_glow = TextureRect.new()
+	_medallion_glow.texture = texture
+	_medallion_glow.material = material
+	_medallion_glow.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+	_medallion_glow.stretch_mode = TextureRect.STRETCH_SCALE
+	_medallion_glow.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_medallion_glow.size = MEDALLION_GLOW_SIZE
+	_medallion_glow.position = _seal_center(id) - MEDALLION_GLOW_SIZE / 2.0
+	_glow_layer.add_child(_medallion_glow)
+
+
+## Le medaillon respire tant que la Tour de la Dame est jouable. Verrouille,
+## il garde une lueur faible et fixe : la tour existe, elle ne s'ouvre pas.
+func _refresh_medallion_glow(state: CampaignSeal.State) -> void:
+	if _medallion_glow == null:
 		return
-	# Ancree au bord droit plutot que posee a une abscisse calculee : sa
-	# largeur depend du texte et n'est connue qu'apres la mise en page. Avec
-	# les deux bords ancres a droite et grow_horizontal = BEGIN, c'est le
-	# moteur qui lui donne sa largeur minimale et la fait grandir vers la
-	# gauche - plus rien a calculer, a aucun moment.
-	_progress_pill.anchor_left = 1.0
-	_progress_pill.anchor_right = 1.0
-	_progress_pill.grow_horizontal = Control.GROW_DIRECTION_BEGIN
-	_progress_pill.offset_left = -16.0
-	_progress_pill.offset_right = -16.0
-	_progress_pill.offset_top = 20.0
-	_progress_pill.offset_bottom = 20.0 + _progress_pill.get_combined_minimum_size().y
+
+	if state == CampaignSeal.State.LOCKED:
+		if _medallion_glow_tween != null and _medallion_glow_tween.is_valid():
+			_medallion_glow_tween.kill()
+		_medallion_glow_tween = null
+		_medallion_glow.modulate.a = 0.35
+		return
+
+	if _medallion_glow_tween != null and _medallion_glow_tween.is_valid():
+		return
+	_medallion_glow.modulate.a = 0.6
+	_medallion_glow_tween = create_tween().set_loops()
+	_medallion_glow_tween.tween_property(_medallion_glow, "modulate:a", 1.0, 1.7) \
+		.set_trans(Tween.TRANS_SINE)
+	_medallion_glow_tween.tween_property(_medallion_glow, "modulate:a", 0.6, 1.7) \
+		.set_trans(Tween.TRANS_SINE)
 
 
-func _build_progress_pill() -> void:
-	_progress_pill = preload("res://scenes/ui/components/pill.tscn").instantiate()
-	_fixed_overlay.add_child(_progress_pill)
+# ------------------------------- BOUTON DU BAS -------------------------------
 
-
-func _build_node(id: int, battle_name: String) -> void:
-	var center: Vector2 = NODE_POS[id - 1]
-
-	var circle := PanelContainer.new()
-	_map_overlay.add_child(circle)
-	circle.mouse_filter = Control.MOUSE_FILTER_STOP
-	circle.gui_input.connect(func(event: InputEvent):
-		if event is InputEventMouseButton and event.pressed and event.button_index == MOUSE_BUTTON_LEFT:
-			_on_node_pressed(id))
-
-	var glyph := Control.new()
-	glyph.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	circle.add_child(glyph)
-
-	var label := PanelContainer.new()
-	_map_overlay.add_child(label)
-	var label_text := UiTheme.make_label(battle_name, 12, UiTheme.TEXT)
-	label_text.autowrap_mode = TextServer.AUTOWRAP_OFF
-	var label_margin := MarginContainer.new()
-	label_margin.add_theme_constant_override("margin_left", 10)
-	label_margin.add_theme_constant_override("margin_right", 10)
-	label_margin.add_theme_constant_override("margin_top", 5)
-	label_margin.add_theme_constant_override("margin_bottom", 5)
-	label_margin.add_child(label_text)
-	label.add_child(label_margin)
-
-	_nodes[id] = {"circle": circle, "glyph": glyph, "label": label, "label_text": label_text, "center": center}
-
-
-## Barre "VILLAGE" fixe par dessus la carte (pas posee sur le parchemin comme
-## en Figma) : c'est elle qui glisse hors ecran au scroll, cf.
-## _set_bottom_bar_visible().
+## Barre "RETOUR CHATEAU" fixe par dessus la carte. La maquette la pose a la
+## fin du parchemin ; on la garde flottante, sinon elle disparait des qu'on
+## remonte le chemin. En echange elle s'efface d'elle-meme quand on lit la
+## carte, cf. _set_bottom_bar_visible().
 func _build_village_button() -> void:
 	_village_button = PanelContainer.new()
 	var box := StyleBoxFlat.new()
@@ -201,10 +224,6 @@ func _build_village_button() -> void:
 	box.shadow_color = Color(0, 0, 0, 0.5)
 	box.shadow_size = 10
 	box.shadow_offset = Vector2(0, 3)
-	box.content_margin_left = 24
-	box.content_margin_right = 24
-	box.content_margin_top = 12
-	box.content_margin_bottom = 12
 	_village_button.add_theme_stylebox_override("panel", box)
 	_village_button.mouse_filter = Control.MOUSE_FILTER_STOP
 	_village_button.gui_input.connect(func(event: InputEvent):
@@ -212,29 +231,46 @@ func _build_village_button() -> void:
 			Router.goto_village())
 	_bottom_bar.add_child(_village_button)
 
+	# Ancre en bas plutot que pose a une ordonnee calculee : la zone de jeu
+	# ne fait pas 852 points de haut sur tous les telephones (cf. CLAUDE.md).
+	_village_button.anchor_left = 0.0
+	_village_button.anchor_right = 1.0
+	_village_button.anchor_top = 1.0
+	_village_button.anchor_bottom = 1.0
+	_slide_bottom_bar(0.0)
+
 	var row := HBoxContainer.new()
 	row.alignment = BoxContainer.ALIGNMENT_CENTER
 	row.add_theme_constant_override("separation", 6)
 	_village_button.add_child(row)
 	var icon := Icon.new()
-	icon.icon_name = "house"
-	icon.color = Color("d9c78c")
-	icon.custom_minimum_size = Vector2(14, 14)
+	icon.icon_name = "castle"
+	icon.color = Color("d9c88a")
+	icon.custom_minimum_size = Vector2(18, 18)
+	icon.size_flags_vertical = Control.SIZE_SHRINK_CENTER
 	row.add_child(icon)
-	var text := UiTheme.make_label("VILLAGE", 13, Color("d9c78c"))
+	var text := UiTheme.make_label("RETOUR CHÂTEAU", 13, Color("d9c78c"))
 	text.add_theme_font_override("font", UiTheme.font_bold())
 	text.autowrap_mode = TextServer.AUTOWRAP_OFF
+	# Le bouton prend toute la largeur : sans ces deux lignes, le libelle
+	# s'etale a droite de l'icone au lieu de rester colle a elle, au centre.
+	text.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
+	text.size_flags_vertical = Control.SIZE_SHRINK_CENTER
 	row.add_child(text)
 	UiTheme.ignore_mouse_recursive(row)
 
-	# Sans ceci le bouton reste a (0,0) - PanelContainer ne se centre jamais
-	# tout seul en layout_mode manuel. Cf. capture Figma 02 : centre en bas.
-	_village_button.size = _village_button.get_combined_minimum_size()
-	_village_button.position = Vector2((CONTENT_WIDTH - _village_button.size.x) / 2.0, BOTTOM_BAR_VISIBLE_Y)
+
+## Une seule fonction pour poser le bouton : elle prend le decalage vertical
+## de l'animation, pour que la position ancree reste la seule verite.
+func _slide_bottom_bar(shift: float) -> void:
+	_village_button.offset_left = 0.0
+	_village_button.offset_right = 0.0
+	_village_button.offset_top = -(BOTTOM_BAR_HEIGHT + BOTTOM_BAR_MARGIN) + shift
+	_village_button.offset_bottom = -BOTTOM_BAR_MARGIN + shift
 
 
-## Glisse la barre du bas hors ecran quand on scroll vers le haut (on lit la
-## carte, la barre gene) et la ramene quand on scroll vers le bas.
+## Glisse la barre du bas hors ecran quand on remonte la carte (on lit, elle
+## gene) et la ramene quand on redescend.
 func _set_bottom_bar_visible(should_show: bool) -> void:
 	if should_show == _bottom_bar_visible:
 		return
@@ -243,125 +279,30 @@ func _set_bottom_bar_visible(should_show: bool) -> void:
 	if _bottom_bar_tween != null and _bottom_bar_tween.is_valid():
 		_bottom_bar_tween.kill()
 
-	var target_y := BOTTOM_BAR_VISIBLE_Y if should_show else BOTTOM_BAR_HIDDEN_Y
+	var from := _village_button.offset_bottom + BOTTOM_BAR_MARGIN
+	var to := 0.0 if should_show else BOTTOM_BAR_SLIDE
 	_bottom_bar_tween = create_tween()
 	_bottom_bar_tween.set_trans(Tween.TRANS_CUBIC).set_ease(Tween.EASE_OUT)
-	_bottom_bar_tween.tween_property(_village_button, "position:y", target_y, 0.25)
+	_bottom_bar_tween.tween_method(_slide_bottom_bar, from, to, 0.25)
 
 
 # ------------------------------- RAFRAICHISSEMENT ----------------------------
 
 func _refresh() -> void:
 	var unlocked := Game.unlocked_battle()
-	var total := Balance.battle_count()
-	var won := 0
-	for data in Balance.CAMPAIGN:
-		if Game.is_battle_won(int(data["id"])):
-			won += 1
-	_progress_pill.set_custom("", "%d/%d" % [won, total], Color(0, 0, 0, 0.4), Color("ccbf99"), 10, 8, 4)
-	_progress_pill.get_node("%Text").add_theme_font_size_override("font_size", 11)
-	# Positionnement DIFFERE, et sur la largeur reelle du calque : juste apres
-	# set_custom(), la pastille n'a pas encore de taille minimale calculee -
-	# on la posait donc a 16 points du bord droit avec une largeur nulle,
-	# c'est-a-dire hors de l'ecran.
-	_place_progress_pill.call_deferred()
-
 	for data in Balance.CAMPAIGN:
 		var id := int(data["id"])
-		var refs: Dictionary = _nodes[id]
-		var circle: PanelContainer = refs["circle"]
-		var glyph: Control = refs["glyph"]
-		var label: PanelContainer = refs["label"]
-		var center: Vector2 = refs["center"]
+		var seal: CampaignSeal = _nodes[id]
 
-		for child in glyph.get_children():
-			child.queue_free()
-
-		var state := "locked"
+		var state := CampaignSeal.State.LOCKED
 		if Game.is_battle_won(id):
-			state = "won"
+			state = CampaignSeal.State.WON
 		elif id <= unlocked:
-			state = "available"
+			state = CampaignSeal.State.AVAILABLE
+		seal.set_state(state)
 
-		var diameter := 28.0
-		var border_width := 1.5
-		var bg := LOCKED_COLOR
-		var bg_alpha := 0.7
-		match state:
-			"won":
-				diameter = 30.0
-				border_width = 2.0
-				bg = WON_COLOR
-				bg_alpha = 1.0
-			"available":
-				diameter = 38.0
-				border_width = 3.0
-				bg = AVAILABLE_COLOR
-				bg_alpha = 1.0
-
-		var box := StyleBoxFlat.new()
-		box.bg_color = bg
-		box.bg_color.a = bg_alpha
-		box.set_corner_radius_all(int(diameter))
-		box.border_color = Color.WHITE if state != "locked" else Color("807361")
-		box.set_border_width_all(int(border_width))
-		# Marge de contenu a zero, explicitement : sans ca, PanelContainer se
-		# rabat sur une marge "auto" qui decale legerement glyph (donc le
-		# chiffre/coche/cadenas) par rapport au centre reel du rond.
-		box.set_content_margin_all(0)
-		if state == "available":
-			box.shadow_color = AVAILABLE_COLOR.darkened(0.1)
-			box.shadow_color.a = 0.6
-			box.shadow_size = 8
-		circle.add_theme_stylebox_override("panel", box)
-		circle.custom_minimum_size = Vector2(diameter, diameter)
-		circle.size = Vector2(diameter, diameter)
-		circle.position = center - circle.size / 2.0
-
-		# "glyph" est un Control nu (pas un Container) : il ne repositionne
-		# jamais tout seul son propre contenu. On fixe donc position ET size a
-		# la main plutot que de ne compter que sur custom_minimum_size, qui
-		# n'a aucun effet hors d'un Container.
-		match state:
-			"won":
-				var check := Icon.new()
-				check.icon_name = "check"
-				check.color = Color.WHITE
-				check.position = Vector2.ZERO
-				check.size = Vector2(diameter, diameter)
-				glyph.add_child(check)
-			"available":
-				var number := UiTheme.make_label(str(id), 17, Color("1a1206"))
-				number.add_theme_font_override("font", UiTheme.font_bold())
-				number.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-				number.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
-				number.position = Vector2.ZERO
-				number.size = Vector2(diameter, diameter)
-				number.autowrap_mode = TextServer.AUTOWRAP_OFF
-				glyph.add_child(number)
-			"locked":
-				var lock := Icon.new()
-				lock.icon_name = "lock"
-				lock.color = Color("807361")
-				lock.position = Vector2.ZERO
-				lock.size = Vector2(diameter, diameter)
-				glyph.add_child(lock)
-		UiTheme.ignore_mouse_recursive(glyph)
-
-		var box_label := StyleBoxFlat.new()
-		box_label.bg_color = Color("1f140a", 0.75)
-		box_label.set_corner_radius_all(8)
-		label.add_theme_stylebox_override("panel", box_label)
-		var label_text: Label = refs["label_text"]
-		label_text.add_theme_color_override("font_color",
-			Color("d9cca6") if state == "won" else (Color("ffe580") if state == "available" else Color("807361")))
-		label.size = label.get_combined_minimum_size()
-		# Le label part a droite de la pastille ; s'il deborderait du parchemin,
-		# on le bascule a gauche.
-		var label_x := center.x + diameter / 2.0 + 8.0
-		if label_x + label.size.x > 378.0:
-			label_x = center.x - diameter / 2.0 - 8.0 - label.size.x
-		label.position = Vector2(label_x, center.y - label.size.y / 2.0)
+		if seal.is_final:
+			_refresh_medallion_glow(state)
 
 
 # ------------------------------- ACTIONS -------------------------------------
@@ -372,12 +313,12 @@ func _on_node_pressed(id: int) -> void:
 	_play_transition(id)
 
 
-## Petit zoom sur la pastille tapee, fondu au noir, puis changement d'ecran -
-## un aller-retour plat vers la preparation manquait de poids.
+## Petit zoom sur le cachet tape, fondu au noir, puis changement d'ecran - un
+## aller-retour plat vers la preparation manquait de poids.
 func _play_transition(id: int) -> void:
 	_transitioning = true
-	var node_center: Vector2 = NODE_POS[id - 1]
-	var viewport_pos := node_center - Vector2(0, _scroll.scroll_vertical)
+	var viewport_pos := _seal_center(id) + _map.position \
+		- Vector2(0, _scroll.scroll_vertical)
 	_scroll.pivot_offset = viewport_pos
 
 	var tween := create_tween()

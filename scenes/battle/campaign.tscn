@@ -1,9 +1,10 @@
-[gd_scene load_steps=5 format=3]
+[gd_scene load_steps=6 format=3]
 
 [ext_resource type="Script" path="res://scenes/battle/campaign.gd" id="1_campaign"]
-[ext_resource type="Texture2D" path="res://assets/backgrounds/parchment_map.png" id="2_bg"]
-[ext_resource type="Script" path="res://scenes/battle/path_dots.gd" id="3_dots"]
+[ext_resource type="Texture2D" path="res://assets/campaign/parchment_map.jpg" id="2_parchment"]
+[ext_resource type="Texture2D" path="res://assets/campaign/path.svg" id="3_path"]
 [ext_resource type="Script" path="res://scenes/ui/components/edge_fades.gd" id="4_fades"]
+[ext_resource type="Script" path="res://scripts/ui/safe_area.gd" id="5_safe"]
 
 [node name="Campaign" type="Control"]
 layout_mode = 3
@@ -13,6 +14,16 @@ anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
 script = ExtResource("1_campaign")
+
+[node name="Backdrop" type="ColorRect" parent="."]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+color = Color(0.18, 0.122, 0.071, 1)
 
 [node name="Scroll" type="ScrollContainer" parent="."]
 layout_mode = 1
@@ -26,35 +37,30 @@ horizontal_scroll_mode = 0
 [node name="Content" type="Control" parent="Scroll"]
 layout_mode = 2
 
-[node name="Planks" type="Control" parent="Scroll/Content"]
+[node name="Map" type="Control" parent="Scroll/Content"]
 layout_mode = 0
+mouse_filter = 2
 
-[node name="ParchmentShadow" type="ColorRect" parent="Scroll/Content"]
+[node name="Parchment" type="TextureRect" parent="Scroll/Content/Map"]
 layout_mode = 0
-color = Color(0, 0, 0, 0.45)
-
-[node name="Parchment" type="TextureRect" parent="Scroll/Content"]
-layout_mode = 0
-texture = ExtResource("2_bg")
+mouse_filter = 2
+texture = ExtResource("2_parchment")
 expand_mode = 1
-stretch_mode = 1
+stretch_mode = 6
 
-[node name="PathDots" type="Control" parent="Scroll/Content"]
-layout_mode = 0
-mouse_filter = 2
-script = ExtResource("3_dots")
-
-[node name="MapOverlay" type="Control" parent="Scroll/Content"]
+[node name="Glow" type="Control" parent="Scroll/Content/Map"]
 layout_mode = 0
 mouse_filter = 2
 
-[node name="FixedOverlay" type="Control" parent="."]
-layout_mode = 1
-anchors_preset = 15
-anchor_right = 1.0
-anchor_bottom = 1.0
-grow_horizontal = 2
-grow_vertical = 2
+[node name="Path" type="TextureRect" parent="Scroll/Content/Map"]
+layout_mode = 0
+mouse_filter = 2
+texture = ExtResource("3_path")
+expand_mode = 1
+stretch_mode = 6
+
+[node name="Seals" type="Control" parent="Scroll/Content/Map"]
+layout_mode = 0
 mouse_filter = 2
 
 [node name="EdgeFades" type="Control" parent="."]
@@ -69,13 +75,18 @@ script = ExtResource("4_fades")
 fade_size = 90.0
 max_alpha = 0.55
 
-[node name="BottomBar" type="Control" parent="."]
+[node name="Safe" type="MarginContainer" parent="."]
 layout_mode = 1
 anchors_preset = 15
 anchor_right = 1.0
 anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
+mouse_filter = 2
+script = ExtResource("5_safe")
+
+[node name="BottomBar" type="Control" parent="Safe"]
+layout_mode = 2
 mouse_filter = 2
 
 [node name="FadeOverlay" type="ColorRect" parent="."]

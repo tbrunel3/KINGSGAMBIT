@@ -27,9 +27,19 @@ func _draw() -> void:
 	var band := fade_size / float(steps)
 	for i in range(steps):
 		var t := float(i) / float(steps)
-		var alpha := max_alpha * (1.0 - t)
-		var color := Color(0, 0, 0, alpha)
-		draw_rect(Rect2(0, t * fade_size, size.x, band + 1), color)
-		draw_rect(Rect2(0, size.y - t * fade_size - band, size.x, band + 1), color)
-		draw_rect(Rect2(t * fade_size, 0, band + 1, size.y), color)
-		draw_rect(Rect2(size.x - t * fade_size - band, 0, band + 1, size.y), color)
+		var color := Color(0, 0, 0, max_alpha * (1.0 - t))
+
+		# Bandes JOINTIVES, calees sur des pixels entiers. Elles se
+		# chevauchaient d'un pixel pour eviter les coutures : ce pixel commun
+		# recevait alors deux fois le noir et dessinait une raie sombre tous
+		# les trois points - tres visible sur un fond clair comme la carte de
+		# campagne. Prendre le bord suivant plutot qu'ajouter une largeur
+		# supprime le chevauchement sans rouvrir de couture.
+		var from := roundf(t * fade_size)
+		var to := roundf(t * fade_size + band)
+		var thickness := maxf(1.0, to - from)
+
+		draw_rect(Rect2(0, from, size.x, thickness), color)
+		draw_rect(Rect2(0, size.y - to, size.x, thickness), color)
+		draw_rect(Rect2(from, 0, thickness, size.y), color)
+		draw_rect(Rect2(size.x - to, 0, thickness, size.y), color)

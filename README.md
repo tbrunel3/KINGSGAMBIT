@@ -381,7 +381,6 @@ le premier combat du jeu était perdu.
   village, fond de plateau, icônes de bâtiments
 - Animations de capture et de promotion dignes de ce nom
 - Sons et retours haptiques
-- Carte de campagne illustrée à la place de la liste
 - Mise en scène narrative du Roi et de la Dame
 - Export iOS
 

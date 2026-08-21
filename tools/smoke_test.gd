@@ -21,6 +21,7 @@ func _ready() -> void:
 	_check_save()
 	_check_losses()
 	_check_rules()
+	_check_run()
 	_play_all_battles()
 	await _check_scenes()
 	_check_campaign_loop()
@@ -36,6 +37,130 @@ func _ready() -> void:
 func _fail(message: String) -> void:
 	_failures += 1
 	print("  ECHEC : %s" % message)
+
+
+# ------------------------------- SERIE DE COMBATS ----------------------------
+
+## La serie (cf. CampaignRun) : usure entre deux combats, renforts, et surtout
+## le fait que RIEN n'atteint l'armee du village avant la fin.
+func _check_run() -> void:
+	print("
+[3b] Serie de combats")
+	Game.reset_progress()
+
+	var battle := Balance.battle(1)
+	var fights := Balance.battle_fights(battle)
+	if fights < 2:
+		_fail("la bataille 1 devrait se jouer en plusieurs combats")
+		return
+
+	var pions_before := Game.units_owned(Balance.PION)
+	var gold_before := Game.gold
+	var run := Game.begin_run(1)
+
+	if int(run.roster.get(Balance.PION, 0)) != pions_before:
+		_fail("la serie doit partir avec l'armee du village au complet")
+
+	# Premier combat gagne, deux pions perdus.
+	run.record_victory({Balance.PION: 2}, 3, 0, 0, 90)
+	if int(run.roster.get(Balance.PION, 0)) != pions_before - 2:
+		_fail("les pertes doivent sortir de l'effectif de la serie")
+	if Game.units_owned(Balance.PION) != pions_before:
+		_fail("les pertes ne doivent PAS toucher le village avant la fin de la serie")
+	if Game.gold != gold_before:
+		_fail("l'or promis ne doit etre verse qu'a la fin de la serie")
+
+	# Renforts : deux points de poids, donc deux pions releves.
+	var recovered := run.advance(Balance.RUN_REINFORCE_WEIGHT)
+	if run.fight != 2:
+		_fail("advance() doit passer au combat suivant")
+	if int(recovered.get(Balance.PION, 0)) != 2:
+		_fail("deux pions devraient se relever entre deux combats")
+	if int(run.losses.get(Balance.PION, 0)) != 0:
+		_fail("un pion releve n'est plus une perte")
+
+	# Une piece lourde ne se releve pas : elle pese plus que le budget.
+	run.record_victory({Balance.TOUR: 1}, 2, 0, 0, 90)
+	var heavy := run.advance(Balance.RUN_REINFORCE_WEIGHT)
+	if heavy.has(Balance.TOUR):
+		_fail("une tour ne devrait pas se relever entre deux combats")
+
+	# Aller-retour par la sauvegarde : une serie doit survivre a la fermeture.
+	Game.save_run(run)
+	var reloaded := Game.current_run(1)
+	if reloaded == null or reloaded.fight != run.fight or reloaded.reward != run.reward:
+		_fail("la serie ne se relit pas correctement depuis la sauvegarde")
+	elif int(reloaded.roster.get(Balance.PION, 0)) != int(run.roster.get(Balance.PION, 0)):
+		_fail("l'effectif de la serie ne se relit pas correctement")
+	if Game.current_run(2) != null:
+		_fail("une serie ouverte sur la bataille 1 ne doit pas valoir pour la 2")
+
+	# Cloture : c'est la, et seulement la, que tout tombe.
+	var promised := run.reward
+	Game.finish_run(run, true)
+	if Game.gold != gold_before + promised:
+		_fail("la victoire de la serie doit verser l'or promis (%d au lieu de %d)" % [
+			Game.gold - gold_before, promised])
+	if Game.units_owned(Balance.TOUR) != maxi(0, _tours_at_start() - 1):
+		_fail("la tour perdue doit quitter l'armee a la fin de la serie")
+	if not Game.is_battle_won(1):
+		_fail("la serie gagnee doit marquer la bataille comme gagnee")
+	if Game.current_run() != null:
+		_fail("une serie finie doit etre effacee")
+
+	# Serie perdue : la consolation seulement, et la bataille reste a faire.
+	Game.reset_progress()
+	gold_before = Game.gold
+	var lost := Game.begin_run(2)
+	lost.record_victory({}, 3, 0, 0, 120)
+	lost.advance(Balance.RUN_REINFORCE_WEIGHT)
+	lost.record_defeat({Balance.PION: 1})
+	Game.finish_run(lost, false)
+	var consolation := int(round(120.0 * Balance.DEFEAT_CONSOLATION_RATIO))
+	if Game.gold != gold_before + consolation:
+		_fail("une serie perdue ne doit rapporter que la consolation")
+	if Game.is_battle_won(2):
+		_fail("une serie perdue ne doit pas debloquer la bataille")
+
+	# NUL : la serie continue, mais ce combat-la n'a rien paye.
+	Game.reset_progress()
+	var drawn := Game.begin_run(3)
+	drawn.record_draw({Balance.PION: 1}, 2, 0, 0)
+	if drawn.reward != 0:
+		_fail("un combat nul ne doit rien rapporter")
+	if int(drawn.losses.get(Balance.PION, 0)) != 1:
+		_fail("un combat nul laisse quand meme ses morts sur le terrain")
+	drawn.advance(Balance.RUN_REINFORCE_WEIGHT)
+	if drawn.fight != 2:
+		_fail("un combat nul ne doit pas rompre la serie")
+
+	# DAME faite en cours de serie : elle reste en ligne, et si elle tombe
+	# c'est le PION qu'elle etait qui manque au village, pas une Dame.
+	Game.reset_progress()
+	var crowned := Game.begin_run(1)
+	var pions := int(crowned.roster.get(Balance.PION, 0))
+	crowned.record_victory({}, 3, 1, 1, 90)
+	if int(crowned.roster.get(Balance.DAME, 0)) != 1:
+		_fail("une Dame promue doit rejoindre l'effectif de la serie")
+	if int(crowned.roster.get(Balance.PION, 0)) != pions - 1:
+		_fail("le pion promu doit quitter l'effectif")
+	if crowned.dames_made != 1:
+		_fail("la Dame faite doit etre comptee")
+
+	crowned.record_defeat({Balance.DAME: 1})
+	if crowned.dames_made != 0:
+		_fail("une Dame faite puis tombee ne doit plus etre comptee")
+	if int(crowned.losses.get(Balance.DAME, 0)) != 0:
+		_fail("une Dame faite en serie ne coute pas une Dame au village")
+	if int(crowned.losses.get(Balance.PION, 0)) != 1:
+		_fail("une Dame faite puis tombee coute le pion qu'elle etait")
+
+	Game.reset_progress()
+	print("  usure, renforts, nul, Dame de serie, sauvegarde, cloture : OK")
+
+
+func _tours_at_start() -> int:
+	return int(Balance.STARTING_UNITS.get(Balance.TOUR, 0))
 
 
 # ------------------------------- DONNEES -------------------------------------
@@ -412,33 +537,58 @@ func _check_rules() -> void:
 	if rook_moves.has(Vector2i(0, 1)):
 		_fail("la tour depasse la piece qu'elle capture")
 
-	# Promotion : un pion qui atteint la rangee 0 devient Dame, toujours, et
-	# garde le niveau (donc la mobilite) du pion qui a promu.
+	# LE SACRE. Un pion qui atteint le fond ne devient plus Dame d'office : il
+	# faut une bataille encore disputee, un pion qui a fait ses preuves, et un
+	# tour d'attente pendant lequel l'adversaire peut l'en empecher.
+	#
+	# Cas 1 : le pion capture en chemin, donc il a droit a la couronne.
 	var engine3 := BattleEngine.new(5, 8)
-	engine3.add_unit(Balance.PION, 4, BattleUnit.TEAM_PLAYER, Vector2i(2, 1))
-	engine3.add_unit(Balance.TOUR, 1, BattleUnit.TEAM_ENEMY, Vector2i(4, 0))
-	var promoted := false
-	var guard := 0
-	while not engine3.finished and guard < 60:
-		for event in engine3.step():
-			if String(event["type"]) == "promotion":
-				promoted = true
-				if String(event["result"]) != Balance.DAME:
-					_fail("une promotion n'a pas produit une Dame : %s" % String(event["result"]))
-		guard += 1
-	if not promoted:
-		_fail("aucune promotion alors qu'un pion pouvait atteindre le fond")
-	else:
-		var piece: BattleUnit = engine3.living(BattleUnit.TEAM_PLAYER)[0] if not engine3.living(BattleUnit.TEAM_PLAYER).is_empty() else null
-		if piece != null:
-			if piece.type != Balance.DAME:
-				_fail("la piece promue n'est pas devenue Dame")
-			if piece.origin_type != Balance.PION:
-				_fail("la piece promue a perdu son type d'origine, elle ne redeviendra pas un pion")
-			if piece.move_range != Balance.move_range(Balance.DAME, 4):
-				_fail("la Dame promue ne garde pas la mobilite du niveau de son pion")
+	var runner := engine3.add_unit(Balance.PION, 4, BattleUnit.TEAM_PLAYER, Vector2i(2, 2))
+	engine3.add_unit(Balance.PION, 1, BattleUnit.TEAM_ENEMY, Vector2i(1, 1))
+	# Tour ennemie reléguee au fond : elle tient la bataille en vie sans jamais
+	# pouvoir atteindre la case du sacre.
+	engine3.add_unit(Balance.TOUR, 1, BattleUnit.TEAM_ENEMY, Vector2i(4, 7))
 
-	print("  pion (avance, prise diagonale), tour (blocage, prise), promotion : OK")
+	engine3.play_move(runner, Vector2i(1, 1))     # prise en diagonale
+	if runner.captures != 1:
+		_fail("la prise du pion n'a pas ete comptee")
+	engine3.step()                                 # reponse ennemie
+
+	var crowning := false
+	for event in engine3.play_move(runner, Vector2i(1, 0)):
+		if String(event["type"]) == "crowning":
+			crowning = true
+	if not crowning:
+		_fail("un pion arrive au fond devrait attendre son sacre")
+	if runner.type != Balance.PION:
+		_fail("le pion ne doit pas etre couronne avant son prochain tour")
+	if MovementRules.legal_moves(runner, engine3.grid).size() != 0:
+		_fail("un pion en attente de sacre devrait etre immobile")
+
+	var crowned := ""
+	for event in engine3.step():                   # l'ennemi joue, puis le sacre
+		if String(event["type"]) == "promotion":
+			crowned = String(event["result"])
+	if crowned != Balance.DAME:
+		_fail("le pion qui a tenu un tour devrait etre fait Dame : %s" % crowned)
+	if runner.origin_type != Balance.PION:
+		_fail("la piece promue a perdu son type d'origine, elle ne redeviendra pas un pion")
+	if runner.move_range != Balance.move_range(Balance.DAME, 4):
+		_fail("la Dame promue ne garde pas la mobilite du niveau de son pion")
+
+	# Cas 2 : un pion qui n'a jamais capture traverse un couloir vide. Il
+	# promeut quand meme, mais en piece intermediaire, et sans attendre.
+	var engine4 := BattleEngine.new(5, 8)
+	var idler := engine4.add_unit(Balance.PION, 4, BattleUnit.TEAM_PLAYER, Vector2i(2, 1))
+	engine4.add_unit(Balance.TOUR, 1, BattleUnit.TEAM_ENEMY, Vector2i(4, 7))
+	var lesser := ""
+	for event in engine4.play_move(idler, Vector2i(2, 0)):
+		if String(event["type"]) == "promotion":
+			lesser = String(event["result"])
+	if lesser != Balance.PROMOTION_FALLBACK:
+		_fail("un pion qui n'a rien pris ne devrait pas etre fait Dame : %s" % lesser)
+
+	print("  pion, tour, sacre differe et conditions de la couronne : OK")
 
 
 # ------------------------------- BATAILLES -----------------------------------
@@ -552,7 +702,8 @@ func _play_battle(battle: Dictionary, castle_level: int, unit_level: int, style:
 
 	print("  Bataille %2d  %-20s  Nv.%d  armee %-7s  %2d vs %2d  ->  %-8s  %2d perdues, %d activations" % [
 		int(battle["id"]), String(battle["name"]), unit_level, style, placed, enemy_count,
-		"VICTOIRE" if victory else "defaite", lost, engine.activation_count
+		"NUL" if engine.is_draw() else ("VICTOIRE" if victory else "defaite"),
+		lost, engine.activation_count
 	])
 
 	if engine.activation_count >= int(Balance.COMBAT["max_activations"]):

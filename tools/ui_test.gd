@@ -247,17 +247,35 @@ func _test_battle() -> void:
 	_check(battle._phase == 2, "le combat se termine et affiche le resultat")
 
 	var victory: bool = battle._engine.winner == BattleUnit.TEAM_PLAYER
-	print("  ---> issue : %s" % ("victoire" if victory else "defaite"))
+	var drawn: bool = battle._engine.is_draw()
+	print("  ---> issue : %s" % ("nul" if drawn else ("victoire" if victory else "defaite")))
+
+	# UN COMBAT N'EST PAS UNE BATAILLE. Un niveau de campagne se joue en
+	# plusieurs combats d'affilee (cf. CampaignRun) : gagner le premier ne
+	# paie rien et ne debloque rien - tout attend la fin de la serie.
+	var fights := Balance.battle_fights(data)
 	if victory:
-		_check(Game.gold == gold_before + int(data["reward"]),
-			"la recompense de %d or est creditee" % int(data["reward"]))
-		_check(Game.unlocked_battle() == 2, "la bataille 2 est debloquee")
-		_check(_find_clickable(battle, "BATAILLE SUIVANTE") != null, "le bouton Bataille suivante existe")
+		_check(Game.gold == gold_before,
+			"le premier combat gagne ne paie pas encore (serie de %d)" % fights)
+		_check(Game.unlocked_battle() == 1,
+			"la bataille 2 reste fermee tant que la serie n'est pas finie")
+		_check(_find_clickable(battle, "COMBAT 2 SUR %d" % fights) != null,
+			"le bouton enchaine sur le combat suivant")
+		var run := Game.current_run(1)
+		_check(run != null and run.fight == 2, "la serie est sauvegardee au combat 2")
+		_check(run != null and run.reward == int(data["reward"]),
+			"l'or du combat gagne est promis, pas verse")
+	elif drawn:
+		_check(Game.gold == gold_before, "un combat nul ne paie rien")
+		_check(_find_clickable(battle, "COMBAT 2 SUR %d" % fights) != null,
+			"un nul ne rompt pas la serie")
 	else:
 		_check(Game.gold == gold_before, "aucune recompense en cas de defaite")
-		_check(_find_clickable(battle, "REESSAYER") != null, "le bouton Reessayer existe")
+		_check(_find_clickable(battle, "REPRENDRE LA SERIE") != null,
+			"la defaite propose de reprendre la serie")
 
-	_check(_find_clickable(battle, "RETOUR AU VILLAGE") != null, "le retour au village est propose")
+	_check(_find_clickable(battle, "ROYAUME") != null, "le retour au royaume est propose")
+	_check(_find_clickable(battle, "CAMPAGNE") != null, "la carte de campagne est proposee")
 
 	battle.queue_free()
 	await _frames(2)
@@ -266,10 +284,12 @@ func _test_battle() -> void:
 
 # ------------------------------- OUTILS --------------------------------------
 
-## Retrouve un element cliquable par son texte, qu'il s'agisse d'un vrai
-## Button ou d'un PanelContainer habille en bouton - la Phase 2 a remplace la
-## plupart des Button par des panneaux, pour poser une icone vectorielle a
-## cote du texte (cf. _icon_button dans battle.gd).
+## Retrouve un element cliquable par son texte, quelle que soit la classe qui
+## lui sert d'habillage : un vrai Button, un PanelContainer habille en bouton
+## (Phase 2), ou une RoyalPlate (V2, qui est un MarginContainer qui se
+## dessine). Ce qui fait un bouton ici n'est pas son type, c'est qu'il
+## ECOUTE - sans ce filtre on retomberait sur la carte qui l'entoure, dont le
+## titre commence souvent par le meme mot ("RECRUTER PION" / "RECRUTER").
 ##
 ## La comparaison ignore la casse et les accents : le texte affiche est
 ## "RECRUTER" ou "RESSAYER", les tests parlent en clair.
@@ -278,10 +298,7 @@ func _find_clickable(root: Node, text: String) -> Control:
 	for child in root.get_children():
 		if child is Button and _normalize(String(child.text)).begins_with(wanted):
 			return child
-		# Un panneau cliquable est un panneau qui ECOUTE : sans ce filtre, on
-		# retomberait sur la carte qui l'entoure, dont le titre commence
-		# souvent par le meme mot que le bouton ("RECRUTER PION" / "RECRUTER").
-		var listens: bool = child is PanelContainer and not child.gui_input.get_connections().is_empty()
+		var listens: bool = child is Control 			and not (child as Control).gui_input.get_connections().is_empty()
 		if listens and _panel_text(child).begins_with(wanted):
 			return child
 		var found := _find_clickable(child, text)

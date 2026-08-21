@@ -2,16 +2,16 @@
 
 importer="texture"
 type="CompressedTexture2D"
-uid="uid://70raa74bsxw2"
-path="res://.godot/imported/parchment_map.png-3edfbfde3cf65093586f325e0cb1bf4b.ctex"
+uid="uid://c6qi8ed1x25em"
+path="res://.godot/imported/castle_icon.svg-0025facb053e2afe1ca5e9afecd0c0fc.ctex"
 metadata={
 "vram_texture": false
 }
 
 [deps]
 
-source_file="res://assets/backgrounds/parchment_map.png"
-dest_files=["res://.godot/imported/parchment_map.png-3edfbfde3cf65093586f325e0cb1bf4b.ctex"]
+source_file="res://assets/campaign/castle_icon.svg"
+dest_files=["res://.godot/imported/castle_icon.svg-0025facb053e2afe1ca5e9afecd0c0fc.ctex"]
 
 [params]
 
@@ -38,3 +38,6 @@ process/hdr_as_srgb=false
 process/hdr_clamp_exposure=false
 process/size_limit=0
 detect_3d/compress_to=1
+svg/scale=1.0
+editor/scale_with_editor_scale=false
+editor/convert_colors_with_editor_theme=false

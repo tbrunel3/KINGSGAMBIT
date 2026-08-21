@@ -53,6 +53,10 @@ func _default_state() -> Dictionary:
 			"promotions": 0,
 		},
 		"missions_claimed": [],
+		# Serie de combats en cours (cf. CampaignRun). Vide hors serie : une
+		# serie survit ainsi a la fermeture du jeu, et reprend au combat
+		# suivant celui qui a ete gagne.
+		"run": {},
 	}
 
 
@@ -499,6 +503,67 @@ func force_finish_upgrade(type: String) -> void:
 	if is_upgrading(type):
 		_state["upgrades"][type] = int(Time.get_unix_time_from_system())
 		check_upgrades()
+
+
+# ------------------------------- SERIE DE COMBATS ----------------------------
+#
+#  Un niveau de campagne se joue en 3 a 5 combats d'affilee (cf. CampaignRun).
+#  L'etat de la serie vit ici pour survivre a la fermeture du jeu ; les regles,
+#  elles, sont dans CampaignRun.
+
+## Serie en cours, ou null. Une serie qui ne porte pas sur `battle_id` est
+## consideree abandonnee : ouvrir une autre bataille remplace la serie.
+func current_run(battle_id: int = -1) -> CampaignRun:
+	var data: Dictionary = _state.get("run", {})
+	if data.is_empty():
+		return null
+	var run := CampaignRun.from_dict(data)
+	if battle_id > 0 and run.battle_id != battle_id:
+		return null
+	return run
+
+
+## Ouvre une serie sur cette bataille, avec l'armee du village au complet.
+func begin_run(battle_id: int) -> CampaignRun:
+	var battle := Balance.battle(battle_id)
+	var army: Dictionary = {}
+	for type in Balance.ARMY_TYPES:
+		army[type] = units_owned(type)
+	var run := CampaignRun.start(battle_id, Balance.battle_fights(battle), army)
+	save_run(run)
+	return run
+
+
+func save_run(run: CampaignRun) -> void:
+	_state["run"] = run.to_dict()
+	save()
+
+
+func clear_run() -> void:
+	if _state.get("run", {}).is_empty():
+		return
+	_state["run"] = {}
+	save()
+
+
+## Cloture la serie : les pertes cumulees quittent l'armee du village, l'or
+## promis est verse, les Dames rentrent au Chateau Royal.
+##
+## C'est le seul endroit ou une serie touche a la progression - pendant, tout
+## reste dans l'objet CampaignRun. Retourne le nombre de Dames effectivement
+## abritees (la capacite du chateau peut en refuser).
+func finish_run(run: CampaignRun, victory: bool) -> int:
+	apply_losses(run.losses)
+	var stored := store_promotions(run.dames_made)
+	if victory:
+		win_battle(run.battle_id, run.reward)
+	elif run.reward > 0:
+		# Serie perdue : il reste la consolation, calculee sur ce que les
+		# combats deja gagnes avaient promis. Tomber au dernier combat d'une
+		# serie de cinq rapporte donc un peu plus que tomber au premier.
+		add_gold(int(round(float(run.reward) * Balance.DEFEAT_CONSOLATION_RATIO)))
+	clear_run()
+	return stored
 
 
 # ------------------------------- CAMPAGNE ------------------------------------

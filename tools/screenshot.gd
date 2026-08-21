@@ -48,7 +48,9 @@ func _ready() -> void:
 
 	await _capture_dame_tower()
 	await _capture_combat()
+	await _capture_run()
 	await _capture_defeat()
+	await _capture_draw()
 	await _capture_splash()
 	await _capture_intro()
 	get_tree().quit()
@@ -118,6 +120,21 @@ func _capture_dame_tower() -> void:
 	Game.reset_progress()
 
 
+## Deuxieme combat d'une serie : c'est l'ecran qui prouve que l'usure marche.
+## _capture_combat() vient de gagner le premier combat de la bataille 1, donc
+## la serie est sauvegardee au combat 2 - on rouvre la scene et on regarde
+## avec quoi le joueur repart.
+func _capture_run() -> void:
+	Router.current_battle_id = 1
+	var battle: Node = load("res://scenes/battle/battle.tscn").instantiate()
+	add_child(battle)
+	for i in range(4):
+		await RenderingServer.frame_post_draw
+	_save(battle, "4b_serie_combat2.png")
+	battle.queue_free()
+	await get_tree().process_frame
+
+
 ## Meme passage que _capture_combat(), mais contre la derniere bataille (Nv.6)
 ## avec une armee de depart (Nv.1) : verifie l'ecran de defaite redessine
 ## (blason couronne brisee, bouton Reessayer rouge) sans dependre du hasard.
@@ -152,6 +169,33 @@ func _capture_defeat() -> void:
 	battle.queue_free()
 	await get_tree().process_frame
 	Game.reset_progress()
+
+
+## L'ecran de match nul. Il ne se produit qu'au bout d'un enlisement complet
+## a materiel strictement egal : on monte donc l'ecran directement plutot que
+## d'esperer tomber dessus en jouant.
+func _capture_draw() -> void:
+	var host := Control.new()
+	host.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	add_child(host)
+
+	var screen := BattleResult.new()
+	host.add_child(screen)
+	screen.open_draw("COMBAT 2 SUR 3 — NUL")
+	screen.add_reward_row("Butin promis", 90)
+	screen.add_stat_row("Combat nul", "Aucun camp n'a plié")
+	screen.add_stat_row("Pertes du combat", "1 Pion", 1)
+	screen.add_icon_row("Blessés relevés", "check", "1 Pion", Color("5fb37a"))
+	screen.add_stat_row("Armée restante", "5 pièces", 1)
+	screen.add_primary_button("COMBAT 3 SUR 3", func(): pass)
+	screen.add_action_button("ROYAUME", "castle", func(): pass)
+	screen.add_action_button("CAMPAGNE", "compass", func(): pass)
+
+	for i in range(4):
+		await RenderingServer.frame_post_draw
+	_save(host, "7c_nul.png")
+	host.queue_free()
+	await get_tree().process_frame
 
 
 ## Capture apres la sequence d'apparition (logo, chargement, credit) mais

@@ -34,6 +34,15 @@ var promoted: bool = false  ## vrai pour un pion promu (cavalier, fou ou dame)
 ## fois, au tout premier deplacement de la piece.
 var has_moved: bool = false
 
+## Prises realisees par cette piece. Sert au sacre : seul un pion qui a fait
+## ses preuves peut pretendre a la couronne (cf. Balance.PROMOTION_REQUIRES_CAPTURE).
+var captures: int = 0
+
+## Pion arrive au fond adverse et EN ATTENTE de couronnement. Il sera fait
+## Dame au debut du prochain tour de son camp, s'il est encore debout
+## (cf. BattleEngine, le sacre prend un tour).
+var awaiting_crown: bool = false
+
 var move_range: int = 1
 ## Portee du tout premier coup. Egale a move_range pour toutes les pieces
 ## sauf le pion, dont l'ouverture s'allonge avec le niveau de sa caserne.
@@ -71,6 +80,15 @@ func _apply_type(new_type: String) -> void:
 func promote_to(new_type: String) -> void:
 	_apply_type(new_type)
 	promoted = true
+
+
+## Defait une promotion. Reserve a la RECHERCHE de l'IA (cf. BattleSearch),
+## qui joue puis reprend ses coups sur le vrai plateau plutot que d'en copier
+## un a chaque noeud - une copie par noeud couterait bien plus cher que la
+## recherche elle-meme. Rien dans le jeu ne deprome une piece.
+func unpromote() -> void:
+	_apply_type(origin_type)
+	promoted = false
 
 
 func is_alive() -> bool:

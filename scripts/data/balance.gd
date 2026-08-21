@@ -285,17 +285,63 @@ const CASTLE_DATA := {
 #  l'IA, ils ne lui donnent aucun privilege. Le camp du joueur, quand il est
 #  confie au bouton AUTO, joue toujours au niveau maximum.
 #
-#    NOVICE   fonce. Prend tout ce qui passe, meme quand la prise lui coute
-#             plus cher que ce qu'elle rapporte, et avance sans regarder si
-#             la case est couverte. Se fait punir par un joueur attentif.
-#    AGUERRI  compte ses echanges et prefere les cases sures, mais ne sauve
-#             pas une piece deja attaquee : elle attend le coup.
-#    EXPERT   joue tout : echanges, fuite des pieces menacees, pions pousses
-#             uniquement la ou un allie peut reprendre.
+#    NOVICE   ne regarde pas la reponse adverse. Elle prend ce qui passe et
+#             se fait fourcher : la case ou elle pose sa tour est sure, elle
+#             y va, et le cavalier prend au coup suivant. Reservee aux deux
+#             premieres batailles - un joueur qui decouvre le jeu doit
+#             pouvoir les gagner.
+#    AGUERRI  voit la reponse immediate. Elle ne donne plus une piece.
+#    EXPERT   voit sa replique : fourchettes, enfilades, echanges a trois
+#             temps.
+#
+#  Ce ne sont plus trois jeux d'heuristiques mais trois PROFONDEURS de
+#  recherche (cf. AI_DEPTH et BattleSearch). Le banc tools/ai_bench.tscn les
+#  fait jouer l'une contre l'autre : chaque demi-coup supplementaire gagne les
+#  six duels, dans les deux camps.
 
 const AI_NOVICE := 0
 const AI_AGUERRI := 1
 const AI_EXPERT := 2
+
+## PROFONDEUR DE RECHERCHE par niveau de jeu, en demi-coups (cf.
+## BattleSearch). C'est la VRAIE echelle de difficulte du jeu.
+##
+## 1 = le camp joue son meilleur coup sans regarder la reponse : c'est
+## l'ancienne IA, celle qui se fait fourcher. On la garde pour les premieres
+## batailles - un debutant doit pouvoir gagner ses premiers combats.
+## 2 = elle voit la reponse immediate. Elle ne donne plus une piece.
+## 3 = elle voit sa replique, donc les fourchettes, les enfilades, et les
+## echanges a trois temps.
+##
+## Chaque demi-coup en plus multiplie le travail : au-dela de 3, l'attente
+## devient sensible au doigt sans que le jeu devienne plus interessant.
+const AI_DEPTH := {
+	AI_NOVICE: 1,
+	AI_AGUERRI: 2,
+	AI_EXPERT: 3,
+}
+
+## Temps de reflexion maximum accorde a la recherche, en millisecondes. La
+## recherche s'arrete des qu'il est depasse et joue le meilleur coup de la
+## derniere profondeur ACHEVEE : c'est ce qui garantit qu'une grande bataille
+## ne fige jamais l'ecran, et qu'un plateau charge redescend proprement d'un
+## demi-coup plutot que de faire attendre.
+##
+## 250 ms parce que ce temps est deja paye : en combat manuel, l'ecran marque
+## une pause de `ai_think_delay` (450 ms) AVANT que l'ennemi joue, uniquement
+## pour qu'on voie quelle piece bouge. Reflechir pendant ce temps-la ne coute
+## rien de percu.
+##
+## Mesure sur la derniere bataille (8x9, 11 pieces par camp, 36 coups legaux
+## a l'ouverture) : profondeur 2 = 10 ms, profondeur 3 = 139 ms, profondeur
+## 4 = 1 400 ms. La quatrieme est donc hors de portee, et c'est pour ca que
+## l'echelle s'arrete a trois.
+const AI_BUDGET_MS := 250
+
+
+## Profondeur de recherche de ce niveau de jeu.
+func ai_depth(skill: int) -> int:
+	return int(AI_DEPTH.get(skill, 1))
 
 # ------------------------------- CAMPAGNE ------------------------------------
 #
@@ -310,24 +356,87 @@ const AI_EXPERT := 2
 #  8 colonnes encore 45.
 #  enemies   : composition ennemie {type: quantite}
 #  level     : niveau de TOUTES les pieces ennemies de cette bataille
+#  fights    : nombre de combats de la SERIE (cf. CampaignRun). Un niveau de
+#              campagne ne se gagne pas en une bataille mais en 3 a 5 d'affilee,
+#              sans retour au village entre les deux.
+
+## PROMOTION - part du materiel engage que l'adversaire doit encore avoir
+## debout pour qu'un pion arrive au fond devienne une DAME.
+##
+## En dessous, la bataille est deja jouee : le pion promeut quand meme, mais
+## en PROMOTION_FALLBACK, une piece intermediaire qui ne rejoint pas le
+## Chateau Royal. Mesure avant la regle (tools/promo_probe.tscn) : sur douze
+## promotions de campagne, six tombaient contre un adversaire sous un tiers de
+## son materiel - la moitie des Dames du jeu etaient du ramassage.
+##
+## Regle a la moitie : une Dame doit etre une PERCEE dans une bataille encore
+## indecise, pas la recompense d'un pion qui se promene une fois l'adversaire
+## brise. C'est le seul bouton a tourner si les Dames redeviennent trop
+## frequentes - ou trop rares.
+const PROMOTION_CONTESTED_RATIO := 0.5
+const PROMOTION_FALLBACK := CAVALIER
+
+## LE SACRE PREND UN TOUR. Un pion arrive au fond ne recoit pas la couronne
+## sur-le-champ : il attend le debut de son prochain tour. L'adversaire a donc
+## UN coup pour l'en empecher.
+##
+## Un pion pose sur la derniere rangee n'a plus aucun coup legal (il n'avance
+## plus, ses diagonales de prise sortent du plateau) : il attend, immobile et
+## sans defense. Le sacre se paie d'un tour d'exposition - la recompense porte
+## son propre risque.
+##
+## Ne concerne QUE la couronne : un pion qui ne remplit pas les conditions de
+## la Dame promeut tout de suite en PROMOTION_FALLBACK. Rester expose n'aurait
+## aucun sens pour une piece qu'on n'attend pas.
+const PROMOTION_TAKES_A_TURN := true
+
+## UNE SEULE DAME PAR BATAILLE ET PAR CAMP. Les pions suivants montent en
+## PROMOTION_FALLBACK. La sonde montrait des batailles a trois Dames : une
+## percee est un evenement, pas une chaine de production.
+const PROMOTION_ONE_PER_BATTLE := true
+
+## LE PION DOIT AVOIR FAIT SES PREUVES : seul un pion qui a deja capture peut
+## pretendre a la couronne. Un pion qui a traverse un couloir vide n'a rien
+## prouve.
+const PROMOTION_REQUIRES_CAPTURE := true
+
+## LE TRONE PLUTOT QUE LA RANGEE : nombre de colonnes CENTRALES du fond adverse
+## ou la couronne se gagne. 0 = toute la rangee.
+##
+## Laisse a 0 pour l'instant : sur un plateau de cinq colonnes, reduire la
+## cible a une ou deux cases fait double emploi avec le sacre qui prend un
+## tour - les deux transforment la meme case en zone de tir, et cumulees elles
+## rendent la couronne inatteignable. A n'ouvrir que si les mesures montrent
+## que la Dame reste trop frequente.
+const PROMOTION_THRONE_WIDTH := 0
+
+## SERIE - poids que le joueur recupere ENTRE deux combats d'une meme serie.
+##
+## Un budget de poids (cf. deploy_weight), pas un nombre de pieces, et depense
+## sur les pertes les moins cheres d'abord : concretement, deux pions se
+## relevent entre deux batailles, jamais une tour. Sans ce filet la serie est
+## une spirale - un mauvais premier combat rend le troisieme injouable ; avec
+## lui, l'usure reste reelle mais rattrapable, et ce sont les pieces lourdes
+## perdues qui font mal.
+const RUN_REINFORCE_WEIGHT := 2
 
 const CAMPAIGN := [
-	{"id": 1,  "name": "L Oree du Bois",     "cols": 5, "rows": 6, "reward": 90,  "level": 1, "ai": AI_NOVICE, "enemies": {PION: 3}},
-	{"id": 2,  "name": "Le Gue de Pierre",   "cols": 5, "rows": 6, "reward": 120, "level": 1, "ai": AI_NOVICE, "enemies": {PION: 2, FOU: 1}},
-	{"id": 3,  "name": "La Route du Sel",    "cols": 6, "rows": 7, "reward": 160, "level": 2, "ai": AI_NOVICE, "enemies": {PION: 3, CAVALIER: 1, TOUR: 1}},
-	{"id": 4,  "name": "Les Champs Brules",  "cols": 6, "rows": 7, "reward": 200, "level": 2, "ai": AI_AGUERRI, "enemies": {PION: 3, FOU: 1, CAVALIER: 1}},
-	{"id": 5,  "name": "Le Pont Noir",       "cols": 6, "rows": 8, "reward": 260, "level": 3, "ai": AI_AGUERRI, "enemies": {PION: 4, TOUR: 1, FOU: 1}},
-	{"id": 6,  "name": "La Carriere",        "cols": 6, "rows": 8, "reward": 320, "level": 3, "ai": AI_AGUERRI, "enemies": {PION: 4, CAVALIER: 1, TOUR: 1}},
-	{"id": 7,  "name": "Les Marches Grises", "cols": 7, "rows": 8, "reward": 400, "level": 4, "ai": AI_AGUERRI, "enemies": {PION: 4, FOU: 1, CAVALIER: 1}},
-	{"id": 8,  "name": "Le Col du Corbeau",  "cols": 7, "rows": 8, "reward": 500, "level": 4, "ai": AI_EXPERT, "enemies": {PION: 5, TOUR: 2, CAVALIER: 1}},
-	{"id": 9,  "name": "Les Ruines Hautes",  "cols": 7, "rows": 9, "reward": 640, "level": 5, "ai": AI_EXPERT, "enemies": {PION: 5, FOU: 2, TOUR: 1, CAVALIER: 1}},
+	{"id": 1,  "name": "L Oree du Bois",     "cols": 5, "rows": 6, "reward": 90,  "level": 1, "ai": AI_NOVICE, "fights": 3, "enemies": {PION: 3}},
+	{"id": 2,  "name": "Le Gue de Pierre",   "cols": 5, "rows": 6, "reward": 120, "level": 1, "ai": AI_NOVICE, "fights": 3, "enemies": {PION: 2, FOU: 1}},
+	{"id": 3,  "name": "La Route du Sel",    "cols": 6, "rows": 7, "reward": 160, "level": 2, "ai": AI_AGUERRI, "fights": 3, "enemies": {PION: 3, CAVALIER: 1, TOUR: 1}},
+	{"id": 4,  "name": "Les Champs Brules",  "cols": 6, "rows": 7, "reward": 200, "level": 2, "ai": AI_AGUERRI, "fights": 4, "enemies": {PION: 3, FOU: 1, CAVALIER: 1}},
+	{"id": 5,  "name": "Le Pont Noir",       "cols": 6, "rows": 8, "reward": 260, "level": 3, "ai": AI_AGUERRI, "fights": 4, "enemies": {PION: 4, TOUR: 1, FOU: 1}},
+	{"id": 6,  "name": "La Carriere",        "cols": 6, "rows": 8, "reward": 320, "level": 3, "ai": AI_AGUERRI, "fights": 4, "enemies": {PION: 4, CAVALIER: 1, TOUR: 1}},
+	{"id": 7,  "name": "Les Marches Grises", "cols": 7, "rows": 8, "reward": 400, "level": 4, "ai": AI_EXPERT, "fights": 4, "enemies": {PION: 4, FOU: 1, CAVALIER: 1}},
+	{"id": 8,  "name": "Le Col du Corbeau",  "cols": 7, "rows": 8, "reward": 500, "level": 4, "ai": AI_EXPERT, "fights": 5, "enemies": {PION: 5, TOUR: 2, CAVALIER: 1}},
+	{"id": 9,  "name": "Les Ruines Hautes",  "cols": 7, "rows": 9, "reward": 640, "level": 5, "ai": AI_EXPERT, "fights": 5, "enemies": {PION: 5, FOU: 2, TOUR: 1, CAVALIER: 1}},
 	# "dame" : Dames offertes a la PREMIERE victoire seulement (cf.
 	# battle.gd > _show_result). Le Roi a perdu sa Dame au premier ecran du
 	# jeu ; il la retrouve au bout de sa campagne, meme si aucun de ses pions
 	# n'a jamais traverse un plateau. Sans ce filet, la moitie du jeu - Tour
 	# de la Dame, aura, ameliorations - reste eteinte pour la plupart des
 	# joueurs : une promotion reussie reste un exploit rare.
-	{"id": 10, "name": "La Tour de la Dame", "cols": 8, "rows": 9, "reward": 900, "level": 6, "ai": AI_EXPERT, "dame": 1, "enemies": {PION: 6, FOU: 2, TOUR: 2, CAVALIER: 1}},
+	{"id": 10, "name": "La Tour de la Dame", "cols": 8, "rows": 9, "reward": 900, "level": 6, "ai": AI_EXPERT, "dame": 1, "fights": 5, "enemies": {PION: 6, FOU: 2, TOUR: 2, CAVALIER: 1}},
 ]
 
 # ------------------------------- MISSIONS ------------------------------------
@@ -603,3 +712,9 @@ func battle_ai_skill(battle: Dictionary) -> int:
 
 func battle_count() -> int:
 	return CAMPAIGN.size()
+
+
+## Nombre de combats de la serie pour cette bataille. Une bataille qui ne le
+## declare pas se joue en un seul combat.
+func battle_fights(battle: Dictionary) -> int:
+	return maxi(1, int(battle.get("fights", 1)))
