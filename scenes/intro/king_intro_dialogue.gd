@@ -35,6 +35,17 @@ const FADE_DURATION := 0.4
 const BUBBLE_COLOR := Color("f5efe2", 0.878)
 const BUBBLE_STROKE := Color("ffd700", 0.451)
 
+## Geometrie de la maquette V2 (frame king-intro-dialogue, revision du
+## 21/08) : la bulle ne tient plus toute la largeur, elle fait 302 points et
+## se centre ; le bouton, lui, est large et bas, ancre au bord inferieur.
+const BUBBLE_WIDTH := 302.0
+const BUTTON_MARGIN := 26.0
+const BUTTON_HEIGHT := 90.0
+## Distance entre le bas du bouton et le bas de l'ecran.
+const BUTTON_BOTTOM_GAP := 102.0
+## Ecart entre la bulle et le bouton.
+const BUBBLE_BUTTON_GAP := 16.0
+
 const HINT_TEXT := "S'APPROCHER DU TRÔNE"
 
 @onready var _background_wrap: Control = $BackgroundWrap
@@ -192,33 +203,60 @@ func skip_approach() -> void:
 	_tapped.emit()
 
 
-## Bulle de dialogue (fond clair, pas de cadre dore, petite pointe vers le
-## Roi) + bouton "COMMENCER", empiles comme le "Dialogue and Controls Area"
-## de la maquette Figma - un VBoxContainer plutot que des positions fixes,
-## pour que le bouton suive si la bulle change de hauteur (texte plus long).
+## Bulle de dialogue et bouton "COMMENCER", places comme dans la maquette V2 :
+## une bulle etroite centree, un large bouton dessous.
+##
+## Les deux sont ANCRES au bord inferieur plutot que poses a une ordonnee
+## fixe : la maquette est dessinee en 402 x 874, le jeu tourne en 393 x 852,
+## et un telephone reel fait encore autre chose. La bulle grandit vers le
+## haut si le texte s'allonge, le bouton ne bouge pas.
 func _build_dialogue_area() -> Dictionary:
-	var area := VBoxContainer.new()
-	area.add_theme_constant_override("separation", 16)
-	area.position = Vector2(20, 546)
-	area.size = Vector2(353, 0)
-	_overlay.add_child(area)
-
-	# La pointe deborde au-dessus de la bulle : elle vit hors du VBoxContainer,
-	# positionnee a la main juste avant que celui-ci ne soit ajoute au parent.
-	var tail := _build_speech_tail()
-	_overlay.add_child(tail)
+	var button := _build_commencer_button()
+	_overlay.add_child(button)
+	button.anchor_left = 0.0
+	button.anchor_right = 1.0
+	button.anchor_top = 1.0
+	button.anchor_bottom = 1.0
+	button.grow_vertical = Control.GROW_DIRECTION_BEGIN
+	button.offset_left = BUTTON_MARGIN
+	button.offset_right = -BUTTON_MARGIN
+	button.offset_top = -(BUTTON_BOTTOM_GAP + BUTTON_HEIGHT)
+	button.offset_bottom = -BUTTON_BOTTOM_GAP
 
 	var panel := _build_dialogue_panel()
-	area.add_child(panel)
-	panel.custom_minimum_size = Vector2(0, 0)
+	_overlay.add_child(panel)
+	panel.anchor_left = 0.5
+	panel.anchor_right = 0.5
+	panel.anchor_top = 1.0
+	panel.anchor_bottom = 1.0
+	panel.grow_horizontal = Control.GROW_DIRECTION_BOTH
+	panel.grow_vertical = Control.GROW_DIRECTION_BEGIN
+	panel.offset_left = -BUBBLE_WIDTH * 0.5
+	panel.offset_right = BUBBLE_WIDTH * 0.5
+	panel.offset_bottom = -(BUTTON_BOTTOM_GAP + BUTTON_HEIGHT + BUBBLE_BUTTON_GAP)
+	panel.offset_top = panel.offset_bottom
 
-	var button := _build_commencer_button()
-	area.add_child(button)
-
-	# La pointe se cale sur le centre de la bulle une fois sa largeur connue.
-	tail.position = Vector2(area.position.x + area.size.x / 2.0 - 12.0, area.position.y - 12.0)
+	# La pointe deborde au-dessus de la bulle : elle vit hors du panneau et se
+	# recale sur lui une fois sa hauteur connue.
+	var tail := _build_speech_tail()
+	_overlay.add_child(tail)
+	# La bulle grandit VERS LE HAUT au fur et a mesure que sa hauteur se
+	# calcule : poser la pointe une seule fois, en differe, la laissait au
+	# milieu du texte. Elle se recale a chaque changement de taille.
+	panel.resized.connect(_place_tail.bind(panel, tail))
+	_place_tail.call_deferred(panel, tail)
 
 	return {"panel": panel, "tail": tail, "button": button}
+
+
+## La pointe se cale sur le bord superieur de la bulle, un peu a gauche du
+## centre comme dans la maquette (elle vise le Roi, pas le milieu).
+func _place_tail(panel: PanelContainer, tail: Control) -> void:
+	if not is_instance_valid(panel) or not is_instance_valid(tail):
+		return
+	tail.position = Vector2(
+		panel.position.x + panel.size.x * 0.5 - 36.0,
+		panel.position.y - tail.size.y + 1.0)
 
 
 func _build_speech_tail() -> Control:
@@ -257,6 +295,7 @@ func _build_dialogue_panel() -> PanelContainer:
 	_dialogue_label = Label.new()
 	_dialogue_label.text = DIALOGUE_TEXT
 	_dialogue_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	_dialogue_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	_dialogue_label.add_theme_font_override("font", UiTheme.font_dialogue())
 	_dialogue_label.add_theme_font_size_override("font_size", 22)
 	_dialogue_label.add_theme_color_override("font_color", Color("0c0614"))
@@ -273,13 +312,14 @@ func _build_commencer_button() -> PanelContainer:
 	box.bg_color = UiTheme.GOLD
 	box.border_color = Color("b8860b")
 	box.set_border_width_all(2)
-	box.set_corner_radius_all(18)
+	box.set_corner_radius_all(12)
 	box.content_margin_top = 18
 	box.content_margin_bottom = 18
-	box.shadow_color = Color("ffbf00", 0.45)
-	box.shadow_size = 12
+	box.shadow_color = Color(0, 0, 0, 0.35)
+	box.shadow_size = 10
+	box.shadow_offset = Vector2(0, 4)
 	button.add_theme_stylebox_override("panel", box)
-	button.custom_minimum_size = Vector2(0, 63)
+	button.custom_minimum_size = Vector2(0, BUTTON_HEIGHT)
 
 	var row := HBoxContainer.new()
 	row.alignment = BoxContainer.ALIGNMENT_CENTER
