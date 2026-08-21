@@ -613,7 +613,8 @@ func _check_scenes() -> void:
 	Game.reset_progress()
 	Router.current_battle_id = 1
 
-	for path in [Router.SPLASH_SCENE, Router.INTRO_SCENE, Router.VILLAGE_SCENE, Router.CAMPAIGN_SCENE, Router.PREP_SCENE, Router.BATTLE_SCENE]:
+	for path in [Router.SPLASH_SCENE, Router.INTRO_SCENE, Router.VILLAGE_SCENE,
+			Router.CASTLE_SCENE, Router.CAMPAIGN_SCENE, Router.PREP_SCENE, Router.BATTLE_SCENE]:
 		var packed: PackedScene = load(path)
 		if packed == null:
 			_fail("scene introuvable : %s" % path)

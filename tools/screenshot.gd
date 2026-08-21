@@ -79,12 +79,28 @@ func _capture_dame_tower() -> void:
 	# Chateau Royal, allume par la Dame rentree.
 	_save(village, "1a_chateau_qui_brille.png")
 
-	village._on_building_pressed(Balance.CASTLE)
-	for i in range(4):
-		await RenderingServer.frame_post_draw
-	_save(village, "1b_chateau_dames.png")
 	village.queue_free()
 	await get_tree().process_frame
+
+	# La salle du trone, Dame rentree : c'est l'ecran qui raconte l'histoire.
+	var castle: Node = load("res://scenes/village/castle_screen.tscn").instantiate()
+	add_child(castle)
+	for i in range(4):
+		await RenderingServer.frame_post_draw
+	_save(castle, "1b_chateau_avec_dame.png")
+	castle.queue_free()
+	await get_tree().process_frame
+
+	# Et le meme, trone vide : l'etat de depart de la campagne.
+	Game.reset_progress()
+	var empty: Node = load("res://scenes/village/castle_screen.tscn").instantiate()
+	add_child(empty)
+	for i in range(4):
+		await RenderingServer.frame_post_draw
+	_save(empty, "1b2_chateau_sans_dame.png")
+	empty.queue_free()
+	await get_tree().process_frame
+	Game.dev_grant_dame()
 
 	# Et le placement avec la Dame en reserve : son chip apparait a cote des
 	# casernes, et elle pese 5 de charge (cf. Balance.deploy_weight).

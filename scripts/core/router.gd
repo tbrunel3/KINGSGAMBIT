@@ -13,6 +13,7 @@ const VILLAGE_SCENE := "res://scenes/village/village.tscn"
 const CAMPAIGN_SCENE := "res://scenes/battle/campaign.tscn"
 const PREP_SCENE := "res://scenes/battle/battle_prep.tscn"
 const BATTLE_SCENE := "res://scenes/battle/battle.tscn"
+const CASTLE_SCENE := "res://scenes/village/castle_screen.tscn"
 
 ## Bataille en cours de preparation ou de combat.
 var current_battle_id: int = 1
@@ -24,6 +25,12 @@ func goto_intro() -> void:
 
 func goto_village() -> void:
 	_change(VILLAGE_SCENE)
+
+
+## Salle du trone, en plein ecran : le chateau est le batiment central du
+## village, il ne tient pas dans une modale.
+func goto_castle() -> void:
+	_change(CASTLE_SCENE)
 
 
 func goto_campaign() -> void:

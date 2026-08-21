@@ -40,6 +40,8 @@ const DIALOGUE_PATH := "res://assets/fonts/ComicRelief-Regular.ttf"
 ## Jaro : l'ecriture d'enseigne de la maquette, reservee aux NOMS DE LIEUX -
 ## les labels de batiments du village. Partout ailleurs c'est Inter.
 const DISPLAY_PATH := "res://assets/fonts/Jaro.ttf"
+## Lora : la serif des bandeaux de titre (Chateau Royal). Variable elle aussi.
+const TITLE_PATH := "res://assets/fonts/Lora.ttf"
 
 const WEIGHT_REGULAR := 400
 const WEIGHT_BOLD := 700
@@ -48,6 +50,7 @@ static var _font: Font = null
 static var _font_bold: Font = null
 static var _font_dialogue: Font = null
 static var _font_display: Font = null
+static var _font_title: Font = null
 
 
 static func font() -> Font:
@@ -80,6 +83,19 @@ static func font_display() -> Font:
 		else:
 			_font_display = font_bold()
 	return _font_display
+
+
+## Serif des bandeaux de titre. Retombe sur Inter gras si Lora manque.
+static func font_title() -> Font:
+	if _font_title == null:
+		if ResourceLoader.exists(TITLE_PATH):
+			var variation := FontVariation.new()
+			variation.base_font = load(TITLE_PATH)
+			variation.variation_opentype = {"wght": WEIGHT_BOLD}
+			_font_title = variation
+		else:
+			_font_title = font_bold()
+	return _font_title
 
 
 static func _inter_at_weight(weight: int) -> Font:

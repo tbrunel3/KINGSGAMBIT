@@ -23,6 +23,8 @@ siège Full sur l'équipe, aucun droit à demander).
 | king-intro-dialogue | 123:32 | **fait** (révision du 21/08 incluse) |
 | village-avec-dame | 162:4 | **fait** |
 | village-sans-dame | 188:2 | **fait** (c'est le même écran sans les halos) |
+| chateau-royal-avec-dame | 178:5 | **fait** — écran plein, remplace la modale |
+| chateau-royal-sans-dame | 178:51 | **fait** (même écran, illustration du trône vide) |
 | 02_Campagne | 58:90 | à faire |
 | preparation-bataille-v2 | 169:4 | à faire |
 | 04_Bataille_Placement | 49:2 | à faire |
@@ -34,8 +36,6 @@ siège Full sur l'équipe, aucun droit à demander).
 | 10-popup-batiment-verrouille | 2:1115 | à faire |
 | 11-popup-amelioration | 2:1165 | à faire |
 | confirm-upgrade-modal | 103:15 | à créer (pas de code aujourd'hui) |
-| chateau-royal-avec-dame | 178:5 | à créer |
-| chateau-royal-sans-dame | 178:51 | à créer |
 | codex-popup | 194:4 | à créer |
 | 12-composants | 2:1224 | planche de référence |
 | Pièces d'échecs SVG | 32:2 | déjà en jeu |

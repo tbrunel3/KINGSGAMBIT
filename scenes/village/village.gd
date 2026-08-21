@@ -721,6 +721,11 @@ func _progress_bar(fraction: float, color: Color) -> Control:
 func _on_building_pressed(type: String) -> void:
 	if is_instance_valid(_popup):
 		return
+	# Le Chateau Royal a son propre ecran : la salle du trone, ou l'on voit
+	# d'un coup d'oeil si la Dame est rentree.
+	if type == Balance.CASTLE:
+		Router.goto_castle()
+		return
 	_popup = BuildingPopupScene.instantiate()
 	add_child(_popup)
 	_popup.open(type)
