@@ -97,12 +97,13 @@ const GARRISON_MINIMUM := {PION: 3}
 ## debut a la fin de la campagne.
 const DAME_GOLD_BONUS := 0.15
 
-## Nombre de Dames a posseder pour ameliorer la Tour de la Dame jusqu'a chaque
-## niveau (indice 0 = passage au niveau 2). L'amelioration se paie en or comme
-## partout ailleurs, mais elle demande EN PLUS d'avoir la collection : c'est ce
-## que veut dire "cumuler des Dames permet de les ameliorer". Les Dames ne sont
-## jamais consommees - une piece durement gagnee ne se sacrifie pas.
-const DAME_UPGRADE_DAMES := [2, 3, 4, 5, 6, 7, 8, 9, 10]
+## "Cumuler des Dames permet de les ameliorer" : le niveau d'une Dame est le
+## plus petit du niveau du Chateau Royal et du NOMBRE de Dames abritees. Il
+## faut donc les deux - un chateau qui monte, et une collection qui grandit -
+## et aucune Dame n'est jamais depensee : c'est leur presence qui compte.
+##
+## Une Dame seule dans un chateau Nv.5 reste donc Nv.1 ; trois Dames dans un
+## chateau Nv.3 sont toutes Nv.3.
 
 ## Une bataille deja gagnee rapporte moins : on peut farmer, mais progresser
 ## reste plus rentable que repasser sur un terrain conquis.
@@ -215,7 +216,9 @@ const UNITS := {
 	},
 	DAME: {
 		"name": "Dame",
-		"building_name": "Tour de la Dame",
+		# La Dame n'a pas de batiment a elle : elle vit au Chateau Royal, aux
+		# cotes du Roi. C'est de la que vient toute l'histoire du jeu.
+		"building_name": "Chateau Royal",
 		"letter": "D",
 		"color": "d8a0d0",
 		"move_type": "queen",
@@ -230,16 +233,14 @@ const UNITS := {
 		# Tour : au chateau Nv.1 (16 de charge), 9 aurait mange plus de la
 		# moitie du budget et rendu son unique recompense impossible a jouer.
 		"deploy_weight": 5,
-		# La Tour de la Dame ne recrute pas - une Dame ne s'achete pas - mais
-		# elle s'ameliore, a condition d'avoir la collection qui va avec
-		# (cf. DAME_UPGRADE_DAMES). Capacite volontairement large : perdre une
-		# Dame durement promue parce que le batiment est plein serait la pire
-		# des punitions.
+		# Nombre de Dames que le chateau peut abriter. Volontairement large :
+		# perdre une Dame durement promue parce qu'il n'y a plus de place
+		# serait la pire des punitions.
 		"capacity":   [10,10,10,10,10,10,10,10,10,10],
-		# Plus cher que le Donjon : c'est la piece la plus forte du jeu, et
-		# chaque palier demande deja une Dame de plus en reserve.
-		"upgrade_cost":    [300, 560,  900, 1300, 1760, 2280, 2860, 3500, 4200],
-		"upgrade_seconds": [120, 300,  660, 1320, 2400, 4200, 6600, 9900,14400],
+		# Aucune amelioration propre : la Dame monte avec le Chateau Royal
+		# (cf. GameState.dame_level).
+		"upgrade_cost": [],
+		"upgrade_seconds": [],
 	},
 }
 
@@ -384,7 +385,7 @@ const MISSIONS := [
 	# --- Le bout du chemin.
 	{"id": "dame", "text": "Ramene une Dame vivante au village",
 		"goal": "dames", "target": 1, "gold": 300, "requires": ["promotion"]},
-	{"id": "two_dames", "text": "Abrite 2 Dames a la Tour de la Dame",
+	{"id": "two_dames", "text": "Abrite 2 Dames au Chateau Royal",
 		"goal": "dames", "target": 2, "gold": 400, "requires": ["dame"]},
 	{"id": "campaign", "text": "Termine la campagne",
 		"goal": "campaign", "target": 1, "gold": 500, "requires": ["castle3", "captures"]},
@@ -502,14 +503,6 @@ func move_range(type: String, level: int) -> int:
 func first_move_range(type: String, level: int) -> int:
 	var value: Variant = _at_level(UNITS[type].get("first_move_range", []), level)
 	return move_range(type, level) if value == null else int(value)
-
-
-## Dames a posseder pour ameliorer la Tour de la Dame depuis ce niveau.
-## 0 quand le batiment est deja au maximum.
-func dames_required(current_level: int) -> int:
-	if current_level < 1 or current_level - 1 >= DAME_UPGRADE_DAMES.size():
-		return 0
-	return int(DAME_UPGRADE_DAMES[current_level - 1])
 
 
 func jump_offsets(type: String, level: int) -> Array:

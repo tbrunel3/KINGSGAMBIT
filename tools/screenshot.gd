@@ -54,7 +54,7 @@ func _ready() -> void:
 	get_tree().quit()
 
 
-## La Tour de la Dame, ouverte : le seul ecran qui n'apparait qu'apres avoir
+## Le Chateau Royal avec une Dame retrouvee : l'ecran n'existe qu'apres avoir
 ## ramene un pion promu vivant d'une bataille. On force la Dame par le
 ## raccourci de test plutot que de jouer la bataille qui la donne.
 func _capture_dame_tower() -> void:
@@ -79,10 +79,10 @@ func _capture_dame_tower() -> void:
 	# Chateau Royal, allume par la Dame rentree.
 	_save(village, "1a_chateau_qui_brille.png")
 
-	village._on_building_pressed(Balance.DAME)
+	village._on_building_pressed(Balance.CASTLE)
 	for i in range(4):
 		await RenderingServer.frame_post_draw
-	_save(village, "1b_tour_dame.png")
+	_save(village, "1b_chateau_dames.png")
 	village.queue_free()
 	await get_tree().process_frame
 

@@ -25,16 +25,12 @@ const BUILDING_POS := {
 	"cavalier": Vector2(235, 230),   # batiment haut-droit
 	"fou": Vector2(45, 628),         # batiment bas-gauche
 	"tour": Vector2(252, 619),       # batiment bas-droit
-	# La Tour de la Dame n'a pas de batiment dessine sur l'ile V2 : son label
-	# se pose sous le Chateau Royal, la ou vivent les Dames retrouvees.
-	"dame": Vector2(126, 496),
 }
 const BUILDING_TITLES := {
 	"pion": "Caserne des Pions",
 	"cavalier": "Ecuries",
 	"fou": "Cloitre des Fous",
 	"tour": "Donjon des Tours",
-	"dame": "Tour de la Dame",
 }
 ## Teinte de chaque label de batiment (bordure + pastille de niveau) - une
 ## palette propre a l'UI du Village, distincte des couleurs d'equipe utilisees
@@ -45,7 +41,6 @@ const BUILDING_ACCENT := {
 	"cavalier": "4dcc66",
 	"fou": "b266e5",
 	"tour": "e5594d",
-	"dame": "d8a0d0",
 }
 ## Halo du chateau et lumieres qui s'allument aux fenetres quand une Dame est
 ## rentree : c'est la difference entre les frames village-sans-dame et
@@ -105,7 +100,6 @@ func _ready() -> void:
 	_build_castle_label()
 	for type in Balance.UNIT_TYPES:
 		_build_building_label(type)
-	_build_building_label(Balance.DAME)
 	_build_battle_button()
 	_build_dev_button()
 
@@ -599,7 +593,6 @@ func _refresh() -> void:
 	_refresh_castle()
 	for type in Balance.UNIT_TYPES:
 		_refresh_building(type)
-	_refresh_building(Balance.DAME)
 
 	if Game.is_campaign_complete():
 		_battle_label.text = "REJOUER LA DERNIERE"
@@ -623,6 +616,23 @@ func _refresh_castle() -> void:
 	var deploy := UiTheme.make_label("Deploiement: %d" % Game.deploy_capacity(), 10, Color("ccd1e0"))
 	deploy.autowrap_mode = TextServer.AUTOWRAP_OFF
 	_castle_sub_row.add_child(deploy)
+
+	# Les Dames retrouvees vivent ici, avec le Roi : c'est le chateau qui
+	# annonce combien il en abrite et ce qu'elles rapportent.
+	var dames := Game.dames_owned()
+	if dames > 0:
+		var crown := Icon.new()
+		crown.icon_name = "crown"
+		crown.color = Color("d8a0d0")
+		crown.custom_minimum_size = Vector2(11, 11)
+		_castle_sub_row.add_child(crown)
+
+		var dame_label := UiTheme.make_label(
+			"%d  +%d%% or" % [dames, int(Balance.DAME_GOLD_BONUS * 100.0 * dames)],
+			10, Color("e5b8e0"))
+		dame_label.add_theme_font_override("font", UiTheme.font_bold())
+		dame_label.autowrap_mode = TextServer.AUTOWRAP_OFF
+		_castle_sub_row.add_child(dame_label)
 
 
 	if Game.is_upgrading(Balance.CASTLE):
@@ -654,34 +664,10 @@ func _refresh_building(type: String) -> void:
 		panel.modulate.a = 0.6
 		# La Tour de la Dame ne s'achete ni ne se debloque au niveau de
 		# chateau : elle apparait le jour ou une Dame y entre.
-		var hint_text := "Chateau Nv.%d requis" % Balance.unlock_castle_level(type)
-		if type == Balance.DAME:
-			hint_text = "Promeus un pion au bout du plateau"
-		var hint := UiTheme.make_label(hint_text, 11, UiTheme.TEXT_DIM)
+		var hint := UiTheme.make_label(
+			"Chateau Nv.%d requis" % Balance.unlock_castle_level(type), 11, UiTheme.TEXT_DIM)
 		hint.autowrap_mode = TextServer.AUTOWRAP_OFF
 		sub_row.add_child(hint)
-	elif type == Balance.DAME:
-		# Pas de pastille de niveau : la Tour de la Dame ne s'ameliore pas,
-		# elle compte les Dames qui y logent.
-		panel.modulate.a = 1.0
-		var dames := Game.dames_owned()
-		var level_pill: Pill = preload("res://scenes/ui/components/pill.tscn").instantiate()
-		sub_row.add_child(level_pill)
-		level_pill.set_custom("", "Nv.%d" % Game.building_level(type), Color(color, 0.2), color)
-		level_pill.get_node("%Text").add_theme_font_size_override("font_size", 10)
-
-		var dame_count := UiTheme.make_label(
-			"%d Dame%s" % [dames, "" if dames <= 1 else "s"], 11, Color("e5d9e5"))
-		dame_count.autowrap_mode = TextServer.AUTOWRAP_OFF
-		sub_row.add_child(dame_count)
-
-		# L'or que rapporte la collection : c'est le vrai interet de laisser
-		# une Dame a la maison, il doit se lire depuis la carte.
-		var aura := UiTheme.make_label(
-			"+%d%% or" % int(Balance.DAME_GOLD_BONUS * 100.0 * dames), 11, color)
-		aura.add_theme_font_override("font", UiTheme.font_bold())
-		aura.autowrap_mode = TextServer.AUTOWRAP_OFF
-		sub_row.add_child(aura)
 	else:
 		panel.modulate.a = 1.0
 		var level_pill: Pill = preload("res://scenes/ui/components/pill.tscn").instantiate()

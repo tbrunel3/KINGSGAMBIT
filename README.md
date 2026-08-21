@@ -41,8 +41,8 @@ de l'or. Retour au village, ouvre un bâtiment, recrute, lance une amélioration
 le compte à rebours continue même jeu fermé.
 
 Mène un pion jusqu'au fond du plateau adverse et **ramène-le vivant** : il
-devient une Dame, rangée à la **Tour de la Dame** au village, redéployable aux
-batailles suivantes.
+devient une Dame, qui rejoint le **Château Royal** aux côtés du Roi et se
+redéploie aux batailles suivantes.
 
 Tu démarres avec **4 pions et un cavalier** : une armée de pions seuls est une
 finale d'échecs, ce qui fait le pire des tutoriels. La Caserne des Pions et les
@@ -106,10 +106,9 @@ la première pièce ennemie rencontrée. Un Cavalier saute par-dessus tout.
 issue d'un pion Nv.1 se déplace donc bien moins loin que celle d'un pion Nv.10.
 
 **Si elle survit à la bataille, elle reste une Dame** : le pion quitte la
-caserne et la Dame s'installe à la **Tour de la Dame**, un bâtiment du village
-qui apparaît à la première d'entre elles. Elle se redéploie ensuite comme
-n'importe quelle autre pièce, pour **5 de charge de déploiement** — le prix
-d'une Tour. Sa *valeur* reste 9 : c'est ce que voit l'IA, qui la traite comme la
+caserne et la Dame s'installe au **Château Royal**, sur le trône laissé vide au
+premier écran du jeu. Elle se redéploie ensuite comme n'importe quelle autre
+pièce, pour **5 de charge de déploiement** — le prix d'une Tour. Sa *valeur* reste 9 : c'est ce que voit l'IA, qui la traite comme la
 pièce la plus chère du plateau. Une Dame capturée est perdue comme le pion
 qu'elle était.
 
@@ -129,13 +128,13 @@ retrouve au bout de sa quête, même si aucun de ses pions n'a jamais traversé 
 plateau. Sans ce filet, une promotion réussie restant un exploit rare, la moitié
 du jeu resterait éteinte pour la plupart des joueurs.
 
-**Améliorer les Dames** : la Tour de la Dame monte en niveau à l'or comme les
-autres bâtiments, mais chaque palier exige d'avoir **N Dames en réserve**
-(`Balance.DAME_UPGRADE_DAMES` : 2 pour le niveau 2, 3 pour le niveau 3…). Les
-Dames ne sont jamais dépensées — c'est la collection qui ouvre le palier, et
-toutes y gagnent en portée. Une Dame déployée depuis le village prend le niveau
-de la Tour ; une Dame promue en pleine bataille garde, elle, le niveau du pion
-qu'elle était.
+**Améliorer les Dames** : elles n'ont pas de bâtiment à elles, donc pas
+d'amélioration à payer séparément. Le niveau d'une Dame est **le plus faible du
+niveau du Château Royal et du nombre de Dames abritées** : une seule Dame dans
+un château Nv.5 reste Nv.1, trois Dames dans un château Nv.3 sont toutes Nv.3.
+Il faut donc les deux — un château qui monte et une collection qui grandit — et
+aucune Dame n'est jamais dépensée. Une Dame promue en pleine bataille garde, de
+son côté, le niveau du pion qu'elle était.
 
 **Les pertes sont définitives.** Une pièce capturée quitte l'armée et devra être
 recrutée à nouveau. C'est ce qui donne son poids au placement — et la raison
@@ -364,10 +363,9 @@ le premier combat du jeu était perdu.
 - 5 types de déplacement, mobilité liée au niveau, **promotion en Dame**
 - **Point i** sur l'écran de bataille : règles, gestes et barème des poids,
   adaptés à la phase en cours
-- **Tour de la Dame** : une Dame ramenée vivante est stockée au village,
-  redéployable, et rapporte +15 % d'or par bataille tant qu'elle y reste ; la
-  Tour s'améliore à l'or dès qu'on en collectionne assez, et le Château Royal
-  rayonne
+- **La Dame au Château Royal** : une Dame ramenée vivante s'installe auprès du
+  Roi, redéployable, et rapporte +15 % d'or par bataille tant qu'elle y reste ;
+  le château se met alors à rayonner, fenêtres allumées
 - **Pertes définitives** avec garnison minimale de sécurité
 - **IA à trois niveaux de jeu**, déclarés par bataille : novice (1-3), aguerri
   (4-7), expert (8-10) — prise la plus rentable, refus des mauvais échanges,

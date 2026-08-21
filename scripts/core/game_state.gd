@@ -87,8 +87,6 @@ func _normalize() -> void:
 	var buildings: Dictionary = _state.get("buildings", {})
 	buildings[Balance.CASTLE] = int(buildings.get(Balance.CASTLE, 1))
 	buildings[Balance.PION] = int(buildings.get(Balance.PION, 1))
-	# La Tour de la Dame (Balance.DAME) suit la meme regle que les casernes a
-	# debloquer : son absence veut dire "pas encore de Dame ramenee vivante".
 	for type in Balance.ARMY_TYPES:
 		if buildings.has(type):
 			buildings[type] = int(buildings[type])
@@ -216,6 +214,15 @@ func dames_owned() -> int:
 	return units_owned(Balance.DAME)
 
 
+## Niveau des Dames abritees au Chateau Royal : le plus petit du niveau du
+## chateau et du nombre de Dames (cf. Balance, section AURA DE LA DAME). Une
+## Dame promue en pleine bataille, elle, garde le niveau de son pion.
+func dame_level() -> int:
+	if dames_owned() <= 0:
+		return 1
+	return clampi(mini(castle_level(), dames_owned()), 1, Balance.MAX_LEVEL)
+
+
 ## Dames ramenees VIVANTES d'une bataille. Le pion promu quitte la caserne des
 ## pions et la Dame prend sa place a la Tour de la Dame, qui apparait au
 ## village a la premiere d'entre elles. Retourne le nombre reellement stocke -
@@ -227,17 +234,13 @@ func store_promotions(count: int) -> int:
 	if count <= 0:
 		return 0
 
-	var room := Balance.capacity(Balance.DAME, maxi(1, building_level(Balance.DAME))) - dames_owned()
+	var room := Balance.capacity(Balance.DAME, castle_level()) - dames_owned()
 	var stored := clampi(count, 0, maxi(0, room))
 	if stored <= 0:
 		return 0
 
 	_state["units"][Balance.PION] = maxi(0, units_owned(Balance.PION) - stored)
 	_state["units"][Balance.DAME] = dames_owned() + stored
-	if not is_building_unlocked(Balance.DAME):
-		_state["buildings"][Balance.DAME] = 1
-		buildings_changed.emit()
-
 	_ensure_playable()
 	save()
 	units_changed.emit()
@@ -445,25 +448,12 @@ func upgrade_remaining(type: String) -> int:
 	return maxi(0, end_time - int(Time.get_unix_time_from_system()))
 
 
-## Dames necessaires pour ameliorer la Tour de la Dame depuis son niveau
-## actuel, et vrai si la collection est reunie. Les Dames ne sont pas
-## consommees : c'est la collection qui debloque le palier, cf.
-## Balance.DAME_UPGRADE_DAMES.
-func dames_required_for_upgrade() -> int:
-	return Balance.dames_required(building_level(Balance.DAME))
-
-
-func can_upgrade_dame_tower() -> bool:
-	var required := dames_required_for_upgrade()
-	return required > 0 and dames_owned() >= required
-
-
-## Lance une amelioration. Retourne false si deja en cours, au max, trop cher,
-## ou - pour la Tour de la Dame - si les Dames requises manquent.
+## Lance une amelioration. Retourne false si deja en cours, au max, ou trop
+## cher. La Dame n'a pas de batiment a ameliorer : elle suit le chateau.
 func start_upgrade(type: String) -> bool:
-	if is_upgrading(type) or is_max_level(type):
+	if type == Balance.DAME:
 		return false
-	if type == Balance.DAME and not can_upgrade_dame_tower():
+	if is_upgrading(type) or is_max_level(type):
 		return false
 	var cost := Balance.upgrade_cost(type, building_level(type))
 	if cost < 0 or not spend_gold(cost):
@@ -585,9 +575,6 @@ func grant_dames(count: int) -> int:
 		return 0
 
 	_state["units"][Balance.DAME] = dames_owned() + stored
-	if not is_building_unlocked(Balance.DAME):
-		_state["buildings"][Balance.DAME] = 1
-		buildings_changed.emit()
 	save()
 	units_changed.emit()
 	missions_changed.emit()

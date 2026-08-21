@@ -119,10 +119,11 @@ func _ready() -> void:
 ## des Pions - elle EST un pion promu, sa mobilite suit celle des pions.
 func _unit_level(type: String) -> int:
 	if type == Balance.DAME:
-		# Les Dames s'entrainent a la Tour de la Dame, qui monte en niveau avec
-		# la collection (cf. Balance.DAME_UPGRADE_DAMES). Une Dame promue EN
-		# COURS de bataille, elle, garde le niveau du pion qu'elle etait.
-		return maxi(1, Game.building_level(Balance.DAME))
+		# Les Dames vivent au Chateau Royal et montent avec lui, sans jamais
+		# depasser le nombre de Dames abritees (cf. GameState.dame_level).
+		# Une Dame promue EN COURS de bataille, elle, garde le niveau du pion
+		# qu'elle etait.
+		return Game.dame_level()
 	return Game.building_level(type)
 
 
@@ -1339,7 +1340,7 @@ func _show_result() -> void:
 			stats_body.add_child(_stats_separator())
 			stats_body.add_child(UiTheme.stat_row("Dames ramenées",
 				_icon_value("crown", Color("d8a0d0"),
-					"+%d à la Tour de la Dame" % dames_gained, Color("d8a0d0"), 13)))
+					"+%d au Château Royal" % dames_gained, Color("d8a0d0"), 13)))
 		if dames_found > 0:
 			stats_body.add_child(_stats_separator())
 			stats_body.add_child(_result_highlight_row("La Dame retrouvée",
@@ -1359,7 +1360,7 @@ func _show_result() -> void:
 			stats_body.add_child(_stats_separator())
 			stats_body.add_child(UiTheme.stat_row("Dames ramenées",
 				_icon_value("crown", Color("d8a0d0"),
-					"+%d à la Tour de la Dame" % dames_gained, Color("d8a0d0"), 13)))
+					"+%d au Château Royal" % dames_gained, Color("d8a0d0"), 13)))
 
 	# Boutons - cf. Button-Stack Figma 06/07 : victoire met en avant l'or
 	# (bataille suivante) puis Reessayer ; defaite met Reessayer en avant sans

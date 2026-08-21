@@ -2,7 +2,7 @@
 
 Tu arrives sur un projet de jeu mobile King's Gambit, un jeu de stratégie fantasy inspiré des échecs. Le Roi a perdu sa Dame (la Reine) ; il reconstruit son armée et enchaîne des batailles pour la retrouver.
 
-Le joueur place son armée avant le combat, puis **joue lui-même chaque coup contre l'IA**, une pièce par camp et par tour, comme aux échecs (tape ou glisser-déposer). Un bouton AUTO laisse l'IA jouer les deux camps pour rejouer vite une bataille déjà gagnée. Un pion mené au bout du plateau devient Dame ; ramenée vivante, elle est stockée à la Tour de la Dame au village et redéployable ensuite.
+Le joueur place son armée avant le combat, puis **joue lui-même chaque coup contre l'IA**, une pièce par camp et par tour, comme aux échecs (tape ou glisser-déposer). Un bouton AUTO laisse l'IA jouer les deux camps pour rejouer vite une bataille déjà gagnée. Un pion mené au bout du plateau devient Dame ; ramenée vivante, elle rejoint le **Château Royal** — le trône vide du début de l'histoire — et redevient déployable.
 
 Le niveau de jeu de l'armée ennemie monte avec la campagne (novice → aguerri → expert, déclaré bataille par bataille dans `Balance.CAMPAIGN`) : les premiers combats doivent être gagnables par quelqu'un qui découvre le jeu. L'armée de départ comprend un cavalier — une armée de pions seuls est une finale d'échecs, donc un mauvais tutoriel — et la dernière bataille offre une Dame à la première victoire.
 
@@ -82,11 +82,12 @@ jeu qui gagne**, en reprenant seulement l'habillage :
    doit parler de charge, pas d'effectif.
 4. **Noms des bâtiments** — la maquette parle d'Atelier, Académie, Chapelle,
    Cathédrale. Le jeu a Caserne des Pions, Écuries, Cloître des Fous, Donjon des
-   Tours, plus la **Tour de la Dame** (absente de la maquette) qui abrite les
-   Dames ramenées vivantes.
-5. **Village avec / sans Dame** — les deux états existent bien dans le jeu, mais
-   la différence se joue sur le **halo doré du Château Royal** et le label de la
-   Tour de la Dame, pas sur la présence d'une pièce sur le château.
+   Tours. Les Dames ramenées vivantes n'ont pas de bâtiment : elles vivent au
+   Château Royal, comme le montrent les frames chateau-royal-avec-dame et
+   chateau-royal-sans-dame.
+5. **Village avec / sans Dame** — les deux états existent bien dans le jeu : la
+   différence se joue sur le **halo doré du Château Royal** et ses fenêtres
+   allumées, exactement comme dans la maquette.
 
 Écrans de la maquette qui n'existent pas encore côté code : Codex du Royaume,
 modale de confirmation d'amélioration, écran plein Château Royal. Ceux-là sont
@@ -198,8 +199,8 @@ Tout est en Inter (Google Fonts, gratuite). Poids utilisés :
   - Chaque label a un sub-frame avec pill de niveau + barre de progression (effectif/max)
   - Label verrouillé (x:50, y:685) : "🔒 Forge" grisé + "Château Nv.6 requis" en petit
 - Bouton BATAILLE (x:87, y:748, w:219, h:59) : fond or #ffd11a, radius 18, stroke 2px, texte "⚔ BATAILLE" noir 19px bold
-- **Code actuel** : l'emplacement verrouillé (x:50, y:685) sert à la **Tour de la Dame** — grisé et "Promeus un pion au bout du plateau" tant qu'aucune Dame n'a été ramenée, puis "N Dames au repos" une fois le bâtiment ouvert. Il n'y a pas de Forge.
-- **Halo du Château Royal** : dès qu'une Dame est au repos, un dégradé radial doré en mélange additif (300×300 à partir de x:46, y:246, élargi de 12 % par Dame supplémentaire) respire lentement sous les labels. Le label de la Tour de la Dame affiche le niveau, le nombre de Dames et l'or qu'elles rapportent (+15 % par Dame au repos).
+- **Code actuel** : quatre bâtiments et le château, pas de Forge et pas de bâtiment pour la Dame — elle vit au Château Royal.
+- **Halo du Château Royal** : dès qu'une Dame est rentrée, un dégradé radial doré en mélange additif respire sous les enseignes et les fenêtres du château s'allument (positions relevées sur la maquette V2). L'enseigne du château affiche alors le nombre de Dames et l'or qu'elles rapportent (+15 % chacune).
 - Bouton DEV (x:362, y:14) : discret, 24×24, radius 4, emoji 🛠
 
 ### 02_Campagne (carte de progression)
@@ -381,7 +382,7 @@ res://
 ## Notes importantes
 
 - Les écrans 04 (Placement) et 05 (Combat) partagent exactement la même grille et le même background pour éviter tout "saut" visuel lors de la transition
-- La Dame n'est pas recrutée — elle apparaît uniquement par promotion (un pion qui atteint le bout du plateau), et n'est conservée que si elle survit à la bataille : elle rejoint alors la Tour de la Dame au village. Laissée au village elle rapporte +15 % d'or par bataille ; collectionnée, elle permet d'améliorer la Tour (N Dames requises par palier, jamais dépensées)
+- La Dame n'est pas recrutée — elle apparaît uniquement par promotion (un pion qui atteint le bout du plateau), et n'est conservée que si elle survit à la bataille : elle rejoint alors le Château Royal. Laissée au village elle rapporte +15 % d'or par bataille ; son niveau au combat est le plus faible du niveau du château et du nombre de Dames abritées, et aucune n'est jamais dépensée
 - Le niveau d'un bâtiment débloque des CAPACITÉS, pas seulement des chiffres : le pion gagne le double pas d'ouverture au niveau 2 (`first_move_range` dans Balance), le cavalier de nouvelles figures de saut
 - Le Roi est unique et lié au Château Royal
 - Les SVG sont les assets finaux — ne les remplace pas par des placeholders

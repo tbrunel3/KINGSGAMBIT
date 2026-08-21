@@ -304,8 +304,8 @@ func _check_losses() -> void:
 	# s'installe a la Tour de la Dame, qui apparait au village a cette
 	# occasion. C'est la seule facon d'en obtenir une.
 	Game.reset_progress()
-	if Game.is_building_unlocked(Balance.DAME):
-		_fail("la Tour de la Dame existe avant la premiere promotion")
+	if Game.dames_owned() != 0:
+		_fail("une Dame est deja au chateau avant la premiere promotion")
 
 	# Au-dessus du plancher de garnison, sinon les pions convertis en Dames
 	# seraient aussitot rendus gratuitement et le test ne prouverait rien.
@@ -323,8 +323,6 @@ func _check_losses() -> void:
 		_fail("les Dames ne sont pas stockees : %d" % Game.dames_owned())
 	if Game.units_owned(Balance.PION) != pions_before - 2:
 		_fail("les pions promus n'ont pas quitte la caserne")
-	if not Game.is_building_unlocked(Balance.DAME):
-		_fail("la Tour de la Dame n'apparait pas apres une promotion")
 
 	# Aura : deux Dames au repos rapportent deux parts, une Dame deployee
 	# renonce a la sienne, et une Dame emmenee ne rapporte plus rien.
@@ -337,23 +335,25 @@ func _check_losses() -> void:
 	if Game.dame_gold_bonus(1000, 2) != 0:
 		_fail("des Dames toutes deployees rapportent encore de l'or")
 
-	# La Tour de la Dame s'ameliore avec la collection, pas en la depensant.
+	# La Dame n'a pas de batiment a elle : son niveau est le plus faible du
+	# niveau du chateau et du nombre de Dames abritees.
 	Game.add_gold(50000)
-	if Game.dames_required_for_upgrade() != int(Balance.DAME_UPGRADE_DAMES[0]):
-		_fail("le palier de Dames requis pour le niveau 2 est incoherent")
-	if not Game.can_upgrade_dame_tower():
-		_fail("2 Dames ne suffisent pas a ouvrir le niveau 2 de la Tour")
-	if not Game.start_upgrade(Balance.DAME):
-		_fail("l'amelioration de la Tour de la Dame est refusee")
-	Game.force_finish_upgrade(Balance.DAME)
-	if Game.building_level(Balance.DAME) != 2:
-		_fail("la Tour de la Dame n'est pas passee niveau 2")
-	if Game.dames_owned() != 2:
-		_fail("l'amelioration a consomme des Dames, elle ne devrait pas")
-	if Game.can_upgrade_dame_tower():
-		_fail("le niveau 3 s'ouvre sans la troisieme Dame")
 	if Game.start_upgrade(Balance.DAME):
-		_fail("la Tour s'ameliore sans la collection requise")
+		_fail("la Dame propose une amelioration alors qu'elle suit le chateau")
+	if Game.dame_level() != 1:
+		_fail("2 Dames dans un chateau Nv.1 ne devraient pas depasser le Nv.1")
+
+	Game.start_upgrade(Balance.CASTLE)
+	Game.force_finish_upgrade(Balance.CASTLE)
+	if Game.dame_level() != 2:
+		_fail("2 Dames dans un chateau Nv.2 devraient etre Nv.2 (%d)" % Game.dame_level())
+
+	Game.start_upgrade(Balance.CASTLE)
+	Game.force_finish_upgrade(Balance.CASTLE)
+	if Game.dame_level() != 2:
+		_fail("le nombre de Dames doit plafonner leur niveau, chateau Nv.3 compris")
+	if Game.dames_owned() != 2:
+		_fail("l'amelioration du chateau a consomme des Dames")
 
 	# Une Dame capturee se perd comme n'importe quelle piece - et son aura
 	# avec elle.

@@ -108,7 +108,7 @@ func losses(team: int) -> Dictionary:
 
 ## Pieces d'un camp promues pendant la bataille et encore debout a la fin.
 ## Cote joueur, ce sont les Dames qui rentrent vivantes : le pion qu'elles
-## etaient quitte la caserne, la Dame prend sa place a la Tour de la Dame
+## etaient quitte la caserne, la Dame rejoint le Chateau Royal
 ## (cf. GameState.store_promotions). Une Dame promue puis capturee ne compte
 ## pas : elle est perdue comme le pion qu'elle etait.
 func promoted_survivors(team: int) -> int:
@@ -206,7 +206,7 @@ func _resolve(unit: BattleUnit, destination: Vector2i) -> Array:
 	# echecs. Elle garde le niveau du pion (voir BattleUnit.promote_to) : une
 	# Dame issue d'un pion Nv.1 se deplace donc bien moins loin que celle d'un
 	# pion Nv.10. Cote joueur, une Dame ramenee VIVANTE rejoint ensuite la
-	# Tour de la Dame au village (cf. promoted_survivors).
+	# Chateau Royal (cf. promoted_survivors).
 	var promotion_row := unit.promotion_row(grid.rows)
 	if unit.origin_type == Balance.PION and not unit.promoted and destination.y == promotion_row:
 		unit.promote_to(Balance.DAME)
