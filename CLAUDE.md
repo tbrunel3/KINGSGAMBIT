@@ -309,7 +309,7 @@ nom n'a pas de suffixe `-v2` : le nom de la frame ne dit rien de son âge.
 | mission-popup | 228:9 | à intégrer (le panneau existe côté code) |
 | 09 / 10 / 11 — popups de bâtiment | 2:1048 / 2:1115 / 2:1165 | à intégrer — *le code couvre les quatre écrans dans une seule scène (`building_popup.gd`), et `screenshot.tscn` en capture deux états (`1e_`, `1f_`) pour comparer* |
 | confirm-upgrade-modal | 103:15 | fait — `confirm_upgrade.tscn` |
-| codex-popup | 194:4 | **dessinée dans Figma** (393 × 4537, un parchemin défilant), absente du jeu |
+| codex-popup | 194:4 | **à ne pas porter tel quel** — voir ci-dessous |
 | 12-composants | 2:1224 | planche de référence |
 | Pièces d'échecs SVG | 32:2 | déjà en jeu |
 | 🗺️ HIÉRARCHIE DU JEU | 203:6 | note de conception du designer, pas un écran |
@@ -337,6 +337,28 @@ n'appartiennent à aucune frame :
 Deux écrans existent dans le jeu **sans avoir jamais été dessinés** : l'écran de
 match nul (fabriqué en repeignant la victoire en acier) et la boutique, dont les
 règles ne sont pas fixées.
+
+### Le codex décrit un autre jeu — ne pas le porter
+
+`codex-popup` (194:4) est une encyclopédie défilante de 4 537 points, et sa
+forme est bonne : plaque de titre, puces de filtre par pièce, une carte par
+pièce, un tableau par niveau, puis les bâtiments et les règles. **Son contenu
+contredit le jeu de bout en bout** :
+
+| Le codex écrit | Le jeu |
+|---|---|
+| des colonnes **PV** et **ATK** par niveau | ni points de vie ni dégâts — une pièce est debout ou capturée |
+| « Charge inflige +50 % de dégâts », « Soigne les alliés adjacents de 10 PV/tour » | aucun soin, aucun dégât |
+| « champ quadrillé de 8 cases sur 11 » | de 5×6 à 8×9 |
+| « commandes de vitesse ×1, ×2, ×4 » | retirées : rien ne joue à la place du joueur |
+| « défaite si votre Roi est vaincu » | il n'y a pas de Roi sur le plateau |
+| huit bâtiments (Donjon de Fer, Cathédrale, Académie militaire, Chapelle de soins) | cinq : le Château et quatre casernes |
+
+Le porter tel quel mettrait des règles fausses sous les yeux du joueur, et c'est
+précisément ce que la règle « la maquette apporte l'apparence, jamais les
+règles » interdit. **Sa mise en page est réutilisable ; ses données sont à
+refaire** à partir de `Balance.UNITS` — mobilité par niveau, capacité, coût de
+recrutement, poids de déploiement. C'est un brief à écrire, pas un import.
 
 ### Les animations : deux écrans en portent, et deux seulement
 

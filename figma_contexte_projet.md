@@ -151,6 +151,29 @@ finiront par avoir besoin de toi :
 
 ---
 
+## Le codex : la forme est bonne, le contenu décrit un autre jeu
+
+`codex-popup` est la plus grande frame du fichier et sa mise en page est juste
+— plaque de titre, puces de filtre, une carte par pièce, un tableau par niveau,
+puis les bâtiments et les règles. **Mais rien de ce qu'elle écrit n'est vrai du
+jeu**, et on ne peut donc pas l'intégrer :
+
+| Le codex écrit | Le jeu |
+|---|---|
+| des colonnes **PV** et **ATK** par niveau | **ni points de vie ni dégâts** — une pièce est debout, ou capturée |
+| « Charge inflige +50 % de dégâts », « Soigne les alliés adjacents de 10 PV/tour » | aucun soin, aucun dégât, aucune statistique de combat |
+| « champ quadrillé de 8 cases sur 11 » | de 5×6 à 8×9, pour qu'une case reste touchable |
+| « commandes de vitesse ×1, ×2, ×4 » | retirées — rien ne joue à la place du joueur |
+| « défaite si votre Roi est vaincu » | il n'y a **pas de Roi** sur le plateau |
+| Donjon de Fer, Cathédrale, Académie militaire, Chapelle de soins | cinq bâtiments : le Château Royal et quatre casernes |
+
+Ce n'est pas une critique du dessin : c'est le brief qui t'a manqué. **Garde la
+mise en page**, on la reprendra telle quelle — mais les données doivent venir du
+jeu : mobilité par niveau, capacité de caserne, coût de recrutement, poids de
+déploiement. Un brief dédié te donnera les vrais chiffres.
+
+---
+
 ## Les règles permanentes de la collaboration
 
 **1. La maquette apporte l'apparence, jamais les règles.** Couleurs, typo,
