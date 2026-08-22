@@ -526,7 +526,13 @@ const RUN_REINFORCE_WEIGHT := 2
 #
 #              La courbe actuelle est calee pour que le cumul verse AVANT une
 #              bataille couvre ce qu'elle demande, avec une marge pour les
-#              recrues. Le farm redevient un choix - accelerer - au lieu d'un
+#              recrues. Les deux dernieres valeurs sont plus hautes que la
+#              progression ne le voudrait, et c'est deliberé : le saut de prix
+#              entre le niveau de la bataille 9 et celui de la 10 est le plus
+#              gros du jeu (+7 120 or), et c'est la recompense de la 9 qui doit
+#              le payer. Elle rend aussi le farm de la 9 nettement plus
+#              efficace, ce qui est la seule facon honnete de raccourcir la
+#              derniere montee. Le farm redevient un choix - accelerer - au lieu d'un
 #              passage oblige. Toucher a `upgrade_cost` sans relancer la sonde,
 #              c'est rouvrir le trou.
 
@@ -539,14 +545,14 @@ const CAMPAIGN := [
 	{"id": 6,  "name": "La Carrière",        "cols": 6, "rows": 8, "reward": 1200, "level": 3, "player": 3, "ai": AI_AGUERRI, "fights": 2, "enemies": {PION: 6, CAVALIER: 1, TOUR: 1}},
 	{"id": 7,  "name": "Les Marches Grises", "cols": 7, "rows": 8, "reward": 1600, "level": 3, "player": 4, "ai": AI_EXPERT, "fights": 2, "enemies": {PION: 7, FOU: 1, CAVALIER: 1, TOUR: 1}},
 	{"id": 8,  "name": "Le Col du Corbeau",  "cols": 7, "rows": 8, "reward": 2000, "level": 4, "player": 4, "ai": AI_EXPERT, "fights": 3, "enemies": {PION: 8, TOUR: 2, CAVALIER: 1}},
-	{"id": 9,  "name": "Les Ruines Hautes",  "cols": 7, "rows": 9, "reward": 2800, "level": 4, "player": 5, "ai": AI_EXPERT, "fights": 3, "enemies": {PION: 8, FOU: 2, TOUR: 1, CAVALIER: 1}},
+	{"id": 9,  "name": "Les Ruines Hautes",  "cols": 7, "rows": 9, "reward": 4500, "level": 4, "player": 5, "ai": AI_EXPERT, "fights": 3, "enemies": {PION: 8, FOU: 2, TOUR: 1, CAVALIER: 1}},
 	# "dame" : Dames offertes a la PREMIERE victoire seulement (cf.
 	# battle.gd > _show_result). Le Roi a perdu sa Dame au premier ecran du
 	# jeu ; il la retrouve au bout de sa campagne, meme si aucun de ses pions
 	# n'a jamais traverse un plateau. Sans ce filet, la moitie du jeu - Tour
 	# de la Dame, aura, ameliorations - reste eteinte pour la plupart des
 	# joueurs : une promotion reussie reste un exploit rare.
-	{"id": 10, "name": "La Tour de la Dame", "cols": 8, "rows": 9, "reward": 5000, "level": 4, "player": 6, "ai": AI_EXPERT, "dame": 1, "fights": 3, "enemies": {PION: 9, FOU: 2, TOUR: 2, CAVALIER: 1}},
+	{"id": 10, "name": "La Tour de la Dame", "cols": 8, "rows": 9, "reward": 8000, "level": 4, "player": 6, "ai": AI_EXPERT, "dame": 1, "fights": 3, "enemies": {PION: 9, FOU: 2, TOUR: 2, CAVALIER: 1}},
 ]
 
 # ------------------------------- MISSIONS ------------------------------------

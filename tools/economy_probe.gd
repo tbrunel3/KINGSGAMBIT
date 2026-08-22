@@ -272,18 +272,14 @@ func _pas_suivant(battle: Dictionary) -> Dictionary:
 	# Au-dela du niveau vise. Une bataille peut demander mieux que prevu - c'est
 	# meme la regle sur les series, qui usent plus qu'un combat seul.
 	#
-	# LE CHATEAU D'ABORD SI LA CHARGE EST SATUREE. C'est le piege qui a fausse
-	# la mesure de la derniere bataille : la charge etant pleine, chaque niveau
-	# de caserne achete au-dela ne changeait plus rien - la piece supplementaire
-	# ne rentrait pas sur le plateau. La sonde a ainsi brule 68 000 or en
-	# ameliorations qu'elle ne pouvait pas deployer, et a conclu a une corvee
-	# qui etait la sienne. Quand le sac est plein, ce qu'il faut acheter c'est
-	# un sac plus grand.
-	if _poids_de_l_armee() >= Game.deploy_capacity() and not Game.is_max_level(Balance.CASTLE):
-		return {"genre": "niveau", "type": Balance.CASTLE,
-			"cout": Balance.upgrade_cost(Balance.CASTLE, Game.castle_level()),
-			"libelle": "le Chateau au niveau %d (charge saturee)" % (Game.castle_level() + 1)}
-
+	# ON PREND LE MOINS CHER, chateau compris. Une tentative de forcer le
+	# CHATEAU des que la charge est saturee a ete essayee puis retiree : elle
+	# partait de l'idee qu'un niveau de caserne ne sert a rien quand le plateau
+	# est deja plein. C'est faux - il n'ajoute pas de piece, mais il rend
+	# meilleures celles qu'on aligne deja, ce qui est precisement la voie que la
+	# campagne pretend suivre (moins de pieces, mieux equipees). La mesure a
+	# tranche : la bataille 8 est passee de 1 a 6 replays avec la regle du
+	# chateau force. On garde donc le moins cher.
 	var meilleur: Dictionary = {}
 	var batiments: Array = [Balance.CASTLE]
 	batiments.append_array(Balance.UNIT_TYPES)
