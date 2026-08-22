@@ -9,6 +9,10 @@ où vivent les règles, comment le mesurer, et les pièges déjà payés. Deux a
 documents complètent celui-ci et ne le répètent pas :
 
 - [`README.md`](README.md) — pour un humain : lancer, jouer, régler, tester.
+- [`passation_chantiers_c_d_e.md`](passation_chantiers_c_d_e.md) — **le travail
+  en cours** : composition d'armée, polices et animations, popups
+  d'accompagnement. À lire avant d'y toucher : la moitié de ce que le joueur
+  demande existe déjà, et le rebâtir créerait des règles concurrentes.
 - [`figma_contexte_projet.md`](figma_contexte_projet.md) — pour le designer :
   l'état du jeu vu de la maquette, et les règles de collaboration.
 
