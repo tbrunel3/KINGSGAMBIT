@@ -57,8 +57,8 @@ c'est un ramassage, pas un achat.
 
 | Coffre | Attente | Rend |
 |---|---|---|
-| Coffre horaire | 1 heure | 8 gemmes |
-| Coffre de trois heures | 3 heures | 25 gemmes |
+| Coffre horaire | 1 heure | 4 gemmes |
+| Coffre de trois heures | 3 heures | 12 gemmes |
 
 **Deux états à dessiner pour chacun :**
 
@@ -95,8 +95,8 @@ d'achat en bas. Seules les valeurs changent :
 | Épique | 18 % | **3 h** |
 | Légendaire | 7 % | **termine tout** |
 
-Le titre **COFFRE LÉGENDAIRE** reste, l'illustration reste, le prix de 1 000
-gemmes reste. Le panneau cesse d'être une table de butin pour devenir **la
+Le titre **COFFRE LÉGENDAIRE** reste, l'illustration reste, le prix, descendu à 600
+gemmes, reste. Le panneau cesse d'être une table de butin pour devenir **la
 légende des quatre coffres** — ce qui est plus utile, puisque c'est la seule
 place de l'écran où le joueur peut comparer les quatre.
 
@@ -153,7 +153,7 @@ le jeu ne peut pas tenir.
 |---|---|---|
 | Pack 1 | 1 000 Or — 50 gemmes | **150 Or** — 50 gemmes |
 | Pack 2 | 5 000 Or — 200 gemmes | **700 Or** — 200 gemmes |
-| Pack 3 | **25 000 Or** — 800 gemmes | **3 000 Or** — 800 gemmes |
+| Pack 3 | **25 000 Or** — 800 gemmes | **3 000 Or** — 600 gemmes |
 
 *(Ces trois montants ont été mesurés depuis, et corrigés une fois : une première
 version à 500 / 2 200 / 6 000 laissait le budget entier d'une campagne acheter
@@ -164,7 +164,7 @@ d'améliorations qu'elle demande à la dixième bataille est de 19 090. Un pack 
 25 000 or ne déséquilibre pas l'économie : **il propose de sauter la
 campagne** — et comme le jeu se termine à la dixième bataille, il n'y a aucun
 contenu après où dépenser cet or. Recalibrés et mesurés, les trois packs
-laissent le budget de gemmes d'une campagne entière acheter **14 % de son or** :
+laissent le budget de gemmes d'une campagne entière acheter **8,7 % de son or** :
 un coup de pouce, pas un raccourci.
 
 Les prix en gemmes, eux, ne bougent pas.

@@ -52,23 +52,30 @@ sensés que si ce total est de l'ordre de **1 000 gemmes sur une campagne
 entière**. En dessous, la boutique est une vitrine fermée ; au-dessus, le pack
 d'or à 800 gemmes s'achète trois fois et l'économie mesurée se rouvre.
 
-Valeurs posées : coffre horaire 8 gemmes, coffre de 3 h 25 gemmes.
+Valeurs posées : coffre horaire **4 gemmes**, coffre de 3 h **12 gemmes**.
+
+⚠️ **Ces deux nombres valaient 8 et 25, et ont été divisés par deux après
+mesure** — décision du joueur, prise sur le chiffre du point suivant. Diviser
+le robinet a rendu deux articles **littéralement inachetables** (le Légendaire
+à 1 000 et le plus gros pack d'or à 800 dépassaient les 768 gemmes d'une
+campagne) : les deux sont descendus à **600** dans le même geste. Un article
+qu'on ne peut jamais s'offrir n'est pas un objet de désir.
 
 **Mesuré depuis** (`tools/shop_probe.tscn`, campagne de 12 jours) :
 
 | Sessions par jour | 7 jours | 12 jours | 21 jours |
 |---|---|---|---|
-| 2 | 462 | 792 | 1 386 |
-| 3 | 693 | 1 188 | 2 079 |
-| 5 | 1 155 | **1 980** | 3 465 |
+| 2 | 224 | 384 | 672 |
+| 3 | 336 | 576 | 1 008 |
+| 5 | 560 | **960** | 1 680 |
 
-Campagne de référence (12 jours, 4 sessions) : **1 584 gemmes** — dans la
-fourchette [500, 2000] que cette spec annonçait. Le Légendaire à 1 000 s'offre
+Campagne de référence (12 jours, 4 sessions) : **768 gemmes** — dans la
+fourchette [500, 2000] que cette spec annonçait. Le Légendaire à 600 s'offre
 donc **une fois par campagne**, ce qui est exactement le statut qu'on veut lui
 donner.
 
 *Une lecture contre-intuitive du tableau* : à 8 sessions par jour le rendement
-**baisse** légèrement (1 968 contre 1 980). Des visites toutes les deux heures
+ne monte plus (960, comme à 5 sessions). Des visites toutes les deux heures
 tombent à contretemps de la piste de 3 h. Ce n'est pas un bug de la sonde,
 c'est le comportement réel d'un plafond « un seul coffre en attente ».
 
@@ -109,21 +116,21 @@ Dans [`scripts/data/balance.gd`](scripts/data/balance.gd), un bloc `SHOP` neuf.
 const SHOP := {
     # Le robinet. Cle -> attente en secondes et gemmes rendues.
     "free_chests": {
-        "horaire":      {"seconds":  3600, "gems":  8},
-        "trois_heures": {"seconds": 10800, "gems": 25},
+        "horaire":      {"seconds":  3600, "gems":  4},
+        "trois_heures": {"seconds": 10800, "gems": 12},
     },
     # Coffres achetes : des SECONDES d'amelioration, pas un tirage.
     "chests": [
         {"id": "commun",     "gems":   50, "seconds":   900},  # 15 min
         {"id": "rare",       "gems":  150, "seconds":  3600},  # 1 h
         {"id": "epique",     "gems":  400, "seconds": 10800},  # 3 h
-        {"id": "legendaire", "gems": 1000, "seconds":    -1},  # termine TOUT
+        {"id": "legendaire", "gems":  600, "seconds":    -1},  # termine TOUT
     ],
     # Section OR : prix en gemmes du dessin, montants MESURES (cf. point 5).
     "gold_packs": [
         {"gems":  50, "gold":  150},   # 3,00 or/gemme
         {"gems": 200, "gold":  700},   # 3,50
-        {"gems": 800, "gold": 3000},   # 3,75
+        {"gems": 600, "gold": 3000},   # 5,00
     ],
     # Section GEMMES : dessinee, inerte tant qu'aucun store n'existe.
     "gem_packs": [
@@ -217,7 +224,7 @@ c'était une offre de **sauter la campagne** — et comme le jeu est fini en dix
 batailles, il n'y a aucun endgame où dépenser cet or ensuite.
 
 **Mesure d'arrivée** (`shop_probe`) : budget entier converti au meilleur taux,
-**5 550 or, soit 14,1 %** des 39 450 que verse une traversée simple. Un coup de
+**3 450 or, soit 8,7 %** des 39 450 que verse une traversée simple. Un coup de
 pouce, pas un raccourci — et le joueur qui le prend renonce à tout coffre.
 
 Deux garde-fous, à deux endroits, parce qu'aucun des deux ne suffit :
@@ -312,19 +319,16 @@ Y rappeler pourquoi : la maquette apporte l'apparence, jamais les règles.
   `economy_probe`.
 - **Les 8 et 25 gemmes** du robinet : mesurés, dans la fourchette — mais voir
   ci-dessous.
-- ⚠️ **La boutique efface 241 % de l'attente de la campagne, et c'est à toi de
-  dire si ça te va.** En confrontant les deux sondes : monter les cinq
+- ✅ **La boutique efface 117 % de l'attente de la campagne, et c'était une
+  décision, pas un calcul.** En confrontant les deux sondes : monter les cinq
   bâtiments au niveau que la campagne prête au joueur demande **4 h 55**
-  d'attente réelle (`economy_probe` en mesure 5,6 h sur son parcours réel) ;
-  le budget de gemmes d'une campagne achète **11 h 52** d'accélération au
-  meilleur taux. Pour qui ramasse ses coffres, **les minuteries cessent d'être
-  une contrainte**.
+  d'attente réelle ; le budget de gemmes en achète **5 h 45**. La boutique
+  couvre l'attente sans la pulvériser.
 
-  Ce n'est pas un bug — c'est exactement le service que la boutique rend — mais
-  c'est une décision de ressenti, pas de calcul, et elle n'a pas été prise. Les
-  deux leviers sont les gains des coffres gratuits et le temps rendu par
-  coffre. Diviser l'un ou l'autre par deux ramène le rapport autour de 120 %.
-  `shop_probe` affiche ce pourcentage à chaque passage.
+  Le premier réglage donnait **241 %** — les minuteries n'existaient plus pour
+  qui ramassait ses coffres. Le joueur a tranché pour un robinet deux fois plus
+  maigre. `shop_probe` pose désormais un plafond à **150 %** : au-dessus, il
+  échoue.
 - **Les achats en euros** : aucune plateforme, aucun plugin, aucun compte
   développeur n'est choisi. Hors de ce chantier.
 - **Une accélération depuis le popup de bâtiment** (« terminer maintenant »)

@@ -734,9 +734,16 @@ const SHOP := {
 	# Le robinet. Les gemmes ne s'achetent pas (aucun store n'existe) : elles
 	# se ramassent ici. Une seule piste par cle, un seul coffre en attente a
 	# la fois - sans ce plafond, partir une semaine rendrait 168 coffres.
+	# ROBINET DIVISE PAR DEUX, sur decision du joueur, apres mesure.
+	#
+	# A 8 et 25 gemmes, une campagne en produisait 1584 - de quoi acheter
+	# 11 h 52 d'acceleration pour 4 h 55 d'attente reelle, soit 241 %. Les
+	# minuteries cessaient d'etre une contrainte pour qui ramasse ses coffres.
+	# A 4 et 12, le rapport retombe autour de 120 % : la boutique couvre
+	# l'attente sans la pulveriser.
 	"free_chests": {
-		"horaire":      {"seconds":  3600, "gems":  8},
-		"trois_heures": {"seconds": 10800, "gems": 25},
+		"horaire":      {"seconds":  3600, "gems":  4},
+		"trois_heures": {"seconds": 10800, "gems": 12},
 	},
 	# Coffres achetes : des SECONDES d'amelioration, pas un tirage. Il n'y a
 	# aucune source d'alea dans ce jeu, et un coffre a probabilites serait la
@@ -755,7 +762,11 @@ const SHOP := {
 		{"id": "commun",     "name": "Commun",     "gems":   50, "seconds":   900},
 		{"id": "rare",       "name": "Rare",       "gems":  150, "seconds":  3600},
 		{"id": "epique",     "name": "Épique",     "gems":  400, "seconds": 10800},
-		{"id": "legendaire", "name": "Légendaire", "gems": 1000, "seconds":    -1},
+		# Descendu de 1000 a 600 EN MEME TEMPS que le robinet : a 1000, il
+		# depassait tout ce qu'une campagne produit desormais (792 gemmes) et
+		# devenait litteralement inachetable. Un coffre qu'on ne peut jamais
+		# s'offrir n'est pas un objet de desir, c'en est un de frustration.
+		{"id": "legendaire", "name": "Légendaire", "gems":  600, "seconds":    -1},
 	],
 	# Section OR. Les prix en gemmes sont ceux de la maquette ; les montants
 	# d'or sont RECALIBRES. Le pack dessine a 25000 valait plus que le cumul
@@ -775,7 +786,8 @@ const SHOP := {
 	"gold_packs": [
 		{"gems":  50, "gold":  150},   # 3,00 or/gemme
 		{"gems": 200, "gold":  700},   # 3,50
-		{"gems": 800, "gold": 3000},   # 3,75
+		{"gems": 600, "gold": 3000},   # 5,00 - descendu de 800 avec le robinet,
+		                               # meme raison que le Legendaire
 	],
 	# Section GEMMES. Dessinee, inerte : Godot n'a pas de facturation native
 	# et le build web ne peut rien vendre. gem_packs_enabled les rallumera le

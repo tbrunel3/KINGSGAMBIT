@@ -53,6 +53,17 @@ const EXPECTED_MAX := 2000
 ## budget de gemmes entier depense au meilleur taux.
 const MAX_GOLD_SHARE := 20.0
 
+## Part maximale de l'ATTENTE de la campagne que la boutique a le droit
+## d'effacer, meme budget.
+##
+## CHOISI, pas calcule. A 241 % - le premier reglage - les minuteries
+## n'existaient plus pour qui ramassait ses coffres. Le joueur a tranche pour
+## un robinet deux fois plus maigre, qui donne 117 % : la boutique couvre
+## l'attente, elle ne la pulverise pas. Le plafond est pose au-dessus de cette
+## cible, pas dessus, pour qu'un reglage voisin ne fasse pas echouer le banc
+## sans raison.
+const MAX_ERASED_SHARE := 150.0
+
 var _failures: int = 0
 
 
@@ -200,11 +211,12 @@ func _versus_the_wait() -> void:
 	print("  le budget d'une campagne (%d gemmes) efface %s, soit %.0f %% de cette attente"
 		% [budget, UiTheme.format_span(erased), share])
 
-	if share >= 100.0:
-		print("  ATTENTION : au-dela de 100 %, pour qui ramasse ses coffres, les minuteries")
-		print("    ne sont plus une contrainte. C'est un choix a assumer, pas un bug -")
-		print("    baisser les gains des coffres gratuits ou le temps rendu par coffre")
-		print("    est le levier si on veut qu'elles pesent encore.")
+	if share > MAX_ERASED_SHARE:
+		_fail("la boutique efface %.0f %% de l'attente (plafond %.0f %%) : les minuteries ne pesent plus rien. Levier : les gains des coffres gratuits, ou le temps rendu par coffre"
+			% [share, MAX_ERASED_SHARE])
+	else:
+		print("  sous le plafond de %.0f %% : la boutique couvre l'attente sans la pulveriser."
+			% MAX_ERASED_SHARE)
 	print("")
 
 
