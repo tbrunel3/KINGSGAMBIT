@@ -45,6 +45,39 @@ static func legal_moves(unit: BattleUnit, grid: GridModel) -> Array:
 
 ## Deplacement glissant : on avance case par case, on s'arrete devant un allie,
 ## et on s'arrete EN PRENANT le premier ennemi rencontre. Tour, Fou, Dame.
+## Toutes les cases que cette piece pourrait UN JOUR occuper, en partant de la
+## sienne, sur un plateau VIDE.
+##
+## Sert a repondre a "une capture est-elle encore possible ?" (cf.
+## BattleEngine.capture_still_possible). On ignore volontairement les pieces
+## qui bloquent : la portee calculee est donc plus GRANDE que la vraie, et
+## c'est le sens sur - on peut rater une position morte, on ne peut pas en
+## inventer une.
+##
+## Le parcours rejoue legal_moves() plutot que de recopier la geometrie de
+## chaque piece : c'est la seule facon que cette fonction ne derive pas le jour
+## ou un deplacement change dans Balance.
+static func reachable_on_empty_board(unit: BattleUnit, cols: int, rows: int) -> Dictionary:
+	var scratch := GridModel.new(cols, rows)
+	var ghost := BattleUnit.create(-1, unit.type, unit.level, unit.team, unit.cell)
+	# L'ouverture du pion n'elargit rien ici, et un pion garde de toute facon
+	# la position vivante par sa promotion (cf. capture_still_possible).
+	ghost.has_moved = true
+	scratch.place(ghost, unit.cell)
+
+	var seen: Dictionary = {unit.cell: true}
+	var queue: Array = [unit.cell]
+	while not queue.is_empty():
+		var from: Vector2i = queue.pop_back()
+		scratch.move_unit(ghost, from)
+		for cell in legal_moves(ghost, scratch):
+			if seen.has(cell):
+				continue
+			seen[cell] = true
+			queue.append(cell)
+	return seen
+
+
 static func _slide(unit: BattleUnit, grid: GridModel, directions: Array) -> Array:
 	var cells: Array = []
 	for dir in directions:

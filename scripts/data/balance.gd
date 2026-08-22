@@ -670,6 +670,18 @@ const COMBAT := {
 	# humain qui joue - il reflechit - donc il ne s'applique pas en partie
 	# (cf. BattleEngine.auto_mode).
 	"stalemate_seconds_cap": 30,
+	# POSITION MORTE - plus aucune capture n'est possible, jamais (cf.
+	# BattleEngine.capture_still_possible). Deux cavaliers Nv.1 sur des
+	# couleurs de cases opposees ne se toucheront jamais : attendre les 80
+	# activations du compteur d'enlisement pour l'annoncer est une punition
+	# gratuite.
+	#
+	# On ne cherche la position morte qu'apres quelques activations sans prise
+	# (le calcul parcourt le plateau pour chaque piece), puis on laisse un
+	# court delai avant de trancher : le joueur doit LIRE l'annonce, pas se
+	# faire couper net.
+	"dead_position_check_after": 4,
+	"dead_position_grace": 6,
 	"max_activations": 1200,   # garde-fou absolu
 }
 

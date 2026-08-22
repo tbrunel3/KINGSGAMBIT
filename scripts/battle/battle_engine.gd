@@ -78,6 +78,9 @@ var _idle_activations: int = 0
 ## Tours passes d'affilee faute de coup legal : deux de suite et plus personne
 ## ne peut jouer (cf. _pass_turn).
 var _passes_in_a_row: int = 0
+## Activation a laquelle la position est devenue morte, ou -1. Sert au compte
+## a rebours affiche avant le nul.
+var _dead_position_since: int = -1
 
 
 func _init(cols: int, rows: int) -> void:
@@ -264,22 +267,31 @@ func _resolve(unit: BattleUnit, destination: Vector2i) -> Array:
 			})
 
 	_idle_activations = 0 if captured else _idle_activations + 1
+	# Une prise vient d'avoir lieu : la position n'etait donc pas morte.
+	if captured:
+		_dead_position_since = -1
 	_passes_in_a_row = 0
 	_end_of_activation(events)
 	return events
 
 
-## Le camp courant n'a aucun coup legal : il passe la main. Deux passes
-## consecutives = plus personne ne peut jouer, on tranche au materiel.
+## PASSER SON TOUR N'EXISTE PLUS, et ce qui reste ici est un garde-fou.
+##
+## Deux portes menaient a une passe, et les deux sont fermees :
+##   - le camp n'a aucun coup legal : il fait desormais NUL (cf.
+##     _end_of_activation), la partie est finie avant d'arriver ici ;
+##   - l'IA n'a rien voulu choisir : c'est un bug, pas une decision, et
+##     BattleAI.decide_team joue maintenant un coup des qu'il en existe un.
+##
+## L'ancien compteur de deux passes consecutives ne pouvait de toute facon pas
+## rattraper le second cas : le coup du JOUEUR le remettait a zero, donc une IA
+## figee laissait la partie tourner indefiniment. C'est le bug qui a motive
+## tout ceci - 48 passes illegitimes mesurees sur 60 parties.
 func _pass_turn(events: Array) -> void:
-	activation_count += 1
+	push_error("BattleEngine : passe de tour demandee alors que le camp %d a %d coup(s) legal(aux)"
+		% [current_team, 1 if has_any_move(current_team) else 0])
 	events.append({"type": "pass", "team": current_team})
-	_idle_activations += 1
-	_passes_in_a_row += 1
-	if _passes_in_a_row >= 2:
-		_finish_on_material("plus aucun coup possible", events)
-		return
-	_end_of_activation(events)
+	_finish(TEAM_NONE, "plus aucun coup possible", events)
 
 
 ## Fin d'activation, quel que soit le coup joue : passage de main, verdict.
@@ -293,6 +305,29 @@ func _end_of_activation(events: Array) -> void:
 
 	if _check_end(events):
 		return
+
+	# PAT - le camp au trait n'a plus aucun coup legal. Comme aux echecs, c'est
+	# un NUL, quel que soit le materiel restant.
+	#
+	# Avant, ce cas partait en verdict au materiel : un camp bloque pouvait
+	# donc GAGNER une bataille qu'il ne jouait plus, ou la perdre sans avoir
+	# rien fait de mal. Le test se fait apres _crown_pending, parce que
+	# couronner un pion en attente rend precisement des coups a un camp qui
+	# n'en avait plus.
+	if not has_any_move(current_team):
+		_finish(TEAM_NONE, "plus aucun coup possible", events)
+		return
+
+	# POSITION MORTE : plus aucune capture n'est possible, jamais. Inutile
+	# d'attendre le compteur d'enlisement - il tomberait quatre-vingts
+	# activations plus tard sur une bataille dont l'issue est deja connue.
+	if _idle_activations >= int(Balance.COMBAT["dead_position_check_after"]):
+		if _dead_position_since < 0 and not capture_still_possible():
+			_dead_position_since = activation_count
+		if _dead_position_since >= 0 \
+				and activation_count - _dead_position_since >= int(Balance.COMBAT["dead_position_grace"]):
+			_finish(TEAM_NONE, "plus aucune capture possible", events)
+			return
 
 	# Deux armees qui ne peuvent plus s'atteindre ne doivent pas bloquer la
 	# partie : on tranche au nombre de pieces restantes.
@@ -320,6 +355,49 @@ func _stalemate_limit() -> int:
 	var seconds_cap := int(Balance.COMBAT["stalemate_seconds_cap"])
 	var by_seconds := int(ceil(float(seconds_cap) / float(Balance.COMBAT["step_delay"])))
 	return mini(by_army_size, by_seconds)
+
+
+## Vrai s'il reste au moins une capture POSSIBLE, un jour, dans cette position.
+##
+## Deux camps dont les pieces ne peuvent jamais se rencontrer ne se prendront
+## jamais rien. Cas reel et frequent : un cavalier Nv.1 ne saute qu'en
+## diagonale d'une case, il ne quitte donc JAMAIS la couleur de case ou il est
+## pose - deux cavaliers Nv.1 sur des couleurs opposees peuvent se courir apres
+## indefiniment. Le fou a la meme propriete, par construction.
+##
+## La reponse est volontairement PRUDENTE : les portees sont calculees sur un
+## plateau vide (cf. MovementRules.reachable_on_empty_board), donc sur-estimees.
+## On peut rater une position morte ; on ne peut pas en inventer une.
+func capture_still_possible() -> bool:
+	var mine := living(TEAM_PLAYER)
+	var theirs := living(TEAM_ENEMY)
+	if mine.is_empty() or theirs.is_empty():
+		return false
+
+	# Un pion encore en vie garde la position vivante : il avance vers le fond
+	# adverse et, une fois Dame, il atteint tout.
+	for unit in mine + theirs:
+		if unit.origin_type == Balance.PION and not unit.promoted:
+			return true
+
+	var reach_mine: Dictionary = {}
+	for unit in mine:
+		for cell in MovementRules.reachable_on_empty_board(unit, grid.cols, grid.rows):
+			reach_mine[cell] = true
+	for unit in theirs:
+		for cell in MovementRules.reachable_on_empty_board(unit, grid.cols, grid.rows):
+			if reach_mine.has(cell):
+				return true
+	return false
+
+
+## Coups restants avant le nul pour position morte, ou -1 si la position est
+## encore vivante. Sert au badge d'annonce.
+func dead_position_moves_remaining() -> int:
+	if _dead_position_since < 0:
+		return -1
+	return maxi(0, int(Balance.COMBAT["dead_position_grace"])
+		- (activation_count - _dead_position_since))
 
 
 ## Progression vers l'enlisement (0 = aucune prise recente, 1 = resolution

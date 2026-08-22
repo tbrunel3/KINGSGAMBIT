@@ -221,6 +221,7 @@ func _capture_defeat() -> void:
 
 	for i in range(3):
 		await RenderingServer.frame_post_draw
+	await _settle_result()
 	_save(battle, "7b_defaite.png")
 
 	battle.queue_free()
@@ -250,9 +251,38 @@ func _capture_draw() -> void:
 
 	for i in range(4):
 		await RenderingServer.frame_post_draw
+	await _settle_result()
 	_save(host, "7c_nul.png")
 	host.queue_free()
 	await get_tree().process_frame
+
+	# Et la SERIE nulle, celle qui porte le grand mot grave (Figma 348:2). Le
+	# combat intermediaire ci-dessus garde sa plaque ecrite : le grand lettrage
+	# est reserve a la fin, comme pour la victoire.
+	var final_host := Control.new()
+	final_host.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	add_child(final_host)
+	var final_screen := BattleResult.new()
+	final_host.add_child(final_screen)
+	final_screen.open_draw("")
+	final_screen.add_reward_row("Consolation", 50)
+	final_screen.add_stat_row("Pertes subies", "4 Pions, 1 Cavalier", 1)
+	final_screen.add_primary_button("RÉESSAYER", func(): pass)
+	final_screen.add_action_button("ROYAUME", "castle", func(): pass)
+	final_screen.add_action_button("CAMPAGNE", "compass", func(): pass)
+	await _settle_result()
+	_save(final_host, "7d_nul_serie.png")
+	final_host.queue_free()
+	await get_tree().process_frame
+
+
+## L'ecran de resultat ENTRE en scene (cf. BattleResult._animate_entry, releve
+## sur la timeline Figma 348:2) : le fond monte en deux images, le titre en
+## sept, les plaques en dix-huit. Une capture prise a quatre images ne
+## montrerait qu'un ecran presque vide.
+func _settle_result() -> void:
+	await get_tree().create_timer(2.6).timeout
+	await RenderingServer.frame_post_draw
 
 
 ## Capture apres la sequence d'apparition (logo, chargement, credit) mais
@@ -359,6 +389,7 @@ func _capture_combat() -> void:
 
 	for i in range(3):
 		await RenderingServer.frame_post_draw
+	await _settle_result()
 	_save(battle, "7_resultat.png")
 
 	battle.queue_free()

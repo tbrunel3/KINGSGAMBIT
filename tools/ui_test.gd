@@ -341,8 +341,17 @@ func _test_battle() -> void:
 			"l'or du combat gagne est promis, pas verse")
 	elif drawn:
 		_check(Game.gold == gold_before, "un combat nul ne paie rien")
-		_check(_find_clickable(battle, "COMBAT 2 SUR %d" % fights) != null,
-			"un nul ne rompt pas la serie")
+		if fights == 1:
+			# Une bataille qui ne compte qu'un combat n'a pas de serie a
+			# poursuivre : le nul la cloture, et elle se rejoue depuis le
+			# debut. Cette branche n'existait pas - la bataille 1 ne pouvait
+			# pas finir nulle avant que le PAT ne devienne un nul.
+			_check(_find_clickable(battle, "REPRENDRE LA SÉRIE") != null,
+				"un nul propose de rejouer la bataille")
+			_check(Game.current_run() == null, "le nul cloture la serie d'un seul combat")
+		else:
+			_check(_find_clickable(battle, "COMBAT 2 SUR %d" % fights) != null,
+				"un nul ne rompt pas la serie")
 	else:
 		_check(Game.gold == gold_before, "aucune recompense en cas de defaite")
 		_check(_find_clickable(battle, "REPRENDRE LA SERIE") != null,

@@ -53,6 +53,7 @@ func _ready() -> void:
 	_check_losses()
 	_check_rules()
 	_check_run()
+	_check_endgame()
 	_play_all_battles()
 	await _check_scenes()
 	_check_campaign_loop()
@@ -907,20 +908,26 @@ func _play_battle(battle: Dictionary, castle_level: int, unit_level: int, style:
 		_fail("bataille %d : aucune piece joueur placee" % int(battle["id"]))
 		return false
 
+	# La RAISON de la fin, pas seulement l'issue : "NUL" ne dit pas si c'est un
+	# pat, une position morte ou un enlisement, et ces trois-la ne se reglent
+	# pas au meme endroit.
+	var reason := ""
 	while not engine.finished:
 		for event in engine.step():
 			if String(event["type"]) == "promotion":
 				_promotions_seen += 1
+			elif String(event["type"]) == "end":
+				reason = String(event.get("reason", ""))
 
 	var victory := engine.winner == BattleUnit.TEAM_PLAYER
 	var lost := 0
 	for count in engine.losses(BattleUnit.TEAM_PLAYER).values():
 		lost += int(count)
 
-	print("  Bataille %2d  %-20s  Nv.%d  armee %-7s n%d  %2d vs %2d  ->  %-8s  %2d perdues, %d activations" % [
+	print("  Bataille %2d  %-20s  Nv.%d  armee %-7s n%d  %2d vs %2d  ->  %-8s  %2d perdues, %3d activations  %s" % [
 		int(battle["id"]), String(battle["name"]), unit_level, style, variante + 1, placed, enemy_count,
 		"NUL" if engine.is_draw() else ("VICTOIRE" if victory else "defaite"),
-		lost, engine.activation_count
+		lost, engine.activation_count, reason
 	])
 
 	if engine.activation_count >= int(Balance.COMBAT["max_activations"]):
@@ -977,6 +984,150 @@ func _pick_round_robin(pool: Dictionary, cursor: int, exhausted: Dictionary = {}
 		if int(pool[type]) > 0:
 			return type
 	return ""
+
+
+# ------------------------------- FIN DE PARTIE -------------------------------
+
+## Un combat doit FINIR, et finir juste. Ces trois verifications sont nees d'un
+## bug reel : sur les deux premieres batailles - les seules en AI_NOVICE -
+## l'IA restait plantee alors qu'elle avait des coups legaux, le moteur passait
+## son tour, et comme le coup du JOUEUR remettait le compteur de passes a zero,
+## la partie ne se terminait jamais. Mesure avant correction : 48 passes
+## illegitimes sur 60 parties.
+func _check_endgame() -> void:
+	print("")
+	print("[3c] Fin de partie")
+	_check_no_idle_pass()
+	_check_stalemate_is_draw()
+	_check_dead_position_is_draw()
+	_done("fin de partie")
+
+
+## PAT - le camp au trait n'a plus aucun coup legal. Comme aux echecs, c'est un
+## NUL, quel que soit le materiel restant.
+func _check_stalemate_is_draw() -> void:
+	var engine := BattleEngine.new(5, 6)
+	engine.auto_mode = false
+	# Pion du joueur bloque par un pion ennemi pile devant : un pion ne prend
+	# pas tout droit, et ses deux diagonales sont vides ou hors du plateau.
+	engine.add_unit(Balance.PION, 1, BattleUnit.TEAM_PLAYER, Vector2i(0, 5))
+	engine.add_unit(Balance.PION, 1, BattleUnit.TEAM_ENEMY, Vector2i(0, 4))
+	# Une tour ennemie a l'autre bout, pour que l'ennemi, LUI, ait un coup.
+	engine.add_unit(Balance.TOUR, 1, BattleUnit.TEAM_ENEMY, Vector2i(4, 0))
+
+	if engine.has_any_move(BattleUnit.TEAM_PLAYER):
+		_fail("pat : le pion du joueur n'est pas bloque, le test ne prouve rien")
+		return
+
+	engine.current_team = BattleUnit.TEAM_ENEMY
+	engine.step()
+
+	if not engine.finished:
+		_fail("pat : le joueur n'a aucun coup legal et la bataille continue")
+	elif not engine.is_draw():
+		_fail("pat : la bataille designe un vainqueur au lieu d'un nul")
+	else:
+		print("  pat (plus aucun coup legal) : NUL")
+
+
+## POSITION MORTE - les deux camps peuvent encore bouger, mais plus aucune
+## capture n'est possible, jamais.
+##
+## Un cavalier Nv.1 ne saute qu'en diagonale d'une case : il ne quitte donc
+## jamais la couleur de case ou il est pose. Poses sur des couleurs opposees,
+## deux cavaliers peuvent se courir apres indefiniment sans jamais se toucher.
+##
+## Le compteur d'enlisement finirait par trancher - mais 80 activations plus
+## tard. Le joueur a le droit de le savoir tout de suite.
+func _check_dead_position_is_draw() -> void:
+	var engine := BattleEngine.new(5, 6)
+	engine.auto_mode = false
+	engine.add_unit(Balance.CAVALIER, 1, BattleUnit.TEAM_PLAYER, Vector2i(0, 5))
+	engine.add_unit(Balance.CAVALIER, 1, BattleUnit.TEAM_ENEMY, Vector2i(0, 0))
+	engine.add_unit(Balance.CAVALIER, 1, BattleUnit.TEAM_ENEMY, Vector2i(2, 0))
+
+	var guard := 0
+	while not engine.finished and guard < 400:
+		guard += 1
+		engine.step()
+
+	if not engine.finished:
+		_fail("position morte : la bataille ne se termine pas")
+		return
+	if not engine.is_draw():
+		_fail("position morte : la bataille designe un vainqueur au lieu d'un nul")
+		return
+	if engine.activation_count > 20:
+		_fail(("position morte : %d activations avant le nul - le jeu a attendu le "
+			+ "compteur d'enlisement au lieu de voir que plus aucune capture "
+			+ "n'etait possible") % engine.activation_count)
+	else:
+		print("  position morte (plus aucune capture possible) : NUL en %d activations"
+			% engine.activation_count)
+
+
+## Un camp qui a des coups legaux ne doit JAMAIS passer son tour. La passe est
+## reservee au camp reellement bloque - et celui-la fait desormais nul.
+func _check_no_idle_pass() -> void:
+	var bad := 0
+	for id in range(1, Balance.battle_count() + 1):
+		var battle := Balance.battle(id)
+		for variante in range(2):
+			bad += _count_idle_passes(battle, variante)
+	if bad > 0:
+		_fail("%d passe(s) de tour alors que le camp avait un coup legal" % bad)
+	else:
+		print("  aucun camp ne passe son tour en ayant un coup legal")
+
+
+## Rejoue une bataille dans les conditions REELLES du bug : le joueur joue a la
+## main (auto_mode = false, coups tires ici), l'ennemi repond par step().
+## Retourne le nombre d'activations ou l'IA a passe en ayant un coup jouable.
+func _count_idle_passes(battle: Dictionary, variante: int) -> int:
+	var rng := RandomNumberGenerator.new()
+	rng.seed = 1000 * int(battle["id"]) + variante
+
+	var engine := BattleEngine.new(int(battle["cols"]), int(battle["rows"]))
+	engine.enemy_skill = Balance.battle_ai_skill(battle)
+	engine.auto_mode = false
+
+	var level := int(battle["level"])
+	var cells: Array = engine.grid.free_enemy_cells()
+	var placed := 0
+	for type in Balance.UNIT_TYPES:
+		if not battle["enemies"].has(type):
+			continue
+		for i in range(int(battle["enemies"][type])):
+			engine.add_unit(type, level, BattleUnit.TEAM_ENEMY, cells[placed])
+			placed += 1
+
+	var player_level := Balance.battle_player_level(battle)
+	var pool: Dictionary = {}
+	for type in Balance.UNIT_TYPES:
+		pool[type] = Balance.capacity(type, player_level)
+	_deploy(engine, pool, Balance.deploy_capacity(player_level), player_level, variante)
+
+	var passes := 0
+	var guard := 0
+	while not engine.finished and guard < 2000:
+		guard += 1
+		if engine.current_team == BattleUnit.TEAM_PLAYER:
+			var options: Array = []
+			for unit in engine.living(BattleUnit.TEAM_PLAYER):
+				for move in engine.legal_moves(unit):
+					options.append([unit, move])
+			if options.is_empty():
+				# Joueur pat : c'est _check_stalemate_is_draw qui en repond.
+				break
+			var pick: Array = options[rng.randi_range(0, options.size() - 1)]
+			engine.play_move(pick[0], pick[1])
+			continue
+
+		var had_moves := engine.has_any_move(engine.current_team)
+		for event in engine.step():
+			if String(event["type"]) == "pass" and had_moves:
+				passes += 1
+	return passes
 
 
 # ------------------------------- SCENES --------------------------------------

@@ -30,6 +30,11 @@ extends Control
 const VICTORY_BG_PATH := "res://assets/results/victory_bg.jpg"
 const VICTORY_TITLE_PATH := "res://assets/results/victory_title.png"
 const DEFEAT_BG_PATH := "res://assets/results/defeat_bg.jpg"
+## Le nul a desormais son propre champ de bataille - gris, sans le ciel chaud
+## de la victoire - et son propre mot grave (Figma 348:2). Il empruntait ceux
+## de la victoire faute d'avoir jamais ete dessine.
+const DRAW_BG_PATH := "res://assets/results/draw_bg.jpg"
+const DRAW_TITLE_PATH := "res://assets/results/draw_title.png"
 const DEFEAT_TITLE_PATH := "res://assets/results/defeat_title.png"
 const COIN_PATH := "res://assets/ui/kg_coin.png"
 const SAFE_AREA_SCRIPT := "res://scripts/ui/safe_area.gd"
@@ -70,6 +75,11 @@ var _title_text: String = ""
 var _stats: VBoxContainer
 var _buttons: VBoxContainer
 var _actions_row: HBoxContainer
+## Cibles de l'animation d'entree (cf. _animate_entry).
+var _bg_image: TextureRect
+var _title_block: Control
+var _stats_block: Control
+var _vignettes: Array[Control] = []
 
 
 static func victory_skin() -> Dictionary:
@@ -138,16 +148,28 @@ static func defeat_skin() -> Dictionary:
 static func draw_skin() -> Dictionary:
 	var skin := victory_skin()
 	skin["confetti"] = false
-	skin["tint"] = Color("0b1225", 0.55)
-	skin["edge"] = Color("c9d3e6")
-	skin["diamond"] = Color("46527a")
-	skin["diamond_edge"] = Color("c9d3e6")
-	skin["text"] = Color("dbe3f2")
-	skin["label"] = Color("9baac0")
-	skin["inner_outline"] = Color("c9d3e6", 0.22)
-	skin["shell"] = PackedColorArray([
-		Color("c9d3e6"), Color("6d7a99"), Color("444f6d"), Color("6d7a99")])
-	skin["shell_inner_edge"] = Color("c9d3e6", 0.25)
+	skin["bg"] = DRAW_BG_PATH
+	skin["title"] = DRAW_TITLE_PATH
+	skin["glow"] = Color("c9d3e6", 0.34)
+	skin["tint"] = Color("0b1225", 0.30)
+	# Teintes RELEVEES sur la frame, pas approchees a l'oeil : la plaque du nul
+	# n'est pas un bleu desature, c'est un gris franc (#1f242e cercle de
+	# #8b9097), et les boutons sont en acier plutot qu'en or.
+	skin["edge"] = Color("8b9097")
+	skin["plate"] = PackedColorArray([
+		Color("1f242e"), Color("1f242e"), Color("1f242e")])
+	skin["inner_outline"] = Color("59616b", 0.5)
+	skin["diamond"] = Color("59616b")
+	skin["diamond_edge"] = Color("666e78")
+	skin["text"] = Color("c9d3e6")
+	skin["label"] = Color("8b9097")
+	skin["separator"] = Color("c9d3e6", 0.08)
+	skin["bullets"] = [Color("808791"), Color("59616b")]
+	skin["highlight_row"] = Color("808791", 0.15)
+	skin["shell"] = PackedColorArray([Color("afaeb3")])
+	skin["shell_inner_edge"] = Color("24242a")
+	skin["action"] = PackedColorArray([Color("52535c"), Color("3c3d45")])
+	skin["cta_inner"] = PackedColorArray([Color("52535c"), Color("3c3d45")])
 	skin["ornament_line"] = Color("c9d3e6", 0.6)
 	skin["ornament_jewel"] = Color("c9d3e6")
 	return skin
@@ -198,13 +220,78 @@ func _open(skin: Dictionary, title_text: String) -> void:
 	column.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	safe.add_child(column)
 
-	column.add_child(_build_title_block())
-	column.add_child(_build_stats_plate())
+	_title_block = _build_title_block()
+	column.add_child(_title_block)
+	_stats_block = _build_stats_plate()
+	column.add_child(_stats_block)
 
 	_buttons = VBoxContainer.new()
 	_buttons.add_theme_constant_override("separation", 12)
 	_buttons.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	column.add_child(_buttons)
+
+	_animate_entry.call_deferred()
+
+
+## ENTREE DE L'ECRAN DE RESULTAT - relevee sur la timeline Figma de l'ecran de
+## nul (348:2, 3 s, sept noeuds), la troisieme et derniere animation du
+## fichier.
+##
+## Elle vaut pour les TROIS peaux : le designer ne l'a dessinee qu'une fois,
+## mais elle decrit comment un ecran de resultat ARRIVE, pas comment un nul
+## arrive. La faire jouer sur la victoire et la defaite evite d'avoir trois
+## entrees differentes pour un meme ecran.
+##
+## Ce qui est repris : les DECALAGES et les DUREES. La boucle de Figma est un
+## artefact d'apercu - l'entree ne se joue qu'une fois (cf. CLAUDE.md).
+func _animate_entry() -> void:
+	if not is_inside_tree():
+		return
+	# Le fond arrive de 1,1 : sans pivot centre, il grandirait par le coin.
+	for node in [_bg_image, _title_block]:
+		if node != null:
+			node.pivot_offset = node.size / 2.0
+
+	var tween := create_tween()
+	tween.set_parallel(true)
+
+	if _bg_image != null:
+		_bg_image.modulate.a = 0.0
+		_bg_image.scale = Vector2(1.1, 1.1)
+		tween.tween_property(_bg_image, "modulate:a", 1.0, 0.8) \
+			.set_ease(Tween.EASE_OUT).set_trans(Tween.TRANS_CUBIC)
+		tween.tween_property(_bg_image, "scale", Vector2.ONE, 3.0) \
+			.set_ease(Tween.EASE_IN_OUT).set_trans(Tween.TRANS_SINE)
+
+	for vignette in _vignettes:
+		vignette.modulate.a = 0.0
+		tween.tween_property(vignette, "modulate:a", 1.0, 1.0) \
+			.set_ease(Tween.EASE_OUT).set_trans(Tween.TRANS_CUBIC)
+
+	if _title_block != null:
+		_title_block.modulate.a = 0.0
+		_title_block.scale = Vector2(1.8, 1.8)
+		tween.tween_property(_title_block, "modulate:a", 1.0, 0.4).set_delay(0.3)
+		# Le mot s'abat de 1,8 avec un LEGER depassement : la courbe Figma
+		# monte a 1,006 avant de revenir. C'est ce rebond qui lui donne son
+		# poids - sans lui, le titre se contente de grandir.
+		tween.tween_property(_title_block, "scale", Vector2.ONE, 0.6).set_delay(0.3) \
+			.set_ease(Tween.EASE_OUT).set_trans(Tween.TRANS_BACK)
+
+	_slide_in(tween, _stats_block, 40.0, 1.0)
+	_slide_in(tween, _buttons, 30.0, 1.3)
+
+
+## Un bloc qui monte a sa place en s'allumant, apres `delay` secondes.
+func _slide_in(tween: Tween, node: Control, rise: float, delay: float) -> void:
+	if node == null:
+		return
+	node.modulate.a = 0.0
+	node.position.y += rise
+	var target := node.position.y - rise
+	tween.tween_property(node, "modulate:a", 1.0, 0.5).set_delay(delay)
+	tween.tween_property(node, "position:y", target, 0.6).set_delay(delay) \
+		.set_ease(Tween.EASE_OUT).set_trans(Tween.TRANS_CUBIC)
 
 
 func _build_background() -> void:
@@ -216,6 +303,7 @@ func _build_background() -> void:
 	if ResourceLoader.exists(_skin["bg"]):
 		image.texture = load(_skin["bg"])
 	add_child(image)
+	_bg_image = image
 
 	var tint := ColorRect.new()
 	tint.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
@@ -225,8 +313,11 @@ func _build_background() -> void:
 
 	# Vignettes haute et basse de la maquette : le titre se detache du plafond
 	# de la taverne, et les plaques du bas reposent sur du noir franc.
-	add_child(_vignette(_skin["vignette_top"], true, 260.0))
-	add_child(_vignette(_skin["vignette_bottom"], false, 432.0))
+	_vignettes.clear()
+	for band in [_vignette(_skin["vignette_top"], true, 260.0),
+			_vignette(_skin["vignette_bottom"], false, 432.0)]:
+		add_child(band)
+		_vignettes.append(band)
 
 
 ## Bandeau degrade ancre en haut (`from_top`) ou en bas, opaque du cote de

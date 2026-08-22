@@ -109,11 +109,47 @@ static func decide_team(team: int, grid: GridModel, units: Array, stalled: int =
 	# meilleure que n'importe quel deplacement. Rester plante fait perdre la
 	# bataille a l'usure, alors on rejoue la decision en mode "desperation"
 	# (cf. _STANDOFF_RATIO), qui accepte la case la moins exposee.
-	return _best_of_team(team, grid, units, stalemate_limit, stalemate_limit, skill)
+	#
+	# `force_desperate` court-circuite _STANDOFF_MIN_PIECES. Ce seuil existe
+	# pour ne pas forcer un sacrifice dans une finale a deux ou trois pieces -
+	# mais dans une relance dont la premisse est "personne ne veut bouger", il
+	# n'a plus d'objet, et il produisait exactement l'inverse de ce qu'on
+	# cherchait : une paralysie totale en finale. Mesure : deux cavaliers Nv.1
+	# figes 25 tours d'affilee sur la premiere bataille du jeu.
+	var desperate := _best_of_team(
+		team, grid, units, stalemate_limit, stalemate_limit, skill, true)
+	if desperate["unit"] != null:
+		return desperate
+
+	# DERNIER FILET. Aucune heuristique n'a voulu de coup, mais il en existe :
+	# on en joue un plutot que de passer le tour. Passer alors qu'on peut jouer
+	# n'est pas une decision, c'est un bug - et le moteur le refuse desormais
+	# (cf. BattleEngine._pass_turn). Ce filet garantit qu'on ne l'atteint pas,
+	# quelle qu'en soit la cause future.
+	return _any_legal_move(team, grid, units, skill)
+
+
+## Le moins mauvais coup parmi TOUS les coups legaux du camp, sans aucune
+## condition. Ne sert que de filet : si on l'atteint, une heuristique en amont
+## a refuse de choisir.
+static func _any_legal_move(team: int, grid: GridModel, units: Array, skill: int) -> Dictionary:
+	var best_unit: BattleUnit = null
+	var best_move := Vector2i(-1, -1)
+	var best_score := -INF
+	for unit in units:
+		if not unit.is_alive() or unit.team != team:
+			continue
+		for cell in MovementRules.legal_moves(unit, grid):
+			var score := _move_score(unit, cell, grid, units, skill)
+			if score > best_score:
+				best_score = score
+				best_unit = unit
+				best_move = cell
+	return {"unit": best_unit, "move": best_move}
 
 
 static func _best_of_team(team: int, grid: GridModel, units: Array, stalled: int,
-		stalemate_limit: int, skill: int) -> Dictionary:
+		stalemate_limit: int, skill: int, force_desperate: bool = false) -> Dictionary:
 	var best_unit: BattleUnit = null
 	var best_move := Vector2i(-1, -1)
 	var best_score := -INF
@@ -121,7 +157,8 @@ static func _best_of_team(team: int, grid: GridModel, units: Array, stalled: int
 	for unit in units:
 		if not unit.is_alive() or unit.team != team:
 			continue
-		var decision := decide(unit, grid, units, stalled, stalemate_limit, skill)
+		var decision := decide(
+			unit, grid, units, stalled, stalemate_limit, skill, force_desperate)
 		var destination: Vector2i = decision["move"]
 		if destination == unit.cell:
 			continue
@@ -187,7 +224,8 @@ static func _move_score(unit: BattleUnit, destination: Vector2i, grid: GridModel
 ## seuil d'enlisement du moteur pour cette bataille (cf. BattleEngine),
 ## transmis pour la desperation ci-dessus.
 static func decide(unit: BattleUnit, grid: GridModel, units: Array, stalled: int = 0,
-		stalemate_limit: int = 999999, skill: int = Balance.AI_EXPERT) -> Dictionary:
+		stalemate_limit: int = 999999, skill: int = Balance.AI_EXPERT,
+		force_desperate: bool = false) -> Dictionary:
 	var enemies := _living_enemies(unit, units)
 	if enemies.is_empty():
 		return {"move": unit.cell, "capture": null}
@@ -336,8 +374,8 @@ static func decide(unit: BattleUnit, grid: GridModel, units: Array, stalled: int
 	#    prend la case la moins survolee (least_exposed_cell), qui peut tres
 	#    bien etre totalement sure : la desperation ne force pas un saut
 	#    suicide, elle interdit juste l'immobilisme prolonge.
-	var desperate := _total_alive(units) >= _STANDOFF_MIN_PIECES \
-		and stalled >= int(float(stalemate_limit) * _STANDOFF_RATIO)
+	var desperate := force_desperate or (_total_alive(units) >= _STANDOFF_MIN_PIECES \
+		and stalled >= int(float(stalemate_limit) * _STANDOFF_RATIO))
 	if desperate and least_exposed_cell != Vector2i(-1, -1):
 		return {"move": least_exposed_cell, "capture": null}
 

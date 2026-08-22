@@ -65,6 +65,10 @@ var _running: bool = false
 
 ## Piece du joueur actuellement selectionnee (tape ou saisie au doigt).
 var _selected_unit: BattleUnit = null
+## Raison rendue par le moteur a la fin du combat ("plus aucun coup possible",
+## "plus aucune capture possible"...). Sert a l'ecran de resultat : "NUL" seul
+## ne dit pas au joueur CE QUI s'est passe.
+var _end_reason: String = ""
 
 ## Vrai pendant qu'une animation ou le tour de l'IA se joue : le plateau
 ## n'accepte alors aucun geste, sinon un joueur rapide jouerait deux coups.
@@ -1197,6 +1201,15 @@ func _refresh_combat_status() -> void:
 func _refresh_blockage_badge() -> void:
 	if _blockage_badge == null or _engine.finished:
 		return
+	# POSITION MORTE : plus aucune capture n'est possible, jamais - et non un
+	# simple passage a vide. Le combat ne peut plus finir que sur un nul ; le
+	# joueur a le droit de le savoir plutot que de manoeuvrer pour rien.
+	var dead := _engine.dead_position_moves_remaining()
+	if dead >= 0:
+		_blockage_badge.visible = true
+		_blockage_label.text = "Aucune capture possible - %d coups" % maxi(1, dead)
+		return
+
 	if _engine.stalemate_ratio() < _BLOCKAGE_WARNING_RATIO:
 		_blockage_badge.visible = false
 		return
@@ -1219,6 +1232,8 @@ func _play_events(events: Array) -> void:
 				await _grid_view.play_move(
 					int(event["unit"]), event["from"], event["to"],
 					float(Balance.COMBAT["move_duration"]))
+			"end":
+				_end_reason = String(event.get("reason", ""))
 			"promotion":
 				if _engine.unit_by_id(int(event["unit"])).team == BattleUnit.TEAM_PLAYER:
 					_promotions_this_battle += 1
@@ -1394,13 +1409,15 @@ func _show_fight_drawn(losses: Dictionary) -> void:
 
 	var screen := BattleResult.new()
 	add_child(screen)
-	screen.open_draw("SÉRIE NULLE" if last else "COMBAT %d SUR %d — NUL" % [done, fights])
+	# Le grand mot grave est reserve a la fin de la serie (Figma 348:2) ; un
+	# combat intermediaire garde sa plaque ecrite, comme pour la victoire.
+	screen.open_draw("" if last else "COMBAT %d SUR %d — NUL" % [done, fights])
 
 	if consolation > 0:
 		screen.add_reward_row("Consolation", consolation)
 	elif not last:
 		screen.add_reward_row("Butin promis", _run.reward)
-	screen.add_stat_row("Combat nul", "Aucun camp n'a plié")
+	screen.add_stat_row("Combat nul", _draw_reason())
 	screen.add_stat_row("Pertes du combat",
 		"Aucune" if losses.is_empty() else _format_losses(losses), 1)
 	if not recovered.is_empty():
@@ -1499,6 +1516,23 @@ func _show_run_lost() -> void:
 		func(): Router.goto_battle(battle_id))
 	screen.add_action_button("ROYAUME", "castle", Router.goto_village)
 	screen.add_action_button("CAMPAGNE", "compass", Router.goto_campaign)
+
+
+## Pourquoi ce combat est nul. Le moteur donne une raison technique ; le joueur
+## a besoin d'une phrase. Sans elle, "NUL" ressemble a un bug - et c'en etait
+## un, avant : une IA figee laissait la partie s'enliser sans rien dire.
+func _draw_reason() -> String:
+	match _end_reason:
+		"plus aucun coup possible":
+			return "Un camp ne pouvait plus jouer"
+		"plus aucune capture possible":
+			return "Plus aucune capture possible"
+		"plus aucune prise possible":
+			return "Aucune prise depuis trop longtemps"
+		"limite de tours atteinte":
+			return "Combat trop long"
+		_:
+			return "Aucun camp n'a plié"
 
 
 ## "4 Pions, 1 Cavalier" - une seule ligne, plutot que des jetons par type,
