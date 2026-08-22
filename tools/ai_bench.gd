@@ -7,12 +7,19 @@ extends Node
 ## piece, meme placement des deux cotes. Le seul ecart entre les deux camps
 ## est la profondeur de recherche.
 ##
-## Sert a repondre a deux questions, et a rien d'autre :
-##   - est-ce que chercher plus loin fait vraiment gagner ?
-##   - combien de temps coute un coup, sur le plus grand plateau du jeu ?
+## Sert a repondre a une question, et a rien d'autre : est-ce que chercher plus
+## loin fait vraiment gagner ?
 ##
-## La seconde compte autant que la premiere : une IA qui gagne toujours mais
-## fait attendre une demi-seconde a chaque coup rend le jeu desagreable.
+## LES DUELS SE JOUENT SANS LIMITE DE TEMPS, et c'est indispensable ici plus
+## qu'ailleurs. Une recherche chronometree qui coupe redescend d'un demi-coup :
+## une "experte" coupee n'est plus experte, et le banc mesurerait alors la
+## profondeur 2 contre elle-meme en croyant opposer 2 a 3. La question posee
+## disparaitrait dans le bruit de la machine.
+##
+## Le cout d'un coup imprime plus bas est donc celui de la profondeur DECLAREE,
+## sans coupure - la vraie facture d'une bataille entiere, la ou ai_probe ne
+## chronometre que la position de depart. Comparer au budget du jeu se fait
+## dans ai_probe, pas ici.
 ##
 ## Lancement :
 ##   godot --headless --path . tools/ai_bench.tscn
@@ -30,9 +37,11 @@ var _worst_label := ""
 
 
 func _ready() -> void:
+	# Duels sans limite de temps : voir l'en-tete du fichier.
+	BattleAI.budget_ms = 0
 	print("")
 	print("BANC DES IA - profondeur de recherche (cf. Balance.AI_DEPTH)")
-	print("  budget de reflexion : %d ms par coup" % Balance.AI_BUDGET_MS)
+	print("  duels joues SANS limite de temps : chaque niveau joue sa vraie profondeur")
 	print("")
 
 	_duel("novice (1 demi-coup)", Balance.AI_NOVICE, "aguerri (2)", Balance.AI_AGUERRI)
@@ -40,12 +49,15 @@ func _ready() -> void:
 	_duel("novice (1 demi-coup)", Balance.AI_NOVICE, "expert (3)", Balance.AI_EXPERT)
 
 	print("")
-	print("COUT D'UN COUP")
+	print("COUT D'UN COUP a profondeur pleine (sans coupure)")
 	print("  coups joues     : %d" % _decisions)
 	print("  moyenne         : %.1f ms" % (_total_ms / maxf(1.0, float(_decisions))))
 	print("  pire coup       : %.1f ms  (%s)" % [_worst_ms, _worst_label])
-	if _worst_ms > float(Balance.AI_BUDGET_MS) * 1.5:
-		print("  ATTENTION : le budget de reflexion est largement depasse.")
+	print("  budget du jeu   : %d ms - au-dela, l'IA redescend d'un demi-coup" % Balance.AI_BUDGET_MS)
+	if _worst_ms > float(Balance.AI_BUDGET_MS):
+		print("  A SAVOIR : le pire coup depasse le budget, donc en partie l'IA")
+		print("             redescendra parfois d'un demi-coup. Verifier avec ai_probe")
+		print("             si c'est la position de depart ou un cas rare de milieu.")
 	print("")
 	get_tree().quit()
 

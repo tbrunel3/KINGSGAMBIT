@@ -435,7 +435,20 @@ func _set_badge_state(text: String) -> void:
 	# La maquette demande Inter Semi Bold ; a 10 points, le Bold que le theme
 	# charge deja ne s'en distingue pas - une graisse de plus a embarquer pour rien.
 	_state_label.add_theme_font_override("font", UiTheme.font_bold())
+
+	# Le badge se retaille sur son texte : un message trop long le ferait passer
+	# SOUS les ronds du bord droit. On borne la place laissee a l'etat plutot
+	# que de compter sur la retenue des messages a venir - le jour ou l'un
+	# depasse, il se coupe proprement au lieu de disparaitre sous la croix.
 	_tour_badge.reset_size()
+	var libre: float = _tour_badge.get_parent().size.x - _tour_badge.position.x 		- (_CORNER_BUTTON + 14.0)
+	if libre > 0.0 and _tour_badge.size.x > libre:
+		_state_label.clip_text = true
+		_state_label.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
+		_state_label.custom_minimum_size.x = maxf(
+			0.0, libre - (_tour_badge.size.x - _state_label.size.x))
+		_state_label.size_flags_horizontal = Control.SIZE_FILL
+		_tour_badge.reset_size()
 
 
 ## HUD d'effectifs (Stats-HUD, ecrans 04 et 05) : une PLAQUE ROYALE comme le
@@ -1212,8 +1225,8 @@ func _play_events(events: Array) -> void:
 				_refresh_crowning()
 				var mine := _engine.unit_by_id(
 					int(event["unit"])).team == BattleUnit.TEAM_PLAYER
-				_status_message("SACRE AU PROCHAIN TOUR — PROTÈGE-LA" if mine
-					else "L'ENNEMI VA FAIRE UNE DAME — EMPÊCHE-LE")
+				_status_message("SACRE AU PROCHAIN TOUR" if mine
+					else "L'ENNEMI VA FAIRE UNE DAME")
 				await _wait(float(Balance.COMBAT["promotion_duration"]))
 			"pass":
 				_status_message("CAMP BLOQUÉ : TOUR PASSÉ")

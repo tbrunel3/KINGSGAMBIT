@@ -485,23 +485,50 @@ const PROMOTION_THRONE_WIDTH := 0
 ## perdues qui font mal.
 const RUN_REINFORCE_WEIGHT := 2
 
+#  reward    LA COURBE DES RECOMPENSES SUIT CELLE DES COUTS, et c'est tout ce
+#              qu'il faut retenir en y touchant.
+#
+#              Elle ne le faisait pas. Les recompenses montaient presque
+#              lineairement - 90, 120, 160... 900, soit 3 590 or pour toute la
+#              campagne - pendant que le prix des niveaux monte
+#              GEOMETRIQUEMENT. Mesure (tools/economy_probe.tscn), cumul des
+#              ameliorations pour atteindre le niveau que la campagne prete au
+#              joueur :
+#
+#                bataille 3 ....  1 130 or     campagne versee a ce stade :   970
+#                bataille 5 ....  3 300 or                                  1 430
+#                bataille 7 ....  6 810 or                                  2 150
+#                bataille 9 ... 11 970 or                                   3 290
+#                bataille 10 .. 19 090 or                                   4 190
+#
+#              Un facteur quatre et demi a l'arrivee, et ca ne se rattrape pas
+#              en jouant mieux : la sonde a du rejouer 36 fois une bataille deja
+#              gagnee pour franchir la seule bataille 7. Ce n'etait pas de la
+#              difficulte, c'etait de la corvee.
+#
+#              La courbe actuelle est calee pour que le cumul verse AVANT une
+#              bataille couvre ce qu'elle demande, avec une marge pour les
+#              recrues. Le farm redevient un choix - accelerer - au lieu d'un
+#              passage oblige. Toucher a `upgrade_cost` sans relancer la sonde,
+#              c'est rouvrir le trou.
+
 const CAMPAIGN := [
-	{"id": 1,  "name": "L Oree du Bois",     "cols": 5, "rows": 6, "reward": 90,  "level": 1, "player": 1, "ai": AI_NOVICE, "fights": 1, "enemies": {PION: 4}},
-	{"id": 2,  "name": "Le Gue de Pierre",   "cols": 5, "rows": 6, "reward": 120, "level": 1, "player": 1, "ai": AI_NOVICE, "fights": 2, "enemies": {PION: 3, FOU: 1}},
-	{"id": 3,  "name": "La Route du Sel",    "cols": 6, "rows": 7, "reward": 160, "level": 2, "player": 2, "ai": AI_AGUERRI, "fights": 2, "enemies": {PION: 4, CAVALIER: 1, TOUR: 1}},
-	{"id": 4,  "name": "Les Champs Brules",  "cols": 6, "rows": 7, "reward": 200, "level": 2, "player": 2, "ai": AI_AGUERRI, "fights": 2, "enemies": {PION: 5, FOU: 1, CAVALIER: 1}},
-	{"id": 5,  "name": "Le Pont Noir",       "cols": 6, "rows": 8, "reward": 260, "level": 2, "player": 3, "ai": AI_AGUERRI, "fights": 2, "enemies": {PION: 6, TOUR: 1, FOU: 1}},
-	{"id": 6,  "name": "La Carriere",        "cols": 6, "rows": 8, "reward": 320, "level": 3, "player": 3, "ai": AI_AGUERRI, "fights": 2, "enemies": {PION: 6, CAVALIER: 1, TOUR: 1}},
-	{"id": 7,  "name": "Les Marches Grises", "cols": 7, "rows": 8, "reward": 400, "level": 3, "player": 4, "ai": AI_EXPERT, "fights": 2, "enemies": {PION: 7, FOU: 1, CAVALIER: 1, TOUR: 1}},
-	{"id": 8,  "name": "Le Col du Corbeau",  "cols": 7, "rows": 8, "reward": 500, "level": 4, "player": 4, "ai": AI_EXPERT, "fights": 3, "enemies": {PION: 8, TOUR: 2, CAVALIER: 1}},
-	{"id": 9,  "name": "Les Ruines Hautes",  "cols": 7, "rows": 9, "reward": 640, "level": 4, "player": 5, "ai": AI_EXPERT, "fights": 3, "enemies": {PION: 8, FOU: 2, TOUR: 1, CAVALIER: 1}},
+	{"id": 1,  "name": "L Oree du Bois",     "cols": 5, "rows": 6, "reward": 250,  "level": 1, "player": 1, "ai": AI_NOVICE, "fights": 1, "enemies": {PION: 4}},
+	{"id": 2,  "name": "Le Gue de Pierre",   "cols": 5, "rows": 6, "reward": 450, "level": 1, "player": 1, "ai": AI_NOVICE, "fights": 2, "enemies": {PION: 3, FOU: 1}},
+	{"id": 3,  "name": "La Route du Sel",    "cols": 6, "rows": 7, "reward": 750, "level": 2, "player": 2, "ai": AI_AGUERRI, "fights": 2, "enemies": {PION: 4, CAVALIER: 1, TOUR: 1}},
+	{"id": 4,  "name": "Les Champs Brules",  "cols": 6, "rows": 7, "reward": 1200, "level": 2, "player": 2, "ai": AI_AGUERRI, "fights": 2, "enemies": {PION: 5, FOU: 1, CAVALIER: 1}},
+	{"id": 5,  "name": "Le Pont Noir",       "cols": 6, "rows": 8, "reward": 1800, "level": 2, "player": 3, "ai": AI_AGUERRI, "fights": 2, "enemies": {PION: 6, TOUR: 1, FOU: 1}},
+	{"id": 6,  "name": "La Carriere",        "cols": 6, "rows": 8, "reward": 2600, "level": 3, "player": 3, "ai": AI_AGUERRI, "fights": 2, "enemies": {PION: 6, CAVALIER: 1, TOUR: 1}},
+	{"id": 7,  "name": "Les Marches Grises", "cols": 7, "rows": 8, "reward": 3600, "level": 3, "player": 4, "ai": AI_EXPERT, "fights": 2, "enemies": {PION: 7, FOU: 1, CAVALIER: 1, TOUR: 1}},
+	{"id": 8,  "name": "Le Col du Corbeau",  "cols": 7, "rows": 8, "reward": 5000, "level": 4, "player": 4, "ai": AI_EXPERT, "fights": 3, "enemies": {PION: 8, TOUR: 2, CAVALIER: 1}},
+	{"id": 9,  "name": "Les Ruines Hautes",  "cols": 7, "rows": 9, "reward": 7000, "level": 4, "player": 5, "ai": AI_EXPERT, "fights": 3, "enemies": {PION: 8, FOU: 2, TOUR: 1, CAVALIER: 1}},
 	# "dame" : Dames offertes a la PREMIERE victoire seulement (cf.
 	# battle.gd > _show_result). Le Roi a perdu sa Dame au premier ecran du
 	# jeu ; il la retrouve au bout de sa campagne, meme si aucun de ses pions
 	# n'a jamais traverse un plateau. Sans ce filet, la moitie du jeu - Tour
 	# de la Dame, aura, ameliorations - reste eteinte pour la plupart des
 	# joueurs : une promotion reussie reste un exploit rare.
-	{"id": 10, "name": "La Tour de la Dame", "cols": 8, "rows": 9, "reward": 900, "level": 4, "player": 6, "ai": AI_EXPERT, "dame": 1, "fights": 3, "enemies": {PION: 9, FOU: 2, TOUR: 2, CAVALIER: 1}},
+	{"id": 10, "name": "La Tour de la Dame", "cols": 8, "rows": 9, "reward": 11000, "level": 4, "player": 6, "ai": AI_EXPERT, "dame": 1, "fights": 3, "enemies": {PION: 9, FOU: 2, TOUR: 2, CAVALIER: 1}},
 ]
 
 # ------------------------------- MISSIONS ------------------------------------
@@ -538,31 +565,31 @@ const CAMPAIGN := [
 const MISSIONS := [
 	# --- Les cinq premieres SONT le tutoriel : elles se suivent une a une.
 	{"id": "first_win", "text": "Remporte ta premiere bataille",
-		"goal": "battles_won", "target": 1, "gold": 60, "requires": []},
+		"goal": "battles_won", "target": 1, "gold": 240, "requires": []},
 	{"id": "recruit", "text": "Recrute une piece au village",
-		"goal": "units_recruited", "target": 1, "gold": 40, "requires": ["first_win"]},
+		"goal": "units_recruited", "target": 1, "gold": 160, "requires": ["first_win"]},
 	{"id": "upgrade", "text": "Ameliore un batiment",
-		"goal": "upgrades", "target": 1, "gold": 80, "requires": ["recruit"]},
+		"goal": "upgrades", "target": 1, "gold": 320, "requires": ["recruit"]},
 	{"id": "three_wins", "text": "Remporte 3 batailles",
-		"goal": "battles_won", "target": 3, "gold": 120, "requires": ["upgrade"]},
+		"goal": "battles_won", "target": 3, "gold": 480, "requires": ["upgrade"]},
 	{"id": "flawless", "text": "Gagne sans perdre une seule piece",
-		"goal": "flawless_wins", "target": 1, "gold": 140, "requires": ["three_wins"]},
+		"goal": "flawless_wins", "target": 1, "gold": 560, "requires": ["three_wins"]},
 
 	# --- Puis deux branches en parallele : la guerre et le royaume.
 	{"id": "captures", "text": "Capture 20 pieces ennemies",
-		"goal": "captures", "target": 20, "gold": 160, "requires": ["flawless"]},
+		"goal": "captures", "target": 20, "gold": 640, "requires": ["flawless"]},
 	{"id": "promotion", "text": "Mene un pion jusqu'au bout du plateau",
-		"goal": "promotions", "target": 1, "gold": 220, "requires": ["flawless"]},
+		"goal": "promotions", "target": 1, "gold": 880, "requires": ["flawless"]},
 	{"id": "castle3", "text": "Porte le Chateau Royal au niveau 3",
-		"goal": "castle_level", "target": 3, "gold": 260, "requires": ["upgrade"]},
+		"goal": "castle_level", "target": 3, "gold": 1040, "requires": ["upgrade"]},
 
 	# --- Le bout du chemin.
 	{"id": "dame", "text": "Ramene une Dame vivante au village",
-		"goal": "dames", "target": 1, "gold": 300, "requires": ["promotion"]},
+		"goal": "dames", "target": 1, "gold": 1200, "requires": ["promotion"]},
 	{"id": "two_dames", "text": "Abrite 2 Dames au Chateau Royal",
-		"goal": "dames", "target": 2, "gold": 400, "requires": ["dame"]},
+		"goal": "dames", "target": 2, "gold": 1600, "requires": ["dame"]},
 	{"id": "campaign", "text": "Termine la campagne",
-		"goal": "campaign", "target": 1, "gold": 500, "requires": ["castle3", "captures"]},
+		"goal": "campaign", "target": 1, "gold": 2000, "requires": ["castle3", "captures"]},
 ]
 
 

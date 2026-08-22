@@ -46,9 +46,23 @@ func _ready() -> void:
 					dames += 1
 				if ratio <= Balance.PROMOTION_CONTESTED_RATIO:
 					mopping += 1
-				print("  bataille %2d  tour %2d  ->  %-9s  (adversaire a %d%% de son materiel)" % [
+				# POURQUOI CE N'EST PAS UNE DAME. La sonde n'affichait que le
+				# ratio de materiel, ce qui laissait croire que c'etait le seul
+				# critere : une ligne "CAVALIER, adversaire a 133%" ressemblait
+				# alors a un bug alors que la regle s'appliquait correctement.
+				# Trois conditions se cumulent (cf. BattleEngine._promotion_for),
+				# et on dit maintenant laquelle a mordu.
+				var cause := ""
+				if result != Balance.DAME:
+					if int(unit.captures) <= 0:
+						cause = "  <- pion sans capture"
+					elif ratio < Balance.PROMOTION_CONTESTED_RATIO:
+						cause = "  <- ramassage"
+					else:
+						cause = "  <- couronne deja prise par ce camp"
+				print("  bataille %2d  tour %2d  ->  %-9s  (adversaire a %3d%% de son materiel)%s" % [
 					battle_id, engine.turn, Balance.unit_name(result).to_upper(),
-					int(round(ratio * 100.0))])
+					int(round(ratio * 100.0)), cause])
 
 	print("")
 	print("  promotions : %d  ->  %d DAMES, %d en piece intermediaire" % [
