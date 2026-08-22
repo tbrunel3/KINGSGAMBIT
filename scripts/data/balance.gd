@@ -534,7 +534,10 @@ const RUN_REINFORCE_WEIGHT := 2
 #              choisit plus, il s'accumule. Mesure a viser - la traversee sans
 #              farm obligatoire, ET un tresor de fin modeste. Une hausse des
 #              deux dernieres recompenses a ete essayee puis retiree pour cette
-#              raison : elle laissait 33 593 or dormants sur 55 530 encaisses. Le farm redevient un choix - accelerer - au lieu d'un
+#              raison : elle laissait 33 593 or dormants sur 55 530 encaisses.
+#              A lire en RETIRANT la recompense de la derniere bataille : elle
+#              tombe quand il n'y a plus rien a acheter, donc elle gonfle le
+#              tresor final sans avoir jamais ete un choix. Le farm redevient un choix - accelerer - au lieu d'un
 #              passage oblige. Toucher a `upgrade_cost` sans relancer la sonde,
 #              c'est rouvrir le trou.
 

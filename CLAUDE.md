@@ -213,6 +213,10 @@ Trois choses à savoir avant de retoucher ces chiffres :
   retirée : elle supprimait tout farm, mais laissait **33 593 or dormants sur
   55 530 encaissés**. Une économie dont on ne dépense que 40 % n'a plus de
   décisions dedans — c'est aussi mauvais qu'un mur, dans l'autre sens.
+
+  *Mais lis ce chiffre en retirant la récompense de la dernière bataille* : elle
+  tombe quand il n'y a plus rien à acheter, donc elle gonfle le trésor final
+  sans jamais avoir été un choix. Le vrai juge est ce qui reste **avant** elle.
 - **Une série demande une RÉSERVE, pas une armée.** Trois combats d'affilée sans
   retour au village : il faut de quoi remplir la charge *à chaque* combat, donc
   `charge × fights` de pièces en caserne. C'est ce que le joueur doit acheter, et
