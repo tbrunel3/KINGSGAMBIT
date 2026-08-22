@@ -232,6 +232,18 @@ représentatif**, et confondre les deux a coûté cher :
   de l'adversaire faisait perdre le joueur. Un coup différent au troisième tour
   envoie la partie ailleurs. On lit donc un **taux sur plusieurs formations**
   (`tune_probe.VARIANTES`), jamais un tirage.
+- **Un banc doit jouer la forme réelle du jeu.** `smoke_test` et `tune_probe`
+  jouent *un* combat ; huit batailles sur dix sont des **séries** de deux ou
+  trois, où l'ennemi revient entier et le joueur avec ses survivants. C'est la
+  définition même de la difficulté du jeu, et aucun des deux ne la mesurait.
+  `series_probe` existe pour ça.
+- **La politique d'un banc fait partie de la mesure.** La sonde économique s'est
+  trompée quatre fois de suite, et chaque fois elle accusait le jeu : elle
+  n'achetait que le moins cher (donc jamais le château), ne comptait qu'un
+  combat par série, entrait dans une série de trois combats sans réserve, et une
+  « correction » de ma part lui a fait acheter de la capacité là où il fallait
+  de la qualité. **Le réflexe utile est de relire l'instrument avant de toucher
+  aux chiffres du jeu** — les quatre fois, le défaut était là.
 
 | Banc | La question à laquelle il répond | Durée |
 |---|---|---|
@@ -240,6 +252,7 @@ représentatif**, et confondre les deux a coûté cher :
 | `tools/ai_probe.tscn` | combien coûte un coup à chaque profondeur ? | ~7 s |
 | `tools/ai_bench.tscn` | est-ce que chercher plus loin fait gagner ? *(mesuré : chaque demi-coup gagne les six duels, dans les deux camps)* | long |
 | `tools/tune_probe.tscn` | de combien de niveaux le joueur doit-il dominer ? | ~45 min |
+| `tools/series_probe.tscn` | une **série** se joue-t-elle jusqu'au bout, et quel bouton la débloque ? | long |
 | `tools/economy_probe.tscn` | la campagne verse-t-elle de quoi se traverser ? | **plusieurs heures** |
 | `tools/promo_probe.tscn` | combien de Dames une campagne produit-elle ? | ~3 min |
 | `tools/debug_battle.tscn` | pourquoi cette bataille tourne mal ? (trace coup par coup) | court |
