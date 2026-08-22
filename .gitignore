@@ -15,5 +15,10 @@ Thumbs.db
 # Etat local d'outils d'assistance (non lie au projet)
 .claude/
 
-# Captures du banc de mise a l'echelle (regenerees a la demande)
-tools/screenshots/echelle/
+# Captures des bancs (regenerees a la demande par tools/screenshot.tscn,
+# ui_test.tscn et resolutions.tscn) : sorties d'outil, pas des sources.
+tools/screenshots/
+
+# Build web (37 Mo de wasm + 15 Mo de pck a chaque export). Publie depuis la
+# branche gh-pages, pas depuis main : voir README, section "Regenerer les builds".
+/docs/
