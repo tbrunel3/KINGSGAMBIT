@@ -17,6 +17,8 @@ extends Node
 ## Les captures atterrissent dans tools/screenshots/echelle/.
 ##
 
+const Driver := preload("res://tools/battle_driver.gd")
+
 const OUTPUT_DIR := "res://tools/screenshots/echelle"
 
 ## Definitions choisies pour encadrer le marche : la plus etroite et la plus
@@ -34,6 +36,13 @@ const SCREENS := [
 	{"scene": "res://scenes/battle/campaign.tscn", "name": "campagne", "battle": 1},
 	{"scene": "res://scenes/battle/battle_prep.tscn", "name": "preparation", "battle": 3},
 	{"scene": "res://scenes/battle/battle.tscn", "name": "placement", "battle": 3},
+	# Le COMBAT est l'ecran le plus expose au changement de format : il n'a plus
+	# de bandeau du bas, donc le plateau prend toute la hauteur restante, et
+	# c'est justement la hauteur qui varie d'un telephone a l'autre. Il se
+	# capture sur le plus GRAND plateau du jeu (bataille 10, 8x9), ou les cases
+	# sont les plus petites et ou un debordement se voit en premier.
+	{"scene": "res://scenes/battle/battle.tscn", "name": "combat", "battle": 10,
+		"combat": true},
 ]
 
 
@@ -54,6 +63,16 @@ func _ready() -> void:
 			add_child(instance)
 			for i in range(4):
 				await RenderingServer.frame_post_draw
+
+			# L'ecran de bataille s'ouvre en placement : pour photographier le
+			# combat il faut poser une armee et lancer les hostilites. C'est le
+			# pilote de test qui le fait, le jeu n'offrant plus aucun moyen de
+			# se jouer tout seul.
+			if bool(screen.get("combat", false)):
+				Driver.auto_place(instance)
+				instance._start_combat()
+				for i in range(6):
+					await RenderingServer.frame_post_draw
 
 			var image := get_viewport().get_texture().get_image()
 			var path := "%s/%s_%s.png" % [OUTPUT_DIR, String(screen["name"]), String(size["name"])]

@@ -611,14 +611,21 @@ func _build_placement_ui() -> void:
 		_type_buttons[type] = chip
 
 	var actions := HBoxContainer.new()
-	actions.add_theme_constant_override("separation", 8)
+	# 6 plutot que 8 : a trois boutons, chaque point compte. Le bandeau doit
+	# tenir dans les 329 points utiles d'un ecran de 393, marges comprises.
+	actions.add_theme_constant_override("separation", 6)
 	_bottom.add_child(actions)
 
 	# DERNIERE FORMATION remplace l'ancien bouton AUTO, qui rangeait l'armee a
 	# la place du joueur. Masque tant qu'il n'y a rien en memoire : a la toute
 	# premiere bataille on pose a la main, et c'est la qu'on apprend le placement.
+	#
+	# SUR DEUX LIGNES, comme la maquette. Ecrit d'un seul tenant, le libelle est
+	# si large qu'il poussait COMBATTRE hors de l'ecran : le bandeau existe en
+	# deux etats, a deux boutons et a trois, et c'est le second qui deborde.
 	if Game.has_remembered_formation(_battle_id()):
-		var last := UiTheme.make_button("DERNIÈRE FORMATION", Color(1, 1, 1, 0.08), 11)
+		var last := UiTheme.make_button("DERNIÈRE
+FORMATION", Color(1, 1, 1, 0.08), 10)
 		last.add_theme_font_override("font", UiTheme.font_bold())
 		last.add_theme_color_override("font_color", Color("ccccd9"))
 		last.pressed.connect(_on_last_formation)
