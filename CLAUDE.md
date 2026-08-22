@@ -10,9 +10,12 @@ documents complètent celui-ci et ne le répètent pas :
 
 - [`README.md`](README.md) — pour un humain : lancer, jouer, régler, tester.
 - [`passation_chantiers_c_d_e.md`](passation_chantiers_c_d_e.md) — **le travail
-  en cours** : composition d'armée, polices et animations, popups
-  d'accompagnement. À lire avant d'y toucher : la moitié de ce que le joueur
-  demande existe déjà, et le rebâtir créerait des règles concurrentes.
+  en cours**, et le premier fichier à ouvrir. Son nom ne dit plus tout ce qu'il
+  contient : la composition d'armée est **faite**, les polices et animations
+  aux trois quarts, un chantier de **format d'écran** s'est ajouté, et les
+  popups d'accompagnement restent. Il porte aussi les décisions déjà prises par
+  le joueur — à lire avant d'y toucher, la moitié de ce qu'il demande existe
+  déjà, et le rebâtir créerait des règles concurrentes.
 - [`figma_contexte_projet.md`](figma_contexte_projet.md) — pour le designer :
   l'état du jeu vu de la maquette, et les règles de collaboration.
 
