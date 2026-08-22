@@ -72,7 +72,7 @@ func _refresh() -> void:
 		_add_upgrade_section(body)
 	elif not Game.is_building_unlocked(_type):
 		_modal.open(Balance.building_name(_type).to_upper(), Modal.Context.NEUTRAL, "lock")
-		body.add_child(_centered_pill("VERROUILLE", Pill.Variant.DEFAULT))
+		body.add_child(_centered_pill("VERROUILLÉ", Pill.Variant.DEFAULT))
 		body.add_child(DividerScene.instantiate())
 		_add_piece_card(body)
 		body.add_child(DividerScene.instantiate())
@@ -299,7 +299,8 @@ func _add_piece_card(body: VBoxContainer) -> void:
 	texts.add_theme_constant_override("separation", 2)
 	texts.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	var name_label := UiTheme.make_label(
-		"LE %s" % Balance.unit_name(_type).to_upper(), 12, UiTheme.GOLD)
+		"%s %s" % [Balance.unit_article(_type).to_upper(),
+			Balance.unit_name(_type).to_upper()], 12, UiTheme.GOLD)
 	name_label.add_theme_font_override("font", UiTheme.font_bold())
 	texts.add_child(name_label)
 

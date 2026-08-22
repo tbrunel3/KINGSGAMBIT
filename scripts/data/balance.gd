@@ -659,6 +659,13 @@ func unit_name(type: String) -> String:
 	return UNITS[type]["name"]
 
 
+## Article defini de la piece, pour les libelles qui la nomment ("LA TOUR").
+## Deux pieces sur six sont feminines : l'ecrire une fois ici evite de le
+## redecouvrir a chaque ecran qui compose une phrase.
+func unit_article(type: String) -> String:
+	return "la" if type == TOUR or type == DAME else "le"
+
+
 func building_name(type: String) -> String:
 	if type == CASTLE:
 		return CASTLE_DATA["name"]
