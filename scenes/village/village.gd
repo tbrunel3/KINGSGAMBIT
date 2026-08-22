@@ -64,12 +64,23 @@ const DEV_BUTTON_RECT := Rect2(362, 14, 24, 24)
 ## discrete : le codex se consulte, il ne se joue pas - lui donner un libelle
 ## le mettrait au meme rang que MISSIONS, qui dit quoi faire ensuite.
 const CODEX_BUTTON_RECT := Rect2(319, 44, 28, 28)
-## Bouton BOUTIQUE, pose sous le codex. Meme traitement : une icone discrete.
-## La boutique ne dit pas quoi faire ensuite, elle attend qu'on ait un
-## chantier a accelerer - lui donner un libelle la mettrait au rang de
-## MISSIONS. Position ABSOLUE parce que le village est le dernier ecran qui
-## n'est pas encore decoupe en zones ancrees (cf. CLAUDE.md, regle 4).
-const SHOP_BUTTON_RECT := Rect2(319, 78, 28, 28)
+## Bouton BOUTIQUE, pose A GAUCHE DE "BATAILLE" et non plus en haut a droite
+## avec le codex : c'est le joueur qui l'a place la dans la maquette
+## (Boutique-Button, 445:6). Le bas de l'ecran est la zone du POUCE, et la
+## boutique est un geste courant - on y passe entre deux batailles.
+##
+## Sa pastille est bleue, pas doree : l'or est reserve a l'action principale,
+## et deux boutons dores cote a cote se disputeraient le regard.
+##
+## Position ABSOLUE parce que le village est le dernier ecran qui n'est pas
+## encore decoupe en zones ancrees (cf. CLAUDE.md, regle 4).
+const SHOP_BUTTON_RECT := Rect2(40, 761, 45, 45)
+const SHOP_BUTTON_FILL := Color("3873f2")
+const SHOP_BUTTON_EDGE := Color("b6c0f3")
+## Le picto dessine par le joueur. C'est l'image SOURCE de la maquette, la
+## seule detouree : l'export du noeud, lui, arrive avec le fond bleu du bouton
+## cuit dedans (alpha entierement opaque - verifie).
+const SHOP_ICON := "res://assets/ui/shop_icon.png"
 
 @onready var _overlay: Control = $Overlay
 
@@ -193,25 +204,40 @@ func _build_top_bar() -> void:
 	settings.size = Vector2(28, 28)
 
 	_build_codex_button()
-	_shop_button = _build_icon_button("star", Color("ffe580"), Color("174971"),
-		SHOP_BUTTON_RECT, _on_shop_pressed)
+	_shop_button = _build_icon_button("", Color("ffe580"), SHOP_BUTTON_FILL,
+		SHOP_BUTTON_RECT, _on_shop_pressed, SHOP_ICON)
 
 
 ## Pastille cliquable a icone seule, le gabarit du codex et de la boutique.
 ## Un PanelContainer et non un Button : c'est le seul moyen d'y inserer un
 ## Icon, qui se DESSINE (cf. _make_clickable plus bas, meme raison).
+##
+## `texture_path` non vide remplace le glyphe trace par une IMAGE - c'est le
+## cas de la boutique, dont le picto vient de la maquette.
 func _build_icon_button(icon_name: String, icon_color: Color, fill: Color,
-		rect: Rect2, on_press: Callable) -> PanelContainer:
+		rect: Rect2, on_press: Callable, texture_path: String = "") -> PanelContainer:
 	var panel := PanelContainer.new()
 	var box := StyleBoxFlat.new()
 	box.bg_color = fill
-	box.set_corner_radius_all(14)
-	box.set_content_margin_all(7)
+	box.set_corner_radius_all(10 if texture_path != "" else 14)
+	box.set_content_margin_all(9 if texture_path != "" else 7)
+	if texture_path != "":
+		box.border_color = SHOP_BUTTON_EDGE
+		box.set_border_width_all(1)
 	panel.add_theme_stylebox_override("panel", box)
 
-	var glyph := Icon.new()
-	glyph.icon_name = icon_name
-	glyph.color = icon_color
+	var glyph: Control
+	if texture_path != "" and ResourceLoader.exists(texture_path):
+		var image := TextureRect.new()
+		image.texture = load(texture_path)
+		image.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+		image.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+		glyph = image
+	else:
+		var icon := Icon.new()
+		icon.icon_name = icon_name
+		icon.color = icon_color
+		glyph = icon
 	glyph.custom_minimum_size = Vector2(14, 14)
 	panel.add_child(glyph)
 
