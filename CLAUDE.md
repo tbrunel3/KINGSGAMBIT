@@ -223,7 +223,8 @@ représentatif**, et confondre les deux a coûté cher :
 - **Un banc chronométré n'est pas une mesure.** Deux bancs lancés sur la même
   position rendaient deux verdicts différents, parce que la recherche coupe au
   temps. Les bancs posent donc `BattleAI.budget_ms = 0` — aucune limite, la
-  recherche va au bout de sa profondeur. Ils jouent alors contre une IA au moins
+  recherche va au bout de sa profondeur. C'est ce qui les rend lents, et c'est
+  le prix d'un oracle. Ils jouent alors contre une IA au moins
   aussi forte que celle du jeu, jamais plus faible : une bataille qu'un banc
   déclare gagnable l'est à coup sûr.
 - **Un seul combat n'est pas une mesure non plus.** Sur la bataille 10, baisser
@@ -238,9 +239,9 @@ représentatif**, et confondre les deux a coûté cher :
 | `tools/ui_test.tscn` | est-ce que les vrais boutons répondent ? | court |
 | `tools/ai_probe.tscn` | combien coûte un coup à chaque profondeur ? | ~7 s |
 | `tools/ai_bench.tscn` | est-ce que chercher plus loin fait gagner ? *(mesuré : chaque demi-coup gagne les six duels, dans les deux camps)* | long |
-| `tools/tune_probe.tscn` | de combien de niveaux le joueur doit-il dominer ? | ~20 min |
-| `tools/economy_probe.tscn` | la campagne verse-t-elle de quoi se traverser ? | long |
-| `tools/promo_probe.tscn` | combien de Dames une campagne produit-elle ? | long |
+| `tools/tune_probe.tscn` | de combien de niveaux le joueur doit-il dominer ? | ~45 min |
+| `tools/economy_probe.tscn` | la campagne verse-t-elle de quoi se traverser ? | **plusieurs heures** |
+| `tools/promo_probe.tscn` | combien de Dames une campagne produit-elle ? | ~3 min |
 | `tools/debug_battle.tscn` | pourquoi cette bataille tourne mal ? (trace coup par coup) | court |
 | `tools/screenshot.tscn` | à quoi ressemblent les écrans ? (PNG dans `tools/screenshots/`) | ~1 min |
 | `tools/resolutions.tscn` | qu'est-ce qui déborde sur les autres téléphones ? | court |
@@ -279,7 +280,7 @@ nom n'a pas de suffixe `-v2` : le nom de la frame ne dit rien de son âge.
 | 06_Bataille_Victoire | 2:546 | fait — écran plein |
 | 07-bataille-defaite | 2:835 | fait (même écran repeint en rouge) |
 | mission-popup | 228:9 | à intégrer (le panneau existe côté code) |
-| 09 / 10 / 11 — popups de bâtiment | 2:1048 / 2:1115 / 2:1165 | à intégrer |
+| 09 / 10 / 11 — popups de bâtiment | 2:1048 / 2:1115 / 2:1165 | à intégrer — *le code couvre les quatre écrans dans une seule scène (`building_popup.gd`), et `screenshot.tscn` en capture deux états (`1e_`, `1f_`) pour comparer* |
 | confirm-upgrade-modal | 103:15 | à créer |
 | codex-popup | 194:4 | à créer |
 | 12-composants | 2:1224 | planche de référence |
