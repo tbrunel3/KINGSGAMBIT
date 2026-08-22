@@ -22,19 +22,29 @@ sous-systèmes, et parce que la première rendait les autres intestables.
 | **B** | La série s'enchaîne sans écran de victoire | ✅ commit `e2772b7` |
 | **C** | La composition d'armée | ✅ fait |
 | **D** | Polices et animations Figma | 🟡 **aux trois quarts** — voir ci-dessous |
-| **F** | Le format d'écran (« dégradés bizarres ») | 🟡 **entamé** — voir ci-dessous |
-| **E** | **Les popups d'accompagnement** | à faire **en dernier** |
+| **E** | Les popups d'accompagnement | à faire |
+| **G + F** | **L'assemblage Figma et le responsive**, ensemble | à faire **en dernier** — voir ci-dessous |
 
-> **Reprendre ici.** Trois choses restent, par ordre de valeur :
+**L'ordre a été fixé par le joueur** : A → B → C → D → E, puis **G et F menés
+ensemble**. Sa formulation : « après le E ça devrait être l'assemblage de tout
+le projet Figma, adaptation des popups, des images, respect graphique absolu,
+et le F avec du coup pour les formats d'écran responsive ».
+
+Les mener ensemble est le bon choix, et pas seulement par commodité : reprendre
+la peau d'un écran et la rendre indifférente au format sont **le même geste sur
+le même fichier**. Les séparer ferait passer deux fois sur chaque écran.
+
+> **Reprendre ici.** Dans l'ordre :
 >
 > 1. **Porter l'entrée du placement** (`248:493`, 3 s, 17 nœuds) — la plus
 >    riche animation du fichier, et l'écran où le joueur passe le plus de temps.
-> 2. **Finir le passage au crible des formats** : seule la carte de campagne a
->    été corrigée. Rejouer `resolutions.tscn` et regarder les trois tailles
->    hors format sur les six autres écrans.
-> 3. **Le chantier E**, avec deux nouveautés à lire d'abord : la maquette
+>    C'est ce qui reste de D.
+> 2. **Le chantier E**, avec deux nouveautés à lire d'abord : la maquette
 >    contient désormais un `popup-combat-phase` (`378:4`) et un `shop-screen`
 >    (`347:4`) qui n'existaient pas au découpage.
+> 3. **G + F ensemble.** Le passage au crible des formats n'a été fait que sur
+>    la carte de campagne : il se termine là, écran par écran, en même temps
+>    que la reprise graphique.
 
 E vient en dernier délibérément : accompagner un jeu qui va changer, c'est du
 travail à refaire.
@@ -449,7 +459,71 @@ dans le texte** — tout est interpolé depuis `Balance`, sans quoi le popup se 
 
 ---
 
-## Deux pièges du projet qui guettent les trois chantiers
+---
+
+# G + F — l'assemblage Figma et le responsive, menés ensemble
+
+**Décidé par le joueur, à faire après E.** « L'assemblage de tout le projet
+Figma, adaptation des popups, des images, respect graphique absolu, et le F
+avec du coup pour les formats d'écran responsive. »
+
+## Le reste à intégrer, concrètement
+
+Relevé sur le fichier au 22/08. Ce sont les écrans dessinés que le jeu
+n'affiche pas encore, ou affiche autrement :
+
+| Écran | node-id | État |
+|---|---|---|
+| `mission-popup` | 228:9 | le panneau existe côté code, la peau n'est pas reprise |
+| `09` / `10` / `11` — popups de bâtiment | 2:1048 / 2:1115 / 2:1165 | le code couvre les quatre états dans une seule scène (`building_popup.gd`) ; `screenshot.tscn` en capture deux (`1e_`, `1f_`) pour comparer |
+| **`popup-combat-phase`** | 378:4 | **jamais ouvert** — à lire pendant E, il recouvre peut-être une partie de ce que E allait proposer |
+| **`shop-screen`** | 347:4 | **dessiné, mais hors périmètre** — voir ci-dessous |
+| `248:493` placement | — | son entrée animée (17 nœuds) reste à porter |
+
+Deux écrans existent **sans avoir jamais été dessinés** : l'écran de match nul
+(fabriqué en repeignant la victoire en acier) et — plus maintenant — la
+boutique.
+
+## Trois choses à savoir avant de commencer
+
+**1. « Respect graphique absolu » ne peut pas vouloir dire transcrire les
+libellés.** La règle 2 du projet tient : la maquette apporte l'apparence,
+jamais les règles. Le projet l'a déjà payé deux fois — le `codex-popup` v1
+décrivait un autre jeu (PV, ATK, soins, plateau 8×11, huit bâtiments), et la
+préparation refaite annonce encore « Points: 0/15 » et « Plateau 8×11 cases ».
+Les deux ont été corrigés côté libellé, pas côté code. **Reprendre la peau : oui.
+Reprendre les chiffres : jamais** — ils se régénèrent depuis `Balance`.
+
+**2. La boutique est explicitement hors périmètre**, et pas par oubli. Le retour
+du designer (`294:2`) l'écrit : « une boutique arrive dans le jeu — coffres,
+gemmes, accélération des améliorations. Elle NE FAIT PAS PARTIE de ce retour et
+aura son propre brief, une fois ses règles écrites et son économie mesurée. »
+Elle est dessinée depuis ; **ses règles ne le sont toujours pas**. L'intégrer
+sans économie mesurée rouvrirait le trou que `economy_probe` a mis des heures à
+fermer.
+
+**3. Le responsive et la fidélité au pixel se contredisent, et il y a un
+bouton.** `window/stretch/aspect` vaut `expand` : le viewport épouse l'écran, et
+c'est ce qui oblige chaque écran à être ancré. Le passer à **`keep`** donne une
+zone de jeu de 393 × 852 **exactement**, avec des bandes noires sur les écrans
+plus allongés — la fidélité devient absolue, le responsive disparaît.
+
+⚠️ **C'est une décision à poser au joueur au début de G**, pas à trancher en
+chemin : elle change la nature du chantier. « Respect graphique absolu » et
+« formats d'écran responsive » sont dans la même phrase de sa demande, et ils
+ne peuvent pas être vrais tous les deux au pixel près.
+
+## Comment le prouver
+
+- `resolutions.tscn`, et **d'abord ses trois tailles hors format** — c'est le
+  seul outil qui voit un problème de format, et il ne le voyait pas avant.
+- `screenshot.tscn` pour comparer écran par écran avec la maquette.
+- `ui_test` doit rester vert : une reprise graphique qui casse un bouton ne se
+  voit sur aucune capture.
+
+---
+
+## Deux pièges du projet qui guettent tous les chantiers restants
 
 1. **`UiTheme.make_label` pose `SIZE_EXPAND_FILL` sur tout libellé.** Dans un
    conteneur horizontal, toutes les colonnes se partagent alors la largeur à
