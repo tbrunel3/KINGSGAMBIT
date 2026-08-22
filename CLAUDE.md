@@ -190,8 +190,12 @@ que la campagne prête au joueur, face à ce qu'elle avait versé à ce stade :
 | versé | 930 | 2 810 | 7 030 |
 
 Un facteur deux et demi, qui ne se rattrape pas en jouant mieux : la sonde a dû
-rejouer **36 fois** une bataille déjà gagnée pour franchir la seule bataille 7. Les récompenses vont maintenant de 150 à 5 000. **Aucun coût n'a
-bougé** — c'est le rapport entre les deux qui était faux, pas les prix.
+rejouer **36 fois** une bataille déjà gagnée pour franchir la seule bataille 7.
+Les récompenses vont maintenant de 150 à 5 000. **Aucun coût n'a bougé** —
+c'est le rapport entre les deux qui était faux, pas les prix.
+
+Mesure d'arrivée : **la campagne se traverse sans farmer une seule fois**, et
+elle finit exactement aux niveaux qu'elle prête au joueur.
 
 **La récompense est celle d'un COMBAT, pas d'une bataille** : une série de trois
 combats paie trois fois. Huit batailles sur dix étant des séries, se tromper
@@ -201,17 +205,23 @@ version de la sonde, dont la première correction des récompenses avait hérit�
 ⚠️ **Toucher à `upgrade_cost` sans relancer `economy_probe`, c'est rouvrir le
 trou.**
 
-Deux choses à savoir avant de retoucher ces chiffres :
+Trois choses à savoir avant de retoucher ces chiffres :
 
-- **`player` est un plancher, pas une cible.** Les bancs de bataille jouent *un*
-  combat, alors que la plupart des batailles sont des séries de deux ou trois.
-  La série use : la bataille 9 a réclamé un château deux crans au-dessus de son
-  niveau déclaré. Ce n'est plus un problème depuis que l'économie suit — le
-  joueur a de quoi dépasser.
-- **La sonde déclare la corvée, pas seulement l'impossible.** Au-delà de douze
-  replays pour une seule bataille, la campagne a échoué même si elle reste
-  théoriquement franchissable. Elle reconnaît aussi l'**impasse** : plus d'or et
-  plus aucune bataille qu'on regagne.
+- **Deux chiffres à lire, jamais un.** « Combien de replays » dit si la campagne
+  est trop chère ; **« combien reste-t-il en poche à la fin »** dit si elle est
+  trop généreuse. Une hausse des deux dernières récompenses a été essayée puis
+  retirée : elle supprimait tout farm, mais laissait **33 593 or dormants sur
+  55 530 encaissés**. Une économie dont on ne dépense que 40 % n'a plus de
+  décisions dedans — c'est aussi mauvais qu'un mur, dans l'autre sens.
+- **Une série demande une RÉSERVE, pas une armée.** Trois combats d'affilée sans
+  retour au village : il faut de quoi remplir la charge *à chaque* combat, donc
+  `charge × fights` de pièces en caserne. C'est ce que le joueur doit acheter, et
+  c'est ce que la sonde n'achetait pas — elle en a conclu à tort que la dernière
+  bataille était hors de portée même tout au niveau 10.
+- **La sonde distingue trois échecs.** La **corvée** (plus de douze replays pour
+  une bataille : franchissable mais indigne), l'**impasse** (plus d'or et plus
+  aucune bataille qu'on regagne), et le **plafond** (tout au maximum et ça ne
+  passe toujours pas — là, ce n'est plus l'économie, c'est le combat).
 
 ---
 
