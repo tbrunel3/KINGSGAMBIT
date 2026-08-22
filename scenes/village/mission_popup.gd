@@ -205,7 +205,11 @@ func _progress_row(progress: int, target: int) -> HBoxContainer:
 	track.size_flags_vertical = Control.SIZE_SHRINK_CENTER
 
 	var fill := ColorRect.new()
-	fill.color = UiTheme.ACCENT
+	# Vert et non bleu : la maquette (Figma mission-popup, 410:5664) peint ces
+	# barres en vert, et c'est la seule difference qu'elle avait encore avec
+	# cet ecran. Le bleu est l'accent du JOUEUR au combat ; ici on parle
+	# d'avancement, pas de camp.
+	fill.color = UiTheme.SUCCESS
 	fill.anchor_bottom = 1.0
 	fill.anchor_right = clampf(float(progress) / float(maxi(target, 1)), 0.0, 1.0)
 	track.add_child(fill)
