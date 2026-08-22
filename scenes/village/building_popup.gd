@@ -93,6 +93,23 @@ func _refresh() -> void:
 		_add_upgrade_section(body)
 
 
+## Une ligne de gain, pointee d'une puce ronde comme la maquette.
+func _gain(text: String) -> HBoxContainer:
+	var row := HBoxContainer.new()
+	row.add_theme_constant_override("separation", 8)
+	var dot := Icon.new()
+	dot.icon_name = "dot"
+	dot.color = UiTheme.GOLD
+	dot.custom_minimum_size = Vector2(6, 6)
+	dot.size_flags_vertical = Control.SIZE_SHRINK_BEGIN
+	row.add_child(dot)
+	var label := UiTheme.make_label(text, 12, Color("f0f3f8"))
+	label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	row.add_child(label)
+	return row
+
+
 func _centered_pill(text: String, variant: Pill.Variant) -> CenterContainer:
 	var center := CenterContainer.new()
 	var pill: Pill = PillScene.instantiate()
@@ -453,6 +470,9 @@ func _add_upgrade_section(body: VBoxContainer) -> void:
 		step.alignment = BoxContainer.ALIGNMENT_CENTER
 		step.add_theme_constant_override("separation", 2)
 		var step_label := UiTheme.make_label("NIVEAU", 11, Color("a0aabf"))
+		# Sans ca, le mot se replie lettre par lettre dans la colonne etroite et
+		# s'affiche "NIV / EA / U".
+		step_label.autowrap_mode = TextServer.AUTOWRAP_OFF
 		step_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 		step.add_child(step_label)
 		var step_row := HBoxContainer.new()
@@ -461,7 +481,7 @@ func _add_upgrade_section(body: VBoxContainer) -> void:
 		var from_label := UiTheme.make_label(str(level), 16, Color("f0f3f8"))
 		from_label.add_theme_font_override("font", UiTheme.font_bold())
 		step_row.add_child(from_label)
-		var arrow := UiTheme.make_label("->", 14, UiTheme.GOLD)
+		var arrow := UiTheme.make_label("→", 14, UiTheme.GOLD)
 		step_row.add_child(arrow)
 		var to_label := UiTheme.make_label(str(level + 1), 18, UiTheme.GOLD)
 		to_label.add_theme_font_override("font", UiTheme.font_bold())
@@ -534,19 +554,23 @@ func _bonus_preview(next_level: int) -> PanelContainer:
 	vbox.add_theme_constant_override("separation", 6)
 	panel.add_child(vbox)
 
-	var heading := UiTheme.make_label("AU NIVEAU %d :" % next_level, 11, Color("a0aabf"))
+	var heading := UiTheme.make_label("AU NIVEAU %d" % next_level, 11, Color("a0aabf"))
 	heading.add_theme_font_override("font", UiTheme.font_bold())
 	heading.autowrap_mode = TextServer.AUTOWRAP_OFF
 	vbox.add_child(heading)
 
 	var cap_now := Balance.capacity(_type, next_level - 1)
 	var cap_next := Balance.capacity(_type, next_level)
-	vbox.add_child(UiTheme.make_label(
-		"- Capacite augmentee : %d -> %d" % [cap_now, cap_next], 12, Color("f0f3f8")))
+	vbox.add_child(_gain("Capacité : %d → %d" % [cap_now, cap_next]))
 
+	# CE QUI CHANGE, pas la mobilite entiere deux fois. La ligne disait
+	# "Portee : en avant 1 case(s), capture en diagonale → en avant 1 case(s),
+	# 2 au premier coup, capture en diagonale" - quatre lignes a l'ecran pour
+	# annoncer une case de plus. Le nouveau libelle suffit : l'ancien est deja
+	# ecrit plus haut, sur la carte de la piece.
 	var move_now := Balance.move_description(_type, next_level - 1)
 	var move_next := Balance.move_description(_type, next_level)
 	if move_now != move_next:
-		vbox.add_child(UiTheme.make_label("- Portee : %s -> %s" % [move_now, move_next], 12, Color("f0f3f8")))
+		vbox.add_child(_gain("Mobilité : %s" % move_next))
 
 	return panel

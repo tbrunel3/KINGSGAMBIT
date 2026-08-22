@@ -754,6 +754,12 @@ func jump_offsets(type: String, level: int) -> Array:
 	return [] if value == null else value
 
 
+## "1 case" ou "3 cases". Le jeu ecrivait "case(s)", ce qui se voit et se lit
+## mal - le nombre est connu au moment ou la phrase se construit.
+func _cases(n: int) -> String:
+	return "%d case%s" % [n, "s" if n > 1 else ""]
+
+
 ## Le nom d'une figure de saut. Les deux premieres ont un nom d'echiquier, et
 ## il vaut mieux que des coordonnees : "saut en L" dit a un joueur ce que
 ## "1x2" ne lui dira jamais. Au-dela, aucune figure n'a de nom recu, alors on
@@ -772,11 +778,11 @@ func _jump_name(dx: int, dy: int) -> String:
 func move_description(type: String, level: int) -> String:
 	match move_type(type):
 		"orthogonal":
-			return "lignes et colonnes, %d cases" % move_range(type, level)
+			return "lignes et colonnes, %s" % _cases(move_range(type, level))
 		"diagonal":
-			return "diagonales, %d cases" % move_range(type, level)
+			return "diagonales, %s" % _cases(move_range(type, level))
 		"queen":
-			return "toutes directions, %d cases" % move_range(type, level)
+			return "toutes directions, %s" % _cases(move_range(type, level))
 		"jump":
 			# Les FIGURES elles-memes, pas leur nombre. Le cavalier passe du
 			# petit saut diagonal (1x1) au L classique (1x2) en montant au
@@ -792,9 +798,9 @@ func move_description(type: String, level: int) -> String:
 			var reach := move_range(type, level)
 			var opening := first_move_range(type, level)
 			if opening > reach:
-				return "en avant %d case(s), %d au premier coup, capture en diagonale" % [
-					reach, opening]
-			return "en avant %d case(s), capture en diagonale" % reach
+				return "en avant %s, %d au premier coup, capture en diagonale" % [
+					_cases(reach), opening]
+			return "en avant %s, capture en diagonale" % _cases(reach)
 
 
 ## Vrai si ce batiment n'existe pas au depart et apparait plus tard.
