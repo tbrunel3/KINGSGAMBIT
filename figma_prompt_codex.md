@@ -236,10 +236,25 @@ Le jeu trace ses propres cachets par-dessus la carte, et ce sont eux qui disent
 fige la progression : le joueur verrait un « 7 » là où le jeu doit pouvoir
 montrer un cachet de plomb rouillé.
 
-**Ce qu'on demande** : la même carte, **sans aucun numéro ni pastille**, juste
-le parchemin, le chemin et le décor. Si les numéros sont peints dans le raster
-et pas sur un calque séparé, dis-le — on garde la carte actuelle, ce n'est pas
-grave.
+**Vérifié depuis** : le nœud `209:423` est un `RECTANGLE` à remplissage image.
+Les numéros sont **peints dans le raster**, pas sur un calque qu'on masque — il
+n'y a donc rien à ré-exporter. Deuxième chose relevée au passage : l'image ne
+couvre que les étapes **6 à 10**, alors que la campagne en compte dix.
+
+**Ce qu'on demande** est donc une **re-génération**, pas un ré-export : la même
+carte, le même trait, mais **sans aucune pastille numérotée**, et sur les
+**dix** étapes du chemin. Le jeu posera ses propres cachets aux emplacements —
+c'est ce qui lui permet de montrer un cachet de plomb rouillé là où le joueur
+n'est pas encore allé.
+
+Deux détails qui comptent pour le remplacement : le fichier en place est
+`parchment_map.jpg`, et l'écran de campagne est un parchemin défilant de
+**2 300 points** de haut pour 393 de large. Tant que cette version n'existe
+pas, le jeu garde la carte actuelle — ce n'est pas bloquant.
+
+*(Le sang au sol de l'illustration actuelle est aussi à retirer : le ton du jeu
+exclut la violence graphique — la capture d'une pièce est une convention
+d'échecs, pas une mise à mort.)*
 
 ---
 
