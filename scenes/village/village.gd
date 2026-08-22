@@ -154,7 +154,9 @@ func _build_top_bar() -> void:
 	var pill_y := TOP_BAR_Y
 
 	_gold_pill = _place_pill(12, pill_y, "", Pill.Variant.TOPBAR)
-	_gold_pill.set_data("dot", "", Pill.Variant.TOPBAR, UiTheme.GOLD)
+	_gold_pill.set_data("", "", Pill.Variant.TOPBAR)
+	# La piece frappee du jeu, comme la maquette - pas une pastille ronde.
+	_gold_pill.set_texture(load("res://assets/ui/kg_coin.png"), 22.0)
 	_gold_pill.set_bold(true)
 
 	_level_pill = _place_pill(132, pill_y, "", Pill.Variant.TOPBAR)
@@ -170,7 +172,7 @@ func _build_top_bar() -> void:
 	box.set_content_margin_all(7)
 	settings.add_theme_stylebox_override("panel", box)
 	var gear := Icon.new()
-	gear.icon_name = "wrench"
+	gear.icon_name = "gear"
 	gear.color = Color("ccccd9")
 	gear.custom_minimum_size = Vector2(14, 14)
 	settings.add_child(gear)
@@ -489,11 +491,10 @@ func _build_battle_button() -> void:
 	row.add_theme_constant_override("separation", 10)
 	_battle_button.add_child(row)
 
-	var sword := Icon.new()
-	sword.icon_name = "sword"
-	sword.color = Color("331f00")
-	sword.custom_minimum_size = Vector2(20, 20)
-	row.add_child(sword)
+	# PAS D'ICONE ici, et c'est la maquette qui tranche : son bouton BATAILLE
+	# porte le seul mot, centre. Le jeu y mettait deux epees croisees, mais a
+	# 20 points leurs gardes disparaissent et il n'en reste qu'une CROIX - le
+	# bouton le plus important du village avait l'air de fermer quelque chose.
 
 	_battle_label = UiTheme.make_label("BATAILLE", 19, Color("331f00"))
 	_battle_label.add_theme_font_override("font", UiTheme.font_bold())
@@ -522,6 +523,8 @@ func _build_dev_button() -> void:
 	dev.size = DEV_BUTTON_RECT.size
 	dev.pressed.connect(_on_dev_pressed)
 
+	# Une CLE et non un engrenage : le bouton voisin est celui des reglages, et
+	# deux ronds dentes identiques cote a cote ne disent pas lequel fait quoi.
 	var icon := Icon.new()
 	icon.icon_name = "wrench"
 	icon.color = UiTheme.TEXT_DIM
@@ -570,7 +573,7 @@ func _format_thousands(n: int) -> String:
 func _refresh() -> void:
 	var pill_y := TOP_BAR_Y + 11.5
 
-	_gold_pill.set_data("dot", _format_thousands(Game.gold), Pill.Variant.TOPBAR, UiTheme.GOLD)
+	_gold_pill.set_data("", _format_thousands(Game.gold), Pill.Variant.TOPBAR)
 	_gold_pill.set_bold(true)
 	_gold_pill.size = _gold_pill.get_combined_minimum_size()
 	_gold_pill.position = Vector2(12, pill_y)

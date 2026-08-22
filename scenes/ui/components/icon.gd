@@ -16,7 +16,7 @@ extends Control
 ##   icon.color = UiTheme.TEXT_DIM
 ##
 
-@export_enum("lock", "wrench", "star", "check", "close", "diamond", "sword", "house", "castle", "crown", "crown_broken", "compass", "coin", "dot", "pause", "skip", "arrow_left", "clock", "info", "chevron_right") var icon_name: String = "star"
+@export_enum("lock", "wrench", "gear", "star", "check", "close", "diamond", "sword", "house", "castle", "crown", "crown_broken", "compass", "coin", "dot", "pause", "skip", "arrow_left", "clock", "info", "chevron_right") var icon_name: String = "star"
 @export var color: Color = Color.WHITE
 @export var line_width: float = 1.8
 
@@ -43,6 +43,8 @@ func _draw() -> void:
 			_draw_lock(c, s, lw)
 		"wrench":
 			_draw_wrench(c, s, lw)
+		"gear":
+			_draw_gear(c, s, lw)
 		"star":
 			_draw_star(c, s)
 		"check":
@@ -98,13 +100,42 @@ func _draw_lock(c: Vector2, s: float, lw: float) -> void:
 	draw_circle(Vector2(c.x, body_top + body_h * 0.4), keyhole_r, color.darkened(0.5) if color.v > 0.5 else Color(0, 0, 0, 0.001))
 
 
+## CLE PLATE - manche en diagonale, tete ouverte en haut.
+##
+## Elle se lisait comme un MAILLON DE CHAINE : un trait avec un cercle plein a
+## chaque bout ne dit pas "cle", il dit "chaine". Une vraie cle a UNE tete, et
+## cette tete est OUVERTE - c'est l'encoche qui la rend reconnaissable, meme a
+## quatorze points.
 func _draw_wrench(c: Vector2, s: float, lw: float) -> void:
-	var half := s * 0.34
-	var a := c + Vector2(-half, half)
-	var b := c + Vector2(half, -half)
-	draw_line(a, b, color, lw * 1.6, true)
-	draw_arc(a, s * 0.16, 0, TAU, 16, color, lw, true)
-	draw_arc(b, s * 0.16, 0, TAU, 16, color, lw, true)
+	var axe := Vector2(0.62, -0.78)
+	var manche := c - axe * s * 0.40
+	var tete := c + axe * s * 0.22
+	draw_line(manche, tete, color, lw * 1.5, true)
+	# Le pommeau du manche, arrondi.
+	draw_circle(manche, lw * 0.9, color)
+	# La tete : un anneau ouvert vers l'exterieur, l'encoche tournee dans l'axe.
+	var depart := axe.angle() - deg_to_rad(50.0)
+	var fin := axe.angle() + deg_to_rad(310.0)
+	draw_arc(tete, s * 0.17, depart, fin, 20, color, lw * 1.3, true)
+
+
+## ENGRENAGE - l'icone des reglages, celle que porte la maquette.
+##
+## La "wrench" voisine n'est pas utilisable pour ca : un trait en diagonale
+## avec un rond a chaque bout se lit comme un MAILLON DE CHAINE a 14 points,
+## pas comme une cle. Elle reste pour qui en veut une, mais les boutons de
+## reglage prennent celle-ci.
+##
+## Huit dents tracees comme des segments radiaux epais plutot qu'un polygone
+## dente : a cette taille, un polygone a seize sommets devient une bouillie,
+## la ou huit traits restent lisibles.
+func _draw_gear(c: Vector2, s: float, lw: float) -> void:
+	var rayon := s * 0.26
+	draw_arc(c, rayon, 0.0, TAU, 24, color, lw, true)
+	for i in range(8):
+		var angle := i * TAU / 8.0
+		var dir := Vector2(cos(angle), sin(angle))
+		draw_line(c + dir * rayon, c + dir * (s * 0.44), color, lw * 1.1, true)
 
 
 func _draw_star(c: Vector2, s: float) -> void:

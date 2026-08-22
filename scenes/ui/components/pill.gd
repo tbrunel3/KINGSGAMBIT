@@ -11,6 +11,7 @@ extends PanelContainer
 enum Variant { DEFAULT, OUTLINE, INFO, GOLD, TOPBAR }
 
 @onready var _icon: Icon = %Icon
+@onready var _texture: TextureRect = %Texture
 @onready var _text: Label = %Text
 
 
@@ -25,7 +26,9 @@ func _ready() -> void:
 ## (alpha 0) pour heriter de la couleur de texte du variant.
 func set_data(icon_name: String, text: String, variant: Variant = Variant.DEFAULT,
 		icon_color: Color = Color(0, 0, 0, 0)) -> void:
-	_icon.visible = not icon_name.is_empty()
+	# Une pastille qui porte une IMAGE la garde : sinon le moindre
+	# rafraichissement de son texte reposerait un glyphe par-dessus.
+	_icon.visible = not icon_name.is_empty() and not _texture.visible
 	if not icon_name.is_empty():
 		_icon.icon_name = icon_name
 	_text.text = text
@@ -68,6 +71,19 @@ func set_variant(variant: Variant, icon_color: Color = Color(0, 0, 0, 0)) -> voi
 
 	_icon.set_icon(_icon.icon_name, icon_color if icon_color.a > 0 else font_color)
 	_text.add_theme_color_override("font_color", font_color)
+
+
+## Remplace le glyphe par une IMAGE - la piece d'or du jeu, par exemple.
+##
+## Un glyphe vectoriel rend bien une forme simple (cadenas, couronne, etoile) ;
+## il ne rend pas une piece frappee. La maquette pose une vraie piece dans la
+## pastille d'or de la barre du haut, et le projet l'a deja en asset : autant
+## la montrer plutot que d'en dessiner une approximation au compas.
+func set_texture(texture: Texture2D, taille: float = 16.0) -> void:
+	_icon.visible = false
+	_texture.visible = texture != null
+	_texture.texture = texture
+	_texture.custom_minimum_size = Vector2(taille, taille)
 
 
 ## Ecarte ponctuellement la couleur de texte fixee par le variant (ex. le
