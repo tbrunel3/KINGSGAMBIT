@@ -57,6 +57,9 @@ func _default_state() -> Dictionary:
 		# serie survit ainsi a la fermeture du jeu, et reprend au combat
 		# suivant celui qui a ete gagne.
 		"run": {},
+		# Dernier placement valide par le joueur, par bataille (cf.
+		# remember_formation). Clefs en chaine : c'est ce que rend le JSON.
+		"formations": {},
 	}
 
 
@@ -117,6 +120,20 @@ func _normalize() -> void:
 	for id in won:
 		clean.append(int(id))
 	_state["battles_won"] = clean
+
+	# Formations memorisees : une case relue "1.0" n'est plus une case. Une
+	# entree malformee est jetee plutot que reposee de travers - mieux vaut
+	# masquer le bouton que poser une piece a cote.
+	var formations: Dictionary = _state.get("formations", {})
+	var clean_formations: Dictionary = {}
+	for key in formations.keys():
+		var pieces: Array = []
+		for piece in formations[key]:
+			if typeof(piece) != TYPE_ARRAY or piece.size() < 3:
+				continue
+			pieces.append([String(piece[0]), int(piece[1]), int(piece[2])])
+		clean_formations[String(key)] = pieces
+	_state["formations"] = clean_formations
 
 
 func save() -> void:
@@ -228,9 +245,9 @@ func dame_level() -> int:
 
 
 ## Dames ramenees VIVANTES d'une bataille. Le pion promu quitte la caserne des
-## pions et la Dame prend sa place a la Tour de la Dame, qui apparait au
-## village a la premiere d'entre elles. Retourne le nombre reellement stocke -
-## il peut etre inferieur si le batiment est plein (cf. Balance capacity DAME).
+## pions et la Dame s'installe au Chateau Royal, dont le trone etait vide au
+## premier ecran du jeu. Retourne le nombre reellement stocke - il peut etre
+## inferieur si le chateau est plein (cf. Balance capacity DAME).
 ##
 ## A appeler APRES apply_losses : une Dame capturee pendant le combat n'est
 ## pas une survivante, elle a deja ete retiree comme le pion qu'elle etait.
@@ -505,6 +522,56 @@ func force_finish_upgrade(type: String) -> void:
 		check_upgrades()
 
 
+# ------------------------------- DERNIERE FORMATION --------------------------
+#
+#  Le placement que le joueur a valide est retenu PAR BATAILLE, et lui est
+#  repropose la fois suivante (bouton DERNIERE FORMATION de l'ecran 04).
+#
+#  Ce n'est pas l'ancien bouton AUTO sous un autre nom. AUTO rangeait l'armee a
+#  la place du joueur - l'ordinateur decidait. Celui-ci ne fait que rendre au
+#  joueur SA propre decision, celle qu'il avait prise la fois d'avant. Sans lui,
+#  une serie de trois combats demande de reposer jusqu'a onze pieces une par
+#  une, trois fois de suite, sans retour au village entre les deux.
+#
+#  Une formation est une liste de [type, x, y].
+
+func remember_formation(battle_id: int, formation: Array) -> void:
+	var formations: Dictionary = _state.get("formations", {})
+	formations[str(battle_id)] = formation.duplicate(true)
+	_state["formations"] = formations
+	save()
+
+
+func remembered_formation(battle_id: int) -> Array:
+	var formations: Dictionary = _state.get("formations", {})
+	return formations.get(str(battle_id), [])
+
+
+func has_remembered_formation(battle_id: int) -> bool:
+	return not remembered_formation(battle_id).is_empty()
+
+
+## La formation memorisee, reduite a ce que le joueur peut encore poser.
+##
+## `available` est l'effectif encore disponible {type: nombre} - celui de la
+## SERIE en cours, pas celui du village. C'est le cas courant plutot que
+## l'exception : le bouton sert surtout entre deux combats d'une meme serie, la
+## ou l'usure a deja mange une partie de l'armee.
+##
+## L'effectif est lu, jamais consomme : l'ecran de placement s'en sert encore
+## apres l'appel.
+func playable_formation(battle_id: int, available: Dictionary) -> Array:
+	var left: Dictionary = available.duplicate()
+	var playable: Array = []
+	for piece in remembered_formation(battle_id):
+		var type := String(piece[0])
+		if int(left.get(type, 0)) <= 0:
+			continue
+		left[type] = int(left[type]) - 1
+		playable.append([type, int(piece[1]), int(piece[2])])
+	return playable
+
+
 # ------------------------------- SERIE DE COMBATS ----------------------------
 #
 #  Un niveau de campagne se joue en 3 a 5 combats d'affilee (cf. CampaignRun).
@@ -647,7 +714,7 @@ func grant_dames(count: int) -> int:
 
 
 ## Offre une Dame sans passer par la promotion : le seul moyen de tester la
-## Tour de la Dame et le deploiement d'une Dame sans jouer une bataille
+## Chateau Royal et le deploiement d'une Dame sans jouer une bataille
 ## entiere jusqu'au bout du plateau.
 func dev_grant_dame() -> void:
 	grant_dames(1)

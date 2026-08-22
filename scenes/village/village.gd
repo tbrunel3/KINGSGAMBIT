@@ -2,7 +2,7 @@ extends Control
 ##
 ## VILLAGE - ecran principal : chateau, batiments, or, bouton bataille.
 ##
-## Reproduit la maquette Figma (assets/screens/01_Village.png) en positions
+## Reproduit la maquette Figma (Figma village-avec-dame, node-id 162:4) en positions
 ## absolues, avec les coordonnees exactes donnees par CLAUDE.md : chaque
 ## batiment est un label pose directement sur le fond, pas une liste
 ## generique. Aucune regle de jeu ici : tout vient de GameState/Balance.
@@ -471,8 +471,7 @@ func _make_clickable(panel: PanelContainer, action: Callable) -> void:
 
 
 ## Panneau clic-able (pas un Button) : seul moyen d'inserer une Icon
-## vectorielle (epee) a cote du texte, cf. _icon_button() dans battle.gd pour
-## le meme besoin sur l'ecran de combat.
+## vectorielle (epee) a cote du texte.
 func _build_battle_button() -> void:
 	_battle_button = PanelContainer.new()
 	var box := StyleBoxFlat.new()
@@ -662,8 +661,8 @@ func _refresh_building(type: String) -> void:
 
 	if not Game.is_building_unlocked(type):
 		panel.modulate.a = 0.6
-		# La Tour de la Dame ne s'achete ni ne se debloque au niveau de
-		# chateau : elle apparait le jour ou une Dame y entre.
+		# La Dame n'a pas de batiment a elle : elle vit au Chateau Royal, et
+		# n'y apparait que le jour ou l'une d'elles y entre.
 		var hint := UiTheme.make_label(
 			"Chateau Nv.%d requis" % Balance.unlock_castle_level(type), 11, UiTheme.TEXT_DIM)
 		hint.autowrap_mode = TextServer.AUTOWRAP_OFF

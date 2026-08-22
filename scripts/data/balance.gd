@@ -37,7 +37,7 @@ const UNIT_TYPES := [PION, CAVALIER, FOU, TOUR]
 
 ## Pieces qui composent l'armee du joueur, donc deployables en bataille. La
 ## Dame s'y ajoute : une fois promue ET ramenee vivante du champ de bataille,
-## elle est stockee a la Tour de la Dame (village) et se redeploie ensuite
+## elle rejoint le Chateau Royal, aux cotes du Roi, et se redeploie ensuite
 ## comme n'importe quelle autre piece. C'est cette liste, et non UNIT_TYPES,
 ## qu'il faut parcourir des qu'on parle de l'ARMEE plutot que des CASERNES.
 const ARMY_TYPES := [PION, CAVALIER, FOU, TOUR, DAME]
@@ -84,7 +84,7 @@ const GARRISON_MINIMUM := {PION: 3}
 ## AURA DE LA DAME - ce que rapporte une Dame RESTEE AU VILLAGE.
 ##
 ## Le Roi a perdu sa Dame : toute la campagne consiste a la retrouver. Une
-## Dame rangee a la Tour de la Dame tient la cour pendant que le Roi se bat,
+## Dame restee au Chateau Royal tient la cour pendant que le Roi se bat,
 ## et chaque bataille rapporte cette fraction d'or en plus.
 ##
 ## Le bonus se compte par Dame AU REPOS : deployer une Dame, c'est renoncer a
@@ -260,8 +260,8 @@ const UNITS := {
 ## Valeurs calculees, pas choisies au hasard : chaque budget est le poids
 ## EXACT de la formation que produisait l'ancien systeme a effectif fixe
 ## (l'ancien tableau, en tetes) avec l'alternance Pion/Cavalier/Fou/Tour de
-## _on_auto_place (poids 1/3/3/5). L'armee par defaut - celle que pose le
-## bouton AUTO et que jouent les tests - est donc EXACTEMENT inchangee ;
+## la formation de reference (poids 1/3/3/5, cf. tools/battle_driver.gd).
+## L'armee que jouent les bancs est donc EXACTEMENT inchangee ;
 ## seule une armee deliberement chargee en pieces fortes est desormais plus
 ## petite. Verifie par tools/smoke_test.gd (10/10 batailles gagnables) :
 ## revalider avec cet outil avant de retoucher ces chiffres.
@@ -282,8 +282,8 @@ const CASTLE_DATA := {
 #  bataille declare donc le niveau de jeu de l'ARMEE ENNEMIE.
 #
 #  Ces niveaux ne changent RIEN aux regles : ils retirent des precautions a
-#  l'IA, ils ne lui donnent aucun privilege. Le camp du joueur, quand il est
-#  confie au bouton AUTO, joue toujours au niveau maximum.
+#  l'IA, ils ne lui donnent aucun privilege. Ils ne valent que pour l'armee
+#  ENNEMIE - le camp du joueur n'est jamais confie a personne.
 #
 #    NOVICE   ne regarde pas la reponse adverse. Elle prend ce qui passe et
 #             se fait fourcher : la case ou elle pose sa tour est sure, elle
@@ -327,16 +327,42 @@ const AI_DEPTH := {
 ## ne fige jamais l'ecran, et qu'un plateau charge redescend proprement d'un
 ## demi-coup plutot que de faire attendre.
 ##
-## 250 ms parce que ce temps est deja paye : en combat manuel, l'ecran marque
+## 450 ms parce que ce temps est deja paye : en combat manuel, l'ecran marque
 ## une pause de `ai_think_delay` (450 ms) AVANT que l'ennemi joue, uniquement
 ## pour qu'on voie quelle piece bouge. Reflechir pendant ce temps-la ne coute
 ## rien de percu.
 ##
-## Mesure sur la derniere bataille (8x9, 11 pieces par camp, 36 coups legaux
-## a l'ouverture) : profondeur 2 = 10 ms, profondeur 3 = 139 ms, profondeur
-## 4 = 1 400 ms. La quatrieme est donc hors de portee, et c'est pour ca que
-## l'echelle s'arrete a trois.
-const AI_BUDGET_MS := 250
+## Mesure (tools/ai_probe.tscn) sur la derniere bataille - 8x9, 14 pieces par
+## camp, 30 coups legaux a l'ouverture :
+##
+##   profondeur 2 =    24 ms
+##   profondeur 3 =   195 ms
+##   profondeur 4 = 2 994 ms
+##
+## La quatrieme est hors de portee, et c'est pour ca que l'echelle s'arrete a
+## trois.
+##
+## CE QUI FAIT BOUGER CE CHIFFRE, ecrit noir sur blanc parce que ca a deja
+## coute : le cout d'un coup suit le nombre de COUPS LEGAUX, donc a la fois les
+## effectifs et les PORTEES - c'est-a-dire le niveau des pieces.
+##
+##   11 pieces/camp au niveau 6 ... 37 coups ... 139 ms   (ancien reglage)
+##   14 pieces/camp au niveau 5 ... 37 coups ... 396 ms   <- hors budget a 250
+##   14 pieces/camp au niveau 4 ... 30 coups ... 195 ms   (reglage actuel)
+##
+## Au reglage du milieu, l'IA declaree EXPERTE retombait a la profondeur 2 sans
+## que rien ne le dise, et a un endroit qui dependait de la machine. Toucher aux
+## effectifs ENNEMIS ou a leur NIVEAU, c'est donc toucher au niveau de jeu reel
+## de l'IA - relancer ai_probe apres, systematiquement.
+##
+## Le budget est reste a 450 alors que 250 suffirait aujourd'hui : c'est la
+## marge pour un telephone deux fois plus lent que la machine de mesure.
+##
+## Sur un telephone lent, la coupure peut se produire malgre tout : l'IA
+## redescend alors proprement d'un demi-coup, avec le meilleur coup de la
+## derniere profondeur ACHEVEE. C'est une degradation, pas un bug - mais c'est
+## aussi pourquoi les BANCS jouent sans limite de temps (cf. BattleAI.budget_ms).
+const AI_BUDGET_MS := 450
 
 
 ## Profondeur de recherche de ce niveau de jeu.
@@ -365,12 +391,39 @@ func ai_depth(skill: int) -> int:
 #              point de sauvegarde en cours de combat. Trop long pour un jeu
 #              qu'on ouvre sur un telephone.
 #
-#              Les trois premieres batailles se jouent donc en UN combat - on
-#              y decouvre le jeu, on ne s'y epuise pas - et la serie ne monte
-#              qu'ensuite, jusqu'a trois. A 1, toute la machinerie de serie
-#              devient invisible : le badge redit PLACEMENT, la preparation
-#              annonce un seul combat, et la victoire paie et debloque
-#              immediatement.
+#              SEULE la premiere bataille se joue en UN combat - on y decouvre
+#              le jeu - et la serie demarre des la deuxieme, jusqu'a trois a la
+#              fin. Elle arrive tot parce que le DEUXIEME combat est le seul
+#              endroit ou le joueur se retrouve derriere : l'ennemi revient au
+#              complet, lui revient avec ses survivants. A 1, toute la
+#              machinerie de serie devient invisible : le badge redit
+#              PLACEMENT, la preparation annonce un seul combat, et la victoire
+#              paie et debloque immediatement.
+#
+#  player    niveau auquel le JOUEUR est cense aborder la bataille, distinct de
+#              `level` qui est celui des pieces ennemies (cf.
+#              battle_player_level). Son avantage n'est plus fait de NOMBRE - il
+#              l'etait, et une bataille gagnee d'avance ne se joue pas - mais de
+#              QUALITE : moins de pieces, mieux equipees, face a un adversaire
+#              plus nombreux et plus fruste.
+#
+#              L'ECART ENTRE LES DEUX SE REGLE BATAILLE PAR BATAILLE, et il n'y
+#              a pas de bonne valeur unique. Mesure par tools/tune_probe.tscn,
+#              cinq formations par configuration, armee variee :
+#
+#                bataille   ecart 0   ecart 1   ecart 2
+#                    7        5/5       4/5       5/5
+#                    8        4/5       5/5       5/5
+#                    9        4/5       5/5       5/5
+#                   10        3/5       3/5       4/5
+#
+#              Les batailles 7 a 9 passent partout : leur ecart declare vaut ce
+#              qu'il vaut, inutile d'y toucher. La DIXIEME est la seule
+#              exception - elle restait a 3/5 pour un joueur PARFAIT, et un
+#              humain fait moins bien. Elle est donc la seule a creuser de deux
+#              niveaux. Rappel du biais : la sonde joue les deux camps a la
+#              recherche, ces taux sont des plafonds. C'est ce qui rend chaque perte
+#              couteuse, et ce qui donne enfin un but aux niveaux de batiment.
 
 ## PROMOTION - part du materiel engage que l'adversaire doit encore avoir
 ## debout pour qu'un pion arrive au fond devienne une DAME.
@@ -433,22 +486,22 @@ const PROMOTION_THRONE_WIDTH := 0
 const RUN_REINFORCE_WEIGHT := 2
 
 const CAMPAIGN := [
-	{"id": 1,  "name": "L Oree du Bois",     "cols": 5, "rows": 6, "reward": 90,  "level": 1, "ai": AI_NOVICE, "fights": 1, "enemies": {PION: 3}},
-	{"id": 2,  "name": "Le Gue de Pierre",   "cols": 5, "rows": 6, "reward": 120, "level": 1, "ai": AI_NOVICE, "fights": 1, "enemies": {PION: 2, FOU: 1}},
-	{"id": 3,  "name": "La Route du Sel",    "cols": 6, "rows": 7, "reward": 160, "level": 2, "ai": AI_AGUERRI, "fights": 1, "enemies": {PION: 3, CAVALIER: 1, TOUR: 1}},
-	{"id": 4,  "name": "Les Champs Brules",  "cols": 6, "rows": 7, "reward": 200, "level": 2, "ai": AI_AGUERRI, "fights": 2, "enemies": {PION: 3, FOU: 1, CAVALIER: 1}},
-	{"id": 5,  "name": "Le Pont Noir",       "cols": 6, "rows": 8, "reward": 260, "level": 3, "ai": AI_AGUERRI, "fights": 2, "enemies": {PION: 4, TOUR: 1, FOU: 1}},
-	{"id": 6,  "name": "La Carriere",        "cols": 6, "rows": 8, "reward": 320, "level": 3, "ai": AI_AGUERRI, "fights": 2, "enemies": {PION: 4, CAVALIER: 1, TOUR: 1}},
-	{"id": 7,  "name": "Les Marches Grises", "cols": 7, "rows": 8, "reward": 400, "level": 4, "ai": AI_EXPERT, "fights": 2, "enemies": {PION: 4, FOU: 1, CAVALIER: 1}},
-	{"id": 8,  "name": "Le Col du Corbeau",  "cols": 7, "rows": 8, "reward": 500, "level": 4, "ai": AI_EXPERT, "fights": 3, "enemies": {PION: 5, TOUR: 2, CAVALIER: 1}},
-	{"id": 9,  "name": "Les Ruines Hautes",  "cols": 7, "rows": 9, "reward": 640, "level": 5, "ai": AI_EXPERT, "fights": 3, "enemies": {PION: 5, FOU: 2, TOUR: 1, CAVALIER: 1}},
+	{"id": 1,  "name": "L Oree du Bois",     "cols": 5, "rows": 6, "reward": 90,  "level": 1, "player": 1, "ai": AI_NOVICE, "fights": 1, "enemies": {PION: 4}},
+	{"id": 2,  "name": "Le Gue de Pierre",   "cols": 5, "rows": 6, "reward": 120, "level": 1, "player": 1, "ai": AI_NOVICE, "fights": 2, "enemies": {PION: 3, FOU: 1}},
+	{"id": 3,  "name": "La Route du Sel",    "cols": 6, "rows": 7, "reward": 160, "level": 2, "player": 2, "ai": AI_AGUERRI, "fights": 2, "enemies": {PION: 4, CAVALIER: 1, TOUR: 1}},
+	{"id": 4,  "name": "Les Champs Brules",  "cols": 6, "rows": 7, "reward": 200, "level": 2, "player": 2, "ai": AI_AGUERRI, "fights": 2, "enemies": {PION: 5, FOU: 1, CAVALIER: 1}},
+	{"id": 5,  "name": "Le Pont Noir",       "cols": 6, "rows": 8, "reward": 260, "level": 2, "player": 3, "ai": AI_AGUERRI, "fights": 2, "enemies": {PION: 6, TOUR: 1, FOU: 1}},
+	{"id": 6,  "name": "La Carriere",        "cols": 6, "rows": 8, "reward": 320, "level": 3, "player": 3, "ai": AI_AGUERRI, "fights": 2, "enemies": {PION: 6, CAVALIER: 1, TOUR: 1}},
+	{"id": 7,  "name": "Les Marches Grises", "cols": 7, "rows": 8, "reward": 400, "level": 3, "player": 4, "ai": AI_EXPERT, "fights": 2, "enemies": {PION: 7, FOU: 1, CAVALIER: 1, TOUR: 1}},
+	{"id": 8,  "name": "Le Col du Corbeau",  "cols": 7, "rows": 8, "reward": 500, "level": 4, "player": 4, "ai": AI_EXPERT, "fights": 3, "enemies": {PION: 8, TOUR: 2, CAVALIER: 1}},
+	{"id": 9,  "name": "Les Ruines Hautes",  "cols": 7, "rows": 9, "reward": 640, "level": 4, "player": 5, "ai": AI_EXPERT, "fights": 3, "enemies": {PION: 8, FOU: 2, TOUR: 1, CAVALIER: 1}},
 	# "dame" : Dames offertes a la PREMIERE victoire seulement (cf.
 	# battle.gd > _show_result). Le Roi a perdu sa Dame au premier ecran du
 	# jeu ; il la retrouve au bout de sa campagne, meme si aucun de ses pions
 	# n'a jamais traverse un plateau. Sans ce filet, la moitie du jeu - Tour
 	# de la Dame, aura, ameliorations - reste eteinte pour la plupart des
 	# joueurs : une promotion reussie reste un exploit rare.
-	{"id": 10, "name": "La Tour de la Dame", "cols": 8, "rows": 9, "reward": 900, "level": 6, "ai": AI_EXPERT, "dame": 1, "fights": 3, "enemies": {PION: 6, FOU: 2, TOUR: 2, CAVALIER: 1}},
+	{"id": 10, "name": "La Tour de la Dame", "cols": 8, "rows": 9, "reward": 900, "level": 4, "player": 6, "ai": AI_EXPERT, "dame": 1, "fights": 3, "enemies": {PION: 9, FOU: 2, TOUR: 2, CAVALIER: 1}},
 ]
 
 # ------------------------------- MISSIONS ------------------------------------
@@ -478,7 +531,7 @@ const CAMPAIGN := [
 #    flawless_wins    victoires sans perdre une seule piece
 #    captures         pieces ennemies capturees, toutes batailles confondues
 #    promotions       pions menes au bout du plateau
-#    dames            Dames actuellement au repos a la Tour de la Dame
+#    dames            Dames actuellement au repos au Chateau Royal
 #    castle_level     niveau du Chateau Royal
 #    campaign         1 quand la campagne est terminee, 0 sinon
 
@@ -542,25 +595,19 @@ const COMBAT := {
 	# de manoeuvrer longuement sans prendre la moindre piece.
 	"stalemate_rounds": 8,
 	"stalemate_rounds_manual": 20,
-	# Chrono de blocage de la resolution AUTOMATIQUE uniquement : quelle que
-	# soit la taille de l'armee, 30 secondes reelles (a vitesse x1) sans la
-	# moindre prise suffisent a trancher. Ce plafond n'a aucun sens quand
-	# c'est un humain qui joue - il reflechit - donc il ne s'applique pas en
-	# mode manuel (cf. BattleEngine.auto_mode).
+	# Plafond des BANCS, ou les deux camps sont joues par l'IA : quelle que
+	# soit la taille de l'armee, 30 secondes de jeu simule sans la moindre
+	# prise suffisent a trancher. Ce plafond n'a aucun sens quand c'est un
+	# humain qui joue - il reflechit - donc il ne s'applique pas en partie
+	# (cf. BattleEngine.auto_mode).
 	"stalemate_seconds_cap": 30,
 	"max_activations": 1200,   # garde-fou absolu
 }
-
-const SPEEDS := [1.0, 2.0, 4.0]
 
 # ------------------------------- ACCESSEURS ----------------------------------
 #
 #  Passer par ces fonctions plutot que de lire les dictionnaires directement :
 #  les niveaux y sont bornes une seule fois, au meme endroit.
-
-func unit_data(type: String) -> Dictionary:
-	return UNITS.get(type, {})
-
 
 func unit_name(type: String) -> String:
 	if type == CASTLE:
@@ -720,6 +767,18 @@ func battle_dame_reward(battle: Dictionary) -> int:
 ## distraite par oubli.
 func battle_ai_skill(battle: Dictionary) -> int:
 	return int(battle.get("ai", AI_EXPERT))
+
+
+## Niveau auquel le joueur est CENSE aborder cette bataille, pour les bancs.
+##
+## Distinct de "level", qui est celui des pieces ennemies. Les deux etaient
+## confondus tant que l'avantage du joueur etait fait de NOMBRE ; ils se
+## separent des lors qu'il est fait de QUALITE - moins de pieces, mieux
+## equipees, face a un adversaire plus nombreux et plus fruste.
+##
+## Une bataille qui ne declare rien suppose les deux camps au meme niveau.
+func battle_player_level(battle: Dictionary) -> int:
+	return int(battle.get("player", battle.get("level", 1)))
 
 
 func battle_count() -> int:

@@ -67,17 +67,6 @@ func open(title: String = "", context: Context = Context.GOLD, header_icon: Stri
 		_header_icon.set_icon(header_icon, _header_icon.color)
 	visible = true
 
-
-## Image de fond optionnelle derriere le contenu, avec un voile sombre pour
-## garder le texte lisible - cf. Victory-Modal/Defeat-Modal des captures
-## Figma. Sans appel, la modale garde son fond plat habituel.
-func set_background(texture: Texture2D, overlay_alpha: float = 0.35) -> void:
-	_background_image.texture = texture
-	_background_image.visible = texture != null
-	_background_overlay.color.a = overlay_alpha
-	_background_overlay.visible = texture != null
-
-
 func set_context(context: Context) -> void:
 	var color := UiTheme.GOLD
 	# Bordure plus sourde que le titre/icone en contexte or - cf. captures

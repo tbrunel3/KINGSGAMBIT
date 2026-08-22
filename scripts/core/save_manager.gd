@@ -66,18 +66,8 @@ func _sync_web_fs() -> void:
 		}
 	""", true)
 
-
-func has_save() -> bool:
-	return FileAccess.file_exists(SAVE_PATH)
-
-
 ## Efface la sauvegarde. Utilise par le bouton de reset des tests.
 func erase() -> void:
 	if FileAccess.file_exists(SAVE_PATH):
 		DirAccess.remove_absolute(ProjectSettings.globalize_path(SAVE_PATH))
 		_sync_web_fs()
-
-
-## Chemin reel du fichier, affiche dans l'ecran de debug.
-func absolute_path() -> String:
-	return ProjectSettings.globalize_path(SAVE_PATH)

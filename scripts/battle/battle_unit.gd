@@ -107,7 +107,3 @@ func promotion_row(rows: int) -> int:
 
 func is_enemy_of(other: BattleUnit) -> bool:
 	return team != other.team
-
-
-func display_name() -> String:
-	return "%s Nv.%d" % [Balance.unit_name(type), level]

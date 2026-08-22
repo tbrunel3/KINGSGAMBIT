@@ -4,7 +4,7 @@ extends Control
 ##
 ## Instancie chaque composant reutilisable (boutons via variations de theme,
 ## Modal/Card/Pill/OrnateDivider/SelectionChip) afin de comparer le rendu a
-## assets/screens/12-composants.png. Outil de developpement, pas un ecran du
+## la planche Figma 12-composants, node-id 2:1224. Outil de developpement, pas un ecran du
 ## jeu.
 ##
 ## Lancement :

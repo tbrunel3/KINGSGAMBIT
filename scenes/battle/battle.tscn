@@ -1,10 +1,11 @@
-[gd_scene load_steps=6 format=3]
+[gd_scene load_steps=7 format=3]
 
 [ext_resource type="Script" path="res://scenes/battle/battle.gd" id="1_battle"]
 [ext_resource type="Script" path="res://scripts/ui/safe_area.gd" id="2_safe"]
 [ext_resource type="Script" path="res://scripts/battle/grid_view.gd" id="3_grid"]
 [ext_resource type="Texture2D" path="res://assets/backgrounds/battlefield_background.png" id="4_bg"]
 [ext_resource type="Script" path="res://scenes/ui/components/edge_fades.gd" id="5_fades"]
+[ext_resource type="Script" path="res://scenes/ui/components/royal_plate.gd" id="6_plate"]
 
 [node name="Battle" type="Control"]
 layout_mode = 3
@@ -67,12 +68,13 @@ offset_top = 100.0
 offset_bottom = -200.0
 script = ExtResource("3_grid")
 
-[node name="TourBadge" type="PanelContainer" parent="Safe/Overlay"]
+[node name="TourBadge" type="MarginContainer" parent="Safe/Overlay"]
 layout_mode = 0
 offset_left = 12.0
 offset_top = 12.0
-offset_right = 181.0
-offset_bottom = 47.0
+offset_right = 232.0
+offset_bottom = 56.0
+script = ExtResource("6_plate")
 
 [node name="TourRow" type="HBoxContainer" parent="Safe/Overlay/TourBadge"]
 layout_mode = 2
@@ -86,6 +88,14 @@ text = "PHASE DE"
 layout_mode = 2
 text = "PLACEMENT"
 
+[node name="StateSeparator" type="Label" parent="Safe/Overlay/TourBadge/TourRow"]
+layout_mode = 2
+text = "·"
+
+[node name="StateLabel" type="Label" parent="Safe/Overlay/TourBadge/TourRow"]
+layout_mode = 2
+text = "À TOI DE JOUER"
+
 [node name="QuitButton" type="Button" parent="Safe/Overlay"]
 layout_mode = 1
 anchors_preset = -1
@@ -98,12 +108,13 @@ grow_horizontal = 0
 theme_type_variation = &"DangerButton"
 text = "X"
 
-[node name="StatsHud" type="PanelContainer" parent="Safe/Overlay"]
+[node name="StatsHud" type="MarginContainer" parent="Safe/Overlay"]
 layout_mode = 0
 offset_left = 333.0
 offset_top = 330.0
 offset_right = 381.0
 offset_bottom = 390.0
+script = ExtResource("6_plate")
 
 [node name="StatsBox" type="HBoxContainer" parent="Safe/Overlay/StatsHud"]
 layout_mode = 2

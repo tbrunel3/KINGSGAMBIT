@@ -12,6 +12,8 @@ extends Node
 ## Les fichiers atterrissent dans tools/screenshots/ (ignore par Git).
 ##
 
+const Driver := preload("res://tools/battle_driver.gd")
+
 const OUTPUT_DIR := "res://tools/screenshots"
 
 const SHOTS := [
@@ -111,7 +113,7 @@ func _capture_dame_tower() -> void:
 	add_child(battle)
 	for i in range(4):
 		await RenderingServer.frame_post_draw
-	battle._on_auto_place()
+	Driver.auto_place(battle)
 	for i in range(4):
 		await RenderingServer.frame_post_draw
 	_save(battle, "1c_dame_au_placement.png")
@@ -146,14 +148,13 @@ func _capture_defeat() -> void:
 	for i in range(4):
 		await RenderingServer.frame_post_draw
 
-	# Une seule piece plutot que _on_auto_place() : l'IA gagne meme en sous-nombre
+	# Une seule piece plutot que la formation complete : l'IA gagne meme en sous-nombre
 	# (cf. son propre chantier de reglage), il faut donc forcer un ecart net
 	# pour obtenir une defaite fiable ici.
 	var only_cell: Vector2i = battle._engine.grid.free_player_cells()[0]
 	battle._on_cell_clicked(only_cell)
-	battle._speed = 4.0
 	battle._start_combat()
-	battle._on_auto_pressed()
+	Driver.resolve(battle)
 
 	var guard := 0
 	while battle._phase != 2 and guard < 6000:
@@ -241,7 +242,7 @@ func _capture_combat() -> void:
 		await RenderingServer.frame_post_draw
 
 	# Armee posee : zones de deploiement, chips et charge du chateau.
-	battle._on_auto_place()
+	Driver.auto_place(battle)
 	for i in range(4):
 		await RenderingServer.frame_post_draw
 	_save(battle, "5_placement.png")
@@ -258,7 +259,6 @@ func _capture_combat() -> void:
 	for i in range(4):
 		await RenderingServer.frame_post_draw
 
-	battle._speed = 4.0
 	battle._start_combat()
 	for i in range(4):
 		await RenderingServer.frame_post_draw
@@ -284,11 +284,15 @@ func _capture_combat() -> void:
 	for i in range(4):
 		await RenderingServer.frame_post_draw
 
-	# Le reste de la bataille tourne en resolution automatique.
-	battle._on_auto_pressed()
-	for i in range(40):
+	# Quelques coups joues A L'ECRAN, avec leurs animations, pour photographier
+	# un combat en cours - puis on termine la bataille par le chemin rapide.
+	# Le jeu, lui, n'offre plus aucun moyen de se jouer tout seul : c'est le
+	# pilote de test qui tient les deux camps.
+	await Driver.resolve(battle, true, 8)
+	for i in range(4):
 		await RenderingServer.frame_post_draw
 	_save(battle, "6b_combat.png")
+	Driver.resolve(battle)
 
 	var guard := 0
 	while battle._phase != 2 and guard < 6000:

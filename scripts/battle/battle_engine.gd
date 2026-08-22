@@ -11,8 +11,8 @@ extends RefCounted
 ##   step()                 l'IA choisit ET joue le coup du camp courant
 ##
 ## Les deux retournent la liste des evenements qui viennent de se produire ;
-## c'est la vue qui les rejoue, plus ou moins vite. La vitesse d'affichage
-## (x1, x2, x4) ne change donc RIEN au resultat.
+## c'est la vue qui les rejoue. Le coup est deja resolu quand l'animation
+## commence : celle-ci ne decide de rien, elle montre.
 ##
 ## Evenements produits :
 ##   {"type": "move",      "unit": id, "from": Vector2i, "to": Vector2i}
@@ -42,21 +42,22 @@ var turn: int = 1
 ## Camp qui joue le prochain coup. Le joueur ouvre toujours la bataille.
 var current_team: int = TEAM_PLAYER
 
-## Niveau de jeu de l'armee ENNEMIE (cf. Balance.AI_NOVICE). Le camp du
-## joueur, quand l'IA le joue a sa place (bouton AUTO, bancs de test), joue
-## toujours au maximum : la resolution automatique doit montrer ce que le
-## placement vaut, pas ce qu'une IA distraite en ferait.
+## Niveau de jeu de l'armee ENNEMIE (cf. Balance.AI_NOVICE). C'est le seul
+## niveau qui compte en partie : le camp du joueur, lui, est joue par le
+## joueur.
 var enemy_skill: int = Balance.AI_EXPERT
 
-## Niveau de jeu du camp du JOUEUR quand l'IA le joue a sa place. Reste au
-## maximum par defaut - c'est ce que doit montrer le bouton AUTO. Le banc de
-## comparaison des IA (tools/ai_bench.tscn) est le seul a l'abaisser, pour
-## faire jouer deux niveaux l'un contre l'autre.
+## Niveau de jeu du camp du JOUEUR quand l'IA le joue a sa place - ce qui
+## n'arrive plus QUE dans les bancs (tools/). Au maximum par defaut : un banc
+## qui mesure une bataille doit montrer ce que le placement vaut, pas ce qu'une
+## IA distraite en ferait. Seul tools/ai_bench.tscn l'abaisse, pour faire jouer
+## deux niveaux l'un contre l'autre.
 var player_skill: int = Balance.AI_EXPERT
 
-## Vrai quand les DEUX camps sont joues par l'IA : bouton AUTO du combat et
-## banc de test. En mode manuel, certains garde-fous anti-blocage calibres sur
-## des secondes d'animation n'ont plus de sens (cf. _stalemate_limit).
+## Vrai quand les DEUX camps sont joues par l'IA - c'est-a-dire dans les BANCS,
+## et nulle part ailleurs : le jeu n'offre plus aucun moyen de se jouer tout
+## seul. En partie, certains garde-fous anti-blocage calibres sur des secondes
+## d'animation n'ont plus de sens (cf. _stalemate_limit).
 var auto_mode: bool = true
 
 var _next_id: int = 1
@@ -145,16 +146,6 @@ func promoted_survivors(team: int) -> int:
 			count += 1
 	return count
 
-
-## Pieces d'un camp encore debout, comptees par type d'origine : c'est l'armee
-## qui rentre au village.
-func survivors(team: int) -> Dictionary:
-	var alive: Dictionary = {}
-	for unit in living(team):
-		alive[unit.origin_type] = int(alive.get(unit.origin_type, 0)) + 1
-	return alive
-
-
 # ------------------------------- BOUCLE --------------------------------------
 
 ## Cases ou cette piece peut se rendre maintenant. C'est ce que la vue
@@ -163,6 +154,28 @@ func legal_moves(unit: BattleUnit) -> Array:
 	if finished or unit == null or not unit.is_alive() or unit.team != current_team:
 		return []
 	return MovementRules.legal_moves(unit, grid)
+
+
+## Cases des pieces de `team` que l'adversaire peut capturer a son prochain
+## coup. La vue en fait un lisere rouge.
+##
+## C'est exactement la question que se pose l'IA avant de poser une piece
+## quelque part (MovementRules.is_cell_threatened, dont elle vit depuis
+## toujours) : on ne fait que la rendre lisible au joueur.
+##
+## Pourquoi ca compte. Le jeu n'a NI POINTS DE VIE NI DEGATS - une piece est sur
+## le plateau, ou capturee, definitivement. Toute la tension d'un tel jeu tient
+## a voir la piece qui attaque : aux echecs on ne ressent pas le danger parce
+## que la position est mauvaise, mais parce qu'on voit l'attaque arriver. Sans
+## ce signal, le danger existait sans jamais se montrer, et le joueur decouvrait
+## ses pertes apres coup.
+func threatened_cells(team: int) -> Array:
+	var foe := TEAM_ENEMY if team == TEAM_PLAYER else TEAM_PLAYER
+	var cells: Array = []
+	for unit in living(team):
+		if MovementRules.is_cell_threatened(unit.cell, foe, grid, units):
+			cells.append(unit.cell)
+	return cells
 
 
 ## Vrai si ce camp a au moins un coup legal. Un camp qui n'en a aucun passe
@@ -292,13 +305,12 @@ func _end_of_activation(events: Array) -> void:
 ## Seuil d'enlisement exprime en activations, deduit du nombre de pieces
 ## encore en jeu : un tour complet coute une activation par piece vivante.
 ##
-## En resolution AUTOMATIQUE, le seuil est aussi plafonne a
-## Balance.COMBAT.stalemate_seconds_cap secondes reelles a vitesse x1 : une
-## bataille qu'on regarde se jouer seule ne doit jamais faire attendre le
-## joueur plus longtemps que ca avant d'etre tranchee (cf. le "chrono" affiche
-## cote vue). En mode MANUEL ce plafond ne s'applique pas - un humain a le
-## droit de reflechir - et le seuil en tours est bien plus large, pour laisser
-## la place aux manoeuvres sans prise.
+## Quand les deux camps sont joues par l'IA - donc dans les BANCS - le seuil
+## est aussi plafonne a Balance.COMBAT.stalemate_seconds_cap : une simulation
+## ne doit pas tourner indefiniment sur une position bloquee. En partie ce
+## plafond ne s'applique pas - un humain a le droit de reflechir - et le seuil
+## en tours est bien plus large, pour laisser la place aux manoeuvres sans
+## prise.
 func _stalemate_limit() -> int:
 	var alive := living(TEAM_PLAYER).size() + living(TEAM_ENEMY).size()
 	var rounds := int(Balance.COMBAT["stalemate_rounds" if auto_mode else "stalemate_rounds_manual"])
@@ -319,18 +331,12 @@ func stalemate_ratio() -> float:
 
 
 ## Coups restants avant que le moteur tranche au materiel si aucune prise ne
-## survient d'ici la. C'est le compte affiche en mode manuel, ou parler en
-## secondes n'aurait aucun sens : c'est le joueur qui tient l'horloge.
+## survient d'ici la. C'est le compte affiche par le badge de blocage : on
+## parle au joueur en COUPS, parce que c'est lui qui tient l'horloge et qu'une
+## seconde ne veut rien dire tant qu'il reflechit.
 func stalemate_moves_remaining() -> int:
 	return maxi(0, _stalemate_limit() - _idle_activations)
 
-
-## Temps restant, en secondes de jeu a vitesse x1, avant que le moteur tranche
-## au materiel si aucune prise ne survient d'ici la. La vue divise par la
-## vitesse choisie pour l'affichage : le seuil reel, lui, ne bouge pas.
-func stalemate_seconds_remaining() -> float:
-	var remaining := _stalemate_limit() - _idle_activations
-	return maxf(0.0, float(remaining) * float(Balance.COMBAT["step_delay"]))
 
 
 ## Departage a la valeur totale des pieces restantes.

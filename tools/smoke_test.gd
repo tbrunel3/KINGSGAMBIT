@@ -13,18 +13,53 @@ extends Node
 var _failures: int = 0
 var _promotions_seen: int = 0
 
+## Sections qui sont allees jusqu'au bout (cf. _done).
+var _finished: Array = []
+
+## Ce que le banc DOIT avoir execute. Une section absente de _finished a ete
+## interrompue en cours de route.
+const SECTIONS := [
+	"donnees", "missions", "sauvegarde", "formation", "menaces", "pertes",
+	"regles", "serie", "batailles", "ecrans", "boucle",
+]
+
+
+## Note qu'une section est allee jusqu'au bout. A appeler en DERNIERE
+## instruction de chaque _check_*.
+##
+## Une erreur d'execution GDScript (appel d'une fonction inexistante, index
+## hors bornes...) ne fait pas planter le jeu : elle interrompt la fonction
+## fautive et rend la main a l'appelant, qui continue comme si de rien n'etait.
+## Sans ce garde-fou, une verification qui plante etait donc simplement SAUTEE
+## et le banc concluait "tout est passe" avec un code de sortie 0 - un banc qui
+## ment est pire que pas de banc du tout.
+##
+## La sentinelle doit etre DANS la section : un appel enveloppant ne suffit pas,
+## il reprend la main apres l'erreur et noterait la section comme terminee.
+func _done(name: String) -> void:
+	_finished.append(name)
+
 
 func _ready() -> void:
+	# Banc : recherche sans limite de temps, donc reproductible (cf.
+	# BattleAI.budget_ms).
+	BattleAI.budget_ms = 0
 	print("=== KING'S GAMBIT - banc de test ===")
 	_check_balance()
 	_check_missions()
 	_check_save()
+	_check_formation()
+	_check_threats()
 	_check_losses()
 	_check_rules()
 	_check_run()
 	_play_all_battles()
 	await _check_scenes()
 	_check_campaign_loop()
+
+	for name in SECTIONS:
+		if not _finished.has(name):
+			_fail("la section '%s' ne s'est pas terminee - erreur de script en cours de route" % name)
 
 	print("")
 	if _failures == 0:
@@ -165,6 +200,7 @@ func _check_run() -> void:
 
 	Game.reset_progress()
 	print("  usure, renforts, nul, Dame de serie, sauvegarde, cloture : OK")
+	_done("serie")
 
 
 func _tours_at_start() -> int:
@@ -265,6 +301,7 @@ func _check_balance() -> void:
 
 	print("  %d pieces sur %d niveaux, %d batailles verifiees" % [
 		Balance.UNIT_TYPES.size(), levels, Balance.battle_count()])
+	_done("donnees")
 
 
 # ------------------------------- MISSIONS ------------------------------------
@@ -338,6 +375,7 @@ func _check_missions() -> void:
 		_fail("la remise a zero n'efface pas les missions reclamees")
 
 	print("  chaine de deverrouillage, progression, reclamation : OK")
+	_done("missions")
 
 
 # ------------------------------- SAUVEGARDE ----------------------------------
@@ -361,7 +399,7 @@ func _check_save() -> void:
 	Game.add_gold(50000)
 
 	# La campagne doit offrir une Dame au moins une fois : sans ca, tout le
-	# systeme de la Tour de la Dame peut rester eteint une partie entiere.
+	# systeme du Chateau Royal peut rester eteint une partie entiere.
 	var dames_offered := 0
 	for battle in Balance.CAMPAIGN:
 		dames_offered += Balance.battle_dame_reward(battle)
@@ -396,6 +434,149 @@ func _check_save() -> void:
 
 	Game.reset_progress()
 	print("  or, recrutement, amelioration : OK")
+	_done("sauvegarde")
+
+
+# ------------------------------- FORMATION MEMORISEE -------------------------
+
+## DERNIERE FORMATION - le placement que le joueur a valide est retenu par
+## bataille, et lui est repropose la fois suivante.
+##
+## Remplace l'ancien bouton AUTO du placement, qui rangeait l'armee a la place
+## du joueur : ici c'est SA decision qu'on lui rend, pas celle de l'ordinateur.
+## Sans ce filet, une serie de trois combats demande de reposer onze pieces une
+## par une, trois fois de suite.
+func _check_formation() -> void:
+	print("\n[2b] Formation memorisee")
+	Game.reset_progress()
+
+	if Game.has_remembered_formation(1):
+		_fail("une formation est memorisee alors qu'aucune bataille n'a ete jouee")
+	if not Game.remembered_formation(1).is_empty():
+		_fail("la formation d'une bataille jamais jouee doit etre vide")
+
+	var formation := [
+		[Balance.PION, 1, 4],
+		[Balance.PION, 2, 4],
+		[Balance.CAVALIER, 0, 5],
+	]
+	Game.remember_formation(1, formation)
+
+	if not Game.has_remembered_formation(1):
+		_fail("la formation validee n'a pas ete retenue")
+
+	var read: Array = Game.remembered_formation(1)
+	if read.size() != 3:
+		_fail("la formation relue compte %d pieces au lieu de 3" % read.size())
+	elif String(read[2][0]) != Balance.CAVALIER or int(read[2][1]) != 0 or int(read[2][2]) != 5:
+		_fail("la formation relue ne correspond pas a celle qui a ete posee")
+
+	# Chaque bataille garde la sienne : revenir sur un terrain ne doit pas y
+	# reposer l'armee d'un autre.
+	if Game.has_remembered_formation(2):
+		_fail("la formation de la bataille 1 fuit sur la bataille 2")
+
+	# Aller-retour par le disque. Le JSON rend TOUT flottant : une case relue
+	# "1.0" n'est pas une case, et la formation se reposerait de travers ou pas
+	# du tout. C'est le meme piege que pour l'or et les niveaux (cf.
+	# GameState._normalize).
+	Game._load()
+	var stored: Array = Game.remembered_formation(1)
+	if stored.size() != 3:
+		_fail("la formation ne survit pas a la relecture du disque (%d pieces)" % stored.size())
+	elif typeof(stored[0][1]) != TYPE_INT or typeof(stored[0][2]) != TYPE_INT:
+		_fail("les coordonnees relues ne sont pas des entiers mais des %s" % [
+			type_string(typeof(stored[0][1]))])
+	elif String(stored[0][0]) != Balance.PION or int(stored[0][1]) != 1 or int(stored[0][2]) != 4:
+		_fail("la formation relue depuis le disque ne correspond pas a celle qui a ete posee")
+
+	# CE QUI RESTE JOUABLE. Une formation memorisee vaut pour une armee qui a
+	# fondu depuis - c'est meme le cas courant, puisque le bouton sert surtout
+	# entre deux combats d'une serie, ou l'usure a deja mordu. Les pieces qu'on
+	# n'a plus sont sautees, les autres gardent leur case.
+	Game.remember_formation(4, [
+		[Balance.PION, 0, 5],
+		[Balance.TOUR, 1, 5],
+		[Balance.PION, 2, 5],
+		[Balance.PION, 3, 5],
+	])
+
+	var available := {Balance.PION: 2, Balance.TOUR: 1}
+	var playable: Array = Game.playable_formation(4, available)
+	if playable.size() != 3:
+		_fail("il reste 2 pions et 1 tour : la formation jouable devrait compter 3 pieces, pas %d" % playable.size())
+	elif String(playable[2][0]) != Balance.PION or int(playable[2][1]) != 2:
+		_fail("les pieces gardees doivent conserver leur case d'origine, dans l'ordre")
+
+	# L'effectif passe en argument ne doit pas etre consomme au passage : c'est
+	# celui de l'ecran de placement, qui s'en sert encore apres.
+	if int(available.get(Balance.PION, 0)) != 2:
+		_fail("playable_formation a vide l'effectif qu'on lui a passe en lecture")
+
+	# Un type entierement disparu est saute sans emporter le reste.
+	var without_tour: Array = Game.playable_formation(4, {Balance.PION: 4})
+	if without_tour.size() != 3:
+		_fail("sans tour, les 3 pions de la formation devraient rester (%d gardes)" % without_tour.size())
+	for piece in without_tour:
+		if String(piece[0]) == Balance.TOUR:
+			_fail("une tour est reposee alors que le joueur n'en a plus")
+
+	if not Game.playable_formation(4, {}).is_empty():
+		_fail("sans une seule piece disponible, rien ne doit etre repose")
+
+	Game.reset_progress()
+	if Game.has_remembered_formation(1):
+		_fail("la remise a zero laisse une formation derriere elle")
+
+	print("  memorisation, relecture, cloisonnement, effectif fondu : OK")
+	_done("formation")
+
+
+# ------------------------------- MENACES -------------------------------------
+
+## LE LISERE DE MENACE. Dans un jeu sans points de vie, ou une capture est une
+## mort definitive, toute la tension tient a VOIR la piece qui attaque. Le jeu
+## allumait les coups du joueur et ne lui disait jamais ce que l'adversaire
+## pouvait prendre au coup suivant : le danger existait sans etre visible.
+##
+## Le moteur sait deja repondre (MovementRules.is_cell_threatened, dont vit
+## l'IA depuis toujours) ; il ne le disait simplement a personne.
+func _check_threats() -> void:
+	print("\n[2c] Pieces menacees")
+
+	# Plateau nu, pieces posees a la main : le seul moyen d'avoir une menace
+	# dont on connait la reponse a l'avance.
+	var engine := BattleEngine.new(5, 6)
+
+	# Tour ennemie en (0,0), portee 2 en ligne : elle tient (0,1) et (0,2).
+	engine.add_unit(Balance.TOUR, 1, BattleUnit.TEAM_ENEMY, Vector2i(0, 0))
+	var expose := engine.add_unit(Balance.PION, 1, BattleUnit.TEAM_PLAYER, Vector2i(0, 2))
+	var abri := engine.add_unit(Balance.PION, 1, BattleUnit.TEAM_PLAYER, Vector2i(4, 5))
+
+	var menacees: Array = engine.threatened_cells(BattleUnit.TEAM_PLAYER)
+
+	if not menacees.has(expose.cell):
+		_fail("le pion sous la tour ennemie n'est pas signale comme menace")
+	if menacees.has(abri.cell):
+		_fail("un pion hors de portee est signale comme menace")
+	if menacees.size() != 1:
+		_fail("%d cases menacees au lieu d'une seule" % menacees.size())
+
+	# Une piece morte ne menace plus rien.
+	engine.remove_unit(engine.grid.unit_at(Vector2i(0, 0)))
+	if not engine.threatened_cells(BattleUnit.TEAM_PLAYER).is_empty():
+		_fail("la tour capturee menace encore")
+
+	# Et le camp adverse se lit de la meme facon : c'est la meme fonction, ce
+	# qui evite d'en ecrire une deuxieme le jour ou on voudra l'afficher.
+	var solo := BattleEngine.new(5, 6)
+	solo.add_unit(Balance.TOUR, 1, BattleUnit.TEAM_PLAYER, Vector2i(2, 5))
+	var proie := solo.add_unit(Balance.PION, 1, BattleUnit.TEAM_ENEMY, Vector2i(2, 3))
+	if not solo.threatened_cells(BattleUnit.TEAM_ENEMY).has(proie.cell):
+		_fail("les pieces ennemies menacees ne se lisent pas avec la meme fonction")
+
+	print("  detection des pieces prenables au coup suivant : OK")
+	_done("menaces")
 
 
 # ------------------------------- PERTES --------------------------------------
@@ -434,8 +615,8 @@ func _check_losses() -> void:
 		_fail("armee vide et or nul : la partie est sans issue")
 
 	# Une Dame ramenee vivante : le pion promu quitte la caserne, la Dame
-	# s'installe a la Tour de la Dame, qui apparait au village a cette
-	# occasion. C'est la seule facon d'en obtenir une.
+	# s'installe au Chateau Royal, qui s'allume au village a cette occasion.
+	# C'est la seule facon d'en obtenir une.
 	Game.reset_progress()
 	if Game.dames_owned() != 0:
 		_fail("une Dame est deja au chateau avant la premiere promotion")
@@ -503,6 +684,7 @@ func _check_losses() -> void:
 
 	Game.reset_progress()
 	print("  retrait des pertes, plancher a zero, garnison minimale, Dames : OK")
+	_done("pertes")
 
 
 # ------------------------------- REGLES DE PIECES ----------------------------
@@ -597,6 +779,7 @@ func _check_rules() -> void:
 		_fail("un pion qui n'a rien pris ne devrait pas etre fait Dame : %s" % lesser)
 
 	print("  pion, tour, sacre differe et conditions de la couronne : OK")
+	_done("regles")
 
 
 # ------------------------------- BATAILLES -----------------------------------
@@ -606,15 +789,11 @@ func _play_all_battles() -> void:
 	print("  Joueur suppose au niveau de la bataille qu'il affronte.")
 	print("")
 
-	# Deux compositions par bataille : une armee variee et une armee de pions.
-	# Exiger qu'une seule composition gagne partout reviendrait a nier l'interet
-	# du choix d'armee - contre des pions, ce sont les pions qui repondent.
 	var wins := 0
 	for battle in Balance.CAMPAIGN:
-		var level := int(battle["level"])
-		var varied := _play_battle(battle, level, level, "variee")
-		var massed := _play_battle(battle, level, level, "pions") if not varied else false
-		if varied or massed:
+		# Le niveau du JOUEUR, qui n'est plus celui de l'ennemi : son avantage
+		# n'est plus fait de nombre mais de qualite (cf. battle_player_level).
+		if _is_winnable(battle, Balance.battle_player_level(battle)):
 			wins += 1
 		else:
 			_fail("bataille %d : aucune composition ne passe" % int(battle["id"]))
@@ -626,6 +805,35 @@ func _play_all_battles() -> void:
 	print("  Promotions observees : %d" % _promotions_seen)
 	if wins < Balance.battle_count():
 		_fail("la campagne n'est pas franchissable en jouant normalement")
+	_done("batailles")
+
+
+## "GAGNABLE" veut dire : le joueur peut TROUVER une facon de gagner.
+##
+## Deux compositions - une armee variee, une armee de pions - et jusqu'a
+## FORMATIONS rangements differents de chacune. Exiger qu'une composition unique
+## gagne partout nierait l'interet du choix d'armee : contre des pions, ce sont
+## les pions qui repondent.
+##
+## POURQUOI PLUSIEURS RANGEMENTS. Le combat est deterministe, d'ou l'idee qu'un
+## seul essai suffisait a prouver un resultat. C'est faux, et ca s'est vu : la
+## bataille 10 basculait de VICTOIRE a defaite selon le rangement, alors que
+## l'armee, la charge et l'adversaire ne bougeaient pas d'un pouce. Un coup
+## different au troisieme tour envoie la partie ailleurs. Juger une bataille sur
+## UN tirage, c'est tirer a pile ou face et appeler ca une mesure.
+##
+## Le premier rangement est essaye d'abord et seul : tant qu'il gagne - le cas
+## des neuf premieres batailles - le banc ne paie rien de plus. On ne va
+## chercher les variantes que la ou la reponse n'est pas franche.
+const FORMATIONS := 5
+
+
+func _is_winnable(battle: Dictionary, level: int) -> bool:
+	for variante in range(FORMATIONS):
+		for style in ["variee", "pions"]:
+			if _play_battle(battle, level, level, style, variante):
+				return true
+	return false
 
 
 ## La toute premiere partie : armee de depart exacte, sans un seul recrutement.
@@ -669,7 +877,8 @@ func _check_first_run() -> void:
 ## Joue une bataille avec un joueur au niveau donne. Le combat est
 ## entierement deterministe (placement + IA fixes, plus aucun alea) : un seul
 ## passage par composition suffit.
-func _play_battle(battle: Dictionary, castle_level: int, unit_level: int, style: String = "variee") -> bool:
+func _play_battle(battle: Dictionary, castle_level: int, unit_level: int, style: String = "variee",
+		variante: int = 0) -> bool:
 	var engine := BattleEngine.new(int(battle["cols"]), int(battle["rows"]))
 	engine.enemy_skill = Balance.battle_ai_skill(battle)
 
@@ -692,7 +901,7 @@ func _play_battle(battle: Dictionary, castle_level: int, unit_level: int, style:
 		else:
 			pool[type] = Balance.capacity(type, unit_level)
 
-	var placed := _deploy(engine, pool, slots, unit_level)
+	var placed := _deploy(engine, pool, slots, unit_level, variante)
 
 	if placed == 0:
 		_fail("bataille %d : aucune piece joueur placee" % int(battle["id"]))
@@ -708,8 +917,8 @@ func _play_battle(battle: Dictionary, castle_level: int, unit_level: int, style:
 	for count in engine.losses(BattleUnit.TEAM_PLAYER).values():
 		lost += int(count)
 
-	print("  Bataille %2d  %-20s  Nv.%d  armee %-7s  %2d vs %2d  ->  %-8s  %2d perdues, %d activations" % [
-		int(battle["id"]), String(battle["name"]), unit_level, style, placed, enemy_count,
+	print("  Bataille %2d  %-20s  Nv.%d  armee %-7s n%d  %2d vs %2d  ->  %-8s  %2d perdues, %d activations" % [
+		int(battle["id"]), String(battle["name"]), unit_level, style, variante + 1, placed, enemy_count,
 		"NUL" if engine.is_draw() else ("VICTOIRE" if victory else "defaite"),
 		lost, engine.activation_count
 	])
@@ -725,7 +934,8 @@ func _play_battle(battle: Dictionary, castle_level: int, unit_level: int, style:
 ## pieces posees.
 ## `capacity` est un budget de poids (cf. CASTLE_DATA.deploy_capacity), pas un
 ## nombre de pieces : chaque type ajoute pese Balance.deploy_weight(type).
-func _deploy(engine: BattleEngine, pool: Dictionary, capacity: int, level: int) -> int:
+func _deploy(engine: BattleEngine, pool: Dictionary, capacity: int, level: int,
+		variante: int = 0) -> int:
 	var order: Array = []
 	var weight := 0
 	var exhausted: Dictionary = {}
@@ -743,10 +953,16 @@ func _deploy(engine: BattleEngine, pool: Dictionary, capacity: int, level: int) 
 
 	order.sort_custom(func(a, b): return Balance.deploy_weight(a) < Balance.deploy_weight(b))
 
+	# La variante fait tourner les cases sous une armee inchangee : meme
+	# effectif, meme charge, rangement different. C'est ce que fait un joueur
+	# qui repose son armee autrement. Meme decalage que tools/tune_probe.gd,
+	# pour que les deux bancs parlent des memes formations.
 	var cells: Array = engine.grid.free_player_cells()
+	var decalage := (variante * 3) % maxi(1, cells.size())
 	var placed := mini(order.size(), cells.size())
 	for i in range(placed):
-		engine.add_unit(String(order[i]), level, BattleUnit.TEAM_PLAYER, cells[i])
+		engine.add_unit(String(order[i]), level, BattleUnit.TEAM_PLAYER,
+			cells[(i + decalage) % cells.size()])
 	return placed
 
 
@@ -786,6 +1002,42 @@ func _check_scenes() -> void:
 		instance.queue_free()
 		await get_tree().process_frame
 
+	await _check_last_formation_button()
+	_done("ecrans")
+
+
+## DERNIERE FORMATION sur un VRAI ecran de bataille.
+##
+## Le reste du banc ne touche jamais la couche interface : il parle au moteur
+## et a GameState. Une erreur de cablage entre les deux - un mauvais numero de
+## bataille, une case hors zone, un signal mal branche - ne se verrait donc
+## qu'a la main, ecran par ecran.
+func _check_last_formation_button() -> void:
+	Game.reset_progress()
+	Router.current_battle_id = 1
+
+	# Bataille 1 : 5 colonnes, 6 rangees, 2 rangees de deploiement. Les cases
+	# du joueur sont donc en y = 4 et 5.
+	Game.remember_formation(1, [[Balance.PION, 0, 4], [Balance.PION, 1, 4]])
+
+	var packed: PackedScene = load(Router.BATTLE_SCENE)
+	var screen: Node = packed.instantiate()
+	add_child(screen)
+	await get_tree().process_frame
+	await get_tree().process_frame
+
+	screen._on_last_formation()
+	if screen._placed.size() != 2:
+		_fail("DERNIERE FORMATION repose %d pieces au lieu des 2 memorisees" % screen._placed.size())
+	elif screen._placed[0].cell != Vector2i(0, 4) or screen._placed[1].cell != Vector2i(1, 4):
+		_fail("DERNIERE FORMATION ne repose pas les pieces sur leurs cases d'origine")
+	else:
+		print("  DERNIÈRE FORMATION : 2 pieces reposees sur leurs cases")
+
+	screen.queue_free()
+	await get_tree().process_frame
+	Game.reset_progress()
+
 
 # ------------------------------- BOUCLE DE JEU -------------------------------
 
@@ -820,3 +1072,4 @@ func _check_campaign_loop() -> void:
 	print("  victoire, recompense, deblocage, relecture disque : OK")
 	print("  rejouer la bataille 1 : %d or au lieu de %d" % [replay, full])
 	Game.reset_progress()
+	_done("boucle")

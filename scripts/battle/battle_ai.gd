@@ -21,8 +21,10 @@ class_name BattleAI
 ##      rester plante - une piece ne doit jamais s'arreter indefiniment
 ##   5. sinon, ne pas bouger
 ##
-## Pour rendre l'IA plus maligne en Phase 2, il suffit de retoucher _score_move :
-## le reste du moteur n'a pas a changer.
+## Ne cherche PAS a rendre cette IA plus maligne en retouchant _score_move :
+## c'est un cul-de-sac connu. Empiler des heuristiques dans un scoring a un
+## demi-coup ne fait pas voir une fourchette - il faut jouer la reponse adverse,
+## et c'est le travail de BattleSearch. Ce fichier doit rester le DEBUTANT.
 ##
 
 ## Valeur en dessous de laquelle une piece accepte D'EMBLEE d'avancer sur une
@@ -56,6 +58,28 @@ const _STANDOFF_RATIO := 0.5
 ## rendre une victoire serree perdante pour rien.
 const _STANDOFF_MIN_PIECES := 4
 
+## Temps de reflexion accorde a la recherche, en millisecondes.
+##
+##   -1  celui du jeu (Balance.AI_BUDGET_MS) - la valeur normale
+##    0  AUCUNE limite : la recherche va au bout de sa profondeur
+##
+## Les BANCS passent a 0, et eux seuls. Une coupure au temps depend de la
+## machine et de sa charge : chronometree, la meme position rendait deux
+## verdicts differents d'un lancement a l'autre, et l'equilibre se reglait sur
+## du sable. Sans limite, un banc redevient une mesure reproductible - et il
+## joue contre une IA au moins aussi forte que celle du jeu, jamais plus
+## faible, donc une bataille qu'il declare gagnable l'est a coup sur.
+##
+## Une variable statique plutot qu'un parametre : la profondeur d'appel va du
+## banc a la recherche en passant par BattleEngine, et faire descendre un
+## reglage de test a travers trois fichiers de production pour qu'un seul
+## outil s'en serve, c'est trois fichiers salis pour rien.
+static var budget_ms: int = -1
+
+
+static func _budget() -> int:
+	return Balance.AI_BUDGET_MS if budget_ms < 0 else budget_ms
+
 
 ## Coup du camp entier : QUELLE piece jouer, et ou. Depuis que le combat se
 ## joue coup par coup, un camp ne deplace qu'une seule piece par tour - il
@@ -73,7 +97,7 @@ static func decide_team(team: int, grid: GridModel, units: Array, stalled: int =
 	# negamax choisit le moins mauvais coup plutot que de rester plante.
 	if Balance.ai_depth(skill) > 1:
 		var searched := BattleSearch.best_move(
-			team, grid, units, Balance.ai_depth(skill), Balance.AI_BUDGET_MS)
+			team, grid, units, Balance.ai_depth(skill), _budget())
 		if searched["unit"] != null:
 			return searched
 

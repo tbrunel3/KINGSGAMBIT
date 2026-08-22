@@ -8,6 +8,9 @@ extends Node
 ##
 
 func _ready() -> void:
+	# Banc : recherche sans limite de temps, donc reproductible (cf.
+	# BattleAI.budget_ms).
+	BattleAI.budget_ms = 0
 	var promotions := 0
 	var mopping := 0
 	var dames := 0

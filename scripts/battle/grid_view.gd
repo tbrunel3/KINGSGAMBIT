@@ -79,6 +79,12 @@ var _promotion_t: float = 0.0
 ## pour la defendre, et l'adversaire assez longtemps pour l'attaquer.
 var crowning_cells: Array = []
 
+## Cases des pieces du joueur que l'adversaire peut prendre a son prochain coup
+## (cf. BattleEngine.threatened_cells). Le jeu n'a ni points de vie ni degats :
+## une capture est definitive, et c'est de VOIR l'attaque arriver que vient
+## toute la tension. Sans ce signal, le danger existait sans se montrer.
+var threat_cells: Array = []
+
 
 ## "bleu_pion" -> Texture2D. Charge une seule fois, jamais dans _draw().
 var _piece_textures: Dictionary = {}
@@ -200,13 +206,6 @@ func _reset_press() -> void:
 	_dragging = false
 	_drag_unit_id = -1
 
-
-## Vrai pendant qu'une piece suit le doigt : l'ecran de bataille s'en sert
-## pour ne pas relancer d'animation par-dessus le geste en cours.
-func is_dragging() -> bool:
-	return _dragging
-
-
 # ------------------------------- DESSIN --------------------------------------
 
 func _draw() -> void:
@@ -223,6 +222,7 @@ func _draw() -> void:
 	for unit in engine.units:
 		if unit.is_alive():
 			_draw_unit(unit)
+	_draw_threats()
 	_draw_dragged_piece()
 	_draw_capture()
 	_draw_crowning()
@@ -429,6 +429,27 @@ func _draw_capture() -> void:
 	draw_line(center + Vector2(radius, -radius), center + Vector2(-radius, radius), color, width)
 
 
+## Piece prenable au prochain coup adverse : un anneau rouge, FIXE.
+##
+## Pas de battement, et c'est deliberé : l'or qui bat appartient deja au
+## couronnement (cf. _draw_crowning), et deux clignotements sur le meme plateau
+## ne se lisent plus l'un ni l'autre. Un danger permanent se lit une fois et se
+## retient ; un danger qui clignote devient du papier peint.
+##
+## Deux arcs plutot qu'un : un halo large et sourd pour que l'anneau tienne sur
+## le fond peint du champ de bataille, un trait net par-dessus pour la lecture.
+func _draw_threats() -> void:
+	if threat_cells.is_empty():
+		return
+	var radius := _cell_size * 0.46
+	for cell in threat_cells:
+		var center := cell_center(cell)
+		draw_arc(center, radius, 0.0, TAU, 28,
+			Color(0.78, 0.20, 0.18, 0.30), maxf(2.5, _cell_size * 0.10))
+		draw_arc(center, radius, 0.0, TAU, 28,
+			Color(0.95, 0.35, 0.30, 0.85), maxf(1.5, _cell_size * 0.045))
+
+
 ## Pion en attente de couronnement : un anneau d'or qui bat autour de la case,
 ## et la couronne au-dessus. Il n'a plus aucun coup legal et personne ne le
 ## couvre - c'est l'annonce d'une Dame ET la designation d'une cible.
@@ -499,8 +520,8 @@ func play_promotion(cell: Vector2i, result_type: String, duration: float) -> voi
 
 # ------------------------------- ANIMATIONS ----------------------------------
 #
-#  Ces methodes sont appelees par le controleur de bataille, qui leur passe une
-#  duree deja divisee par la vitesse choisie (x1 / x2 / x4).
+#  Ces methodes sont appelees par le controleur de bataille. Le coup est deja
+#  resolu quand elles demarrent : l'animation ne decide de rien, elle montre.
 
 func play_move(unit_id: int, from: Vector2i, to: Vector2i, duration: float) -> void:
 	_anim_unit = unit_id

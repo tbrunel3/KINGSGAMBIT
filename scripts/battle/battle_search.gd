@@ -73,6 +73,21 @@ const PROMOTION_FALLOFF := 0.5
 ## qu'il est depasse, avec le meilleur coup de la derniere profondeur ACHEVEE.
 ## C'est ce qui garantit qu'une bataille sur un grand plateau ne fige jamais
 ## l'ecran, quel que soit le nombre de pieces.
+##
+## `budget_ms <= 0` retire toute limite de temps : la recherche va au bout de
+## sa profondeur, quel qu'en soit le prix. C'est le mode des BANCS, et il
+## existe pour une raison precise.
+##
+## POURQUOI LES BANCS NE PEUVENT PAS ETRE CHRONOMETRES. Une coupure au temps
+## depend de la machine, de sa charge, de l'heure qu'il est. Deux bancs lances
+## sur la meme position rendaient deux verdicts differents - l'un annoncait une
+## defaite, l'autre un nul - et regler l'equilibre sur un oracle qui change
+## d'avis, c'est regler sur du sable. Sans limite, la meme position donne
+## toujours le meme coup : le banc redevient une mesure.
+##
+## Le banc joue donc contre une IA au moins aussi forte que celle du jeu, jamais
+## plus faible. C'est le bon sens de l'erreur : une bataille declaree gagnable
+## par le banc l'est a coup sur dans le jeu.
 static func best_move(team: int, grid: GridModel, units: Array, max_depth: int,
 		budget_ms: int) -> Dictionary:
 	var moves := _generate(team, grid, units)
@@ -80,7 +95,9 @@ static func best_move(team: int, grid: GridModel, units: Array, max_depth: int,
 		return {"unit": null, "move": Vector2i(-1, -1)}
 
 	_order(moves, grid)
-	var deadline := Time.get_ticks_msec() + maxi(1, budget_ms)
+	# Sans budget, une echeance hors d'atteinte plutot qu'un test de plus dans
+	# la boucle chaude : _negamax est appele des centaines de milliers de fois.
+	var deadline := (1 << 62) if budget_ms <= 0 else Time.get_ticks_msec() + budget_ms
 	var best: Dictionary = moves[0]
 
 	# Approfondissement iteratif : on cherche a 1, puis 2, puis 3... Deux

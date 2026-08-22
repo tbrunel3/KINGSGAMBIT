@@ -1,0 +1,6 @@
+[gd_scene load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://tools/tune_probe.gd" id="1_tune"]
+
+[node name="TuneProbe" type="Node"]
+script = ExtResource("1_tune")

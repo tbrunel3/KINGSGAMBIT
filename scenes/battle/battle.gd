@@ -9,10 +9,13 @@ extends Control
 ## au moteur le coup choisi par le joueur (tape ou glisser-deposer), demande a
 ## l'IA le coup adverse, et rejoue les evenements retournes.
 ##
-## Le combat se joue coup par coup : une piece du joueur, une piece de l'IA.
-## Le bouton AUTO laisse l'IA jouer les deux camps jusqu'au bout - pratique
-## pour refaire de l'or sur une bataille deja gagnee. La vitesse (x1/x2/x4)
-## n'agit que sur les durees d'affichage, jamais sur l'issue d'un coup.
+## Le combat se joue coup par coup : une piece du joueur, une piece de l'IA, et
+## RIEN ne joue a la place du joueur - ni resolution automatique, ni vitesse
+## acceleree. Le plateau attend son coup aussi longtemps qu'il le faut.
+##
+## Le moteur, lui, sait toujours jouer les deux camps (BattleEngine.auto_mode) :
+## c'est ce dont vivent les bancs de tools/, qui simulent des campagnes entieres
+## sans personne devant l'ecran.
 ##
 
 enum Phase { PLACEMENT, COMBAT, RESULT }
@@ -20,12 +23,14 @@ enum Phase { PLACEMENT, COMBAT, RESULT }
 const ModalScene := preload("res://scenes/ui/components/modal.tscn")
 const SelectionChipScene := preload("res://scenes/ui/components/selection_chip.tscn")
 
-@onready var _tour_badge: PanelContainer = $Safe/Overlay/TourBadge
+@onready var _tour_badge: RoyalPlate = $Safe/Overlay/TourBadge
 @onready var _phase_prefix: Label = $Safe/Overlay/TourBadge/TourRow/PhasePrefixLabel
 @onready var _phase_label: Label = $Safe/Overlay/TourBadge/TourRow/PhaseLabel
+@onready var _state_separator: Label = $Safe/Overlay/TourBadge/TourRow/StateSeparator
+@onready var _state_label: Label = $Safe/Overlay/TourBadge/TourRow/StateLabel
 @onready var _quit_button: Button = $Safe/Overlay/QuitButton
 @onready var _grid_view: Control = $Safe/Overlay/Grid
-@onready var _stats_hud: PanelContainer = $Safe/Overlay/StatsHud
+@onready var _stats_hud: RoyalPlate = $Safe/Overlay/StatsHud
 @onready var _stats_box: HBoxContainer = $Safe/Overlay/StatsHud/StatsBox
 @onready var _bottom_panel: PanelContainer = $Safe/Overlay/BottomPanel
 @onready var _bottom: VBoxContainer = $Safe/Overlay/BottomPanel/BottomBox
@@ -56,7 +61,6 @@ var _selected_type: String = ""
 var _placed: Array = []           # BattleUnit du joueur poses sur la grille
 
 # Combat
-var _speed: float = 1.0
 var _running: bool = false
 
 ## Piece du joueur actuellement selectionnee (tape ou saisie au doigt).
@@ -65,9 +69,6 @@ var _selected_unit: BattleUnit = null
 ## Vrai pendant qu'une animation ou le tour de l'IA se joue : le plateau
 ## n'accepte alors aucun geste, sinon un joueur rapide jouerait deux coups.
 var _busy: bool = false
-
-## Resolution automatique : l'IA joue les DEUX camps jusqu'a la fin.
-var _auto: bool = false
 
 ## Dames emmenees au combat, relevees au moment ou la bataille commence. Une
 ## Dame partie se battre ne tient plus la cour : elle ne rapporte pas sa part
@@ -82,11 +83,7 @@ var _promotions_this_battle: int = 0
 # Elements rafraichis souvent, gardes sous la main.
 var _status_label: Label = null
 var _type_buttons: Dictionary = {}
-var _speed_buttons: Dictionary = {}
 var _fight_button: Button = null
-var _auto_button: PanelContainer = null
-var _auto_label: Label = null
-var _turn_label: Label = null
 
 
 func _ready() -> void:
@@ -96,8 +93,7 @@ func _ready() -> void:
 		return
 
 	_style_stats_hud()
-	_quit_button.add_theme_font_size_override("font_size", 13)
-	_quit_button.pressed.connect(_on_quit)
+	_style_quit_button()
 	_build_help_button()
 
 	# Serie : on reprend celle en cours sur cette bataille, sinon on en ouvre
@@ -137,6 +133,11 @@ func _unit_level(type: String) -> int:
 	return Game.building_level(type)
 
 
+## Numero de la bataille en cours.
+func _battle_id() -> int:
+	return int(_battle["id"])
+
+
 ## Types que le joueur peut poser sur la grille : ses casernes, plus la Dame
 ## s'il en a ramene une vivante d'une bataille precedente.
 ##
@@ -170,46 +171,75 @@ func _owned(type: String) -> int:
 #  encore de captures, et pendant le combat on ne reparle pas de la zone
 #  bleue.
 
-const _HELP_RECT := Rect2(0, 12, 30, 30)
+## Les deux ronds du bord droit (Btn-Exit et Btn-Info de la maquette v2) :
+## 34 points de diametre, bleu nuit cercle d'or, EMPILES - la sortie en haut,
+## l'aide juste dessous.
+##
+## Ils remplacent le gros bouton rouge "X" et le rond gris qui l'accompagnait.
+## Quitter une bataille n'est pas une action dangereuse qu'il faut peindre en
+## rouge : c'est une sortie, et le rouge de l'ecran est celui de l'ennemi.
+const _CORNER_BUTTON := 34.0
+const _CORNER_TOP := 12.0
+const _CORNER_GAP := 8.0
 
 
-## Petit rond discret, cale a gauche de la croix de sortie.
+## Habillage commun aux deux ronds, cf. Btn-Exit / Btn-Info.
+func _corner_button_style() -> StyleBoxFlat:
+	var box := StyleBoxFlat.new()
+	box.bg_color = Color("0a1230", 0.85)
+	box.set_corner_radius_all(int(_CORNER_BUTTON * 0.5))
+	box.border_color = Color("ffe580", 0.8)
+	box.set_border_width_all(1.5)
+	box.set_content_margin_all(0)
+	return box
+
+
+## Ancre un rond au bord droit, a `rank` places sous le premier.
+##
+## Les offsets se calculent ici plutot que de se lire sur le voisin : au
+## moment du _ready() la mise en page n'a pas encore tourne, et la position
+## d'un frere vaut encore son offset negatif.
+func _place_corner_button(node: Control, rank: int) -> void:
+	node.anchor_left = 1.0
+	node.anchor_right = 1.0
+	node.grow_horizontal = Control.GROW_DIRECTION_BEGIN
+	node.offset_left = -(_CORNER_BUTTON + 6.0)
+	node.offset_right = -6.0
+	node.offset_top = _CORNER_TOP + rank * (_CORNER_BUTTON + _CORNER_GAP)
+	node.offset_bottom = node.offset_top + _CORNER_BUTTON
+
+
 func _build_help_button() -> void:
 	var help := PanelContainer.new()
-	var box := StyleBoxFlat.new()
-	box.bg_color = Color("0d0f1a", 0.75)
-	box.set_corner_radius_all(15)
-	box.border_color = Color(1, 1, 1, 0.18)
-	box.set_border_width_all(1)
-	box.set_content_margin_all(6)
-	help.add_theme_stylebox_override("panel", box)
+	help.add_theme_stylebox_override("panel", _corner_button_style())
 	help.mouse_filter = Control.MOUSE_FILTER_STOP
 
-	var icon := Icon.new()
-	icon.icon_name = "info"
-	icon.color = Color("ccd1e0")
-	icon.custom_minimum_size = Vector2(16, 16)
-	icon.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	help.add_child(icon)
+	var glyph := UiTheme.make_label("i", 16, Color("ffe580"))
+	glyph.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	glyph.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	glyph.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	help.add_child(glyph)
 
 	_quit_button.get_parent().add_child(help)
-
-	# Ancre au bord droit, comme la croix de sortie : lire la position de
-	# celle-ci ici ne marcherait pas, la mise en page n'a pas encore tourne au
-	# moment du _ready() et elle vaut encore son offset negatif.
-	var gap := 8.0
-	var quit_width := absf(_quit_button.offset_left)
-	help.anchor_left = 1.0
-	help.anchor_right = 1.0
-	help.grow_horizontal = Control.GROW_DIRECTION_BEGIN
-	help.offset_left = -(quit_width + gap + _HELP_RECT.size.x)
-	help.offset_right = -(quit_width + gap)
-	help.offset_top = _HELP_RECT.position.y
-	help.offset_bottom = _HELP_RECT.position.y + _HELP_RECT.size.y
+	_place_corner_button(help, 1)
 	help.gui_input.connect(func(event: InputEvent):
 		if event is InputEventMouseButton and event.pressed and event.button_index == MOUSE_BUTTON_LEFT:
 			_open_help()
 	)
+
+
+## La croix de sortie, premier des deux ronds du bord droit.
+func _style_quit_button() -> void:
+	_quit_button.text = "✕"
+	_quit_button.theme_type_variation = &""
+	_quit_button.add_theme_font_size_override("font_size", 16)
+	_quit_button.add_theme_color_override("font_color", Color("ffe580"))
+	_quit_button.add_theme_color_override("font_hover_color", Color("ffe580"))
+	_quit_button.add_theme_color_override("font_pressed_color", Color("fff2c2"))
+	for state in ["normal", "hover", "pressed", "focus"]:
+		_quit_button.add_theme_stylebox_override(state, _corner_button_style())
+	_place_corner_button(_quit_button, 0)
+	_quit_button.pressed.connect(_on_quit)
 
 
 func _open_help() -> void:
@@ -336,24 +366,27 @@ func _help_note(text: String) -> Label:
 	return label
 
 
-## Badge de tour (haut-gauche) : bleu "PHASE DE PLACEMENT" pendant la pose,
-## or "TOUR N" pendant le combat - couleurs et tailles reprises telles quelles
-## de la maquette Figma (Tour-Badge, ecrans 04 et 05), border+ombre incluses.
-func _style_tour_badge(bg: Color, border: Color, radius: int, prefix_color: Color, prefix_size: int,
+## Badge de tour (haut-gauche), ecrans 04 et 05 de la maquette v2.
+##
+## C'est une PLAQUE ROYALE, comme la preparation, la victoire et la defaite :
+## bleu nuit en degrade, cercle d'or. Les deux ecrans de bataille etaient les
+## derniers a parler un autre dialecte - une pastille bleue au placement, une
+## pastille or au combat - alors qu'ils sont l'ecran ou le joueur passe le plus
+## clair de son temps.
+##
+## Le badge porte aussi L'ETAT DU TOUR pendant le combat, et c'est ce qui a
+## permis de supprimer le bandeau du bas : cf. _build_combat_ui.
+func _style_tour_badge(prefix_color: Color, prefix_size: int,
 		main_color: Color, main_size: int) -> void:
-	var box := StyleBoxFlat.new()
-	box.bg_color = bg
-	box.set_corner_radius_all(radius)
-	box.border_color = border
-	box.set_border_width_all(2)
-	box.content_margin_left = 14
-	box.content_margin_right = 14
-	box.content_margin_top = 8
-	box.content_margin_bottom = 8
-	box.shadow_color = Color(0, 0, 0, 0.4)
-	box.shadow_size = 6
-	box.shadow_offset = Vector2(0, 2)
-	_tour_badge.add_theme_stylebox_override("panel", box)
+	_tour_badge.fill_colors = PackedColorArray([
+		Color("1e3278"), Color("0a1230"), Color("0e1a40")])
+	_tour_badge.gradient_horizontal = true
+	_tour_badge.border_color = Color("ffe580")
+	_tour_badge.border_width = 2.0
+	_tour_badge.corner_radius = 10.0
+	_tour_badge.inner_outline_color = Color(0, 0, 0, 0)
+	_tour_badge.set_padding(14, 9, 14, 9)
+	_tour_badge.queue_redraw()
 
 	_phase_prefix.add_theme_color_override("font_color", prefix_color)
 	_phase_prefix.add_theme_font_size_override("font_size", prefix_size)
@@ -362,10 +395,14 @@ func _style_tour_badge(bg: Color, border: Color, radius: int, prefix_color: Colo
 	_phase_label.add_theme_font_size_override("font_size", main_size)
 	_phase_label.add_theme_font_override("font", UiTheme.font_bold())
 
+	# Le badge se retaille sur son contenu : "PHASE DE PLACEMENT" et
+	# "TOUR 12 - L'ENNEMI JOUE..." n'ont pas la meme longueur, et une largeur
+	# figee coupait l'un ou laissait l'autre flotter dans le vide.
+	_tour_badge.reset_size()
+
 
 func _style_placement_badge() -> void:
-	_style_tour_badge(UiTheme.ACCENT, Color("1a66b2", 0.7), 12,
-		Color.WHITE, 10, Color.WHITE, 13)
+	_style_tour_badge(Color("ffe580", 0.7), 11, Color("ffe580"), 15)
 	# Le badge dit ou l'on en est dans la SERIE : c'est le seul endroit de
 	# l'ecran de placement qui le rappelle, et c'est ce qui change la facon de
 	# poser son armee - on ne place pas pareil au premier combat sur trois et
@@ -375,31 +412,45 @@ func _style_placement_badge() -> void:
 	else:
 		_phase_prefix.text = "PHASE DE"
 	_phase_label.text = "PLACEMENT"
-	_tour_badge.custom_minimum_size = Vector2(169, 35)
-	_tour_badge.size = Vector2(169, 35)
+	_set_badge_state("")
 
 
 func _style_combat_badge() -> void:
-	_style_tour_badge(UiTheme.GOLD, Color("d9a600", 0.7), 14,
-		UiTheme.GOLD_TEXT, 13, Color("331a00"), 18)
+	_style_tour_badge(Color("ffe580", 0.7), 11, Color("ffe580"), 18)
 	_phase_prefix.text = "TOUR"
-	_tour_badge.custom_minimum_size = Vector2(86, 41)
-	_tour_badge.size = Vector2(86, 41)
 
 
-## Panneau lateral (Stats-HUD, ecrans 04 et 05) : meme habillage sombre
-## translucide dans les deux phases, seul le contenu (Body) change.
+## Troisieme ligne du badge : l'etat du tour, apres un point mediant. Vide, le
+## point disparait avec elle plutot que de flotter tout seul en fin de badge.
+func _set_badge_state(text: String) -> void:
+	_state_label.text = text
+	_state_label.visible = not text.is_empty()
+	_state_separator.visible = not text.is_empty()
+	_state_separator.text = "·"
+	_state_separator.add_theme_color_override("font_color", Color("ffe580", 0.5))
+	_state_separator.add_theme_font_size_override("font_size", 16)
+	_state_separator.add_theme_font_override("font", UiTheme.font_bold())
+	_state_label.add_theme_color_override("font_color", Color(1, 1, 1, 0.95))
+	_state_label.add_theme_font_size_override("font_size", 10)
+	# La maquette demande Inter Semi Bold ; a 10 points, le Bold que le theme
+	# charge deja ne s'en distingue pas - une graisse de plus a embarquer pour rien.
+	_state_label.add_theme_font_override("font", UiTheme.font_bold())
+	_tour_badge.reset_size()
+
+
+## HUD d'effectifs (Stats-HUD, ecrans 04 et 05) : une PLAQUE ROYALE comme le
+## badge de tour, en plus petit et en plus discret - bleu nuit a 90 %, filet
+## d'or a 70 %. Meme habillage dans les deux phases, seul le contenu change.
 func _style_stats_hud() -> void:
-	var box := StyleBoxFlat.new()
-	box.bg_color = Color("0d0f1a", 0.75)
-	box.set_corner_radius_all(12)
-	box.border_color = Color(1, 1, 1, 0.1)
-	box.set_border_width_all(1)
-	box.set_content_margin_all(10)
-	box.shadow_color = Color(0, 0, 0, 0.35)
-	box.shadow_size = 4
-	box.shadow_offset = Vector2(0, 2)
-	_stats_hud.add_theme_stylebox_override("panel", box)
+	_stats_hud.fill_colors = PackedColorArray([
+		Color("1e3278", 0.9), Color("0a1230", 0.9)])
+	_stats_hud.gradient_horizontal = true
+	_stats_hud.border_color = Color("ffe580", 0.7)
+	_stats_hud.border_width = 1.5
+	_stats_hud.corner_radius = 8.0
+	_stats_hud.inner_outline_color = Color(0, 0, 0, 0)
+	_stats_hud.set_padding_all(10)
+	_stats_hud.queue_redraw()
 
 	# Le HUD flotte AU-DESSUS du plateau (cf. maquettes 04/05) : sur un
 	# plateau reduit il recouvre la colonne de droite. Il doit donc laisser
@@ -503,7 +554,7 @@ func _build_placement_ui() -> void:
 	var header := HBoxContainer.new()
 	_bottom.add_child(header)
 
-	var header_label := UiTheme.make_label("DISPONIBLES AU PLACEMENT", 11, Color("ccccd9"))
+	var header_label := UiTheme.make_label("DÉPLOIEMENT", 11, Color("ccccd9"))
 	header_label.add_theme_font_override("font", UiTheme.font_bold())
 	header_label.autowrap_mode = TextServer.AUTOWRAP_OFF
 	header_label.size_flags_horizontal = Control.SIZE_SHRINK_BEGIN
@@ -513,7 +564,7 @@ func _build_placement_ui() -> void:
 	header_spacer.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	header.add_child(header_spacer)
 
-	_status_label = UiTheme.make_label("Tape ou glisse", 10, Color("e5bf4d"))
+	_status_label = UiTheme.make_label("", 10, Color("e5bf4d"))
 	_status_label.autowrap_mode = TextServer.AUTOWRAP_OFF
 	_status_label.size_flags_horizontal = Control.SIZE_SHRINK_END
 	_status_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
@@ -550,11 +601,15 @@ func _build_placement_ui() -> void:
 	actions.add_theme_constant_override("separation", 8)
 	_bottom.add_child(actions)
 
-	var auto := UiTheme.make_button("AUTO", Color(1, 1, 1, 0.08), 12)
-	auto.add_theme_font_override("font", UiTheme.font_bold())
-	auto.add_theme_color_override("font_color", Color("ccccd9"))
-	auto.pressed.connect(_on_auto_place)
-	actions.add_child(auto)
+	# DERNIERE FORMATION remplace l'ancien bouton AUTO, qui rangeait l'armee a
+	# la place du joueur. Masque tant qu'il n'y a rien en memoire : a la toute
+	# premiere bataille on pose a la main, et c'est la qu'on apprend le placement.
+	if Game.has_remembered_formation(_battle_id()):
+		var last := UiTheme.make_button("DERNIÈRE FORMATION", Color(1, 1, 1, 0.08), 11)
+		last.add_theme_font_override("font", UiTheme.font_bold())
+		last.add_theme_color_override("font_color", Color("ccccd9"))
+		last.pressed.connect(_on_last_formation)
+		actions.add_child(last)
 
 	var reset := UiTheme.make_button("RÉINITIALISER", Color(1, 1, 1, 0.08), 12)
 	reset.add_theme_font_override("font", UiTheme.font_bold())
@@ -621,10 +676,12 @@ func _placed_weight() -> int:
 
 func _refresh_placement() -> void:
 	var capacity := Game.deploy_capacity()
-	if _placed_weight() >= capacity:
-		_status_label.text = "Charge maximale atteinte"
-	else:
-		_status_label.text = "Tape ou glisse"
+	# A droite de l'en-tete du bandeau, la maquette v2 ecrit la CHARGE, en or.
+	# Elle etait deja au HUD lateral, mais le joueur a les yeux sur ses puces
+	# quand il pose : c'est la qu'il faut lui dire ce qu'il lui reste de budget.
+	_status_label.text = "Charge : %d/%d" % [_placed_weight(), capacity]
+
+	_refresh_threats()
 
 	for type in _type_buttons.keys():
 		var chip: SelectionChip = _type_buttons[type]
@@ -670,9 +727,11 @@ func _refresh_stats_hud() -> void:
 	_keep_hud_on_screen.call_deferred()
 
 
-## Bande libre entre les boutons du haut (qui s'arretent a 42) et le plateau
-## (qui commence a 100).
-const _HUD_TOP := 54.0
+## Le HUD se pose SOUS les deux ronds du bord droit, qui occupent la meme
+## colonne : sortie, aide, puis effectifs. Calcule plutot qu'ecrit en dur -
+## changer la taille des ronds ne doit pas faire reapparaitre le recouvrement
+## qui masquait la moitie du HUD.
+const _HUD_TOP := _CORNER_TOP + 2.0 * (_CORNER_BUTTON + _CORNER_GAP)
 
 
 ## Le HUD se recale a droite apres chaque changement de contenu : sa largeur
@@ -856,39 +915,27 @@ func _on_reset_placement() -> void:
 	_refresh_placement()
 
 
-## Formation automatique : les pions devant, les pieces lourdes derriere.
+## Repose la formation que le JOUEUR avait validee la fois precedente (cf.
+## GameState.remember_formation).
 ##
-## Aligner tout le monde sur la meme rangee est le pire placement possible :
-## les pieces se bouchent le passage et la tour ne sort jamais. Les pions
-## ouvrent le contact, les pieces de valeur suivent une fois les lignes ouvertes.
-func _on_auto_place() -> void:
+## Ce n'est pas l'ancien bouton AUTO sous un autre nom : AUTO composait une
+## armee a la place du joueur, celui-ci lui rend sa propre decision. Les pieces
+## qu'il n'a plus - l'usure d'une serie - sont simplement sautees.
+func _on_last_formation() -> void:
+	_on_reset_placement()
+
 	var capacity := Game.deploy_capacity()
-	var weight := 0
-	var order: Array = []
-	# Types qui ne rentrent plus dans la charge restante : a exclure des tours
-	# suivants sans arreter la formation pour autant, un type plus leger peut
-	# encore avoir sa place (ex. il reste 2 de charge, la Tour a 5 ne rentre
-	# plus mais un Pion a 1 oui).
-	var exhausted: Dictionary = {}
-	while true:
-		var type := _pick_available_type(order, exhausted)
-		if type.is_empty():
-			break
-		var type_weight := Balance.deploy_weight(type)
-		if weight + type_weight > capacity:
-			exhausted[type] = true
+	for piece in Game.playable_formation(_battle_id(), _remaining):
+		var type := String(piece[0])
+		var cell := Vector2i(int(piece[1]), int(piece[2]))
+		if int(_remaining.get(type, 0)) <= 0:
 			continue
-		order.append(type)
-		weight += type_weight
-
-	# Les pions passent devant, le reste garde son ordre d'alternance.
-	order.sort_custom(func(a, b): return Balance.deploy_weight(a) < Balance.deploy_weight(b))
-
-	var cells: Array = _engine.grid.free_player_cells()
-	for i in range(mini(order.size(), cells.size())):
-		var type: String = order[i]
-		var unit := _engine.add_unit(type, _unit_level(type),
-			BattleUnit.TEAM_PLAYER, cells[i])
+		if not _engine.grid.is_player_zone(cell) or _engine.grid.unit_at(cell) != null:
+			continue
+		# La charge a pu retrecir depuis : on s'arrete a ce qui rentre encore.
+		if _placed_weight() + Balance.deploy_weight(type) > capacity:
+			continue
+		var unit := _engine.add_unit(type, _unit_level(type), BattleUnit.TEAM_PLAYER, cell)
 		_placed.append(unit)
 		_remaining[type] = int(_remaining[type]) - 1
 
@@ -896,32 +943,24 @@ func _on_auto_place() -> void:
 	_refresh_placement()
 
 
-## Alterne les types disponibles plutot que de vider la caserne la plus pleine :
-## un mur de pions perd contre a peu pres tout.
-##
-## `taken` contient les types deja retenus pour cette formation, afin de tenir
-## le compte avant que les pieces soient reellement posees. `exhausted` exclut
-## les types qui ne rentrent plus dans la charge restante (cf. _on_auto_place).
-func _pick_available_type(taken: Array = [], exhausted: Dictionary = {}) -> String:
-	var types: Array = _deployable_types()
-	for offset in range(types.size()):
-		var type: String = types[(taken.size() + offset) % types.size()]
-		if exhausted.has(type):
-			continue
-		if int(_remaining[type]) - taken.count(type) > 0:
-			return type
-	return ""
-
-
 # ------------------------------- PHASE COMBAT --------------------------------
 #
 #  Le joueur joue une piece, l'IA repond avec une des siennes. Tant que c'est
 #  au joueur, le plateau attend : aucune horloge ne tourne, il peut reflechir
-#  aussi longtemps qu'il veut. Le bouton AUTO confie les deux camps a l'IA.
+#  aussi longtemps qu'il veut.
 
 func _start_combat() -> void:
 	if _placed.is_empty():
 		return
+
+	# La formation validee est retenue pour la prochaine fois : c'est elle que
+	# reposera le bouton DERNIERE FORMATION, au combat suivant de la serie ou
+	# des mois plus tard.
+	var formation: Array = []
+	for unit in _placed:
+		formation.append([unit.type, unit.cell.x, unit.cell.y])
+	Game.remember_formation(_battle_id(), formation)
+
 	_phase = Phase.COMBAT
 	_running = true
 	_dames_deployed = 0
@@ -932,8 +971,6 @@ func _start_combat() -> void:
 	# sur des secondes d'animation ne s'appliquent plus (cf. BattleEngine).
 	_engine.auto_mode = false
 	_style_combat_badge()
-	_style_bottom_panel(Color("111319", 0.85), 0, 0)
-	_place_bottom_panel(77)
 	_grid_view.preview_moves = []
 	_grid_view.show_zones = false
 	_clear_selection()
@@ -988,118 +1025,24 @@ func _clear_blockage_badge() -> void:
 		_blockage_label = null
 
 
+## L'ECRAN DE COMBAT N'A PLUS DE BANDEAU DU BAS.
+##
+## Il en avait un de 77 points, qui portait le statut, le bouton AUTO et les
+## trois vitesses. AUTO et les vitesses sont partis avec tout ce qui jouait a
+## la place du joueur ; il ne restait qu'une ligne de texte - six mots - pour
+## 77 points de haut.
+##
+## La maquette v2 (05_Bataille_Combat) tranche : plus de bandeau, l'etat du
+## tour remonte dans le badge qui dit deja le numero du tour, et toute la
+## hauteur gagnee retourne AU PLATEAU. C'est le bon calcul, chiffres a l'appui :
+## une case fait 45 a 72 points de cote selon la bataille, et doit rester
+## touchable au pouce. Chaque point pris par l'habillage etait un point pris
+## aux cases.
 func _build_combat_ui() -> void:
 	_clear_bottom()
-
-	var separator := ColorRect.new()
-	separator.color = Color(0.18, 0.357, 1.0, 0.38)
-	separator.custom_minimum_size = Vector2(0, 1)
-	_bottom.add_child(separator)
-
-	var row := HBoxContainer.new()
-	row.add_theme_constant_override("separation", 8)
-	_bottom.add_child(row)
-
-	# A gauche : a qui de jouer. C'est la seule information dont le joueur a
-	# besoin en permanence - le tour et les effectifs sont deja dans le badge
-	# et le HUD lateral (cf. captures Figma 05).
-	_turn_label = UiTheme.make_label("", 12, Color("e5e5f0"))
-	_turn_label.add_theme_font_override("font", UiTheme.font_bold())
-	_turn_label.autowrap_mode = TextServer.AUTOWRAP_OFF
-	_turn_label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	_turn_label.size_flags_vertical = Control.SIZE_SHRINK_CENTER
-	row.add_child(_turn_label)
-
-	_auto_button = _icon_button("skip", "AUTO", Color("1c2135"), Color("2a2f45"), Color("a0aabf"), 14, 11)
-	_auto_label = _auto_button.find_child("Label", true, false)
-	_auto_button.gui_input.connect(func(event: InputEvent):
-		if event is InputEventMouseButton and event.pressed and event.button_index == MOUSE_BUTTON_LEFT:
-			_on_auto_pressed()
-	)
-	row.add_child(_auto_button)
-
-	var toggle := PanelContainer.new()
-	var toggle_box := StyleBoxFlat.new()
-	toggle_box.bg_color = Color("161926")
-	toggle_box.set_corner_radius_all(12)
-	toggle_box.border_color = Color("2a2f45")
-	toggle_box.set_border_width_all(1)
-	toggle_box.set_content_margin_all(4)
-	toggle.add_theme_stylebox_override("panel", toggle_box)
-	var toggle_row := HBoxContainer.new()
-	toggle_row.add_theme_constant_override("separation", 3)
-	toggle.add_child(toggle_row)
-	row.add_child(toggle)
-
-	_speed_buttons.clear()
-	for speed in Balance.SPEEDS:
-		var pill := PanelContainer.new()
-		var pill_label := UiTheme.make_label("x%d" % int(speed), 12, Color("5a6480"))
-		pill_label.add_theme_font_override("font", UiTheme.font_bold())
-		pill_label.autowrap_mode = TextServer.AUTOWRAP_OFF
-		pill_label.mouse_filter = Control.MOUSE_FILTER_IGNORE
-		pill.add_child(pill_label)
-		var margin := StyleBoxFlat.new()
-		margin.set_corner_radius_all(8)
-		margin.content_margin_left = 10
-		margin.content_margin_right = 10
-		margin.content_margin_top = 7
-		margin.content_margin_bottom = 7
-		margin.bg_color = Color("1c2135")
-		pill.add_theme_stylebox_override("panel", margin)
-		pill.gui_input.connect(func(event: InputEvent):
-			if event is InputEventMouseButton and event.pressed and event.button_index == MOUSE_BUTTON_LEFT:
-				_on_speed_selected(float(speed))
-		)
-		toggle_row.add_child(pill)
-		_speed_buttons[speed] = pill
-
-	_refresh_combat_status()
-
-
-## Panneau clic-able icone + texte (Pause / Fin Tour, ecran 05) - un
-## PanelContainer plutot qu'un Button, pour placer une Icon vectorielle a
-## cote du texte sans dependre d'une police emoji (cf. icon.gd).
-func _icon_button(icon_name: String, text: String, bg: Color, border: Color, fg: Color,
-		icon_size: float, font_size: int) -> PanelContainer:
-	var panel := PanelContainer.new()
-	var box := StyleBoxFlat.new()
-	box.bg_color = bg
-	box.set_corner_radius_all(10)
-	box.border_color = border
-	box.set_border_width_all(1)
-	box.content_margin_left = 14
-	box.content_margin_right = 14
-	box.content_margin_top = 10
-	box.content_margin_bottom = 10
-	panel.add_theme_stylebox_override("panel", box)
-	panel.mouse_filter = Control.MOUSE_FILTER_STOP
-
-	var row := HBoxContainer.new()
-	row.name = "Row"
-	row.alignment = BoxContainer.ALIGNMENT_CENTER
-	row.add_theme_constant_override("separation", 6)
-	panel.add_child(row)
-
-	var icon := Icon.new()
-	icon.icon_name = icon_name
-	icon.color = fg
-	icon.custom_minimum_size = Vector2(icon_size, icon_size)
-	row.add_child(icon)
-
-	var label := UiTheme.make_label(text, font_size, fg)
-	label.name = "Label"
-	label.add_theme_font_override("font", UiTheme.font_bold())
-	label.autowrap_mode = TextServer.AUTOWRAP_OFF
-	label.size_flags_horizontal = Control.SIZE_SHRINK_BEGIN
-	row.add_child(label)
-
-	UiTheme.ignore_mouse_recursive(row)
-	return panel
-
-
-func _on_speed_selected(speed: float) -> void:
-	_speed = speed
+	_bottom_panel.visible = false
+	# Le plateau reprend la place du bandeau, jusqu'a la barre gestuelle.
+	_grid_view.offset_bottom = -8.0
 	_refresh_combat_status()
 
 
@@ -1108,7 +1051,7 @@ func _on_speed_selected(speed: float) -> void:
 ## Selectionne une piece et allume ses coups possibles. Pour changer d'avis,
 ## on tape une autre piece ou une case vide (cf. _on_combat_tap).
 func _select_unit(unit: BattleUnit) -> void:
-	if _busy or _auto or unit == null or unit.team != BattleUnit.TEAM_PLAYER:
+	if _busy or unit == null or unit.team != BattleUnit.TEAM_PLAYER:
 		return
 	if _selected_unit == unit:
 		return
@@ -1128,7 +1071,7 @@ func _clear_selection() -> void:
 ## Tape sur le plateau pendant le combat : soit on choisit une piece, soit on
 ## envoie la piece deja choisie sur la case tapee.
 func _on_combat_tap(cell: Vector2i) -> void:
-	if _busy or _auto:
+	if _busy:
 		return
 
 	if _selected_unit != null and _grid_view.legal_targets.has(cell):
@@ -1150,12 +1093,12 @@ func _on_combat_tap(cell: Vector2i) -> void:
 ## illegal ne consomme rien : le moteur retourne une liste vide et la piece
 ## reste selectionnee.
 func _try_player_move(unit: BattleUnit, destination: Vector2i) -> void:
-	if _busy or _auto or _phase != Phase.COMBAT:
+	if _busy or _phase != Phase.COMBAT:
 		return
 
 	var events: Array = _engine.play_move(unit, destination)
 	if events.is_empty():
-		_status_message("Ce coup n'est pas possible")
+		_status_message("COUP IMPOSSIBLE")
 		return
 
 	_busy = true
@@ -1166,13 +1109,12 @@ func _try_player_move(unit: BattleUnit, destination: Vector2i) -> void:
 
 
 ## Enchaine tous les coups qui ne demandent rien au joueur : la reponse de
-## l'IA, et un eventuel tour passe faute de coup legal. En mode AUTO, la
-## boucle ne rend jamais la main et resout la bataille entiere.
+## l'IA, et un eventuel tour passe faute de coup legal.
 func _resume_until_player_turn() -> void:
 	while _running and not _engine.finished:
 		_refresh_combat_status()
 		var player_turn: bool = _engine.current_team == BattleUnit.TEAM_PLAYER
-		if player_turn and not _auto and _engine.has_any_move(BattleUnit.TEAM_PLAYER):
+		if player_turn and _engine.has_any_move(BattleUnit.TEAM_PLAYER):
 			break
 
 		await _wait(float(Balance.COMBAT["ai_think_delay"]))
@@ -1199,61 +1141,39 @@ func _hand_over_to_player() -> void:
 	if not _engine.finished and not _engine.has_any_move(BattleUnit.TEAM_PLAYER):
 		_busy = true
 		_grid_view.draggable_team = -1
-		_status_message("Aucun coup possible - tu passes ton tour")
+		_status_message("AUCUN COUP POSSIBLE — TU PASSES")
 		await _resume_until_player_turn()
 
 
-func _on_auto_pressed() -> void:
-	_auto = not _auto
-	if not _auto:
-		_refresh_combat_status()
-		return
-
-	_clear_selection()
-	if _busy or _engine.finished or _phase != Phase.COMBAT:
-		_refresh_combat_status()
-		return
-
-	_busy = true
-	_grid_view.draggable_team = -1
-	await _resume_until_player_turn()
-
-
-## Message temporaire dans le bandeau du bas ; le prochain rafraichissement
-## de statut reprend la main.
+## Message temporaire A LA PLACE de l'etat du tour, dans le badge ; le prochain
+## rafraichissement de statut reprend la main.
+##
+## Le badge se retaille dessus, donc un message peut etre plus long que "À TOI
+## DE JOUER" sans rien couper - mais il reste sur une ligne : c'est une reponse
+## au geste qu'on vient de faire, pas un paragraphe d'aide. L'aide, c'est le i.
 func _status_message(text: String) -> void:
-	if _turn_label != null:
-		_turn_label.text = text
+	_set_badge_state(text)
 
 
 func _refresh_combat_status() -> void:
 	_phase_label.text = str(_engine.turn)
 	_refresh_stats_hud()
 	_refresh_blockage_badge()
-	_update_speed_pills(_speed)
 
-	if _auto_label != null:
-		_auto_label.text = "MANUEL" if _auto else "AUTO"
-
-	if _turn_label == null:
-		return
 	if _engine.finished:
-		_turn_label.text = "Bataille terminee"
-	elif _auto:
-		_turn_label.text = "Resolution automatique..."
+		_set_badge_state("BATAILLE TERMINÉE")
 	elif _engine.current_team == BattleUnit.TEAM_PLAYER and not _busy:
-		_turn_label.text = "A toi de jouer"
+		_set_badge_state("À TOI DE JOUER")
 	else:
-		_turn_label.text = "L'ennemi joue..."
+		_set_badge_state("L'ENNEMI JOUE…")
 
 
 ## N'apparait que passe _BLOCKAGE_WARNING_RATIO du seuil d'enlisement (cf.
 ## BattleEngine.stalemate_ratio) : le combat doit etre visiblement bloque
 ## depuis un moment, pas juste en train de manoeuvrer sans prise recente.
 ##
-## En resolution automatique le compte a rebours s'exprime en secondes (le
-## joueur regarde), en mode manuel en coups restants (le joueur joue, une
-## seconde ne veut plus rien dire).
+## Le compte a rebours s'exprime en COUPS restants : c'est le joueur qui joue,
+## et une seconde ne veut rien dire tant qu'il reflechit.
 func _refresh_blockage_badge() -> void:
 	if _blockage_badge == null or _engine.finished:
 		return
@@ -1261,31 +1181,11 @@ func _refresh_blockage_badge() -> void:
 		_blockage_badge.visible = false
 		return
 	_blockage_badge.visible = true
-	if _auto:
-		var seconds := _engine.stalemate_seconds_remaining() / _speed
-		_blockage_label.text = "Blocage - %ds" % maxi(1, int(ceil(seconds)))
-	else:
-		_blockage_label.text = "Blocage - %d coups" % maxi(1, _engine.stalemate_moves_remaining())
+	_blockage_label.text = "Blocage - %d coups" % maxi(1, _engine.stalemate_moves_remaining())
 
 
-func _update_speed_pills(shown_speed: float) -> void:
-	for speed in _speed_buttons.keys():
-		var pill: PanelContainer = _speed_buttons[speed]
-		var active: bool = speed == shown_speed
-		var box := StyleBoxFlat.new()
-		box.set_corner_radius_all(8)
-		box.content_margin_left = 10
-		box.content_margin_right = 10
-		box.content_margin_top = 7
-		box.content_margin_bottom = 7
-		box.bg_color = Color("ffd700") if active else Color("1c2135")
-		pill.add_theme_stylebox_override("panel", box)
-		var label: Label = pill.get_child(0)
-		label.add_theme_color_override("font_color", Color("0f111a") if active else Color("5a6480"))
-
-
-## Rejoue les evenements d'un coup. Seules les DUREES dependent de la vitesse
-## choisie : les evenements, eux, sont deja resolus.
+## Rejoue les evenements d'un coup. Ils sont deja resolus par le moteur :
+## l'animation ne decide de rien, elle montre.
 func _play_events(events: Array) -> void:
 	for event in events:
 		if not _running:
@@ -1293,18 +1193,18 @@ func _play_events(events: Array) -> void:
 		match String(event["type"]):
 			"capture":
 				await _grid_view.play_capture(
-					event["cell"], float(Balance.COMBAT["capture_duration"]) / _speed)
+					event["cell"], float(Balance.COMBAT["capture_duration"]))
 			"move":
 				_grid_view.last_move = {"from": event["from"], "to": event["to"]}
 				await _grid_view.play_move(
 					int(event["unit"]), event["from"], event["to"],
-					float(Balance.COMBAT["move_duration"]) / _speed)
+					float(Balance.COMBAT["move_duration"]))
 			"promotion":
 				if _engine.unit_by_id(int(event["unit"])).team == BattleUnit.TEAM_PLAYER:
 					_promotions_this_battle += 1
 				await _grid_view.play_promotion(
 					event["cell"], String(event["result"]),
-					float(Balance.COMBAT["promotion_duration"]) / _speed)
+					float(Balance.COMBAT["promotion_duration"]))
 			"crowning":
 				# Le sacre prend un tour : le pion est arrive, il n'est pas
 				# encore Dame. On le signale et on marque la case - c'est
@@ -1312,11 +1212,11 @@ func _play_events(events: Array) -> void:
 				_refresh_crowning()
 				var mine := _engine.unit_by_id(
 					int(event["unit"])).team == BattleUnit.TEAM_PLAYER
-				_status_message("Sacre au prochain tour — protège-la !" if mine
-					else "L'ennemi va faire une Dame — empêche-le !")
+				_status_message("SACRE AU PROCHAIN TOUR — PROTÈGE-LA" if mine
+					else "L'ENNEMI VA FAIRE UNE DAME — EMPÊCHE-LE")
 				await _wait(float(Balance.COMBAT["promotion_duration"]))
 			"pass":
-				_status_message("Camp bloque : tour passe")
+				_status_message("CAMP BLOQUÉ : TOUR PASSÉ")
 				await _wait(float(Balance.COMBAT["step_delay"]))
 			_:
 				pass
@@ -1331,12 +1231,24 @@ func _refresh_crowning() -> void:
 		if unit.awaiting_crown and unit.is_alive():
 			cells.append(unit.cell)
 	_grid_view.crowning_cells = cells
+	_refresh_threats()
 	_grid_view.queue_redraw()
 
 
+## Pieces du joueur que l'ennemi peut prendre a son prochain coup. La vue les
+## cercle de rouge (cf. GridView._draw_threats).
+##
+## Rafraichi apres chaque coup, mais AUSSI pendant le placement, et ce second
+## usage vaut le premier : on voit immediatement qu'on vient de poser une tour
+## sous la ligne d'un fou adverse. C'est ce qui fait du placement un vrai
+## contre-placement plutot qu'une repartition a l'aveugle - l'armee ennemie est
+## deja sur le plateau quand on pose la sienne.
+func _refresh_threats() -> void:
+	_grid_view.threat_cells = _engine.threatened_cells(BattleUnit.TEAM_PLAYER)
+
+
 func _wait(seconds: float) -> void:
-	var duration := maxf(0.01, seconds / _speed)
-	await get_tree().create_timer(duration).timeout
+	await get_tree().create_timer(maxf(0.01, seconds)).timeout
 
 
 # ------------------------------- PHASE RESULTAT ------------------------------
@@ -1567,7 +1479,6 @@ func _show_run_lost() -> void:
 		func(): Router.goto_battle(battle_id))
 	screen.add_action_button("ROYAUME", "castle", Router.goto_village)
 	screen.add_action_button("CAMPAGNE", "compass", Router.goto_campaign)
-
 
 
 ## "4 Pions, 1 Cavalier" - une seule ligne, plutot que des jetons par type,

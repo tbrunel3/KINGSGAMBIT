@@ -34,11 +34,6 @@ func place(unit: BattleUnit, cell: Vector2i) -> void:
 	_occupant[cell] = unit
 	unit.cell = cell
 
-
-func remove_at(cell: Vector2i) -> void:
-	_occupant.erase(cell)
-
-
 func remove_unit(unit: BattleUnit) -> void:
 	if _occupant.get(unit.cell, null) == unit:
 		_occupant.erase(unit.cell)
@@ -60,11 +55,6 @@ func player_zone_first_row() -> int:
 
 func is_player_zone(cell: Vector2i) -> bool:
 	return in_bounds(cell) and cell.y >= player_zone_first_row()
-
-
-func is_enemy_zone(cell: Vector2i) -> bool:
-	return in_bounds(cell) and cell.y < Balance.DEPLOY_ROWS
-
 
 ## Cases libres de la zone ennemie, rangee du fond d'abord, du centre vers les
 ## bords : une armee massee au centre se defend mieux qu'une ligne etalee.
@@ -96,7 +86,3 @@ func _row_from_center(y: int) -> Array:
 		row.append(Vector2i(x, y))
 	row.sort_custom(func(a, b): return absf(a.x - middle) < absf(b.x - middle))
 	return row
-
-
-func chebyshev(a: Vector2i, b: Vector2i) -> int:
-	return maxi(absi(a.x - b.x), absi(a.y - b.y))

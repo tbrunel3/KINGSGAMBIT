@@ -43,17 +43,6 @@ static func legal_moves(unit: BattleUnit, grid: GridModel) -> Array:
 		_:
 			return _pawn(unit, grid)
 
-
-## Les cases de `legal_moves` qui capturent effectivement une piece adverse.
-static func capture_moves(unit: BattleUnit, grid: GridModel) -> Array:
-	var captures: Array = []
-	for cell in legal_moves(unit, grid):
-		var occupant := grid.unit_at(cell)
-		if occupant != null and unit.is_enemy_of(occupant):
-			captures.append(cell)
-	return captures
-
-
 ## Deplacement glissant : on avance case par case, on s'arrete devant un allie,
 ## et on s'arrete EN PRENANT le premier ennemi rencontre. Tour, Fou, Dame.
 static func _slide(unit: BattleUnit, grid: GridModel, directions: Array) -> Array:

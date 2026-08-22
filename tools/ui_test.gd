@@ -10,6 +10,8 @@ extends Node
 ##   godot --headless --path . tools/ui_test.tscn
 ##
 
+const Driver := preload("res://tools/battle_driver.gd")
+
 var _failures: int = 0
 
 
@@ -154,8 +156,8 @@ func _test_battle() -> void:
 	_check(battle._phase == 0, "la bataille demarre en phase de placement")
 	_check(battle._engine.living(BattleUnit.TEAM_ENEMY).size() > 0, "l'armee ennemie est en place")
 
-	# Placement automatique
-	battle._on_auto_place()
+	# Placement automatique (pilote de test : le jeu ne le propose plus)
+	Driver.auto_place(battle)
 	await _frames(2)
 	var placed: int = battle._placed.size()
 	_check(placed > 0, "le placement automatique pose %d unites" % placed)
@@ -168,7 +170,7 @@ func _test_battle() -> void:
 	battle._on_reset_placement()
 	await _frames(2)
 	_check(battle._placed.is_empty(), "Reinitialiser vide la grille")
-	battle._on_auto_place()
+	Driver.auto_place(battle)
 	await _frames(2)
 	_check(battle._placed.size() == placed, "le replacement redonne le meme effectif")
 
@@ -201,7 +203,6 @@ func _test_battle() -> void:
 
 	# Combat : le joueur joue lui-meme son premier coup
 	var gold_before := Game.gold
-	battle._speed = 4.0
 	battle._start_combat()
 	_check(battle._phase == 1, "le combat demarre")
 	_check(battle._engine.current_team == BattleUnit.TEAM_PLAYER, "le joueur ouvre la bataille")
@@ -236,9 +237,9 @@ func _test_battle() -> void:
 		wait_ai += 1
 	_check(battle._engine.turn > turn_before or battle._phase == 2, "l'IA repond et le tour avance")
 
-	# Le reste de la bataille est confie a la resolution automatique.
-	battle._on_auto_pressed()
-	_check(battle._auto, "le bouton AUTO enclenche la resolution automatique")
+	# Le reste de la bataille est confie au pilote de test. Il n'y a plus de
+	# bouton pour ca dans le jeu : c'est le joueur qui joue, toujours.
+	Driver.resolve(battle)
 
 	var guard := 0
 	while battle._phase != 2 and guard < 8000:
