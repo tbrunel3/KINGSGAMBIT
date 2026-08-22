@@ -189,7 +189,7 @@ func _piece_badge(size: int) -> PanelContainer:
 func _add_castle_card(body: VBoxContainer) -> void:
 	var card: PanelContainer = CardScene.instantiate()
 	var card_body: VBoxContainer = card.get_node("%Body")
-	card_body.add_child(UiTheme.stat_row("Deploiement actuel",
+	card_body.add_child(UiTheme.stat_row("Déploiement actuel",
 		UiTheme.make_label("%d de charge" % Game.deploy_capacity(), 14, Color("f0f3f8"))))
 
 	if not Game.is_max_level(Balance.CASTLE):
@@ -267,9 +267,9 @@ func _add_locked_card(body: VBoxContainer) -> void:
 	var card: PanelContainer = CardScene.instantiate()
 	var card_body: VBoxContainer = card.get_node("%Body")
 	card_body.add_child(UiTheme.make_label(
-		"Disponible au Chateau niveau %d" % required, 15, UiTheme.GOLD))
+		"Disponible au Château niveau %d" % required, 15, UiTheme.GOLD))
 	card_body.add_child(UiTheme.make_label(
-		"Chateau actuel : niveau %d" % Game.castle_level(), 13, UiTheme.TEXT_DIM))
+		"Château actuel : niveau %d" % Game.castle_level(), 13, UiTheme.TEXT_DIM))
 
 	var track := Control.new()
 	track.custom_minimum_size = Vector2(0, 8)
@@ -485,9 +485,9 @@ func _add_upgrade_section(body: VBoxContainer) -> void:
 	var seconds := Balance.upgrade_seconds(_type, level)
 
 	body.add_child(_action_row(
-		"AMELIORER BATIMENT", UiTheme.GOLD,
+		"AMÉLIORER BÂTIMENT", UiTheme.GOLD,
 		"%d Or" % cost, UiTheme.format_duration(seconds),
-		"AMELIORER", UiTheme.GOLD_BUTTON, Color("ffd700"),
+		"AMÉLIORER", UiTheme.GOLD_BUTTON, Color("ffd700"),
 		not Game.can_afford(cost),
 		func(): Game.start_upgrade(_type),
 		Color("d4af37")))

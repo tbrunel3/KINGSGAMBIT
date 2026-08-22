@@ -26,12 +26,6 @@ const BUILDING_POS := {
 	"fou": Vector2(45, 628),         # batiment bas-gauche
 	"tour": Vector2(252, 619),       # batiment bas-droit
 }
-const BUILDING_TITLES := {
-	"pion": "Caserne des Pions",
-	"cavalier": "Ecuries",
-	"fou": "Cloitre des Fous",
-	"tour": "Donjon des Tours",
-}
 ## Teinte de chaque label de batiment (bordure + pastille de niveau) - une
 ## palette propre a l'UI du Village, distincte des couleurs d'equipe utilisees
 ## sur la grille de bataille (cf. capture Figma 01 : chaque batiment a sa
@@ -409,7 +403,7 @@ func _build_castle_label() -> void:
 	vbox.add_theme_constant_override("separation", 4)
 	margin.add_child(vbox)
 
-	var title := UiTheme.make_label("CHATEAU ROYAL", 16, Color("ffd933"))
+	var title := UiTheme.make_label("CHÂTEAU ROYAL", 16, Color("ffd933"))
 	title.add_theme_font_override("font", UiTheme.font_display())
 	title.autowrap_mode = TextServer.AUTOWRAP_OFF
 	title.size_flags_horizontal = Control.SIZE_SHRINK_BEGIN
@@ -442,7 +436,10 @@ func _build_building_label(type: String) -> void:
 	vbox.add_theme_constant_override("separation", 4)
 	margin.add_child(vbox)
 
-	var title := UiTheme.make_label(String(BUILDING_TITLES[type]), 15, Color.WHITE)
+	# Le nom vient de Balance, comme celui qu'affiche le popup du batiment : il
+	# y avait deux tables pour la meme chose, et elles ne disaient deja plus
+	# tout a fait la meme chose.
+	var title := UiTheme.make_label(Balance.building_name(type), 15, Color.WHITE)
 	title.add_theme_font_override("font", UiTheme.font_display())
 	title.autowrap_mode = TextServer.AUTOWRAP_OFF
 	title.size_flags_horizontal = Control.SIZE_SHRINK_BEGIN
@@ -612,7 +609,7 @@ func _refresh_castle() -> void:
 	level_pill.set_custom("", "Nv.%d" % Game.castle_level(), Color("ffd933", 0.2), Color("ffd933"))
 	level_pill.get_node("%Text").add_theme_font_size_override("font_size", 11)
 
-	var deploy := UiTheme.make_label("Deploiement: %d" % Game.deploy_capacity(), 10, Color("ccd1e0"))
+	var deploy := UiTheme.make_label("Charge : %d" % Game.deploy_capacity(), 10, Color("ccd1e0"))
 	deploy.autowrap_mode = TextServer.AUTOWRAP_OFF
 	_castle_sub_row.add_child(deploy)
 
@@ -664,7 +661,7 @@ func _refresh_building(type: String) -> void:
 		# La Dame n'a pas de batiment a elle : elle vit au Chateau Royal, et
 		# n'y apparait que le jour ou l'une d'elles y entre.
 		var hint := UiTheme.make_label(
-			"Chateau Nv.%d requis" % Balance.unlock_castle_level(type), 11, UiTheme.TEXT_DIM)
+			"Château Nv.%d requis" % Balance.unlock_castle_level(type), 11, UiTheme.TEXT_DIM)
 		hint.autowrap_mode = TextServer.AUTOWRAP_OFF
 		sub_row.add_child(hint)
 	else:

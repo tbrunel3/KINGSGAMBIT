@@ -1312,7 +1312,7 @@ func _show_result() -> void:
 	if draw:
 		_phase_label.text = "Match nul"
 	else:
-		_phase_label.text = "Victoire" if victory else "Defaite"
+		_phase_label.text = "Victoire" if victory else "Défaite"
 
 	# NUL : personne n'a gagne. Les survivants rentrent, les morts restent
 	# morts, ce combat ne rapporte rien - mais la serie n'est pas rompue.

@@ -79,6 +79,31 @@ func _capture_dame_tower() -> void:
 	for i in range(3):
 		await RenderingServer.frame_post_draw
 
+	# LES POPUPS DE BATIMENT, qui n'avaient aucune capture alors qu'ils portent
+	# a eux seuls quatre ecrans de la maquette (08 chateau, 09 batiment, 10
+	# verrouille, 11 amelioration en cours) dans une seule scene. Sans image de
+	# reference, l'ecart avec la V2 ne se voyait nulle part.
+	#
+	# Deux etats, qui couvrent les deux formes du popup :
+	#   - une caserne ouverte, ou l'on recrute et ou l'on ameliore
+	#   - un batiment VERROUILLE, qui n'affiche qu'une condition d'ouverture
+	#
+	# Pas le Chateau Royal : le toucher ne l'ouvre pas en popup, il CHANGE DE
+	# SCENE vers la salle du trone (deja capturee en 1b). L'ajouter ici faisait
+	# derailler tout le reste de la campagne de captures.
+	for shot in [
+		{"type": Balance.CAVALIER, "file": "1e_popup_caserne.png"},
+		{"type": Balance.TOUR, "file": "1f_popup_verrouille.png"},
+	]:
+		village._on_building_pressed(String(shot["type"]))
+		for i in range(4):
+			await RenderingServer.frame_post_draw
+		_save(village, String(shot["file"]))
+		if is_instance_valid(village._popup):
+			village._popup.queue_free()
+		for i in range(3):
+			await RenderingServer.frame_post_draw
+
 	# Le village AVANT d'ouvrir le popup : c'est la qu'on voit le halo dore du
 	# Chateau Royal, allume par la Dame rentree.
 	_save(village, "1a_chateau_qui_brille.png")

@@ -235,7 +235,7 @@ static func ignore_mouse_recursive(node: Node) -> void:
 ## Formate une duree en secondes pour un compte a rebours (1h 05m / 3m 20s).
 static func format_duration(seconds: int) -> String:
 	if seconds <= 0:
-		return "termine"
+		return "terminé"
 	var h := seconds / 3600
 	var m := (seconds % 3600) / 60
 	var s := seconds % 60

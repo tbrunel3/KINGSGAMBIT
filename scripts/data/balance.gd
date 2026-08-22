@@ -159,7 +159,7 @@ const UNITS := {
 	},
 	CAVALIER: {
 		"name": "Cavalier",
-		"building_name": "Ecuries",
+		"building_name": "Écuries",
 		"letter": "C",
 		"color": "c96f4f",
 		"move_type": "jump",
@@ -186,7 +186,7 @@ const UNITS := {
 	},
 	FOU: {
 		"name": "Fou",
-		"building_name": "Cloitre",
+		"building_name": "Cloître des Fous",
 		"letter": "F",
 		"color": "8f6fc6",
 		"move_type": "diagonal",
@@ -201,7 +201,7 @@ const UNITS := {
 	},
 	TOUR: {
 		"name": "Tour",
-		"building_name": "Donjon",
+		"building_name": "Donjon des Tours",
 		"letter": "T",
 		"color": "6f9f5f",
 		"move_type": "orthogonal",
@@ -218,7 +218,7 @@ const UNITS := {
 		"name": "Dame",
 		# La Dame n'a pas de batiment a elle : elle vit au Chateau Royal, aux
 		# cotes du Roi. C'est de la que vient toute l'histoire du jeu.
-		"building_name": "Chateau Royal",
+		"building_name": "Château Royal",
 		"letter": "D",
 		"color": "d8a0d0",
 		"move_type": "queen",
@@ -267,7 +267,7 @@ const UNITS := {
 ## revalider avec cet outil avant de retoucher ces chiffres.
 ##                    Nv   1   2   3   4   5   6   7   8   9  10
 const CASTLE_DATA := {
-	"name": "Chateau Royal",
+	"name": "Château Royal",
 	"letter": "R",
 	"color": "c6a84f",
 	"deploy_capacity": [ 16, 19, 21, 23, 26, 28, 30, 32, 34, 36],
@@ -530,12 +530,12 @@ const RUN_REINFORCE_WEIGHT := 2
 #              c'est rouvrir le trou.
 
 const CAMPAIGN := [
-	{"id": 1,  "name": "L Oree du Bois",     "cols": 5, "rows": 6, "reward": 150,  "level": 1, "player": 1, "ai": AI_NOVICE, "fights": 1, "enemies": {PION: 4}},
-	{"id": 2,  "name": "Le Gue de Pierre",   "cols": 5, "rows": 6, "reward": 250, "level": 1, "player": 1, "ai": AI_NOVICE, "fights": 2, "enemies": {PION: 3, FOU: 1}},
+	{"id": 1,  "name": "L'Orée du Bois",     "cols": 5, "rows": 6, "reward": 150,  "level": 1, "player": 1, "ai": AI_NOVICE, "fights": 1, "enemies": {PION: 4}},
+	{"id": 2,  "name": "Le Gué de Pierre",   "cols": 5, "rows": 6, "reward": 250, "level": 1, "player": 1, "ai": AI_NOVICE, "fights": 2, "enemies": {PION: 3, FOU: 1}},
 	{"id": 3,  "name": "La Route du Sel",    "cols": 6, "rows": 7, "reward": 400, "level": 2, "player": 2, "ai": AI_AGUERRI, "fights": 2, "enemies": {PION: 4, CAVALIER: 1, TOUR: 1}},
-	{"id": 4,  "name": "Les Champs Brules",  "cols": 6, "rows": 7, "reward": 600, "level": 2, "player": 2, "ai": AI_AGUERRI, "fights": 2, "enemies": {PION: 5, FOU: 1, CAVALIER: 1}},
+	{"id": 4,  "name": "Les Champs Brûlés",  "cols": 6, "rows": 7, "reward": 600, "level": 2, "player": 2, "ai": AI_AGUERRI, "fights": 2, "enemies": {PION: 5, FOU: 1, CAVALIER: 1}},
 	{"id": 5,  "name": "Le Pont Noir",       "cols": 6, "rows": 8, "reward": 900, "level": 2, "player": 3, "ai": AI_AGUERRI, "fights": 2, "enemies": {PION: 6, TOUR: 1, FOU: 1}},
-	{"id": 6,  "name": "La Carriere",        "cols": 6, "rows": 8, "reward": 1200, "level": 3, "player": 3, "ai": AI_AGUERRI, "fights": 2, "enemies": {PION: 6, CAVALIER: 1, TOUR: 1}},
+	{"id": 6,  "name": "La Carrière",        "cols": 6, "rows": 8, "reward": 1200, "level": 3, "player": 3, "ai": AI_AGUERRI, "fights": 2, "enemies": {PION: 6, CAVALIER: 1, TOUR: 1}},
 	{"id": 7,  "name": "Les Marches Grises", "cols": 7, "rows": 8, "reward": 1600, "level": 3, "player": 4, "ai": AI_EXPERT, "fights": 2, "enemies": {PION: 7, FOU: 1, CAVALIER: 1, TOUR: 1}},
 	{"id": 8,  "name": "Le Col du Corbeau",  "cols": 7, "rows": 8, "reward": 2000, "level": 4, "player": 4, "ai": AI_EXPERT, "fights": 3, "enemies": {PION: 8, TOUR: 2, CAVALIER: 1}},
 	{"id": 9,  "name": "Les Ruines Hautes",  "cols": 7, "rows": 9, "reward": 2800, "level": 4, "player": 5, "ai": AI_EXPERT, "fights": 3, "enemies": {PION: 8, FOU: 2, TOUR: 1, CAVALIER: 1}},
@@ -597,13 +597,13 @@ const MISSIONS := [
 		"goal": "captures", "target": 20, "gold": 480, "requires": ["flawless"]},
 	{"id": "promotion", "text": "Mene un pion jusqu'au bout du plateau",
 		"goal": "promotions", "target": 1, "gold": 660, "requires": ["flawless"]},
-	{"id": "castle3", "text": "Porte le Chateau Royal au niveau 3",
+	{"id": "castle3", "text": "Porte le Château Royal au niveau 3",
 		"goal": "castle_level", "target": 3, "gold": 780, "requires": ["upgrade"]},
 
 	# --- Le bout du chemin.
 	{"id": "dame", "text": "Ramene une Dame vivante au village",
 		"goal": "dames", "target": 1, "gold": 900, "requires": ["promotion"]},
-	{"id": "two_dames", "text": "Abrite 2 Dames au Chateau Royal",
+	{"id": "two_dames", "text": "Abrite 2 Dames au Château Royal",
 		"goal": "dames", "target": 2, "gold": 1200, "requires": ["dame"]},
 	{"id": "campaign", "text": "Termine la campagne",
 		"goal": "campaign", "target": 1, "gold": 1500, "requires": ["castle3", "captures"]},
@@ -732,7 +732,8 @@ func move_description(type: String, level: int) -> String:
 		"queen":
 			return "toutes directions, %d cases" % move_range(type, level)
 		"jump":
-			return "saut, %d figures" % jump_offsets(type, level).size()
+			var figures := jump_offsets(type, level).size()
+			return "saut, %d figure%s" % [figures, "s" if figures > 1 else ""]
 		_:
 			var reach := move_range(type, level)
 			var opening := first_move_range(type, level)
