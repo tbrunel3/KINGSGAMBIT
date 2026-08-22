@@ -318,9 +318,21 @@ nom n'a pas de suffixe `-v2` : le nom de la frame ne dit rien de son âge.
 
 Inventaire relevé sur le fichier entier (`get_metadata` sur la page, 47 nœuds de
 premier niveau) : **rien d'autre n'y est un écran**. Le reste sont les images
-sources posées à côté des frames — illustrations du Roi, fonds de plateau, carte
-parchemin dessinée à la main, Roi derrière des barreaux. Elles n'appartiennent à
-aucune frame et ne sont donc réclamées par aucun écran.
+sources posées à côté des frames, et toutes sont déjà en jeu sauf deux, qui
+n'appartiennent à aucune frame :
+
+- **La Dame captive** — la pièce derrière des barreaux, dans une arche de
+  pierre. C'est l'image centrale de l'histoire et elle n'était nulle part.
+  Récupérée dans `assets/story/dame_captive.png`, **sans écran qui l'affiche** :
+  la placer serait inventer une mise en page que la maquette ne donne pas.
+  *Attention en la ré-exportant* : l'export du nœud arrive avec le fond gris du
+  canvas (alpha entièrement opaque) ; c'est l'image SOURCE qu'il faut prendre,
+  la seule vraiment détourée.
+- **Une carte de campagne illustrée**, numéros d'étape dessinés en dur. Elle ne
+  peut pas remplacer `parchment_map.jpg` telle quelle : le jeu trace ses cachets
+  par-dessus, et ce sont eux qui disent verrouillé / disponible / gagné. Un
+  parchemin qui porte déjà ses numéros perd la progression. C'est un concept, pas
+  un asset déposable.
 
 Deux écrans existent dans le jeu **sans avoir jamais été dessinés** : l'écran de
 match nul (fabriqué en repeignant la victoire en acier) et la boutique, dont les
