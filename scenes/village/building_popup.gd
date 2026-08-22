@@ -15,6 +15,7 @@ extends Control
 const DividerScene := preload("res://scenes/ui/components/ornate_divider.tscn")
 const CardScene := preload("res://scenes/ui/components/card.tscn")
 const PillScene := preload("res://scenes/ui/components/pill.tscn")
+const ConfirmUpgradeScene := preload("res://scenes/village/confirm_upgrade.tscn")
 
 var _type: String = ""
 
@@ -351,6 +352,17 @@ func _add_recruit_row(body: VBoxContainer) -> void:
 ## Ligne compacte titre/cout(+duree) a gauche, bouton d'action a droite - le
 ## meme gabarit sert au recrutement et a l'amelioration (Option-Recruit et
 ## Option-Upgrade des captures Figma 09/10), seule la couleur d'accent change.
+## L'amelioration passe par une CONFIRMATION (cf. confirm_upgrade.gd). Elle
+## engage a la fois de l'or et des heures de temps reel : c'est la seule action
+## du village a le faire, et c'etait la seule sans question posee.
+func _ask_upgrade() -> void:
+	var confirm: Node = ConfirmUpgradeScene.instantiate()
+	var type := _type
+	confirm.confirmed.connect(func(): Game.start_upgrade(type))
+	get_tree().root.add_child(confirm)
+	confirm.open(type)
+
+
 func _action_row(title_text: String, title_color: Color, cost_text: String, extra_text: String,
 		button_text: String, button_bg: Color, button_border: Color, disabled: bool,
 		on_press: Callable, border: Color) -> PanelContainer:
@@ -503,7 +515,7 @@ func _add_upgrade_section(body: VBoxContainer) -> void:
 		"%d Or" % cost, UiTheme.format_duration(seconds),
 		"AMÉLIORER", UiTheme.GOLD, Color("b8860b"),
 		not Game.can_afford(cost),
-		func(): Game.start_upgrade(_type),
+		_ask_upgrade,
 		Color("d4af37")))
 
 

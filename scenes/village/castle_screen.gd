@@ -15,6 +15,8 @@ extends Control
 ## l'amelioration viennent de Balance et de GameState.
 ##
 
+const ConfirmUpgradeScene := preload("res://scenes/village/confirm_upgrade.tscn")
+
 const BG_AVEC_DAME := "res://assets/castle/throne_room_avec_dame.png"
 const BG_SANS_DAME := "res://assets/castle/throne_room_sans_dame.png"
 
@@ -36,6 +38,16 @@ const CAPTION := Color("8b9bb4")
 
 var _panel_body: VBoxContainer = null
 var _level_label: Label = null
+
+
+## L'amelioration du Chateau passe par la meme confirmation que celle des
+## casernes (cf. confirm_upgrade.gd) : c'est la plus chere du jeu, et la plus
+## longue.
+func _ask_upgrade() -> void:
+	var confirm: Node = ConfirmUpgradeScene.instantiate()
+	confirm.confirmed.connect(func(): Game.start_upgrade(Balance.CASTLE))
+	get_tree().root.add_child(confirm)
+	confirm.open(Balance.CASTLE)
 
 
 func _ready() -> void:
@@ -435,5 +447,5 @@ func _upgrade_button(cost: int) -> PanelContainer:
 	# le bouton qui est en train d'emettre le signal.
 	button.gui_input.connect(func(event: InputEvent):
 		if event is InputEventMouseButton and event.pressed and event.button_index == MOUSE_BUTTON_LEFT:
-			Game.start_upgrade.call_deferred(Balance.CASTLE))
+			_ask_upgrade())
 	return button

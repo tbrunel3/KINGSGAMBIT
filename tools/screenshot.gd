@@ -104,6 +104,19 @@ func _capture_dame_tower() -> void:
 		for i in range(3):
 			await RenderingServer.frame_post_draw
 
+	# LA MODALE DE CONFIRMATION D'AMELIORATION, que le jeu n'avait pas avant la
+	# revision : elle s'ouvre par-dessus le village, comme en partie.
+	Game.add_gold(5000)
+	var confirm: Node = load("res://scenes/village/confirm_upgrade.tscn").instantiate()
+	village.add_child(confirm)
+	confirm.open(Balance.PION)
+	for i in range(4):
+		await RenderingServer.frame_post_draw
+	_save(village, "1g_confirmer_amelioration.png")
+	confirm.queue_free()
+	for i in range(3):
+		await RenderingServer.frame_post_draw
+
 	# Le village AVANT d'ouvrir le popup : c'est la qu'on voit le halo dore du
 	# Chateau Royal, allume par la Dame rentree.
 	_save(village, "1a_chateau_qui_brille.png")

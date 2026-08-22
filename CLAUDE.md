@@ -308,7 +308,7 @@ nom n'a pas de suffixe `-v2` : le nom de la frame ne dit rien de son âge.
 | 07-bataille-defaite | 2:835 | fait (même écran repeint en rouge) |
 | mission-popup | 228:9 | à intégrer (le panneau existe côté code) |
 | 09 / 10 / 11 — popups de bâtiment | 2:1048 / 2:1115 / 2:1165 | à intégrer — *le code couvre les quatre écrans dans une seule scène (`building_popup.gd`), et `screenshot.tscn` en capture deux états (`1e_`, `1f_`) pour comparer* |
-| confirm-upgrade-modal | 103:15 | **dessinée dans Figma**, absente du jeu |
+| confirm-upgrade-modal | 103:15 | fait — `confirm_upgrade.tscn` |
 | codex-popup | 194:4 | **dessinée dans Figma** (393 × 4537, un parchemin défilant), absente du jeu |
 | 12-composants | 2:1224 | planche de référence |
 | Pièces d'échecs SVG | 32:2 | déjà en jeu |

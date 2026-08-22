@@ -80,6 +80,18 @@ func _test_village() -> void:
 	if upgrade != null:
 		_press(upgrade)
 		await _frames(3)
+
+		# L'AMELIORATION SE CONFIRME depuis la revision de l'ecran : elle engage a
+		# la fois de l'or et des heures de temps reel, et c'est la seule action du
+		# village a le faire. Le banc doit donc suivre le vrai parcours - sans quoi
+		# il ne teste plus ce que le joueur fait.
+		_check(not Game.is_upgrading(Balance.PION),
+			"rien ne demarre tant que la confirmation n'est pas donnee")
+		var confirm := _find_clickable(get_tree().root, "CONFIRMER")
+		_check(confirm != null, "la modale de confirmation s'ouvre")
+		if confirm != null:
+			_press(confirm)
+			await _frames(3)
 		_check(Game.is_upgrading(Balance.PION), "l'amelioration demarre")
 		_check(Game.upgrade_remaining(Balance.PION) > 0, "le compte a rebours est arme")
 
