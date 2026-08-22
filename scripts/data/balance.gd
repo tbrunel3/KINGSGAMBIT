@@ -740,8 +740,16 @@ func move_description(type: String, level: int) -> String:
 		"queen":
 			return "toutes directions, %d cases" % move_range(type, level)
 		"jump":
-			var figures := jump_offsets(type, level).size()
-			return "saut, %d figure%s" % [figures, "s" if figures > 1 else ""]
+			# Les FIGURES elles-memes, pas leur nombre. Le cavalier passe du
+			# petit saut diagonal (1x1) au L classique (1x2) en montant au
+			# niveau 2 : deux sauts tres differents, mais toujours UNE figure.
+			# A n'en dire que le compte, l'ecran d'amelioration affichait la
+			# meme phrase avant et apres, et masquait donc le seul gain reel de
+			# ce palier.
+			var noms: Array = []
+			for figure in jump_offsets(type, level):
+				noms.append("%d×%d" % [int(figure[0]), int(figure[1])])
+			return "saut %s" % ", ".join(noms)
 		_:
 			var reach := move_range(type, level)
 			var opening := first_move_range(type, level)

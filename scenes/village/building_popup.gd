@@ -313,7 +313,12 @@ func _add_piece_card(body: VBoxContainer) -> void:
 	if Game.is_building_unlocked(_type) and level < Balance.max_level(_type):
 		var next_move := Balance.move_description(_type, level + 1)
 		if next_move != current_move:
-			var upgrade_desc := UiTheme.make_label("Portee : %s -> %s" % [current_move, next_move], 11, UiTheme.SUCCESS)
+			# Seulement CE QUI CHANGE. La ligne du dessus dit deja la mobilite
+			# actuelle ; la repeter pour la barrer d'une fleche prenait deux
+			# lignes pour une information.
+			var upgrade_desc := UiTheme.make_label(
+				"Nv.%d → %s" % [level + 1, next_move], 11, UiTheme.SUCCESS)
+			upgrade_desc.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 			texts.add_child(upgrade_desc)
 
 	if _type == Balance.PION:
