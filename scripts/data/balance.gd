@@ -537,7 +537,20 @@ const RUN_REINFORCE_WEIGHT := 2
 #              raison : elle laissait 33 593 or dormants sur 55 530 encaisses.
 #              A lire en RETIRANT la recompense de la derniere bataille : elle
 #              tombe quand il n'y a plus rien a acheter, donc elle gonfle le
-#              tresor final sans avoir jamais ete un choix. Le farm redevient un choix - accelerer - au lieu d'un
+#              tresor final sans avoir jamais ete un choix.
+#
+#              MESURE DE REFERENCE de la courbe actuelle (economy_probe) - c'est
+#              a ce tableau qu'il faut comparer apres toute retouche :
+#
+#                encaisse ............ 41 430   (dont 1 680 de missions)
+#                depense ............. 21 937
+#                reste ............... 19 493   dont 15 000 de recompense finale
+#                surplus reel .........  4 493
+#                replays obligatoires .      0
+#                niveaux atteints ..... Ch6 P6 C6 F6 T6 - exactement `player: 6`
+#
+#              Les deux signaux de sante sont la : aucun farm impose, et un
+#              surplus mince une fois la derniere prime mise de cote. Le farm redevient un choix - accelerer - au lieu d'un
 #              passage oblige. Toucher a `upgrade_cost` sans relancer la sonde,
 #              c'est rouvrir le trou.
 
