@@ -20,7 +20,12 @@ const SHOTS := [
 	{"scene": "res://scenes/village/village.tscn", "file": "1_village.png", "battle": 1},
 	{"scene": "res://scenes/battle/campaign.tscn", "file": "2_campagne.png", "battle": 1},
 	{"scene": "res://scenes/battle/battle_prep.tscn", "file": "3_preparation.png", "battle": 3},
+	# La derniere bataille est la seule a porter le bandeau de la Dame captive
+	# (cf. battle_prep._build_stake_band) : sans cette capture, rien ne le
+	# montre jamais.
+	{"scene": "res://scenes/battle/battle_prep.tscn", "file": "3b_preparation_dame.png", "battle": 10},
 	{"scene": "res://scenes/battle/battle.tscn", "file": "4_placement.png", "battle": 3},
+	{"scene": "res://scenes/village/codex_popup.tscn", "file": "1i_codex.png", "battle": 1},
 	{"scene": "res://scenes/ui/ui_kit_showcase.tscn", "file": "0_ui_kit.png", "battle": 1},
 ]
 

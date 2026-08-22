@@ -60,6 +60,10 @@ const TOP_FADE_HEIGHT := 143.0
 const BOTTOM_FADE_TOP := 720.0
 const BOTTOM_FADE_HEIGHT := 132.0
 const DEV_BUTTON_RECT := Rect2(362, 14, 24, 24)
+## Bouton CODEX, cale a gauche de l'engrenage des reglages. Icone seule et
+## discrete : le codex se consulte, il ne se joue pas - lui donner un libelle
+## le mettrait au meme rang que MISSIONS, qui dit quoi faire ensuite.
+const CODEX_BUTTON_RECT := Rect2(319, 44, 28, 28)
 
 @onready var _overlay: Control = $Overlay
 
@@ -69,6 +73,7 @@ var _level_pill: Pill
 var _missions_button: PanelContainer
 var _missions_label: Label
 var _missions_badge: PanelContainer
+var _codex_button: PanelContainer
 var _castle_label: PanelContainer
 var _castle_glow: TextureRect
 var _castle_glow_tween: Tween
@@ -179,6 +184,41 @@ func _build_top_bar() -> void:
 	_overlay.add_child(settings)
 	settings.position = Vector2(353, TOP_BAR_Y)
 	settings.size = Vector2(28, 28)
+
+	_build_codex_button()
+
+
+## Bouton du CODEX DU ROYAUME. Le jeu n'expliquait nulle part ce que fait une
+## piece, ce que coute la recrue suivante, ni pourquoi une bataille demande
+## trois combats : c'est la porte de cette reference.
+func _build_codex_button() -> void:
+	_codex_button = PanelContainer.new()
+	var box := StyleBoxFlat.new()
+	box.bg_color = Color("174971")
+	box.set_corner_radius_all(14)
+	box.set_content_margin_all(7)
+	_codex_button.add_theme_stylebox_override("panel", box)
+
+	var glyph := Icon.new()
+	glyph.icon_name = "info"
+	glyph.color = Color("ffe580")
+	glyph.custom_minimum_size = Vector2(14, 14)
+	_codex_button.add_child(glyph)
+
+	_overlay.add_child(_codex_button)
+	_codex_button.position = CODEX_BUTTON_RECT.position
+	_codex_button.size = CODEX_BUTTON_RECT.size
+
+	UiTheme.ignore_mouse_recursive(glyph)
+	_codex_button.mouse_filter = Control.MOUSE_FILTER_STOP
+	_codex_button.gui_input.connect(func(event: InputEvent):
+		if event is InputEventMouseButton and event.pressed and event.button_index == MOUSE_BUTTON_LEFT:
+			_on_codex_pressed()
+	)
+
+
+func _on_codex_pressed() -> void:
+	Router.goto_codex()
 
 
 ## Bandeau degrade vertical, pose sur le decor.
@@ -559,13 +599,7 @@ func _style_building_panel(panel: PanelContainer, accent: Color, radius: int,
 ## "2 450" plutot que "2450" - separateur de milliers a la francaise, comme
 ## la pastille Or de la capture Figma 01.
 func _format_thousands(n: int) -> String:
-	var digits := str(n)
-	var out := ""
-	for i in range(digits.length()):
-		if i > 0 and (digits.length() - i) % 3 == 0:
-			out += " "
-		out += digits[i]
-	return out
+	return UiTheme.format_thousands(n)
 
 
 # ------------------------------- RAFRAICHISSEMENT ----------------------------

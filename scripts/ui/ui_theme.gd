@@ -233,6 +233,19 @@ static func ignore_mouse_recursive(node: Node) -> void:
 
 
 ## Formate une duree en secondes pour un compte a rebours (1h 05m / 3m 20s).
+## "15 530" plutot que "15530". Un montant a cinq chiffres sans separateur se
+## dechiffre au lieu de se lire, et la campagne en verse jusqu'a 15 000 d'un
+## coup sur la derniere serie.
+static func format_thousands(n: int) -> String:
+	var digits := str(absi(n))
+	var out := ""
+	for i in range(digits.length()):
+		if i > 0 and (digits.length() - i) % 3 == 0:
+			out += " "
+		out += digits[i]
+	return ("-" if n < 0 else "") + out
+
+
 static func format_duration(seconds: int) -> String:
 	if seconds <= 0:
 		return "terminé"

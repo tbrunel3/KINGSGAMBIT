@@ -18,6 +18,7 @@ var _failures: int = 0
 func _ready() -> void:
 	print("=== KING'S GAMBIT - test d'interface ===")
 	await _test_village()
+	await _test_codex()
 	await _test_battle()
 
 	print("")
@@ -152,10 +153,61 @@ func _test_village() -> void:
 	await _frames(2)
 
 
+# ------------------------------- CODEX ---------------------------------------
+
+## Le codex se REGENERE depuis Balance a chaque ouverture (cf. codex_popup.gd).
+## Ce test ne relit pas ses chiffres un par un - il verifie qu'il en produit
+## autant que le jeu a de pieces, et surtout que les mots de l'ancienne
+## maquette, qui decrivaient un autre jeu, n'y sont jamais revenus.
+func _test_codex() -> void:
+	print("\n[2] Codex : une carte par piece, et rien de l'autre jeu")
+
+	Game.reset_progress()
+	var codex: Node = load("res://scenes/village/codex_popup.tscn").instantiate()
+	add_child(codex)
+	await _frames(3)
+
+	var body: Node = codex.get_node("Safe/Root/Scroll/Body")
+	# Une carte par piece de l'armee, plus la section des batiments et celle
+	# des regles.
+	_check(body.get_child_count() == Balance.ARMY_TYPES.size() + 2,
+		"le codex affiche %d cartes + 2 sections" % Balance.ARMY_TYPES.size())
+
+	var texte := _collect_text(codex)
+	for word in ["PV", "ATK", "Roque", "Cathédrale", "Donjon de Fer", "Académie",
+			"Chapelle", "8 × 11", "×2", "Bouclier"]:
+		_check(texte.find(word) < 0, "le codex ne dit nulle part \"%s\"" % word)
+
+	# Les vrais chiffres du jeu, pris a la source : s'ils manquent, le codex a
+	# cesse de lire Balance.
+	var last := Balance.move_description(Balance.CAVALIER, Balance.MAX_LEVEL)
+	_check(texte.find(last) >= 0, "la mobilite du cavalier au niveau max y figure")
+	_check(texte.find("%d" % Balance.deploy_capacity(Balance.MAX_LEVEL)) >= 0,
+		"la charge maximale du chateau y figure")
+
+	# Le filtre : une seule carte, et plus de sections.
+	codex._on_filter(Balance.DAME)
+	await _frames(2)
+	_check(body.get_child_count() == 1, "filtrer sur la Dame ne laisse qu'une carte")
+
+	codex.queue_free()
+	await _frames(2)
+
+
+## Tout le texte affiche par un ecran, mis bout a bout.
+func _collect_text(node: Node) -> String:
+	var out := ""
+	if node is Label:
+		out += (node as Label).text + "\n"
+	for child in node.get_children():
+		out += _collect_text(child)
+	return out
+
+
 # ------------------------------- BATAILLE ------------------------------------
 
 func _test_battle() -> void:
-	print("\n[2] Bataille : placement, combat, recompense")
+	print("\n[3] Bataille : placement, combat, recompense")
 
 	Game.reset_progress()
 	Router.current_battle_id = 1

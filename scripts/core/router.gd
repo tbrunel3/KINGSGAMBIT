@@ -14,6 +14,7 @@ const CAMPAIGN_SCENE := "res://scenes/battle/campaign.tscn"
 const PREP_SCENE := "res://scenes/battle/battle_prep.tscn"
 const BATTLE_SCENE := "res://scenes/battle/battle.tscn"
 const CASTLE_SCENE := "res://scenes/village/castle_screen.tscn"
+const CODEX_SCENE := "res://scenes/village/codex_popup.tscn"
 
 ## Bataille en cours de preparation ou de combat.
 var current_battle_id: int = 1
@@ -31,6 +32,13 @@ func goto_village() -> void:
 ## village, il ne tient pas dans une modale.
 func goto_castle() -> void:
 	_change(CASTLE_SCENE)
+
+
+## Codex du royaume. En plein ecran defilant et non en modale : il enumere
+## les dix niveaux de cinq pieces, les batiments et les regles - une modale
+## qui ne defile pas en montrerait le dixieme.
+func goto_codex() -> void:
+	_change(CODEX_SCENE)
 
 
 func goto_campaign() -> void:

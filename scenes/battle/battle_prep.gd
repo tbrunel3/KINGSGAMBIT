@@ -36,6 +36,9 @@ const TEXT_BRIGHT := Color("f0f3f8")
 const TEXT_DIM := Color("a0aabf")
 
 const COIN_TEXTURE := preload("res://assets/ui/kg_coin.png")
+## Chargee a la demande et non en preload : elle ne sert qu'a la derniere
+## bataille, et 160 Ko n'ont rien a faire en memoire les neuf autres fois.
+const CAPTIVE_TEXTURE := "res://assets/story/dame_captive.png"
 
 @onready var _background: TextureRect = $Background
 @onready var _header: HBoxContainer = $Safe/Root/HeaderMargin/Header
@@ -54,6 +57,7 @@ func _ready() -> void:
 	if _battle.is_empty():
 		_body.add_child(UiTheme.make_label("Bataille introuvable", 16, UiTheme.DANGER))
 		return
+	_build_stake_band()
 	_build_enemy_panel()
 	_build_player_panel()
 	_build_info_panel()
@@ -123,6 +127,65 @@ func _build_header() -> void:
 	title_pad.add_child(title)
 
 
+# ------------------------------- L'ENJEU -------------------------------------
+
+## Bandeau d'enjeu de la DERNIERE bataille (Figma preparation-bataille-10-v3).
+##
+## La Dame captive est l'image centrale de l'histoire du jeu - le Roi a perdu
+## sa Dame, toute la campagne consiste a la retrouver - et elle n'etait
+## affichee nulle part. Elle apparait ici, et seulement ici : la condition est
+## `dame` dans Balance.CAMPAIGN, que seule la dixieme bataille declare. Une
+## bataille qui n'offre pas de Dame n'a pas ce bandeau, et l'ecran est
+## exactement celui d'avant.
+func _build_stake_band() -> void:
+	var dames := Balance.battle_dame_reward(_battle)
+	if dames <= 0:
+		return
+	if not ResourceLoader.exists(CAPTIVE_TEXTURE):
+		return
+
+	var plate := _plate(GOLD_EDGE, 4.0, 16.0, PLATE_FILL)
+	plate.set_padding(14, 20, 14, 16)
+	_body.add_child(plate)
+
+	var pad := _inner_padding()
+	plate.add_child(pad)
+	var row := HBoxContainer.new()
+	row.add_theme_constant_override("separation", 14)
+	pad.add_child(row)
+
+	var portrait := TextureRect.new()
+	portrait.texture = load(CAPTIVE_TEXTURE)
+	portrait.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+	portrait.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+	portrait.custom_minimum_size = Vector2(52, 76)
+	portrait.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	row.add_child(portrait)
+
+	var column := VBoxContainer.new()
+	column.add_theme_constant_override("separation", 4)
+	column.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	column.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	row.add_child(column)
+
+	var title := UiTheme.gold_label("ELLE EST LÀ-HAUT", 15)
+	title.autowrap_mode = TextServer.AUTOWRAP_OFF
+	column.add_child(title)
+
+	# Le nombre de combats et le nombre de Dames viennent de la bataille, pas
+	# d'une phrase ecrite en dur : a `fights: 1`, le bandeau dit "ce combat".
+	var fights := Balance.battle_fights(_battle)
+	var what := "les %d combats" % fights if fights > 1 else "ce combat"
+	var prize := "une Dame" if dames <= 1 else "%d Dames" % dames
+	var body := UiTheme.make_label(
+		"Remporte %s et %s rejoint le %s — le trône vide du premier écran du jeu."
+			% [what, prize, Balance.building_name(Balance.DAME)], 12, TEXT_DIM)
+	body.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	column.add_child(body)
+
+	UiTheme.ignore_mouse_recursive(plate)
+
+
 # ------------------------------- ARMEE ENNEMIE -------------------------------
 
 func _build_enemy_panel() -> void:
@@ -142,11 +205,29 @@ func _build_enemy_panel() -> void:
 
 	var enemies: Dictionary = _battle["enemies"]
 	var level := int(_battle["level"])
+	# Le corps du nom suit le NOMBRE de cartes : la derniere bataille aligne
+	# les quatre types, et "Cavalier x1" y arrivait tronque en "avalier >".
+	# Mieux vaut deux points de moins que le nom coupe.
+	var kinds := 0
+	for type in Balance.UNIT_TYPES:
+		if enemies.has(type):
+			kinds += 1
+	var crowded := kinds >= 4
 	for type in Balance.UNIT_TYPES:
 		if not enemies.has(type):
 			continue
-		row.add_child(_unit_card(type, "rouge", "%s ×%d" % [
-			Balance.unit_name(type), int(enemies[type])], "Nv.%d" % level, 13, "", true))
+		var count := int(enemies[type])
+		# A quatre types, une carte ne fait plus que 68 unites de large et
+		# "Cavalier x1" y arrivait coupe en "avalier >". Le nombre descend
+		# alors sur la ligne du niveau, qui a de la place : c'est le NOM qu'il
+		# ne faut jamais tronquer.
+		if crowded:
+			row.add_child(_unit_card(type, "rouge", Balance.unit_name(type),
+				"×%d · Nv.%d" % [count, level], 11, "", true))
+		else:
+			row.add_child(_unit_card(type, "rouge",
+				"%s ×%d" % [Balance.unit_name(type), count],
+				"Nv.%d" % level, 13, "", true))
 
 
 # ------------------------------- TON ARMEE -----------------------------------
@@ -248,7 +329,8 @@ func _build_info_panel() -> void:
 	coin.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
 	coin.size_flags_vertical = Control.SIZE_SHRINK_CENTER
 	gold_value.add_child(coin)
-	gold_value.add_child(UiTheme.gold_label("%d Or" % (reward * fights), 15))
+	gold_value.add_child(UiTheme.gold_label(
+		"%s Or" % UiTheme.format_thousands(reward * fights), 15))
 	column.add_child(_info_row(
 		"Récompense de la série" if fights > 1 else "Récompense totale", gold_value))
 

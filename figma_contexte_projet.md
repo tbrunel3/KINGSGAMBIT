@@ -138,8 +138,23 @@ Les libellés de la maquette et ceux du jeu divergent sur plusieurs points.
 | mission-popup | 228:9 | à intégrer |
 | 09 / 10 / 11 — popups de bâtiment | 2:1048 / 2:1115 / 2:1165 | à intégrer |
 | confirm-upgrade-modal | 103:15 | à créer |
-| codex-popup | 194:4 | à créer |
+| codex-popup-v3 | 321:2 | **en jeu** — la v1 (194:4) est conservée intacte à côté |
+| preparation-bataille-10-v3 | 330:2 | **en jeu** — la préparation, plus le bandeau de la Dame captive |
 | 12-composants | 2:1224 | planche de référence |
+
+### Deux demandes ouvertes
+
+- **La carte de campagne illustrée** (`209:423`). Elle est plus belle que le
+  parchemin en jeu et on la prendrait volontiers, mais les numéros d'étape sont
+  **peints dans le raster** : ce n'est pas un calque qu'on masque. Le jeu trace
+  ses propres cachets par-dessus, et ce sont eux qui disent verrouillé /
+  disponible / gagné. Il nous faudrait la même carte **régénérée sans les
+  pastilles numérotées** — et couvrant les dix étapes, celle-ci s'arrête à la 6ᵉ.
+- **La Dame captive est maintenant en jeu** : elle est le bandeau d'enjeu de la
+  préparation de la bataille 10, « La Tour de la Dame » — la seule bataille qui
+  accorde une Dame. Voir `preparation-bataille-10-v3` (`330:2`). Le PNG détouré
+  du dépôt a été reversé dans la maquette : l'image d'origine du fichier arrive
+  avec un fond opaque.
 
 **Deux écrans existent dans le jeu sans avoir jamais été dessinés**, et
 finiront par avoir besoin de toi :
@@ -151,12 +166,19 @@ finiront par avoir besoin de toi :
 
 ---
 
-## Le codex : la forme est bonne, le contenu décrit un autre jeu
+## Le codex : la forme était bonne, le contenu décrivait un autre jeu
+
+> **✅ RÉGLÉ.** Le brief qui te manquait existe :
+> [`figma_prompt_codex.md`](figma_prompt_codex.md), avec tous les chiffres du
+> jeu. La frame **`codex-popup-v3`** (node-id `321:2`) a été posée à côté de la
+> tienne — **ton `codex-popup` d'origine n'a pas été touché** — et l'écran est
+> en jeu. Ce qui suit reste écrit pour mémoire, parce que c'est le genre
+> d'erreur qui revient sans un brief.
 
 `codex-popup` est la plus grande frame du fichier et sa mise en page est juste
 — plaque de titre, puces de filtre, une carte par pièce, un tableau par niveau,
-puis les bâtiments et les règles. **Mais rien de ce qu'elle écrit n'est vrai du
-jeu**, et on ne peut donc pas l'intégrer :
+puis les bâtiments et les règles. **Mais rien de ce qu'elle écrivait n'était
+vrai du jeu** :
 
 | Le codex écrit | Le jeu |
 |---|---|
@@ -167,10 +189,36 @@ jeu**, et on ne peut donc pas l'intégrer :
 | « défaite si votre Roi est vaincu » | il n'y a **pas de Roi** sur le plateau |
 | Donjon de Fer, Cathédrale, Académie militaire, Chapelle de soins | cinq bâtiments : le Château Royal et quatre casernes |
 
-Ce n'est pas une critique du dessin : c'est le brief qui t'a manqué. **Garde la
-mise en page**, on la reprendra telle quelle — mais les données doivent venir du
-jeu : mobilité par niveau, capacité de caserne, coût de recrutement, poids de
-déploiement. Un brief dédié te donnera les vrais chiffres.
+Ce n'est pas une critique du dessin : c'est le brief qui t'a manqué. **La mise
+en page a été gardée telle quelle**, seules les données ont changé.
+
+Ce qui a bougé dans la v3, et pourquoi :
+
+- **La carte du ROI a disparu**, ainsi que sa puce de filtre. Il n'y a pas de
+  Roi sur le plateau — il est le narrateur du jeu, pas une pièce.
+- **Le tableau passe de `NIVEAU / PV / ATK / BONUS` à
+  `NIV. / MOBILITÉ / CASERNE / PRIX`**, et de 3 lignes à **10** : le codex est
+  le seul écran qui montre la courbe entière plutôt que le palier suivant.
+- **« Attaque » devient « Capture »** : il n'y a pas d'attaque séparée, on
+  capture en se déplaçant sur la case adverse.
+- **Chaque carte gagne une puce POIDS** (1 / 3 / 3 / 5 / 5) : c'est ce que la
+  pièce coûte dans le budget de placement, celui que l'écran de préparation
+  affiche déjà en « Charge : 27/28 ».
+- **Les huit bâtiments deviennent cinq**, avec leur palier de déverrouillage.
+- **Les cinq règles deviennent six**, réécrites, et l'anneau rouge y entre —
+  c'est la mécanique de tension du jeu et elle n'était nulle part.
+
+Trois réglages d'adaptabilité, et ce sont des défauts mécaniques, pas des choix
+de goût :
+
+- **La rangée de puces débordait** : 404 points de puces dans un conteneur de
+  361. Rembourrage ramené de 14 à 10, et le ROI en moins.
+- **La colonne `BONUS / INFO` faisait 100 points** pour du texte qui en demande
+  le double. Les quatre colonnes ont été redistribuées au profit de la
+  mobilité, et les colonnes chiffrées alignées à droite.
+- **La frame est passée en Inter.** Elle était en **Geist**, que le jeu
+  n'embarque pas : il n'a qu'Inter, Comic Relief et Jaro. La maquette montrait
+  donc une typo qui ne pouvait pas être livrée.
 
 ---
 

@@ -262,7 +262,7 @@ représentatif**, et confondre les deux a coûté cher :
 | Banc | La question à laquelle il répond | Durée |
 |---|---|---|
 | `tools/smoke_test.tscn` | est-ce que tout tient encore debout ? (données, économie, règles, série, 10 batailles, écrans) | ~70 s |
-| `tools/ui_test.tscn` | est-ce que les vrais boutons répondent ? | court |
+| `tools/ui_test.tscn` | est-ce que les vrais boutons répondent ? (et le codex dit-il encore la vérité ?) | court |
 | `tools/ai_probe.tscn` | combien coûte un coup à chaque profondeur ? | ~7 s |
 | `tools/ai_bench.tscn` | est-ce que chercher plus loin fait gagner ? *(mesuré : chaque demi-coup gagne les six duels, dans les deux camps)* | long |
 | `tools/tune_probe.tscn` | de combien de niveaux le joueur doit-il dominer ? | ~45 min |
@@ -309,7 +309,8 @@ nom n'a pas de suffixe `-v2` : le nom de la frame ne dit rien de son âge.
 | mission-popup | 228:9 | à intégrer (le panneau existe côté code) |
 | 09 / 10 / 11 — popups de bâtiment | 2:1048 / 2:1115 / 2:1165 | à intégrer — *le code couvre les quatre écrans dans une seule scène (`building_popup.gd`), et `screenshot.tscn` en capture deux états (`1e_`, `1f_`) pour comparer* |
 | confirm-upgrade-modal | 103:15 | fait — `confirm_upgrade.tscn` |
-| codex-popup | 194:4 | **à ne pas porter tel quel** — voir ci-dessous |
+| codex-popup / **codex-popup-v3** | 194:4 / 321:2 | fait — la v3 réécrit les données, la v1 décrivait un autre jeu (voir ci-dessous) |
+| **preparation-bataille-10-v3** | 330:2 | fait — la préparation, plus le bandeau de la Dame captive |
 | 12-composants | 2:1224 | planche de référence |
 | Pièces d'échecs SVG | 32:2 | déjà en jeu |
 | 🗺️ HIÉRARCHIE DU JEU | 203:6 | note de conception du designer, pas un écran |
@@ -322,28 +323,37 @@ sources posées à côté des frames, et toutes sont déjà en jeu sauf deux, qu
 n'appartiennent à aucune frame :
 
 - **La Dame captive** — la pièce derrière des barreaux, dans une arche de
-  pierre. C'est l'image centrale de l'histoire et elle n'était nulle part.
-  Récupérée dans `assets/story/dame_captive.png`, **sans écran qui l'affiche** :
-  la placer serait inventer une mise en page que la maquette ne donne pas.
+  pierre. C'est l'image centrale de l'histoire. Récupérée dans
+  `assets/story/dame_captive.png`, et **désormais affichée** : elle est le
+  bandeau d'enjeu de la préparation de la **bataille 10**, la seule que
+  `Balance.CAMPAIGN` fasse déclarer `dame` (cf.
+  `battle_prep._build_stake_band`). Les neuf autres batailles gardent l'écran
+  exactement tel qu'il était.
   *Attention en la ré-exportant* : l'export du nœud arrive avec le fond gris du
   canvas (alpha entièrement opaque) ; c'est l'image SOURCE qu'il faut prendre,
-  la seule vraiment détourée.
-- **Une carte de campagne illustrée**, numéros d'étape dessinés en dur. Elle ne
-  peut pas remplacer `parchment_map.jpg` telle quelle : le jeu trace ses cachets
-  par-dessus, et ce sont eux qui disent verrouillé / disponible / gagné. Un
-  parchemin qui porte déjà ses numéros perd la progression. C'est un concept, pas
-  un asset déposable.
+  la seule vraiment détourée. Le PNG du dépôt (800 × 1259, alpha propre) a été
+  reversé dans la maquette pour que la frame Figma ne montre pas, elle non
+  plus, un fond opaque.
+- **Une carte de campagne illustrée** (nœud `209:423`) — **vérifié, et le
+  verdict est non.** C'est un `RECTANGLE` à remplissage image : les numéros
+  d'étape sont peints DANS le raster, pas sur un calque qu'on masque. Elle ne
+  couvre en plus que les batailles 6 à 10. Le jeu trace ses cachets par-dessus
+  la carte, et ce sont eux qui disent verrouillé / disponible / gagné : un
+  parchemin qui porte déjà ses numéros fige la progression. Il faudrait une
+  RE-GÉNÉRATION sans les pastilles, pas un ré-export — c'est demandé dans
+  [`figma_prompt_codex.md`](figma_prompt_codex.md). `parchment_map.jpg` reste
+  en place jusque-là.
 
 Deux écrans existent dans le jeu **sans avoir jamais été dessinés** : l'écran de
 match nul (fabriqué en repeignant la victoire en acier) et la boutique, dont les
 règles ne sont pas fixées.
 
-### Le codex décrit un autre jeu — ne pas le porter
+### Le codex décrivait un autre jeu — refait, pas porté
 
 `codex-popup` (194:4) est une encyclopédie défilante de 4 537 points, et sa
 forme est bonne : plaque de titre, puces de filtre par pièce, une carte par
 pièce, un tableau par niveau, puis les bâtiments et les règles. **Son contenu
-contredit le jeu de bout en bout** :
+contredisait le jeu de bout en bout** :
 
 | Le codex écrit | Le jeu |
 |---|---|
@@ -354,11 +364,34 @@ contredit le jeu de bout en bout** :
 | « défaite si votre Roi est vaincu » | il n'y a pas de Roi sur le plateau |
 | huit bâtiments (Donjon de Fer, Cathédrale, Académie militaire, Chapelle de soins) | cinq : le Château et quatre casernes |
 
-Le porter tel quel mettrait des règles fausses sous les yeux du joueur, et c'est
-précisément ce que la règle « la maquette apporte l'apparence, jamais les
-règles » interdit. **Sa mise en page est réutilisable ; ses données sont à
-refaire** à partir de `Balance.UNITS` — mobilité par niveau, capacité, coût de
-recrutement, poids de déploiement. C'est un brief à écrire, pas un import.
+Le porter tel quel aurait mis des règles fausses sous les yeux du joueur, et
+c'est précisément ce que la règle « la maquette apporte l'apparence, jamais les
+règles » interdit. **La mise en page a été gardée, les données refaites** :
+`codex-popup-v3` (321:2) dans la maquette, [`scenes/village/codex_popup.gd`](scenes/village/codex_popup.gd)
+en jeu, et le brief qui manquait dans [`figma_prompt_codex.md`](figma_prompt_codex.md).
+
+**Le codex en jeu ne transcrit rien : il se REGENERE depuis `Balance` à chaque
+ouverture.** Mobilité par niveau (`move_description`), capacité de caserne,
+coût de recrutement et son pas, prix d'amélioration, poids de déploiement,
+tailles de plateau relevées sur `CAMPAIGN`, longueur des séries lue sur
+`fights`. Une transcription se décale dès que le jeu bouge — c'est exactement
+ce qui avait produit le codex faux. `ui_test` vérifie d'ailleurs qu'aucun des
+mots de l'ancienne version (`PV`, `ATK`, `Roque`, `Cathédrale`…) n'y est
+revenu.
+
+Trois pièges payés en le portant :
+
+1. **`UiTheme.make_label` pose `SIZE_EXPAND_FILL` sur tout libellé.** Les quatre
+   colonnes du tableau se partageaient donc la largeur à parts égales — 67
+   unités chacune, mesuré — et la mobilité, seule colonne à en avoir besoin, se
+   repliait sur quatre lignes pendant que « 8 » occupait 67 unités. Toute
+   colonne à largeur fixe doit repasser explicitement en `SIZE_FILL`.
+2. **Le codex ne tient pas dans une modale.** `Modal` ne défile pas ; le codex
+   fait 5 549 points. C'est un écran plein avec `ScrollContainer`, comme la
+   préparation de bataille — d'où `Router.goto_codex()`.
+3. **Les six puces de filtre ne tiennent pas dans 361 points** (404 dans la
+   maquette d'origine, ROI compris). La rangée défile horizontalement, et le
+   rembourrage des puces est passé de 14 à 10 côté maquette.
 
 ### Les animations : deux écrans en portent, et deux seulement
 

@@ -35,6 +35,11 @@ const SCREENS := [
 	{"scene": "res://scenes/village/village.tscn", "name": "village", "battle": 1},
 	{"scene": "res://scenes/battle/campaign.tscn", "name": "campagne", "battle": 1},
 	{"scene": "res://scenes/battle/battle_prep.tscn", "name": "preparation", "battle": 3},
+	# La derniere bataille ajoute le bandeau de la Dame captive AU-DESSUS des
+	# trois panneaux, dans un corps qui defile deja : c'est l'ecran le plus
+	# serre du jeu en hauteur.
+	{"scene": "res://scenes/battle/battle_prep.tscn", "name": "preparation-dame", "battle": 10},
+	{"scene": "res://scenes/village/codex_popup.tscn", "name": "codex", "battle": 1},
 	{"scene": "res://scenes/battle/battle.tscn", "name": "placement", "battle": 3},
 	# Le COMBAT est l'ecran le plus expose au changement de format : il n'a plus
 	# de bandeau du bas, donc le plateau prend toute la hauteur restante, et

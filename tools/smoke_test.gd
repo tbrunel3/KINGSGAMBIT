@@ -989,7 +989,8 @@ func _check_scenes() -> void:
 	Router.current_battle_id = 1
 
 	for path in [Router.SPLASH_SCENE, Router.INTRO_SCENE, Router.VILLAGE_SCENE,
-			Router.CASTLE_SCENE, Router.CAMPAIGN_SCENE, Router.PREP_SCENE, Router.BATTLE_SCENE]:
+			Router.CASTLE_SCENE, Router.CODEX_SCENE, Router.CAMPAIGN_SCENE,
+			Router.PREP_SCENE, Router.BATTLE_SCENE]:
 		var packed: PackedScene = load(path)
 		if packed == null:
 			_fail("scene introuvable : %s" % path)
