@@ -308,14 +308,45 @@ nom n'a pas de suffixe `-v2` : le nom de la frame ne dit rien de son âge.
 | 07-bataille-defaite | 2:835 | fait (même écran repeint en rouge) |
 | mission-popup | 228:9 | à intégrer (le panneau existe côté code) |
 | 09 / 10 / 11 — popups de bâtiment | 2:1048 / 2:1115 / 2:1165 | à intégrer — *le code couvre les quatre écrans dans une seule scène (`building_popup.gd`), et `screenshot.tscn` en capture deux états (`1e_`, `1f_`) pour comparer* |
-| confirm-upgrade-modal | 103:15 | à créer |
-| codex-popup | 194:4 | à créer |
+| confirm-upgrade-modal | 103:15 | **dessinée dans Figma**, absente du jeu |
+| codex-popup | 194:4 | **dessinée dans Figma** (393 × 4537, un parchemin défilant), absente du jeu |
 | 12-composants | 2:1224 | planche de référence |
 | Pièces d'échecs SVG | 32:2 | déjà en jeu |
+| 🗺️ HIÉRARCHIE DU JEU | 203:6 | note de conception du designer, pas un écran |
+| KINGSGAMBIT_COIN | 114:2 | pièce d'or, déjà en jeu |
+| LOGO_STUDIOBNL | 116:573 | logo du studio — jamais récupéré |
+
+Inventaire relevé sur le fichier entier (`get_metadata` sur la page, 47 nœuds de
+premier niveau) : **rien d'autre n'y est un écran**. Le reste sont les images
+sources posées à côté des frames — illustrations du Roi, fonds de plateau, carte
+parchemin dessinée à la main, Roi derrière des barreaux. Elles n'appartiennent à
+aucune frame et ne sont donc réclamées par aucun écran.
 
 Deux écrans existent dans le jeu **sans avoir jamais été dessinés** : l'écran de
 match nul (fabriqué en repeignant la victoire en acier) et la boutique, dont les
 règles ne sont pas fixées.
+
+### Les animations : deux écrans en portent, et deux seulement
+
+Relevé avec `get_motion_context` sur **les seize frames** du fichier. Quatorze
+n'ont aucune donnée de mouvement ; les deux écrans d'intro en ont une vraie
+timeline :
+
+| Frame | Timeline | Ce qu'elle décrit |
+|---|---|---|
+| `169:136` king-intro-before-dialogue | 2,5 s | l'invite « s'approcher du trône » tenue à zéro jusqu'à 40 %, puis montée à 70 % d'opacité |
+| `123:32` king-intro-dialogue | 3 s, 6 nœuds | une entrée en cascade : fond, illustration (échelle 1,08 → 1), bulle (+20 px), bouton (+15 px) |
+
+**La boucle est un artefact d'aperçu**, pas une intention : Figma rejoue l'entrée
+en rond faute de savoir qu'elle ne se joue qu'une fois. Ce qui compte, ce sont
+les décalages, les durées et les courbes.
+
+Ce qui en a été repris dans `king_intro_dialogue.gd` : les deux **élévations**
+(la bulle et le bouton montaient à plat, ils montent maintenant), le **posé** de
+l'illustration à 1,08 avant sa dérive lente, et le **retard** de l'invite. Ce qui
+ne l'a pas été, et pourquoi c'est écrit dans le fichier : la frappe lettre par
+lettre du dialogue n'existe pas dans Figma et vaut mieux que le fondu qu'elle
+remplace, et l'empilement de deux calques d'illustration n'a pas d'objet ici.
 
 ### Quatre pièges d'import, déjà payés
 

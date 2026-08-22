@@ -29,6 +29,42 @@ const ZOOM_TARGET := 1.12
 const ZOOM_DURATION := 14.0
 const PANEL_DELAY := 0.5
 const PANEL_DURATION := 0.5
+
+# ------------------------------- TIMELINE FIGMA -------------------------------
+#
+#  La frame king-intro-dialogue (123:32) porte une VRAIE timeline Figma, relevee
+#  avec get_motion_context : 3 secondes, six noeuds qui entrent en cascade. Ce
+#  n'est pas une boucle malgre ce qu'en montre l'apercu - Figma rejoue l'entree
+#  en rond faute de savoir qu'elle ne se joue qu'une fois.
+#
+#  Ce qui en est repris, c'est ce que le jeu n'avait pas : les deux ELEVATIONS.
+#  Le panneau et le bouton n'apparaissaient qu'en fondu, a plat. Dans la
+#  maquette ils MONTENT en apparaissant - 20 points pour la bulle, 15 pour le
+#  bouton - et c'est ce mouvement qui leur donne le poids d'un objet qui se pose.
+#
+#  Ce qui n'en est PAS repris, et pourquoi :
+#
+#    - la frappe lettre par lettre du dialogue n'existe pas dans Figma. C'est un
+#      ajout du jeu, et il vaut mieux que le fondu qu'il remplace.
+#    - le fondu des DEUX calques d'illustration (0-1 s puis 1,2-1,8 s) sert a
+#      Figma a empiler deux images ; le jeu n'en a qu'une.
+#
+#  Le zoom lent de 14 secondes reste : il est ambiant, la ou la maquette decrit
+#  une ENTREE. Les deux ne s'excluent pas, ils s'enchainent (cf. _start_zoom).
+
+## Elevation de la bulle et du bouton a leur apparition (Figma : translate y).
+const PANEL_RISE := 20.0
+const BUTTON_RISE := 15.0
+
+## Echelle de depart de l'illustration, qui se pose ensuite sur 1,2 s
+## (Figma : scale 1.08 -> 1, cubic-bezier(0.25, 0, 0.35, 1)).
+const SETTLE_SCALE := 1.08
+const SETTLE_DURATION := 1.2
+
+## Delai avant que l'invite du premier ecran apparaisse (Figma
+## king-intro-before-dialogue : opacite tenue a zero jusqu'a 40 % d'une boucle
+## de 2,5 s). Le Roi doit se laisser regarder avant qu'on propose de s'approcher.
+const HINT_DELAY := 1.0
 const TYPE_CHAR_DELAY := 0.032
 const FADE_DURATION := 0.4
 
@@ -157,10 +193,28 @@ func _build_approach_hint() -> Control:
 	chevron.size_flags_vertical = Control.SIZE_SHRINK_CENTER
 	row.add_child(chevron)
 
+	# L'invite ARRIVE, elle n'est pas la d'emblee : la maquette la tient a zero
+	# pendant les quatre premiers dixiemes de sa boucle. Le Roi doit se laisser
+	# regarder avant qu'on propose de s'en approcher.
+	#
+	# Elle respire ensuite, la ou Figma la fait revenir a zero d'un coup a chaque
+	# tour de boucle : un apercu qui reboucle n'est pas une intention d'animation,
+	# et un clignotement franc jurerait sur un ecran contemplatif.
+	row.modulate.a = 0.0
+	var entree := create_tween()
+	entree.tween_interval(HINT_DELAY)
+	var apparition := entree.tween_property(row, "modulate:a", 0.7, 0.8)
+	apparition.set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_OUT)
+
 	_hint_pulse = create_tween()
+	_hint_pulse.stop()
 	_hint_pulse.set_loops()
 	_hint_pulse.tween_property(row, "modulate:a", 0.35, 1.1).set_trans(Tween.TRANS_SINE)
 	_hint_pulse.tween_property(row, "modulate:a", 0.7, 1.1).set_trans(Tween.TRANS_SINE)
+	entree.finished.connect(func():
+		if _hint_pulse != null and _hint_pulse.is_valid():
+			_hint_pulse.play()
+	)
 
 	return row
 
@@ -344,19 +398,37 @@ func _build_commencer_button() -> PanelContainer:
 
 # ------------------------------- ANIMATION -----------------------------------
 
-## Zoom lent et continu sur l'illustration, amorce des l'ouverture de l'ecran -
-## cf. consigne : "petit zoom in sur l'illustration du roi triste".
+## L'illustration se POSE, puis derive.
+##
+## Deux mouvements a la suite, et ils viennent de deux endroits : la maquette
+## decrit une ENTREE - l'image arrive a 1,08 et se pose sur 1,2 s - la ou l'on
+## voulait un zoom ambiant qui dure tout l'ecran. Les enchainer donne les deux :
+## l'image se pose comme un objet qu'on repose, puis elle respire.
 func _start_zoom() -> void:
 	var tween := create_tween()
-	tween.tween_property(_background_wrap, "scale", Vector2(ZOOM_TARGET, ZOOM_TARGET), ZOOM_DURATION) \
-		.set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN_OUT)
+	_background_wrap.scale = Vector2(SETTLE_SCALE, SETTLE_SCALE)
+	var pose := tween.tween_property(_background_wrap, "scale", Vector2.ONE, SETTLE_DURATION)
+	pose.set_trans(Tween.TRANS_CUBIC).set_ease(Tween.EASE_OUT)
+	var derive := tween.tween_property(_background_wrap, "scale",
+		Vector2(ZOOM_TARGET, ZOOM_TARGET), ZOOM_DURATION)
+	derive.set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN_OUT)
 
 
+## La bulle MONTE en apparaissant, elle ne fait pas que se fondre.
+##
+## Figma anime opacite ET translation ensemble, sur une cubic-bezier
+## (0.16, 1, 0.3, 1) : une deceleration franche, sans rebond. TRANS_EXPO en
+## EASE_OUT la rend de tres pres, et c'est ce mouvement qui donne a la bulle le
+## poids d'un objet qu'on pose plutot que d'une image qu'on allume.
 func _reveal_panel(panel: PanelContainer, tail: Control) -> void:
+	var arrivee := panel.position.y
+	panel.position.y = arrivee + PANEL_RISE
 	var tween := create_tween()
 	tween.set_parallel(true)
 	tween.tween_property(panel, "modulate:a", 1.0, PANEL_DURATION).set_trans(Tween.TRANS_SINE)
 	tween.tween_property(tail, "modulate:a", 1.0, PANEL_DURATION).set_trans(Tween.TRANS_SINE)
+	var montee := tween.tween_property(panel, "position:y", arrivee, PANEL_DURATION)
+	montee.set_trans(Tween.TRANS_EXPO).set_ease(Tween.EASE_OUT)
 	await tween.finished
 
 
@@ -374,8 +446,13 @@ func _type_dialogue() -> void:
 ## texte n'est pas fini - cf. consigne : "le bouton combat se debloque".
 func _unlock_button() -> void:
 	_commencer_ready = true
+	var arrivee := _commencer_button.position.y
+	_commencer_button.position.y = arrivee + BUTTON_RISE
 	var tween := create_tween()
+	tween.set_parallel(true)
 	tween.tween_property(_commencer_button, "modulate:a", 1.0, 0.3).set_trans(Tween.TRANS_SINE)
+	var montee := tween.tween_property(_commencer_button, "position:y", arrivee, 0.5)
+	montee.set_trans(Tween.TRANS_EXPO).set_ease(Tween.EASE_OUT)
 
 
 func _on_commencer_pressed() -> void:
