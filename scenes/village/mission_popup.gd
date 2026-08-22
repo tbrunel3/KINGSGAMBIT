@@ -13,6 +13,7 @@ extends Control
 ##
 
 const CardScene := preload("res://scenes/ui/components/card.tscn")
+const DividerScene := preload("res://scenes/ui/components/ornate_divider.tscn")
 
 ## Au-dela, la liste deborderait de l'ecran (la modale ne defile pas). Les
 ## missions suivantes apparaitront au fur et a mesure des reclamations.
@@ -40,7 +41,14 @@ func _refresh() -> void:
 		body.remove_child(child)
 		child.free()
 
-	_modal.open("MISSIONS", Modal.Context.GOLD, "compass")
+	# EN-TETE EN LIGNE, pas de badge centre : la maquette pose l'icone a gauche
+	# du mot MISSIONS, sur une seule ligne, exactement comme les popups de
+	# batiment au repos. Un grand glyphe centre au-dessus d'un titre centre
+	# appartient aux ecrans de RESULTAT (victoire, defaite, chateau), pas a une
+	# liste d'objectifs.
+	_modal.open("", Modal.Context.GOLD)
+	body.add_child(_inline_header())
+	body.add_child(DividerScene.instantiate())
 
 	var missions := Game.missions_visible()
 	if missions.is_empty():
@@ -85,6 +93,45 @@ func _all_done() -> PanelContainer:
 
 ## Une mission : libelle, barre de progression, recompense, et le bouton
 ## RECLAMER qui s'allume quand c'est fait.
+## Le glyphe qui va avec ce que la mission demande. La maquette en pose un
+## devant chaque ligne, et il vaut mieux qu'une puce : d'un coup d'oeil, on
+## trie ce qui se gagne au combat de ce qui se construit au village.
+func _goal_icon(goal: String) -> String:
+	match goal:
+		"battles_won", "flawless_wins":
+			return "sword"
+		"units_recruited":
+			return "house"
+		"upgrades", "castle_level":
+			return "castle"
+		"captures":
+			return "crown_broken"
+		"promotions", "dames":
+			return "crown"
+		_:
+			return "star"
+
+
+## Titre en ligne : le glyphe, puis le mot, cales a gauche.
+func _inline_header() -> HBoxContainer:
+	var row := HBoxContainer.new()
+	row.add_theme_constant_override("separation", 10)
+
+	var icon := Icon.new()
+	icon.icon_name = "star"
+	icon.color = UiTheme.GOLD
+	icon.custom_minimum_size = Vector2(22, 22)
+	icon.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	row.add_child(icon)
+
+	var title := UiTheme.make_label("MISSIONS", 18, UiTheme.GOLD)
+	title.add_theme_font_override("font", UiTheme.font_bold())
+	title.autowrap_mode = TextServer.AUTOWRAP_OFF
+	title.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	row.add_child(title)
+	return row
+
+
 func _mission_card(mission: Dictionary) -> PanelContainer:
 	var complete := Game.is_mission_complete(mission)
 	var progress := Game.mission_progress(String(mission["goal"]))
@@ -106,6 +153,14 @@ func _mission_card(mission: Dictionary) -> PanelContainer:
 
 	var header := HBoxContainer.new()
 	header.add_theme_constant_override("separation", 8)
+
+	var icon := Icon.new()
+	icon.icon_name = _goal_icon(String(mission["goal"]))
+	icon.color = UiTheme.GOLD if complete else Color("8fa0b8")
+	icon.custom_minimum_size = Vector2(16, 16)
+	icon.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	header.add_child(icon)
+
 	var label := UiTheme.make_label(String(mission["text"]), 12,
 		Color("f0f3f8") if complete else Color("ccd1e0"))
 	label.add_theme_font_override("font", UiTheme.font_bold())
@@ -121,7 +176,7 @@ func _mission_card(mission: Dictionary) -> PanelContainer:
 	coin.color = UiTheme.GOLD
 	coin.custom_minimum_size = Vector2(13, 13)
 	reward.add_child(coin)
-	var gold_label := UiTheme.make_label(str(int(mission["gold"])), 13, UiTheme.GOLD)
+	var gold_label := UiTheme.make_label("%d Or" % int(mission["gold"]), 13, UiTheme.GOLD)
 	gold_label.add_theme_font_override("font", UiTheme.font_bold())
 	gold_label.autowrap_mode = TextServer.AUTOWRAP_OFF
 	reward.add_child(gold_label)
@@ -178,7 +233,7 @@ func _claim_button(id: String) -> PanelContainer:
 	button.add_theme_stylebox_override("panel", box)
 	button.mouse_filter = Control.MOUSE_FILTER_STOP
 
-	var label := UiTheme.make_label("RECLAMER", 12, Color("331f00"))
+	var label := UiTheme.make_label("RÉCLAMER", 12, Color("331f00"))
 	label.add_theme_font_override("font", UiTheme.font_bold())
 	label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	label.autowrap_mode = TextServer.AUTOWRAP_OFF

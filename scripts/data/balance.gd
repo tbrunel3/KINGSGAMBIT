@@ -606,11 +606,11 @@ const CAMPAIGN := [
 
 const MISSIONS := [
 	# --- Les cinq premieres SONT le tutoriel : elles se suivent une a une.
-	{"id": "first_win", "text": "Remporte ta premiere bataille",
+	{"id": "first_win", "text": "Remporte ta première bataille",
 		"goal": "battles_won", "target": 1, "gold": 180, "requires": []},
-	{"id": "recruit", "text": "Recrute une piece au village",
+	{"id": "recruit", "text": "Recrute une pièce au village",
 		"goal": "units_recruited", "target": 1, "gold": 120, "requires": ["first_win"]},
-	{"id": "upgrade", "text": "Ameliore un batiment",
+	{"id": "upgrade", "text": "Améliore un bâtiment",
 		"goal": "upgrades", "target": 1, "gold": 240, "requires": ["recruit"]},
 	{"id": "three_wins", "text": "Remporte 3 batailles",
 		"goal": "battles_won", "target": 3, "gold": 360, "requires": ["upgrade"]},
@@ -618,15 +618,15 @@ const MISSIONS := [
 		"goal": "flawless_wins", "target": 1, "gold": 420, "requires": ["three_wins"]},
 
 	# --- Puis deux branches en parallele : la guerre et le royaume.
-	{"id": "captures", "text": "Capture 20 pieces ennemies",
+	{"id": "captures", "text": "Capture 20 pièces ennemies",
 		"goal": "captures", "target": 20, "gold": 480, "requires": ["flawless"]},
-	{"id": "promotion", "text": "Mene un pion jusqu'au bout du plateau",
+	{"id": "promotion", "text": "Mène un pion jusqu'au bout du plateau",
 		"goal": "promotions", "target": 1, "gold": 660, "requires": ["flawless"]},
 	{"id": "castle3", "text": "Porte le Château Royal au niveau 3",
 		"goal": "castle_level", "target": 3, "gold": 780, "requires": ["upgrade"]},
 
 	# --- Le bout du chemin.
-	{"id": "dame", "text": "Ramene une Dame vivante au village",
+	{"id": "dame", "text": "Ramène une Dame vivante au village",
 		"goal": "dames", "target": 1, "gold": 900, "requires": ["promotion"]},
 	{"id": "two_dames", "text": "Abrite 2 Dames au Château Royal",
 		"goal": "dames", "target": 2, "gold": 1200, "requires": ["dame"]},

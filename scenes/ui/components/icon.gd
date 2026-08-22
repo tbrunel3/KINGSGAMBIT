@@ -175,19 +175,31 @@ func _draw_diamond(c: Vector2, s: float) -> void:
 	draw_colored_polygon(points, color)
 
 
+## UNE epee droite, pointe en haut : lame, garde, poignee, pommeau.
+##
+## Il y en avait deux, croisees. C'est le blason classique, mais il ne survit
+## pas a la reduction : a seize points les gardes disparaissent et il ne reste
+## qu'une CROIX - le bouton BATAILLE du village avait l'air de fermer quelque
+## chose. Une seule lame verticale se reconnait a n'importe quelle taille,
+## parce que sa silhouette n'a pas d'equivalent.
 func _draw_sword(c: Vector2, s: float, lw: float) -> void:
-	_draw_single_sword(c, s, lw, false)
-	_draw_single_sword(c, s, lw, true)
-
-
-func _draw_single_sword(c: Vector2, s: float, lw: float, mirrored: bool) -> void:
-	var dir := Vector2(1, -1) if not mirrored else Vector2(-1, -1)
-	var tip := c + dir * s * 0.4
-	var hilt := c - dir * s * 0.4
-	draw_line(hilt, tip, color, lw, true)
-	var guard_dir := Vector2(dir.y, -dir.x).normalized() * s * 0.1
-	var guard_center := hilt + dir * s * 0.12
-	draw_line(guard_center - guard_dir, guard_center + guard_dir, color, lw * 0.8, true)
+	# Les PROPORTIONS font tout : une lame courte sur une garde large donne un
+	# signe plus, pas une epee. La lame prend les deux tiers de la hauteur, la
+	# garde reste etroite.
+	var pointe := c + Vector2(0, -s * 0.46)
+	var garde := c + Vector2(0, s * 0.16)
+	var pommeau := c + Vector2(0, s * 0.44)
+	# La lame, effilee : un triangle plutot qu'un trait, sinon elle se confond
+	# avec la poignee et l'ensemble ressemble a une croix.
+	var demi := maxf(lw * 0.9, s * 0.075)
+	draw_colored_polygon(PackedVector2Array([
+		pointe, garde + Vector2(demi, 0), garde + Vector2(-demi, 0)]), color)
+	# La garde, franche et large : c'est elle qui dit "epee" et non "clou".
+	draw_line(garde + Vector2(-s * 0.17, 0), garde + Vector2(s * 0.17, 0),
+		color, lw * 1.2, true)
+	# Poignee et pommeau.
+	draw_line(garde, pommeau, color, lw * 1.1, true)
+	draw_circle(pommeau, lw * 1.1, color)
 
 
 func _draw_house(c: Vector2, s: float, lw: float) -> void:
@@ -277,10 +289,20 @@ func _draw_compass(c: Vector2, s: float, lw: float) -> void:
 	draw_circle(c, s * 0.06, color)
 
 
-## Deux pieces empilees - cf. les montants "+X Or" dans les captures Figma.
+## UNE piece, pleine, cerclee d'un jonc.
+##
+## Il y en avait deux, decalees. A douze points, deux cercles qui se chevauchent
+## ne se lisent pas comme des pieces empilees mais comme un huit couche - et la
+## maquette n'en montre jamais qu'une, partout ou elle chiffre de l'or.
+##
+## Pleine et non au trait : c'est ce qui la distingue d'une pastille vide a
+## cette taille, et ce qui lui donne le poids d'une monnaie.
 func _draw_coin(c: Vector2, s: float, lw: float) -> void:
-	draw_arc(c + Vector2(-0.12 * s, 0.08 * s), 0.22 * s, 0, TAU, 20, color, lw, true)
-	draw_arc(c + Vector2(0.12 * s, -0.08 * s), 0.22 * s, 0, TAU, 20, color, lw, true)
+	var rayon := s * 0.34
+	draw_circle(c, rayon, color)
+	# Le jonc, creuse dans la piece plutot que pose dessus : un trait de la
+	# couleur du fond n'existe pas ici, alors on l'obtient en assombrissant.
+	draw_arc(c, rayon * 0.66, 0.0, TAU, 20, Color(0, 0, 0, 0.35), maxf(1.0, lw * 0.7), true)
 
 
 ## Deux barres verticales - bouton Pause du controle de combat (ecran 05).
