@@ -74,6 +74,11 @@ var _secondes_amelioration: int = 0
 ## Vrai si le joueur s'est retrouve sans or ET sans bataille regagnable.
 var _impasse: bool = false
 
+## Vrai si le joueur a tout monte au maximum sans y arriver. Ce n'est alors plus
+## une question d'economie du tout : aucune somme d'or ne fait passer la
+## bataille, c'est le COMBAT qui est hors de portee.
+var _plafond: bool = false
+
 
 func _ready() -> void:
 	# Banc : recherche sans limite de temps, donc reproductible (cf.
@@ -121,7 +126,8 @@ func _traverser(battle_id: int) -> bool:
 		# Perdue : il faut monter en puissance. Quel est le prochain achat ?
 		var pas := _pas_suivant(battle)
 		if pas.is_empty():
-			print("  bataille %2d  %-20s  MUR : plus rien a acheter (tout au maximum)" % [
+			_plafond = true
+			print("  bataille %2d  %-20s  PLAFOND : tout au niveau maximum, et la bataille ne passe toujours pas" % [
 				battle_id, String(battle["name"])])
 			return false
 
@@ -501,7 +507,15 @@ func _bilan(mur: int) -> void:
 	print("  Attente d'amelioration cumulee . %6d s  (%.1f h de temps reel)" % [
 		_secondes_amelioration, heures])
 	print("")
-	if _impasse:
+	if _plafond:
+		print("  VERDICT : PLAFOND a la bataille %d. Le joueur a tout monte au niveau" % mur)
+		print("            maximum - chateau et casernes - et la bataille ne passe")
+		print("            toujours pas. Ce n'est donc PAS un probleme d'economie :")
+		print("            aucune somme d'or n'y changerait quoi que ce soit. C'est le")
+		print("            COMBAT qui est hors de portee, et c'est du cote de")
+		print("            Balance.CAMPAIGN qu'il faut aller voir - effectifs ennemis,")
+		print("            nombre de combats de la serie, ou renforts d'entre-deux.")
+	elif _impasse:
 		print("  VERDICT : IMPASSE a la bataille %d. Le joueur n'a plus d'or, et plus" % mur)
 		print("            aucune bataille qu'il regagne pour en refaire. Le jeu ne")
 		print("            propose aucune sortie : c'est un cul-de-sac, pas une")
