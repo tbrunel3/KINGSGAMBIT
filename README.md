@@ -414,6 +414,17 @@ de douze replays pour une seule bataille, la campagne a échoué même si elle
 reste théoriquement franchissable. Elle sait aussi reconnaître l'**impasse** —
 plus d'or et plus aucune bataille qu'on regagne.
 
+Mesuré après correction : **0 replay jusqu'à la bataille 7**, 1 à la 8, 4 à la
+9. Le point dur restant est **la dernière montée** — le saut de prix entre le
+niveau de la bataille 9 et celui de la 10 est le plus gros du jeu (+7 120 or).
+Les récompenses des deux dernières batailles ont été relevées pour le payer ;
+la récompense de la 9 agit deux fois, puisqu'elle grossit le trésor de guerre
+*et* rend le farm de la 9 plus efficace.
+
+Réserve à garder en tête : la sonde annonce elle-même un **majorant** du vrai
+plancher. Elle achète en glouton ; un joueur qui dépense mieux s'en sort à
+moins.
+
 Une nuance mesurée, à connaître avant de retoucher `player` : les bancs de
 bataille jouent **un combat**, alors que la plupart des batailles sont des
 séries de deux ou trois. La série use, donc elle demande un peu plus que le
