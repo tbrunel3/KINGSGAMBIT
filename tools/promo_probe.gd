@@ -44,7 +44,7 @@ func _ready() -> void:
 				var result := String(event["result"])
 				if result == Balance.DAME:
 					dames += 1
-				if ratio <= Balance.PROMOTION_CONTESTED_RATIO:
+				if ratio < Balance.PROMOTION_CONTESTED_RATIO:
 					mopping += 1
 				# POURQUOI CE N'EST PAS UNE DAME. La sonde n'affichait que le
 				# ratio de materiel, ce qui laissait croire que c'etait le seul

@@ -110,11 +110,18 @@ cause différente :
    deux camps à *courir* au fond plutôt qu'à se battre ; les promotions
    doublaient au lieu de se raréfier. Une prime d'évaluation penche la balance,
    elle ne fait pas le travail de la recherche.
-2. **Une Dame ne se gagne que dans une bataille encore disputée**
-   (`Balance.PROMOTION_CONTESTED_RATIO`). En dessous, le pion promeut quand même
-   — il a traversé le plateau — mais en **Cavalier**, qui ne rejoint pas le
-   Château Royal. *C'est le seul bouton à tourner si les Dames redeviennent trop
-   fréquentes ou trop rares.*
+2. **Une Dame se mérite** : le pion doit avoir capturé au moins une fois
+   (`PROMOTION_REQUIRES_CAPTURE`), la bataille doit être encore disputée
+   (`PROMOTION_CONTESTED_RATIO`), et il n'y a qu'une couronne par camp et par
+   bataille (`PROMOTION_ONE_PER_BATTLE`). Sinon le pion promeut quand même — il
+   a traversé le plateau — mais en **Cavalier**, qui ne rejoint pas le Château
+   Royal.
+
+   *Il y a **deux** boutons, pas un.* Mesuré sur les six promotions dégradées
+   d'une campagne : deux échouent seulement sur la capture, deux seulement sur
+   le ratio, deux sur les deux. `PROMOTION_CONTESTED_RATIO` a l'air d'être le
+   levier principal ; `PROMOTION_REQUIRES_CAPTURE` pèse autant, et il a
+   l'avantage de se lire sur le pion plutôt que sur l'état du plateau.
 3. **Une Dame faite en cours de série reste en ligne** jusqu'au dernier combat
    (`CampaignRun._enlist_dames`). Si elle tombe, c'est le **pion qu'elle était**
    qui manque au village.

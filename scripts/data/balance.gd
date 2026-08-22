@@ -463,6 +463,15 @@ const PROMOTION_ONE_PER_BATTLE := true
 ## LE PION DOIT AVOIR FAIT SES PREUVES : seul un pion qui a deja capture peut
 ## pretendre a la couronne. Un pion qui a traverse un couloir vide n'a rien
 ## prouve.
+##
+## CE FILTRE PESE AUTANT QUE LE RATIO, et ce n'etait pas l'idee recue. Mesure
+## (tools/promo_probe.tscn) sur les six promotions degradees d'une campagne :
+## deux echouent SEULEMENT ici, deux echouent SEULEMENT sur le ratio, et deux
+## sur les deux a la fois. Il y a donc deux boutons, pas un - et celui-ci a
+## l'avantage de ne rien devoir a l'etat du plateau : il se lit sur le pion.
+##
+## Attention en lisant la sonde : ses etiquettes suivent l'ordre des tests, donc
+## "pion sans capture" masque les cas ou le ratio aurait mordu de toute facon.
 const PROMOTION_REQUIRES_CAPTURE := true
 
 ## LE TRONE PLUTOT QUE LA RANGEE : nombre de colonnes CENTRALES du fond adverse
