@@ -385,6 +385,42 @@ bataille 10, baisser le *seul* niveau ennemi donnait `NUL, NUL, PERDUE, gagnée`
 Un coup différent au troisième tour envoie la partie ailleurs. `tune_probe` lit
 donc un **taux sur plusieurs formations**, jamais un tirage.
 
+### L'économie : la courbe des récompenses suit celle des coûts
+
+C'est le réglage le moins intuitif du jeu, et celui qui s'est révélé faux.
+
+Le prix des niveaux monte **géométriquement** — atteindre le niveau 6 partout
+coûte 19 090 or de bâtiments. Les récompenses, elles, montaient presque
+linéairement : 3 590 or pour toute la campagne. Un facteur quatre et demi, qui
+ne se rattrape pas en jouant mieux. `economy_probe` mesurait 11 replays pour
+franchir la bataille 3 et **36 pour la bataille 7** — ce n'est pas de la
+difficulté, c'est de la corvée, et personne ne la fait sur un téléphone.
+
+Les récompenses vont maintenant de 150 à 5 000, calées pour que le cumul versé
+**avant** une bataille couvre ce qu'elle demande, avec une marge pour les
+recrues. Aucun coût n'a bougé : c'est le rapport entre les deux qui était faux.
+
+**La récompense est celle d'un COMBAT, pas d'une bataille.** Une série de trois
+combats paie trois fois cette valeur — c'est ce qu'annonce l'écran de
+préparation, « Récompense de la série ». Huit batailles sur dix étant des
+séries, se tromper là-dessus fausse tout le calcul d'un facteur deux à trois.
+C'est exactement l'erreur qu'a faite la première version de la sonde, et la
+première correction des récompenses avait été calibrée sur ce chiffre faussé.
+
+⚠️ **Toucher à `upgrade_cost` sans relancer la sonde, c'est rouvrir le trou.**
+
+La sonde déclare désormais la **corvée**, pas seulement l'impossible : au-delà
+de douze replays pour une seule bataille, la campagne a échoué même si elle
+reste théoriquement franchissable. Elle sait aussi reconnaître l'**impasse** —
+plus d'or et plus aucune bataille qu'on regagne.
+
+Une nuance mesurée, à connaître avant de retoucher `player` : les bancs de
+bataille jouent **un combat**, alors que la plupart des batailles sont des
+séries de deux ou trois. La série use, donc elle demande un peu plus que le
+niveau déclaré — la bataille 8 a réclamé des casernes un cran au-dessus. Ce
+n'est plus un problème depuis que l'économie suit : le joueur a de quoi
+dépasser le niveau prévu. `player` est un plancher, pas une cible.
+
 ### Équilibrage vérifié
 
 Deux compositions sont testées par bataille — une armée variée et une armée de
@@ -400,9 +436,6 @@ détecté que le premier combat du jeu était perdu.
 
 ## Limites connues
 
-- **L'économie ne suit pas.** `tools/economy_probe.tscn` mesure un mur autour de
-  la bataille 7 : la campagne ne verse pas de quoi payer les niveaux que les
-  bancs de bataille supposent au joueur. Chantier ouvert.
 - **Sur un téléphone lent**, la recherche peut sortir de son budget et redescendre
   d'un demi-coup. C'est une dégradation propre — le meilleur coup de la dernière
   profondeur achevée — mais elle rend l'IA un peu plus faible que déclarée.

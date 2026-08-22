@@ -169,6 +169,46 @@ des effectifs, des portées ou de l'évaluation.**
 
 ---
 
+## L'économie : la courbe des récompenses suit celle des coûts
+
+Le réglage le moins intuitif du jeu, et celui qui s'est révélé faux.
+
+Le prix des niveaux monte **géométriquement** ; les récompenses montaient
+presque linéairement. Mesuré, cumul des améliorations pour atteindre le niveau
+que la campagne prête au joueur, face à ce qu'elle avait versé à ce stade :
+
+| | bataille 3 | bataille 7 | bataille 10 |
+|---|---|---|---|
+| demandé | 1 130 | 6 810 | 19 090 |
+| versé | 970 | 2 150 | 4 190 |
+
+Un facteur quatre et demi, qui ne se rattrape pas en jouant mieux : la sonde a
+dû rejouer **36 fois** une bataille déjà gagnée pour franchir la seule
+bataille 7. Les récompenses vont maintenant de 150 à 5 000. **Aucun coût n'a
+bougé** — c'est le rapport entre les deux qui était faux, pas les prix.
+
+**La récompense est celle d'un COMBAT, pas d'une bataille** : une série de trois
+combats paie trois fois. Huit batailles sur dix étant des séries, se tromper
+là-dessus fausse le calcul d'un facteur deux à trois — ce qu'a fait la première
+version de la sonde, dont la première correction des récompenses avait hérité.
+
+⚠️ **Toucher à `upgrade_cost` sans relancer `economy_probe`, c'est rouvrir le
+trou.**
+
+Deux choses à savoir avant de retoucher ces chiffres :
+
+- **`player` est un plancher, pas une cible.** Les bancs de bataille jouent *un*
+  combat, alors que la plupart des batailles sont des séries de deux ou trois.
+  La série use : la bataille 9 a réclamé un château deux crans au-dessus de son
+  niveau déclaré. Ce n'est plus un problème depuis que l'économie suit — le
+  joueur a de quoi dépasser.
+- **La sonde déclare la corvée, pas seulement l'impossible.** Au-delà de douze
+  replays pour une seule bataille, la campagne a échoué même si elle reste
+  théoriquement franchissable. Elle reconnaît aussi l'**impasse** : plus d'or et
+  plus aucune bataille qu'on regagne.
+
+---
+
 ## Mesurer : la discipline des bancs
 
 Le combat n'a aucune source d'aléa, mais **déterministe ne veut pas dire

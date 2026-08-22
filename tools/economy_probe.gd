@@ -57,7 +57,12 @@ extends Node
 const REPLAYS_TOLERABLES := 12
 
 ## Garde-fou d'achats successifs pour une meme bataille.
-const MAX_ACHATS_PAR_BATAILLE := 40
+##
+## Technique, contrairement a REPLAYS_TOLERABLES : acheter beaucoup n'est pas
+## une corvee tant que l'or est la, c'est juste une longue montee en puissance.
+## Il ne sert qu'a empecher une boucle infinie si plus aucun achat ne fait
+## progresser. Large a dessein - la bataille 9 en a consomme 32.
+const MAX_ACHATS_PAR_BATAILLE := 90
 
 var _or_gagne_batailles: int = 0
 var _or_gagne_missions: int = 0
@@ -171,7 +176,7 @@ func _tenter_replay(cible: int) -> bool:
 	if not issue["gagnee"]:
 		return false
 
-	var gain := Game.reward_for(cible)
+	var gain: int = Game.reward_for(cible) * int(issue["combats"])
 	_encaisser(cible, issue)
 	_or_gagne_replays += gain
 	_or_gagne_batailles -= gain
@@ -181,11 +186,21 @@ func _tenter_replay(cible: int) -> bool:
 
 ## Verse ce que la serie a rapporte et applique ses pertes, par le vrai
 ## GameState : recompense, deblocage, missions, garnison minimale.
+##
+## LA RECOMPENSE SE COMPTE PAR COMBAT, PAS PAR BATAILLE. Chaque combat gagne
+## d'une serie ajoute sa part (CampaignRun.record_victory), et le total n'est
+## verse qu'a la fin - une serie de trois combats paie donc trois fois. C'est
+## ce qu'annonce l'ecran de preparation ("Recompense de la serie").
+##
+## La sonde n'en creditait qu'une seule, et sous-estimait donc les revenus d'un
+## facteur deux a trois sur huit batailles sur dix. Elle a fait conclure a un
+## trou economique plus large qu'il ne l'etait, et la premiere correction des
+## recompenses a ete calibree sur ce chiffre fausse.
 func _encaisser(battle_id: int, issue: Dictionary) -> void:
 	var avant := Game.gold
 	Game.apply_losses(issue["pertes"])
 	Game.record_battle(true, int(issue["pertes_total"]), int(issue["captures"]), int(issue["promotions"]))
-	Game.win_battle(battle_id, Game.reward_for(battle_id))
+	Game.win_battle(battle_id, Game.reward_for(battle_id) * int(issue["combats"]))
 	_or_gagne_batailles += Game.gold - avant
 	_reclamer_les_missions()
 
@@ -326,14 +341,16 @@ func _jouer_serie(battle_id: int) -> Dictionary:
 
 		if not combat["gagne"]:
 			return {"gagnee": false, "pertes": pertes, "pertes_total": _total(pertes),
-				"captures": captures, "promotions": promotions, "charge": charge}
+				"captures": captures, "promotions": promotions, "charge": charge,
+				"combats": fight - 1}
 
 		# Renforts entre deux combats : les moins chers d'abord.
 		if fight < fights:
 			_renforcer(effectif, pertes)
 
 	return {"gagnee": true, "pertes": pertes, "pertes_total": _total(pertes),
-		"captures": captures, "promotions": promotions, "charge": charge}
+		"captures": captures, "promotions": promotions, "charge": charge,
+		"combats": fights}
 
 
 ## Un combat. L'armee ennemie revient au complet ; le joueur pose ce qui lui
