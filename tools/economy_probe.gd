@@ -269,8 +269,21 @@ func _pas_suivant(battle: Dictionary) -> Dictionary:
 			return {"genre": "recrue", "type": choisi, "cout": Game.recruit_cost(choisi),
 				"libelle": "un %s" % Balance.unit_name(choisi)}
 
-	# Plus rien d'utile a acheter au niveau vise : on monte au-dela plutot que
-	# de declarer le mur, car une bataille peut demander mieux que prevu.
+	# Au-dela du niveau vise. Une bataille peut demander mieux que prevu - c'est
+	# meme la regle sur les series, qui usent plus qu'un combat seul.
+	#
+	# LE CHATEAU D'ABORD SI LA CHARGE EST SATUREE. C'est le piege qui a fausse
+	# la mesure de la derniere bataille : la charge etant pleine, chaque niveau
+	# de caserne achete au-dela ne changeait plus rien - la piece supplementaire
+	# ne rentrait pas sur le plateau. La sonde a ainsi brule 68 000 or en
+	# ameliorations qu'elle ne pouvait pas deployer, et a conclu a une corvee
+	# qui etait la sienne. Quand le sac est plein, ce qu'il faut acheter c'est
+	# un sac plus grand.
+	if _poids_de_l_armee() >= Game.deploy_capacity() and not Game.is_max_level(Balance.CASTLE):
+		return {"genre": "niveau", "type": Balance.CASTLE,
+			"cout": Balance.upgrade_cost(Balance.CASTLE, Game.castle_level()),
+			"libelle": "le Chateau au niveau %d (charge saturee)" % (Game.castle_level() + 1)}
+
 	var meilleur: Dictionary = {}
 	var batiments: Array = [Balance.CASTLE]
 	batiments.append_array(Balance.UNIT_TYPES)
