@@ -71,6 +71,14 @@ sans retour au village. Seule la première reste unique : on y découvre le jeu.
 La série arrive tôt parce que c'est le **deuxième** combat qui met le joueur en
 danger — l'ennemi revient au complet, lui revient avec ses survivants.
 
+**Une série ne se couronne qu'une fois.** Un combat intermédiaire gagné
+n'ouvre pas d'écran de victoire : un bandeau court (`SeriesBanner`) dit où on en
+est et ce qu'on a perdu, puis le placement du combat suivant s'ouvre — tout seul
+après `series_banner_seconds`, ou au doigt. Le grand lettrage et le versement de
+l'or restent pour la fin, et la victoire de série renvoie d'abord à la **carte**,
+où le cachet suivant s'ouvre. La première série rencontrée s'explique dans un
+popup montré **une seule fois** (`SeriesPopup`, `GameState.has_seen_series_warning`).
+
 `fights` (dans `Balance.CAMPAIGN`) est **le bouton de la durée d'une séance**.
 Un combat joué à la main prend cinq à dix minutes sur les grands plateaux : à
 cinq combats, un niveau demandait quarante minutes d'affilée sans point de
@@ -90,14 +98,57 @@ pareil** (tirage semé sur le numéro du combat). Une série survit à la fermet
 du jeu et reprend au combat suivant ; quitter en plein combat le fait
 recommencer, avec l'effectif qu'il avait au départ.
 
-### Le match nul
+### Les trois façons de finir sans vainqueur
 
-Une bataille enlisée se tranche au matériel restant — mais **à égalité stricte,
-personne n'a gagné**. Le camp qui mène garde sa victoire. Au nul, les survivants
-rentrent, le combat ne rapporte rien, mais **la série n'est pas rompue** : c'est
-un tour d'usure payé pour rien, pas une déroute. Un nul au dernier combat achève
-la série sans qu'elle soit remportée. L'écran de résultat a une troisième peau
-(`BattleResult.draw_skin`) : le décor de la victoire, en acier, sans confettis.
+Un combat qui ne se décide pas au dernier soldat debout se termine de **trois**
+manières, et elles ne se règlent pas au même endroit.
+
+**1. Le PAT** — le camp au trait n'a plus aucun coup légal. `stalemate_is_draw`
+(dans `Balance.COMBAT`) décide de son issue, et **c'est le seul bouton du jeu
+qui change de public** :
+
+- `true` *(actuel)* — nul, comme aux échecs. Le camp écrasé sauve la partie.
+- `false` — le camp bloqué perd, comme au shatranj. Figer l'adversaire devient
+  une victoire.
+
+⚠️ **Le pat est BEAUCOUP plus fréquent ici qu'aux échecs**, et ce n'est pas un
+accident : sur cinq colonnes, les pions se bloquent nez à nez en permanence, et
+un pion ne prend pas tout droit. Mesuré à `true` : **6 des 19 parties du banc
+finissent nulles, bataille 1 comprise**, presque toujours parce que l'ennemi est
+réduit à trois pions bloqués alors que le joueur mène largement. Ne pas toucher
+à ce réglage sans relancer `smoke_test` et lire la colonne des raisons.
+
+**2. La POSITION MORTE** — plus aucune capture n'est possible, jamais. Toujours
+nulle. Un cavalier Nv.1 ne saute qu'en diagonale d'une case : il ne quitte
+jamais la couleur de case où il est posé, exactement comme un fou. Deux
+cavaliers Nv.1 sur des couleurs opposées se courent après indéfiniment.
+
+`BattleEngine.capture_still_possible()` calcule les portées **sur un plateau
+vide** (`MovementRules.reachable_on_empty_board`), donc sur-estimées : la
+fonction peut RATER une position morte, elle ne peut pas en inventer une. Un
+pion encore en vie garde toujours la position vivante — il promeut, et une Dame
+atteint tout. Annoncé dans le badge, puis nul après un court délai
+(`dead_position_check_after`, `dead_position_grace`). Mesuré : 10 activations au
+lieu des 80 du compteur d'enlisement.
+
+**3. L'ENLISEMENT** — plus aucune prise depuis `stalemate_rounds_manual` tours,
+mais des coups restent possibles. Tranché **au matériel restant** ; à égalité
+stricte, personne n'a gagné.
+
+Au nul, les survivants rentrent, le combat ne rapporte rien, mais **la série
+n'est pas rompue** : c'est un tour d'usure payé pour rien, pas une déroute. Un
+nul au dernier combat achève la série sans qu'elle soit remportée. L'écran de
+résultat a sa propre peau (`BattleResult.draw_skin`) et ses propres assets
+(`assets/results/draw_*`, Figma 348:2) : champ de bataille gris, mot **NULLE**
+gravé, plaque d'acier. Il dit aussi **pourquoi** c'est nul — sans cette phrase,
+« NUL » ressemble à un bug, et c'en était un.
+
+**Un camp ne passe jamais son tour.** `BattleAI.decide_team` joue un coup dès
+qu'il en existe un, et `BattleEngine._pass_turn` signale une erreur au lieu de
+passer. Le bug d'origine : l'IA restait plantée en finale (la désespérance était
+coupée en dessous de quatre pièces), et le compteur de passes qui devait clore
+la partie était remis à zéro par le coup du JOUEUR. 48 passes illégitimes
+mesurées sur 60 parties, toutes sur les deux batailles en `AI_NOVICE`.
 
 ### La Dame : rare à faire, dure à garder
 
@@ -262,7 +313,7 @@ représentatif**, et confondre les deux a coûté cher :
 | Banc | La question à laquelle il répond | Durée |
 |---|---|---|
 | `tools/smoke_test.tscn` | est-ce que tout tient encore debout ? (données, économie, règles, série, 10 batailles, écrans) | ~70 s |
-| `tools/ui_test.tscn` | est-ce que les vrais boutons répondent ? (et le codex dit-il encore la vérité ?) | court |
+| `tools/ui_test.tscn` | est-ce que les vrais boutons répondent ? (le codex dit-il encore la vérité, la série s'enchaîne-t-elle sans écran de victoire ?) | court |
 | `tools/ai_probe.tscn` | combien coûte un coup à chaque profondeur ? | ~7 s |
 | `tools/ai_bench.tscn` | est-ce que chercher plus loin fait gagner ? *(mesuré : chaque demi-coup gagne les six duels, dans les deux camps)* | long |
 | `tools/tune_probe.tscn` | de combien de niveaux le joueur doit-il dominer ? | ~45 min |

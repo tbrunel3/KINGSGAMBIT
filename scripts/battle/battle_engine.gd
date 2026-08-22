@@ -315,7 +315,10 @@ func _end_of_activation(events: Array) -> void:
 	# couronner un pion en attente rend precisement des coups a un camp qui
 	# n'en avait plus.
 	if not has_any_move(current_team):
-		_finish(TEAM_NONE, "plus aucun coup possible", events)
+		if bool(Balance.COMBAT["stalemate_is_draw"]):
+			_finish(TEAM_NONE, "plus aucun coup possible", events)
+		else:
+			_finish(_other_team(current_team), "adversaire bloque", events)
 		return
 
 	# POSITION MORTE : plus aucune capture n'est possible, jamais. Inutile

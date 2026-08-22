@@ -122,6 +122,24 @@ func _ready() -> void:
 	_grid_view.draggable_team = BattleUnit.TEAM_PLAYER
 
 	_enter_placement()
+	_warn_about_series()
+
+
+## Explique la serie, une fois, au moment ou le joueur la decouvre : au
+## placement du PREMIER combat d'une bataille qui en compte plusieurs. Pas au
+## combat 2, ou il serait deja trop tard pour comprendre ce qui vient de se
+## passer.
+func _warn_about_series() -> void:
+	if Balance.battle_fights(_battle) <= 1:
+		return
+	if _run != null and _run.fight > 1:
+		return
+	if Game.has_seen_series_warning():
+		return
+	Game.mark_series_warning_seen()
+	var popup: Control = preload("res://scenes/battle/series_popup.tscn").instantiate()
+	add_child(popup)
+	popup.setup(Balance.battle_fights(_battle))
 
 
 ## Niveau auquel une piece part au combat : celui de son batiment. La Dame
@@ -1368,23 +1386,14 @@ func _show_fight_won(losses: Dictionary) -> void:
 	var recovered := _run.advance(Balance.RUN_REINFORCE_WEIGHT)
 	Game.save_run(_run)
 
-	var screen := BattleResult.new()
-	add_child(screen)
-	screen.open(true, "COMBAT %d SUR %d" % [done, _run.total])
-
-	screen.add_reward_row("Butin promis", _run.reward)
-	screen.add_stat_row("Ennemis vaincus", str(_run.enemies_defeated))
-	screen.add_stat_row("Pertes du combat",
-		"Aucune" if losses.is_empty() else _format_losses(losses), 1)
-	if not recovered.is_empty():
-		screen.add_icon_row("Blessés relevés", "check",
-			_format_losses(recovered), Color("5fb37a"))
-	screen.add_stat_row("Armée restante", "%d pièces" % _run.pieces_left(), 1)
-
-	screen.add_primary_button("COMBAT %d SUR %d" % [_run.fight, _run.total],
-		func(): Router.goto_battle(battle_id))
-	screen.add_action_button("ROYAUME", "castle", Router.goto_village)
-	screen.add_action_button("CAMPAGNE", "compass", Router.goto_campaign)
+	# PAS d'ecran de victoire ici. Une serie est UN engagement : la couronner
+	# a chaque combat vide la victoire de son sens et impose trois clics pour
+	# un seul enjeu. Un bandeau court dit ou on en est et ce qu'on a perdu,
+	# puis le placement du combat suivant s'ouvre - tout seul, ou au doigt.
+	var banner := SeriesBanner.new()
+	add_child(banner)
+	banner.show_fight(done, _run.total, losses, recovered, _run.pieces_left())
+	banner.continued.connect(func(): Router.goto_battle(battle_id))
 
 
 ## Combat nul. Tant qu'il reste des combats, la serie continue au suivant ;
@@ -1474,10 +1483,12 @@ func _show_run_won(dame_bonus: int) -> void:
 		"Aucune" if run_losses.is_empty() else _format_losses(run_losses), 1)
 
 	if battle_id < Balance.battle_count():
-		screen.add_primary_button("BATAILLE SUIVANTE",
+		# La CARTE d'abord : c'est la que le cachet de la bataille suivante
+		# s'ouvre, et une progression qu'on ne voit pas n'existe pas. Le
+		# raccourci vers la bataille suivante reste, en second.
+		screen.add_primary_button("CARTE DE CAMPAGNE", Router.goto_campaign)
+		screen.add_secondary_button("BATAILLE SUIVANTE",
 			func(): Router.goto_prep(battle_id + 1))
-		screen.add_secondary_button("REJOUER LA SÉRIE",
-			func(): Router.goto_battle(battle_id))
 	else:
 		screen.add_primary_button("REJOUER LA SÉRIE",
 			func(): Router.goto_battle(battle_id))
@@ -1541,7 +1552,7 @@ func _format_losses(losses: Dictionary) -> String:
 	var details: Array = []
 	for type in Balance.ARMY_TYPES:
 		if losses.has(type):
-			details.append("%d %s" % [int(losses[type]), Balance.unit_name(type)])
+			details.append(Balance.unit_count(type, int(losses[type])))
 	return ", ".join(details)
 
 

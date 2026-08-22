@@ -682,6 +682,27 @@ const COMBAT := {
 	# faire couper net.
 	"dead_position_check_after": 4,
 	"dead_position_grace": 6,
+	# PAT - le camp au trait n'a plus aucun coup legal. Deux ecoles, et le
+	# choix se fait manette en main, pas au banc :
+	#
+	#   true  (echecs)   le pat fait NUL. Le camp ecrase sauve la partie -
+	#                    c'est la ressource du pat, que tout joueur d'echecs
+	#                    connait. Mesure : 6 parties de banc sur 19 finissent
+	#                    nulles, bataille 1 comprise. Sur un plateau de cinq
+	#                    colonnes les pions se bloquent nez a nez sans arret,
+	#                    donc le pat y est BEAUCOUP plus frequent qu'aux
+	#                    echecs.
+	#   false (shatranj) le camp bloque PERD. Figer l'adversaire devient une
+	#                    victoire. Plus lisible pour qui ne vient pas des
+	#                    echecs, et le nul reste reserve a la position morte -
+	#                    le seul cas ou personne ne peut plus rien.
+	#
+	# Une seule valeur separe les deux jeux : ne pas la coder en dur ailleurs.
+	"stalemate_is_draw": true,
+	# Duree du bandeau entre deux combats d'une serie (cf. SeriesBanner). Le
+	# joueur peut le couper au doigt : cette valeur ne fixe que l'attente
+	# MAXIMALE de quelqu'un qui ne touche a rien.
+	"series_banner_seconds": 2.4,
 	"max_activations": 1200,   # garde-fou absolu
 }
 
@@ -701,6 +722,14 @@ func unit_name(type: String) -> String:
 ## redecouvrir a chaque ecran qui compose une phrase.
 func unit_article(type: String) -> String:
 	return "la" if type == TOUR or type == DAME else "le"
+
+
+## "1 Pion", "4 Pions" - le jeu ecrivait "4 Pion" partout ou il comptait des
+## pieces (pertes, blesses releves, bandeau de serie). Le pluriel se decide ici
+## plutot que dans chaque ecran : il y en avait deja trois.
+func unit_count(type: String, count: int) -> String:
+	var name := unit_name(type)
+	return "%d %s%s" % [count, name, "s" if count > 1 else ""]
 
 
 func building_name(type: String) -> String:

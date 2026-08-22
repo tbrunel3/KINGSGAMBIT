@@ -20,6 +20,7 @@ func _ready() -> void:
 	await _test_village()
 	await _test_codex()
 	await _test_battle()
+	await _test_series_chaining()
 
 	print("")
 	if _failures == 0:
@@ -363,6 +364,87 @@ func _test_battle() -> void:
 	battle.queue_free()
 	await _frames(2)
 	Game.reset_progress()
+
+
+# ------------------------------- SERIE ---------------------------------------
+
+## Une serie ne se couronne qu'une fois. Un combat intermediaire gagne rend la
+## main au suivant par un BANDEAU court - pas par un ecran de victoire, qui
+## imposait trois clics pour un seul enjeu et vidait la victoire de son sens.
+##
+## Le combat est force plutot que joue : ce qui est teste ici est l'ENCHAINEMENT,
+## et la bataille 2 peut tres bien finir nulle avec la formation de reference.
+func _test_series_chaining() -> void:
+	print("")
+	print("[4] Serie : un combat gagne encha\u00eene sans ecran de victoire")
+
+	Game.reset_progress()
+	var battle_id := 0
+	for id in range(1, Balance.battle_count() + 1):
+		if Balance.battle_fights(Balance.battle(id)) > 1:
+			battle_id = id
+			break
+	if battle_id == 0:
+		print("  (aucune bataille en serie : rien a verifier)")
+		return
+
+	Router.current_battle_id = battle_id
+	var battle: Node = load("res://scenes/battle/battle.tscn").instantiate()
+	add_child(battle)
+	await _frames(3)
+
+	# L'avertissement s'ouvre a la premiere serie, et une seule fois.
+	var popup: Node = null
+	for child in battle.get_children():
+		if child.get_script() != null and String(child.name).begins_with("SeriesPopup"):
+			popup = child
+	_check(popup != null, "la premiere serie s'explique dans un popup")
+	_check(Game.has_seen_series_warning(), "l'avertissement ne se reverra plus")
+	if popup != null:
+		popup.queue_free()
+		await _frames(2)
+
+	Driver.auto_place(battle)
+	await _frames(2)
+	battle._start_combat()
+	await _frames(2)
+
+	# Victoire forcee : on retire l'armee ennemie, puis le joueur joue un coup,
+	# ce qui declenche le verdict.
+	for foe in battle._engine.living(BattleUnit.TEAM_ENEMY):
+		foe.captured = true
+		battle._engine.grid.remove_unit(foe)
+	var mover: BattleUnit = null
+	for unit in battle._engine.living(BattleUnit.TEAM_PLAYER):
+		if not battle._engine.legal_moves(unit).is_empty():
+			mover = unit
+			break
+	if mover == null:
+		_check(false, "aucun coup jouable pour declencher la fin du combat")
+		battle.queue_free()
+		return
+	battle._try_player_move(mover, battle._engine.legal_moves(mover)[0])
+
+	var waited := 0
+	while battle._phase != 2 and waited < 600:
+		await get_tree().process_frame
+		waited += 1
+
+	var banner: Node = null
+	var result: Node = null
+	for child in battle.get_children():
+		if child is SeriesBanner:
+			banner = child
+		elif child is BattleResult:
+			result = child
+	_check(banner != null, "le combat gagne affiche le bandeau d'enchainement")
+	_check(result == null, "aucun ecran de victoire entre deux combats")
+
+	var run := Game.current_run(battle_id)
+	_check(run != null and run.fight == 2, "la serie est sauvegardee au combat 2")
+
+	battle.queue_free()
+	await _frames(2)
 
 
 # ------------------------------- OUTILS --------------------------------------

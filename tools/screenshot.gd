@@ -53,6 +53,7 @@ func _ready() -> void:
 		instance.queue_free()
 		await get_tree().process_frame
 
+	await _capture_series()
 	await _capture_dame_tower()
 	await _capture_combat()
 	await _capture_run()
@@ -61,6 +62,36 @@ func _ready() -> void:
 	await _capture_splash()
 	await _capture_intro()
 	get_tree().quit()
+
+
+## Les deux ecrans de la SERIE : l'avertissement qui l'explique une fois, et le
+## bandeau qui enchaine deux combats sans passer par la victoire.
+func _capture_series() -> void:
+	var host := Control.new()
+	host.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	add_child(host)
+
+	var popup: Control = load("res://scenes/battle/series_popup.tscn").instantiate()
+	host.add_child(popup)
+	popup.setup(3)
+	for i in range(6):
+		await RenderingServer.frame_post_draw
+	_save(host, "1j_serie_avertissement.png")
+	host.queue_free()
+	await get_tree().process_frame
+
+	var board := Control.new()
+	board.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	add_child(board)
+	var banner := SeriesBanner.new()
+	board.add_child(banner)
+	banner.show_fight(2, 3, {Balance.PION: 2, Balance.CAVALIER: 1},
+		{Balance.PION: 1}, 7)
+	await get_tree().create_timer(0.5).timeout
+	await RenderingServer.frame_post_draw
+	_save(board, "4c_serie_bandeau.png")
+	board.queue_free()
+	await get_tree().process_frame
 
 
 ## Le Chateau Royal avec une Dame retrouvee : l'ecran n'existe qu'apres avoir

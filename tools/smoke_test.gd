@@ -1022,12 +1022,15 @@ func _check_stalemate_is_draw() -> void:
 	engine.current_team = BattleUnit.TEAM_ENEMY
 	engine.step()
 
+	var draw_expected := bool(Balance.COMBAT["stalemate_is_draw"])
 	if not engine.finished:
 		_fail("pat : le joueur n'a aucun coup legal et la bataille continue")
-	elif not engine.is_draw():
-		_fail("pat : la bataille designe un vainqueur au lieu d'un nul")
+	elif draw_expected and not engine.is_draw():
+		_fail("pat : la bataille designe un vainqueur alors que le reglage dit NUL")
+	elif not draw_expected and engine.winner != BattleUnit.TEAM_ENEMY:
+		_fail("pat : le camp bloque ne perd pas alors que le reglage le prevoit")
 	else:
-		print("  pat (plus aucun coup legal) : NUL")
+		print("  pat (plus aucun coup legal) : %s" % ("NUL" if draw_expected else "le camp bloque perd"))
 
 
 ## POSITION MORTE - les deux camps peuvent encore bouger, mais plus aucune

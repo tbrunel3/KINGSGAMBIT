@@ -665,6 +665,20 @@ func win_battle(id: int, reward: int) -> void:
 #  Le dialogue du Roi (king_intro_dialogue.tscn) ne doit se montrer qu'une
 #  fois : au premier lancement, pas a chaque retour au village.
 
+## L'avertissement de serie n'a de sens qu'une fois : la deuxieme bataille
+## apprend au joueur qu'une bataille peut demander plusieurs combats, les
+## suivantes n'ont plus a le lui redire.
+func has_seen_series_warning() -> bool:
+	return bool(_state.get("seen_series_warning", false))
+
+
+func mark_series_warning_seen() -> void:
+	if has_seen_series_warning():
+		return
+	_state["seen_series_warning"] = true
+	save()
+
+
 func has_seen_intro() -> bool:
 	return bool(_state.get("seen_intro", false))
 
