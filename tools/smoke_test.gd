@@ -199,8 +199,53 @@ func _check_run() -> void:
 	if int(crowned.losses.get(Balance.PION, 0)) != 1:
 		_fail("une Dame faite puis tombee coute le pion qu'elle etait")
 
+	# ----- La COMPOSITION dans la serie -----
+	#
+	#  Regle choisie : elle survit a la serie et se REDUIT des pertes - on ne
+	#  la refait pas entre deux combats. Mais les renforts doivent y rentrer,
+	#  sinon une piece relevee serait vivante et impossible a poser.
+	Game.reset_progress()
+	var capacity := Game.deploy_capacity()
+	var composed := Game.begin_run(series_id)
+	var stock := int(composed.roster.get(Balance.PION, 0))
+
+	if composed.has_lineup():
+		_fail("sans composition memorisee, la serie doit s'ouvrir sans composition")
+	if int(composed.deployable().get(Balance.PION, 0)) != stock:
+		_fail("sans composition, le placement doit proposer l'effectif entier")
+
+	# Le joueur en engage trois sur les huit qu'il possede.
+	composed.set_lineup({Balance.PION: 3}, capacity)
+	if int(composed.deployable().get(Balance.PION, 0)) != 3:
+		_fail("le placement ne doit proposer que les pieces composees")
+	if composed.reserve(Balance.PION) != stock - 3:
+		_fail("le reste doit demeurer en caserne")
+	if composed.lineup_weight() != 3 * Balance.deploy_weight(Balance.PION):
+		_fail("la charge composee doit compter des POIDS, pas des pieces")
+
+	# Deux tombent au premier combat : la composition les perd.
+	composed.record_victory({Balance.PION: 2}, 3, 0, 0, 90)
+	if int(composed.lineup.get(Balance.PION, 0)) != 1:
+		_fail("les pertes doivent sortir de la composition, pas seulement du roster")
+
+	# Puis se relevent : ils DOIVENT revenir dans la composition.
+	var back := composed.advance(Balance.RUN_REINFORCE_WEIGHT, capacity)
+	if int(back.get(Balance.PION, 0)) != 2:
+		_fail("deux pions devraient se relever entre deux combats")
+	if int(composed.lineup.get(Balance.PION, 0)) != 3:
+		_fail("un renfort releve doit redevenir posable, donc rentrer dans la composition")
+
+	# Une composition trop lourde est ramenee a la charge, pas refusee.
+	var greedy := CampaignRun.new()
+	greedy.roster = {Balance.PION: 999}
+	greedy.set_lineup({Balance.PION: 999}, capacity)
+	if greedy.lineup_weight() != capacity:
+		_fail("la charge doit borner la composition (%d au lieu de %d)" % [
+			greedy.lineup_weight(), capacity])
+
 	Game.reset_progress()
 	print("  usure, renforts, nul, Dame de serie, sauvegarde, cloture : OK")
+	print("  composition : bornee par la charge, reduite des pertes, ouverte aux renforts")
 	_done("serie")
 
 

@@ -75,6 +75,28 @@ godot --headless --path . --export-release "Windows Desktop"
 godot --headless --path . --export-release "Web"
 ```
 
+### Tester sur son téléphone, en réseau local
+
+Le build web part dans `docs/`. Pour l'ouvrir depuis un téléphone du même
+Wi-Fi :
+
+```bash
+python tools/serve_local.py docs
+```
+
+Le script affiche les deux adresses à ouvrir — une pour ce PC, une pour le
+téléphone — et génère au passage le certificat dont il a besoin.
+
+**Le HTTPS n'est pas une précaution, c'est une obligation.** Godot refuse de
+démarrer hors d'un « contexte sécurisé ». `localhost` en est un ; une adresse
+de réseau local comme `http://192.168.1.60` n'en est pas un, et le téléphone
+n'afficherait que *« Secure Context — Check web server configuration (use
+HTTPS) »*. Le certificat étant auto-signé, le téléphone avertit **une fois** :
+il faut accepter (« Paramètres avancés » → « Continuer »).
+
+Si la page ne s'ouvre pas du tout, c'est le pare-feu Windows : autoriser
+`python.exe` en entrée sur le profil du réseau courant.
+
 ---
 
 ## Règles du jeu

@@ -112,8 +112,13 @@ func _ready() -> void:
 	_engine.enemy_skill = Balance.battle_ai_skill(_battle)
 	_spawn_enemies()
 
+	# Ce que le placement propose est la COMPOSITION choisie a la preparation,
+	# pas l'armee entiere : la charge s'est deja depensee la-bas. Sans
+	# composition - premiere bataille jamais preparee, ou un banc qui saute
+	# l'ecran - c'est le roster, comme avant (cf. CampaignRun.deployable).
+	var pool := _run.deployable()
 	for type in Balance.ARMY_TYPES:
-		_remaining[type] = int(_run.roster.get(type, 0))
+		_remaining[type] = int(pool.get(type, 0))
 
 	_grid_view.setup(_engine)
 	_grid_view.cell_clicked.connect(_on_cell_clicked)
@@ -174,12 +179,13 @@ func _deployable_types() -> Array:
 	return types
 
 
-## Pieces de ce type engagees dans la serie, posees ou non. `_remaining` ne
+## Pieces de ce type engagees dans ce COMBAT, posees ou non - la composition
+## si le joueur en a valide une, le roster de la serie sinon. `_remaining` ne
 ## compte que celles qui restent en main pendant le placement.
 func _owned(type: String) -> int:
 	if _run == null:
 		return Game.units_owned(type)
-	return int(_run.roster.get(type, 0))
+	return int(_run.deployable().get(type, 0))
 
 
 # ------------------------------- AIDE ----------------------------------------
@@ -1383,7 +1389,7 @@ func _show_fight_won(losses: Dictionary) -> void:
 	# On avance MAINTENANT plutot qu'au clic : la serie est sauvegardee au
 	# combat suivant, donc fermer le jeu sur cet ecran ne fait pas rejouer le
 	# combat qu'on vient de gagner.
-	var recovered := _run.advance(Balance.RUN_REINFORCE_WEIGHT)
+	var recovered := _run.advance(Balance.RUN_REINFORCE_WEIGHT, Game.deploy_capacity())
 	Game.save_run(_run)
 
 	# PAS d'ecran de victoire ici. Une serie est UN engagement : la couronner
@@ -1413,7 +1419,7 @@ func _show_fight_drawn(losses: Dictionary) -> void:
 		Game.finish_run(_run, false)
 		consolation = int(round(float(promised) * Balance.DEFEAT_CONSOLATION_RATIO))
 	else:
-		recovered = _run.advance(Balance.RUN_REINFORCE_WEIGHT)
+		recovered = _run.advance(Balance.RUN_REINFORCE_WEIGHT, Game.deploy_capacity())
 		Game.save_run(_run)
 
 	var screen := BattleResult.new()

@@ -30,6 +30,20 @@ const SHOTS := [
 ]
 
 
+
+## Pousse toutes les animations en cours jusqu'a leur fin.
+##
+## Depuis que les ecrans ont une entree animee (preparation, resultat, bandeau
+## de serie), une capture prise quatre images apres l'instanciation photographie
+## un ecran a MOITIE APPARU - la preparation ressortait quasiment vide, et le
+## banc accusait la mise en page. On saute donc a la fin des tweens plutot que
+## d'attendre : c'est instantane, et c'est exact.
+func _finish_animations() -> void:
+	for tween in get_tree().get_processed_tweens():
+		if tween.is_valid():
+			tween.custom_step(10.0)
+	await RenderingServer.frame_post_draw
+
 func _ready() -> void:
 	DirAccess.make_dir_recursive_absolute(ProjectSettings.globalize_path(OUTPUT_DIR))
 
@@ -44,6 +58,7 @@ func _ready() -> void:
 		# Quelques images pour laisser les conteneurs se disposer.
 		for i in range(4):
 			await RenderingServer.frame_post_draw
+		await _finish_animations()
 
 		var image := get_viewport().get_texture().get_image()
 		var path := "%s/%s" % [OUTPUT_DIR, String(shot["file"])]
@@ -53,6 +68,7 @@ func _ready() -> void:
 		instance.queue_free()
 		await get_tree().process_frame
 
+	await _capture_composition()
 	await _capture_series()
 	await _capture_dame_tower()
 	await _capture_combat()
@@ -62,6 +78,34 @@ func _ready() -> void:
 	await _capture_splash()
 	await _capture_intro()
 	get_tree().quit()
+
+
+## La preparation une fois COMPOSEE : sans cette capture, on ne voit jamais
+## que l'etat vide, et c'est justement l'etat rempli qui dit ce que l'ecran
+## fait. La composition est posee en memoire plutot que tapee : la capture doit
+## montrer la meme chose a chaque fois.
+func _capture_composition() -> void:
+	# Une capture precedente a instancie battle.tscn sur cette bataille, ce qui
+	# laisse une serie ouverte sans composition - et une serie EN COURS ne se
+	# recompose pas depuis la memoire, c'est la regle. On repart d'avant.
+	Game.clear_run()
+	Game.remember_lineup(3, {Balance.PION: 3, Balance.CAVALIER: 1})
+	Router.current_battle_id = 3
+
+	var prep: Node = load("res://scenes/battle/battle_prep.tscn").instantiate()
+	add_child(prep)
+	for i in range(4):
+		await RenderingServer.frame_post_draw
+	await _finish_animations()
+
+	var path := "%s/3c_preparation_composee.png" % OUTPUT_DIR
+	var image := get_viewport().get_texture().get_image()
+	image.save_png(path)
+	print("capture : %s (%d x %d)" % [path, image.get_width(), image.get_height()])
+
+	prep.queue_free()
+	await get_tree().process_frame
+	Game.reset_progress()
 
 
 ## Les deux ecrans de la SERIE : l'avertissement qui l'explique une fois, et le

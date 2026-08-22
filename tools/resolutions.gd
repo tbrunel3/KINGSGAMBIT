@@ -23,12 +23,26 @@ const OUTPUT_DIR := "res://tools/screenshots/echelle"
 
 ## Definitions choisies pour encadrer le marche : la plus etroite et la plus
 ## large des tailles courantes, plus la base du projet.
+##
+## ⚠️ LES CINQ PREMIERES ONT TOUTES LE MEME FORMAT (0,45 a 0,46). Le banc ne
+## pouvait donc PAS attraper un probleme de format - il ne mesurait que la
+## largeur. C'est ce qui l'a laisse passer un ecran casse dans un navigateur
+## de telephone, ou la barre d'URL mange la hauteur et fait monter le rapport
+## a 0,55.
+##
+## Les trois dernieres tailles existent pour ca, et ce sont elles qu'il faut
+## regarder en premier : un ecran qui tient en 393x852 et casse en 393x700 est
+## un ecran qui suppose une hauteur.
 const SIZES := [
 	{"w": 393, "h": 852, "name": "base-393x852"},        # reference du projet
 	{"w": 360, "h": 800, "name": "android-360x800"},     # Android d'entree de gamme
 	{"w": 375, "h": 812, "name": "iphone-375x812"},      # iPhone 13 mini / X
 	{"w": 412, "h": 915, "name": "pixel-412x915"},       # Pixel 7
 	{"w": 430, "h": 932, "name": "iphone-430x932"},      # iPhone 15 Pro Max
+	# --- hors format : c'est ici que ca casse ---
+	{"w": 393, "h": 700, "name": "web-393x700"},         # navigateur, barre d'URL visible
+	{"w": 360, "h": 620, "name": "court-360x620"},       # le plus court plausible
+	{"w": 430, "h": 1080, "name": "tres-long-430x1080"}, # le plus allonge
 ]
 
 const SCREENS := [
@@ -51,6 +65,20 @@ const SCREENS := [
 ]
 
 
+
+## Pousse toutes les animations en cours jusqu'a leur fin.
+##
+## Depuis que les ecrans ont une entree animee (preparation, resultat, bandeau
+## de serie), une capture prise quatre images apres l'instanciation photographie
+## un ecran a MOITIE APPARU - la preparation ressortait quasiment vide, et le
+## banc accusait la mise en page. On saute donc a la fin des tweens plutot que
+## d'attendre : c'est instantane, et c'est exact.
+func _finish_animations() -> void:
+	for tween in get_tree().get_processed_tweens():
+		if tween.is_valid():
+			tween.custom_step(10.0)
+	await RenderingServer.frame_post_draw
+
 func _ready() -> void:
 	DirAccess.make_dir_recursive_absolute(ProjectSettings.globalize_path(OUTPUT_DIR))
 	Game.reset_progress()
@@ -68,6 +96,7 @@ func _ready() -> void:
 			add_child(instance)
 			for i in range(4):
 				await RenderingServer.frame_post_draw
+			await _finish_animations()
 
 			# L'ecran de bataille s'ouvre en placement : pour photographier le
 			# combat il faut poser une armee et lancer les hostilites. C'est le

@@ -22,3 +22,7 @@ tools/screenshots/
 # Build web (37 Mo de wasm + 15 Mo de pck a chaque export). Publie depuis la
 # branche gh-pages, pas depuis main : voir README, section "Regenerer les builds".
 /docs/
+
+# Certificat auto-signe du serveur de test local (tools/serve_local.py).
+# Contient une CLE PRIVEE : jamais dans le depot, et regenere en une commande.
+tools/*.pem

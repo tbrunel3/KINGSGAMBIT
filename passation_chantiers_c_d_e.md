@@ -20,9 +20,21 @@ sous-systèmes, et parce que la première rendait les autres intestables.
 |---|---|---|
 | **A** | Le combat répond et se termine | ✅ commit `57c307b` |
 | **B** | La série s'enchaîne sans écran de victoire | ✅ commit `e2772b7` |
-| **C** | **La composition d'armée** | à faire — le plus gros |
-| **D** | **Polices et animations Figma** | à faire |
+| **C** | La composition d'armée | ✅ fait |
+| **D** | Polices et animations Figma | 🟡 **aux trois quarts** — voir ci-dessous |
+| **F** | Le format d'écran (« dégradés bizarres ») | 🟡 **entamé** — voir ci-dessous |
 | **E** | **Les popups d'accompagnement** | à faire **en dernier** |
+
+> **Reprendre ici.** Trois choses restent, par ordre de valeur :
+>
+> 1. **Porter l'entrée du placement** (`248:493`, 3 s, 17 nœuds) — la plus
+>    riche animation du fichier, et l'écran où le joueur passe le plus de temps.
+> 2. **Finir le passage au crible des formats** : seule la carte de campagne a
+>    été corrigée. Rejouer `resolutions.tscn` et regarder les trois tailles
+>    hors format sur les six autres écrans.
+> 3. **Le chantier E**, avec deux nouveautés à lire d'abord : la maquette
+>    contient désormais un `popup-combat-phase` (`378:4`) et un `shop-screen`
+>    (`347:4`) qui n'existaient pas au découpage.
 
 E vient en dernier délibérément : accompagner un jeu qui va changer, c'est du
 travail à refaire.
@@ -54,7 +66,48 @@ Godot est installé par winget, il n'est pas dans le `PATH` :
 
 ---
 
-# C — la composition d'armée
+# C — la composition d'armée ✅ FAIT
+
+**Ce chantier est terminé.** Ce qui suit garde la trace de la demande et du
+raisonnement ; les décisions prises sont en tête, et le fonctionnement final
+est décrit dans [`CLAUDE.md`](CLAUDE.md) > « Recruter fait une réserve,
+composer fait une armée ». **Ne pas le reconstruire.**
+
+## Ce qui a été décidé, et livré
+
+| Question | Réponse du joueur |
+|---|---|
+| Nouvel écran ou `battle_prep` interactif ? | **`battle_prep` interactif**, sur une maquette `169:4` **refaite** par le joueur : ennemi en haut, déploiement au milieu, caserne en bas |
+| Recompose-t-on entre deux combats ? | **Non — la composition survit et se réduit** des pertes… |
+| | …**mais les renforts doivent être plaçables** : ils rentrent donc dans la composition (`CampaignRun._reinforce`) |
+| Où se dépense la charge ? | **À la composition seulement** |
+| L'idée des casernes (garnison / relèvement) | **Pas maintenant** — toujours ouverte, voir la décision 4 plus bas |
+
+Une découverte non prévue : **la maquette refaite est en thème clair** (crème,
+panneaux blancs) alors que tout le jeu est en nuit et or. La rupture a été
+signalée au joueur, qui l'a maintenue. `battle_prep` est donc le seul écran
+clair du jeu — et il est en **Inter**, pas en Geist, ce qui retire un point du
+chantier D.
+
+Mesuré après coup : `smoke_test` tient ses **10/10 batailles gagnables** (le
+signal que cette passation demandait de surveiller), `ui_test` joue la
+composition, et 360 × 800 ne déborde pas.
+
+Deux pièges payés en le faisant, qui ne sont pas dans la liste générale :
+
+1. **Libérer un nœud pendant que son propre signal émet est refusé par Godot**
+   (« Attempted to free a locked object »). La carte de caserne déclenche la
+   reconstruction qui la libère : sans un `call_deferred`, la carte survivait
+   et la composition restait bloquée sur sa première pièce — **sans qu'aucune
+   erreur ne remonte à l'écran**.
+2. **Un `PanelContainer` ignore les constantes `margin_*`.** Sa marge vient des
+   `content_margin` de sa `StyleBox` ; posée en constante, elle ne fait rien et
+   le contenu vient coller le trait.
+
+---
+
+## L'archive de la demande
+
 
 ## Ce que le joueur a demandé, dans ses mots
 
@@ -116,6 +169,10 @@ réponse du designer :
   page « Écrans triés » (`248:2`), jamais lue.
 
 ## Les décisions à poser au joueur AVANT de coder
+
+> **Toutes tranchées sauf la 4** (les casernes), que le joueur a explicitement
+> reportée. Le reste est archive.
+
 
 1. **Nouvel écran, ou `battle_prep` interactif ?** Recommandation ci-dessus,
    mais c'est son parcours.
@@ -204,6 +261,12 @@ pour un seul mot.** Embarquer Geist n'est donc pas interdit — c'est un arbitra
 3. **Geist pour les titres seulement**, Inter pour le corps. Compromis, et ça
    pourrait remplacer Lora, qui ne sert que deux fois.
 
+**Un point déjà acquis** : la maquette refaite de la préparation (`169:4`) est
+intégralement en **Inter** — `Inter:Bold`, `Inter:Extra_Bold`,
+`Inter:Semi_Bold`, `Inter:Black`. Le désaccord Geist/Inter ne porte donc pas
+sur cet écran, et il faut vérifier combien d'autres frames le designer a
+converties depuis.
+
 ⚠️ Un relevé est nécessaire avant de choisir : **quelles frames utilisent quoi**.
 Le script qui l'a fait pour le codex est réutilisable — `getStyledTextSegments(['fontName'])`
 sur tous les nœuds `TEXT` d'une frame, via `use_figma`.
@@ -239,6 +302,89 @@ Ce qui est déjà porté, et qui donne le langage à reprendre :
 
 ---
 
+# D — état réel : les deux prémisses étaient fausses
+
+**Les deux moitiés du chantier reposaient sur des relevés périmés. Refaits.**
+
+## Les polices : il n'y a rien à faire
+
+La demande était « change les polices comme sur Figma », et ce document
+annonçait des maquettes en **Geist**. **C'est faux aujourd'hui.** Relevé sur
+les 1 200 nœuds de texte des 30 frames, via `use_figma` et
+`getStyledTextSegments(['fontName'])` :
+
+**tout le fichier est en Inter**, la police que le jeu embarque déjà. Restent
+quatre glyphes égarés — `Jua` dans `village-avec-dame` et `07-bataille-nulle`,
+`Lilita One` dans `king-intro-dialogue`. Jua ayant été retirée pour son poids
+(2,1 Mo pour un mot), il n'y a **ni arbitrage à poser, ni police à embarquer**.
+Les trois options de ce document sont sans objet.
+
+## Les animations : le relevé était périmé, et pour une raison précise
+
+**Les timelines vivent sur les COPIES de la page « Écrans triés » (`248:2`),
+pas sur les originaux.** Un relevé fait sur la page principale — ce qu'avait
+fait la session précédente — ne peut pas les voir. Le fichier a d'ailleurs
+**trois pages**, et `get_metadata` sans `nodeId` n'en annonce qu'une.
+
+L'inventaire complet est dans [`CLAUDE.md`](CLAUDE.md). Ce qui reste :
+
+- ⚠️ **`248:493` — l'entrée du placement, 3 s, 17 nœuds.** La plus riche du
+  fichier, et non portée. Grille qui zoome de 1,08, badge de tour qui tombe de
+  −80 px avec rebond, HUD qui glisse de +70 px, bandeau qui monte de +200 px,
+  quatre puces qui éclosent en ressort en cascade, lueur verte pulsée sur
+  COMBATTRE.
+- `287:308` — un fondu au noir de 0,5 s. C'est **lui** qui explique pourquoi
+  cette frame « rend noir à l'export » : la question est close, il n'y a rien
+  à réparer.
+
+**Fait :** l'entrée de la préparation (`248:406`, 2 s, 12 nœuds), portée en
+opacités et échelles — pas en translations, parce que ses panneaux sont
+enfants d'un `VBoxContainer`.
+
+⚠️ **Une animation d'entrée rend les bancs de capture menteurs**, et je m'y
+suis fait prendre : la préparation ressortait quasiment vide de
+`resolutions.tscn`, et j'ai d'abord accusé la mise en page. Les deux outils
+sautent maintenant à la fin des tweens (`_finish_animations`). **Tout nouvel
+outil de capture doit faire pareil.**
+
+---
+
+# F — le format d'écran (chantier neuf)
+
+## D'où ça vient
+
+Le joueur a testé le build web sur son téléphone et signalé « des dégradés
+bizarres vu que j'ai pas le même format que les fenêtres web ».
+
+## Ce qui est fait
+
+La **carte de campagne** est corrigée, et les cinq pièges rencontrés sont
+écrits dans [`CLAUDE.md`](CLAUDE.md) > « Le format d'écran ». En résumé : la
+largeur en unités de jeu ne descend jamais sous 393 (c'est la HAUTEUR qui
+varie), un `Control` enfant de `ScrollContainer` ne s'étire pas, un dégradé
+approximé par bandes raye sur un format non entier, et `parchment_map.jpg`
+avait **30 px de barre brune cuits dans chaque bord** par l'export Figma.
+
+`EdgeFades` a été réécrit en vraies textures de dégradé — **ne pas revenir aux
+bandes**. Le parchemin a été recadré (786 → 726).
+
+## Ce qui reste
+
+- **Passer les six autres écrans au crible.** `resolutions.tscn` a désormais
+  trois tailles hors format (`web-393x700`, `court-360x620`,
+  `tres-long-430x1080`) : ce sont **elles** qu'il faut regarder. Seule la carte
+  a été traitée.
+- ⚠️ **Le banc lui-même était l'angle mort** : ses cinq définitions d'origine
+  avaient toutes le même format. C'est la quatrième fois dans ce projet que le
+  défaut est dans l'instrument — relire l'instrument avant d'accuser le jeu.
+- **Tester sur un vrai téléphone**, pas dans un navigateur intégré : celui-ci
+  force un DPR de 2 et rend Godot dans le quart supérieur gauche, ce qui est un
+  artefact de l'outil et fait perdre du temps. `python tools/serve_local.py docs`
+  sert le build en HTTPS sur le réseau local (le HTTPS est **obligatoire** :
+  Godot refuse de démarrer hors contexte sécurisé).
+
+---
+
 # E — les popups d'accompagnement
 
 ## Ce que le joueur a demandé
@@ -259,6 +405,18 @@ avant serait à réécrire.
 | `MissionPopup` | les objectifs, qui remplacent un tutoriel |
 | `CodexPopup` | mobilité par niveau, casernes, six règles de combat |
 | `ConfirmUpgrade` | ce qu'on engage avant une amélioration longue |
+
+## Deux écrans neufs à lire AVANT de proposer quoi que ce soit
+
+Le designer a ajouté depuis le découpage, et ni l'un ni l'autre n'est intégré :
+
+- **`378:4 popup-combat-phase`** — un popup de phase de combat. Il recouvre
+  peut-être déjà une partie de ce que E allait proposer : à ouvrir en premier.
+- **`347:4 shop-screen`** — la boutique. `CLAUDE.md` la déclarait « jamais
+  dessinée » ; elle l'est. Ses RÈGLES, elles, ne sont toujours pas écrites
+  (coffres horaires, gemmes, accélération d'améliorations), et le retour du
+  designer `294:2` la met explicitement **hors périmètre** en attendant son
+  propre brief et sa mesure économique. Ne pas l'anticiper.
 
 ## Les candidats repérés, par ordre de gravité
 

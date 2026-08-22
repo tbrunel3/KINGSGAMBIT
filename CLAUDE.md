@@ -44,16 +44,17 @@ sur 852 points se décale dès que l'appareil en fait 880. Chaque écran se déc
 en zones ancrées — barre haute de hauteur fixe, contenu central qui prend la
 place restante, bandeau bas de hauteur fixe. Cadre utile : **361 × 824**
 (393 × 852 moins les marges de zone sûre). Convertis : `battle.tscn`,
-`campaign.tscn`. Restent à convertir : village, préparation.
+`campaign.tscn`, `battle_prep.tscn`. Reste à convertir : village.
 
 ---
 
 ## Le jeu en un écran
 
-Le joueur **place son armée** face à une formation ennemie qu'il voit, puis
-**joue lui-même chaque coup**, une pièce par camp et par tour, jusqu'à ce qu'un
-camp n'ait plus rien debout. Ni points de vie ni dégâts : une pièce est sur le
-plateau, ou capturée. On capture en se déplaçant sur la case adverse.
+Le joueur **compose son armée**, la **place** face à une formation ennemie
+qu'il voit, puis **joue lui-même chaque coup**, une pièce par camp et par tour,
+jusqu'à ce qu'un camp n'ait plus rien debout. Ni points de vie ni dégâts : une
+pièce est sur le plateau, ou capturée. On capture en se déplaçant sur la case
+adverse.
 
 Un **anneau rouge** cercle en permanence les pièces prenables au coup suivant.
 Sans points de vie, voir l'attaque arriver EST la tension du jeu — aux échecs on
@@ -66,6 +67,55 @@ déployable. Entre deux batailles, retour au village : recruter, améliorer.
 
 Ton : fantasy médiéval, mélancolique mais pas sombre — un royaume diminué qui se
 reconstruit. Aucune violence graphique.
+
+### Recruter fait une réserve, composer fait une armée
+
+C'est la distinction que le jeu ne montrait nulle part, et qui donnait au
+joueur l'impression que **« après le recrutement de troupe, rien ne change
+ensuite »**. Il avait raison sur le ressenti et tort sur la cause : le
+recrutement alimentait bien le placement, mais le vrai plafond n'a jamais été
+l'effectif — c'est la **charge**. Au château Nv.1 on pose 16 de charge ; un
+dixième pion n'entrait sur aucun plateau.
+
+Ce qui manquait n'était pas un budget, c'était l'étape de **choix** :
+
+| | Où | Quoi | Plafond |
+|---|---|---|---|
+| **Recruter** | village | remplit la **caserne** | la capacité du bâtiment |
+| **Composer** | préparation | remplit le **déploiement** | `Balance.deploy_capacity` |
+| **Placer** | placement | pose sur le plateau | *plus aucun* |
+
+**La charge se dépense à la composition, une fois.** Le placement ne fait plus
+que poser ce qui a déjà été choisi. Deux plafonds qui se ressemblent, et le
+joueur ne saurait plus lequel le bloque — le garde-fou du placement reste dans
+`battle.gd`, mais une composition valide le rend inatteignable.
+
+La composition vit dans **`CampaignRun.lineup`**, un sous-ensemble du `roster` :
+
+- **Vide = aucune composition**, et le placement retombe sur le roster entier.
+  Ce n'est pas un cas d'erreur, c'est le chemin des **bancs**, qui n'ouvrent
+  jamais la préparation — et c'est ce qui leur laisse mesurer la même chose
+  qu'avant. `smoke_test` déclare toujours **10/10 batailles gagnables**.
+- Elle **survit à la série et se réduit des pertes** : on ne recompose pas
+  entre deux combats, sinon on remet un écran de décision là où le bandeau de
+  série vient d'en enlever un. Au combat 2, l'écran est en lecture seule.
+- **Les renforts y rentrent** (`CampaignRun._reinforce`). Sans ça, un pion
+  relevé entre deux combats serait vivant et impossible à poser.
+- Elle est **mémorisée par bataille** (`GameState.remember_lineup`), même
+  doctrine que `DERNIÈRE FORMATION` : on rend au joueur *sa* décision, on n'en
+  prend pas une à sa place — la règle 3 interdit une armée composée par
+  l'ordinateur, pas une décision qu'on lui repropose.
+
+⚠️ **La préparation n'ouvre plus la série.** Elle monte un `CampaignRun`
+*provisoire* en mémoire et ne le verse qu'au départ du combat
+(`_commit_lineup`). Appeler `Game.begin_run` en arrivant sur l'écran
+effacerait une série entamée sur une **autre** bataille, juste parce que le
+joueur est venu regarder celle-ci.
+
+**C'est le seul écran clair du jeu.** La maquette refaite (`169:4`) est en
+parchemin crème et panneaux blancs, quand la carte qui le précède et le
+placement qui le suit restent en nuit et or. La rupture a été signalée puis
+assumée : la règle 2 donne l'apparence à la maquette.
 
 ### La série de combats
 
@@ -317,7 +367,7 @@ représentatif**, et confondre les deux a coûté cher :
 | Banc | La question à laquelle il répond | Durée |
 |---|---|---|
 | `tools/smoke_test.tscn` | est-ce que tout tient encore debout ? (données, économie, règles, série, 10 batailles, écrans) | ~70 s |
-| `tools/ui_test.tscn` | est-ce que les vrais boutons répondent ? (le codex dit-il encore la vérité, la série s'enchaîne-t-elle sans écran de victoire ?) | court |
+| `tools/ui_test.tscn` | est-ce que les vrais boutons répondent ? (le codex dit-il encore la vérité, la composition borne-t-elle le placement, la série s'enchaîne-t-elle sans écran de victoire ?) | court |
 | `tools/ai_probe.tscn` | combien coûte un coup à chaque profondeur ? | ~7 s |
 | `tools/ai_bench.tscn` | est-ce que chercher plus loin fait gagner ? *(mesuré : chaque demi-coup gagne les six duels, dans les deux camps)* | long |
 | `tools/tune_probe.tscn` | de combien de niveaux le joueur doit-il dominer ? | ~45 min |
@@ -356,7 +406,7 @@ nom n'a pas de suffixe `-v2` : le nom de la frame ne dit rien de son âge.
 | village-avec-dame / sans-dame | 162:4 / 188:2 | fait (le même écran sans les halos) |
 | chateau-royal-avec-dame / sans-dame | 178:5 / 178:51 | fait — écran plein, remplace la modale |
 | 02_Campagne | 58:90 | fait — parchemin défilant de 2300 points |
-| preparation-bataille-v2 | 169:4 | fait — introduit la plaque royale |
+| **preparation-bataille-v2** | 169:4 | fait — **refaite** : c'est l'écran de composition, et le **seul écran clair du jeu** (voir ci-dessous) |
 | 04_Bataille_Placement | 49:2 | fait |
 | 05_Bataille_Combat | 2:407 | fait |
 | 06_Bataille_Victoire | 2:546 | fait — écran plein |
@@ -366,11 +416,21 @@ nom n'a pas de suffixe `-v2` : le nom de la frame ne dit rien de son âge.
 | confirm-upgrade-modal | 103:15 | fait — `confirm_upgrade.tscn` |
 | codex-popup / **codex-popup-v3** | 194:4 / 321:2 | fait — la v3 réécrit les données, la v1 décrivait un autre jeu (voir ci-dessous) |
 | **preparation-bataille-10-v3** | 330:2 | fait — la préparation, plus le bandeau de la Dame captive |
+| **shop-screen** | 347:4 | **jamais intégré** — la boutique est désormais DESSINÉE ; ses règles restent à écrire (coffres, gemmes, accélération) |
+| **popup-combat-phase** | 378:4 | **jamais intégré** — nouveau, à lire avant le chantier E |
+| 07-bataille-nulle *(copie)* | 343:126 | doublon de `348:2`, même timeline — rien à faire |
 | 12-composants | 2:1224 | planche de référence |
 | Pièces d'échecs SVG | 32:2 | déjà en jeu |
 | 🗺️ HIÉRARCHIE DU JEU | 203:6 | note de conception du designer, pas un écran |
 | KINGSGAMBIT_COIN | 114:2 | pièce d'or, déjà en jeu |
 | LOGO_STUDIOBNL | 116:573 | logo du studio — jamais récupéré |
+
+⚠️ **Le fichier a TROIS pages**, et `get_metadata` sans `nodeId` n'en annonce
+qu'une (`0:1 KINGS GAMBIT`). Les deux autres se découvrent par
+`figma.root.children` via `use_figma` : **`248:2` « Écrans triés »** — des
+copies qui portent des **timelines que les originaux n'ont pas** (voir plus
+bas) et la section de retour du designer `294:2` — et **`353:2` « NEW UI »**,
+vide à ce jour.
 
 Inventaire relevé sur le fichier entier (`get_metadata` sur la page, 47 nœuds de
 premier niveau) : **rien d'autre n'y est un écran**. Le reste sont les images
@@ -448,27 +508,57 @@ Trois pièges payés en le portant :
    maquette d'origine, ROI compris). La rangée défile horizontalement, et le
    rembourrage des puces est passé de 14 à 10 côté maquette.
 
-### Les animations : deux écrans en portent, et deux seulement
+### Les animations : le relevé complet, et où elles se cachent
 
-Relevé avec `get_motion_context` sur **les seize frames** du fichier. Quatorze
-n'ont aucune donnée de mouvement ; les deux écrans d'intro en ont une vraie
-timeline :
+⚠️ **Le relevé ne se fait pas sur la page principale.** Les timelines vivent en
+grande partie sur les **copies** de la page « Écrans triés » (`248:2`), pas sur
+les originaux. Un relevé fait sur les seize frames de la page principale
+concluait « deux écrans animés » — il en manquait quatre, dont la plus riche du
+fichier. Passer `get_motion_context` en `recursive` sur **les deux pages**.
 
-| Frame | Timeline | Ce qu'elle décrit |
+Relevé complet (22 frames interrogées) :
+
+| Frame | Timeline | État |
 |---|---|---|
-| `169:136` king-intro-before-dialogue | 2,5 s | l'invite « s'approcher du trône » tenue à zéro jusqu'à 40 %, puis montée à 70 % d'opacité |
-| `123:32` king-intro-dialogue | 3 s, 6 nœuds | une entrée en cascade : fond, illustration (échelle 1,08 → 1), bulle (+20 px), bouton (+15 px) |
+| `123:32` king-intro-dialogue | 3 s, 6 nœuds | porté (`king_intro_dialogue.gd`) |
+| `169:136` king-intro-before-dialogue | 2,5 s, 1 nœud | porté |
+| `348:2` / `343:126` bataille-nulle *(copies identiques)* | 3 s, 7 nœuds | porté (`battle_result._animate_entry`, les trois peaux) |
+| `248:406` **préparation** | 2 s, 12 nœuds | porté (`battle_prep._animate_entry`) |
+| `248:493` **placement** | 3 s, **17 nœuds** | ⚠️ **PAS porté** — la plus riche du fichier |
+| `287:308` placement 2 boutons | 2 s, 1 nœud | pas porté — un fondu au noir |
 
-**La boucle est un artefact d'aperçu**, pas une intention : Figma rejoue l'entrée
-en rond faute de savoir qu'elle ne se joue qu'une fois. Ce qui compte, ce sont
-les décalages, les durées et les courbes.
+Tout le reste — campagne, village, château, combat, victoire, défaite, codex,
+popups de bâtiment, boutique, mission-popup — n'a **aucune** donnée de mouvement.
 
-Ce qui en a été repris dans `king_intro_dialogue.gd` : les deux **élévations**
-(la bulle et le bouton montaient à plat, ils montent maintenant), le **posé** de
-l'illustration à 1,08 avant sa dérive lente, et le **retard** de l'invite. Ce qui
-ne l'a pas été, et pourquoi c'est écrit dans le fichier : la frappe lettre par
-lettre du dialogue n'existe pas dans Figma et vaut mieux que le fondu qu'elle
-remplace, et l'empilement de deux calques d'illustration n'a pas d'objet ici.
+**`248:493` est le morceau qui reste** : la grille qui zoome de 1,08, le badge
+de tour qui tombe de −80 px avec rebond, le HUD qui glisse de +70 px, le bandeau
+qui monte de +200 px, les quatre puces qui éclosent en ressort l'une après
+l'autre, et une lueur verte pulsée sur COMBATTRE.
+
+**Pourquoi `287:308` rendait noir à l'export** — la question était ouverte
+depuis deux sessions : la frame contient un nœud `Fade-From-Black`, un
+rectangle noir plein écran à l'opacité 1 qui s'efface sur les 25 premiers % de
+la timeline. L'export statique capture l'image 0, donc le voile. Ce n'est pas un
+bug de Figma, et il n'y a rien à réparer.
+
+**La boucle est un artefact d'aperçu**, pas une intention : Figma rejoue
+l'entrée en rond faute de savoir qu'elle ne se joue qu'une fois. Ce qui compte,
+ce sont les décalages, les durées et les courbes.
+
+**Deux pièges de portage, payés :**
+
+1. **Ne jamais animer la `position` d'un enfant de conteneur.** Le tween se bat
+   avec la mise en page — c'est ce qui avait collé le bandeau de série en haut
+   de l'écran. `battle_result._slide_in` peut le faire parce que ses blocs ne
+   sont PAS dans un conteneur ; `battle_prep` ne le peut pas, et n'y reprend
+   donc que les **opacités et les échelles** (que la maquette anime aussi).
+   Poser `pivot_offset` **après** la mise en page, jamais à la construction.
+2. **Une animation d'entrée rend les bancs de capture menteurs.** Une capture
+   prise quatre images après l'instanciation photographie un écran à moitié
+   apparu — la préparation ressortait quasiment vide, et j'ai d'abord accusé la
+   mise en page. `screenshot.tscn` et `resolutions.tscn` sautent maintenant à la
+   fin des tweens (`_finish_animations`, via `get_processed_tweens().custom_step`).
+   **Tout nouvel outil de capture doit faire pareil.**
 
 ### Quatre pièges d'import, déjà payés
 
@@ -483,9 +573,17 @@ remplace, et l'empilement de deux calques d'illustration n'a pas d'objet ici.
 3. **Un label ne peut pas être rempli d'un dégradé** sans un shader par glyphe.
    `UiTheme.gold_label()` garde l'or médian à plat, avec l'ombre portée — à 9-19
    points la différence ne se voit pas.
-4. **Pas de nouvelle police.** Inter (variable), Comic Relief pour la voix du
-   Roi, Jaro pour les enseignes, dans `assets/fonts`. Jua avait servi pour un
-   seul mot et pesait 2,1 Mo.
+4. **Pas de nouvelle police.** `assets/fonts` en contient **quatre** : Inter
+   (variable, tout le jeu), Comic Relief (la voix du Roi), Jaro (les
+   enseignes), Lora (`font_title`, deux usages). Jua avait servi pour un seul
+   mot et pesait 2,1 Mo — c'est le précédent qui fait règle.
+
+   **La maquette est en Inter, elle aussi.** Relevé sur les 1 200 nœuds de
+   texte des 30 frames : tout est en Inter, sauf quatre glyphes égarés — `Jua`
+   dans `village-avec-dame` et `07-bataille-nulle`, `Lilita One` dans
+   `king-intro-dialogue`. La demande « change les polices comme sur Figma »
+   partait d'un fichier en Geist qui n'existe plus : **il n'y a rien à
+   changer**, et surtout rien à embarquer.
 
 ### Là où la maquette dit autre chose que le jeu
 
@@ -493,8 +591,9 @@ Le jeu gagne, on reprend seulement l'habillage :
 
 1. **Taille du plateau** — la maquette annonce 8×11 cases. Les plateaux vont de
    5×6 à 8×9, pour qu'une case reste cliquable au pouce (45 à 72 points).
-2. **« Déploiement : 12/15 unités »** — c'est un **budget de poids**, pas un
-   effectif (Pion 1, Cavalier 3, Fou 3, Tour 5, Dame 5). Les écrans disent
+2. **« Déploiement : 12/15 unités »**, devenu **« Points: 0/15 »** sur la
+   maquette refaite — c'est un **budget de poids**, pas un effectif ni des
+   points (Pion 1, Cavalier 3, Fou 3, Tour 5, Dame 5). Les écrans disent
    « Charge : 7/16 ».
 3. **Noms des bâtiments** — Atelier / Académie / Chapelle / Cathédrale n'existent
    pas. Le jeu a Caserne des Pions, Écuries, Cloître des Fous, Donjon des Tours.
@@ -531,6 +630,51 @@ Typographie : **Inter** partout (Black 32 px pour les titres de section, Bold
 Pièces : 18 SVG dans `assets/pieces/` — `bleu/` (joueur), `rouge/` (ennemi),
 `absent/` (silhouette grisée). Ce sont les assets finaux, jamais à remplacer par
 des placeholders.
+
+---
+
+## Le format d'écran : quatre pièges, tous payés
+
+Le joueur a signalé « des dégradés bizarres » sur son téléphone. Il a fallu
+quatre hypothèses fausses avant la bonne. Les voici toutes, parce que chacune
+est un piège qui se retendra.
+
+**1. La largeur en unités de jeu ne descend JAMAIS sous 393.** En étirement
+`canvas_items` + `expand`, Godot choisit l'échelle sur le plus contraint des
+deux axes puis agrandit le viewport. Une fenêtre de 360 × 800 donne un
+viewport de **393 × 873** : c'est la HAUTEUR qui varie d'un téléphone à
+l'autre, pas la largeur. Un écran qui « casse en 360 de large » casse en
+réalité parce qu'il suppose une hauteur.
+
+**2. Un `Control` ordinaire enfant d'un `ScrollContainer` ne s'étire pas.** Il
+garde sa taille minimale. `campaign.gd` mesurait la largeur disponible sur ce
+`Content` : il lisait donc toujours 393, quelle que soit la fenêtre, et la
+carte ne s'élargissait jamais. **Mesurer sur le `ScrollContainer`**, pas sur
+son contenu. Ce faux négatif a coûté deux corrections inutiles.
+
+**3. Un dégradé approximé par des bandes RAYE sur un autre format.**
+`EdgeFades` empilait 24 rectangles. Les bords de bande sont arrondis au point
+près *avant* que l'étirement ne les multiplie par un facteur qui n'est pas
+entier : les arrondis tombent entre deux pixels et le dégradé se met à rayer.
+Il dessine maintenant de vraies **textures** `GradientTexture2D`, que le GPU
+interpole en continu. **Ne jamais revenir à un empilement de bandes.** Au
+passage, un fondu en points absolus mange une part croissante d'un écran
+court : `EdgeFades.MAX_SHARE` le borne à 9 % du côté.
+
+**4. Un export Figma emporte le fond de la frame — même en JPG.** Le piège est
+déjà documenté pour l'alpha des PNG ; `parchment_map.jpg` en était une autre
+victime, avec **30 pixels de barre brune cuits dans chaque bord**. Aucune
+correction de mise en page ne pouvait les enlever, et ce sont eux que le
+joueur voyait. L'image a été recadrée (786 → 726 de large) et le parchemin
+passé en étirement exact — en `KEEP_ASPECT_COVERED`, le nouveau rapport
+l'aurait rogné en hauteur et **tous les cachets auraient glissé**.
+
+⚠️ **Et le piège de l'instrument, le pire des cinq.** `resolutions.tscn`
+testait cinq définitions… qui ont **toutes le même format** (0,45 à 0,46). Il
+ne mesurait que la largeur, et ne pouvait structurellement pas voir un
+problème de format. Trois tailles hors format ont été ajoutées
+(`web-393x700`, `court-360x620`, `tres-long-430x1080`) : **ce sont celles-là
+qu'il faut regarder en premier.**
 
 ---
 

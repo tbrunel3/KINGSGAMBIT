@@ -60,6 +60,10 @@ func _default_state() -> Dictionary:
 		# Dernier placement valide par le joueur, par bataille (cf.
 		# remember_formation). Clefs en chaine : c'est ce que rend le JSON.
 		"formations": {},
+		# Derniere COMPOSITION validee par le joueur, par bataille (cf.
+		# remember_lineup). Meme doctrine que "formations" : on lui rend sa
+		# propre decision, on n'en prend pas une a sa place.
+		"lineups": {},
 	}
 
 
@@ -134,6 +138,18 @@ func _normalize() -> void:
 			pieces.append([String(piece[0]), int(piece[1]), int(piece[2])])
 		clean_formations[String(key)] = pieces
 	_state["formations"] = clean_formations
+
+	# Compositions memorisees. Le JSON rend les nombres en float : un "3.0"
+	# glisse dans un compteur d'unites fait afficher des pieces a la virgule.
+	var lineups: Dictionary = _state.get("lineups", {})
+	var clean_lineups: Dictionary = {}
+	for key in lineups.keys():
+		var chosen: Dictionary = {}
+		var raw: Dictionary = lineups[key]
+		for type in raw.keys():
+			chosen[String(type)] = int(raw[type])
+		clean_lineups[String(key)] = chosen
+	_state["lineups"] = clean_lineups
 
 
 func save() -> void:
@@ -551,6 +567,39 @@ func has_remembered_formation(battle_id: int) -> bool:
 	return not remembered_formation(battle_id).is_empty()
 
 
+# ------------------------------- DERNIERE COMPOSITION ------------------------
+#
+#  La composition validee est retenue PAR BATAILLE, comme la formation. Elle
+#  sert deux fois : le bouton DERNIERE COMPOSITION de l'ecran de preparation,
+#  et l'amorce d'une serie rejouee (cf. begin_run).
+#
+#  Ce n'est pas une armee composee par l'ordinateur - ce que la regle 3 du
+#  projet interdit. C'est la derniere decision du JOUEUR, qu'on lui repropose
+#  plutot que de la lui faire reprendre piece par piece a chaque replay.
+
+func remember_lineup(battle_id: int, lineup: Dictionary) -> void:
+	var lineups: Dictionary = _state.get("lineups", {})
+	var clean: Dictionary = {}
+	for type in lineup.keys():
+		if int(lineup[type]) > 0:
+			clean[String(type)] = int(lineup[type])
+	lineups[str(battle_id)] = clean
+	_state["lineups"] = lineups
+	save()
+
+
+func remembered_lineup(battle_id: int) -> Dictionary:
+	var lineups: Dictionary = _state.get("lineups", {})
+	return (lineups.get(str(battle_id), {}) as Dictionary).duplicate()
+
+
+func has_remembered_lineup(battle_id: int) -> bool:
+	for count in remembered_lineup(battle_id).values():
+		if int(count) > 0:
+			return true
+	return false
+
+
 ## La formation memorisee, reduite a ce que le joueur peut encore poser.
 ##
 ## `available` est l'effectif encore disponible {type: nombre} - celui de la
@@ -597,6 +646,11 @@ func begin_run(battle_id: int) -> CampaignRun:
 	for type in Balance.ARMY_TYPES:
 		army[type] = units_owned(type)
 	var run := CampaignRun.start(battle_id, Balance.battle_fights(battle), army)
+	# La serie s'ouvre sur la derniere composition que le joueur avait validee
+	# ici, ramenee a ce qu'il possede encore et a la charge d'aujourd'hui. Sans
+	# rien en memoire - premiere bataille, ou un banc qui n'ouvre jamais la
+	# preparation - elle reste VIDE, et le placement propose le roster entier.
+	run.set_lineup(remembered_lineup(battle_id), deploy_capacity())
 	save_run(run)
 	return run
 

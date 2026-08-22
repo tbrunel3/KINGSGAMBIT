@@ -33,6 +33,7 @@ anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
 horizontal_scroll_mode = 0
+vertical_scroll_mode = 3
 
 [node name="Content" type="Control" parent="Scroll"]
 layout_mode = 2
@@ -46,7 +47,7 @@ layout_mode = 0
 mouse_filter = 2
 texture = ExtResource("2_parchment")
 expand_mode = 1
-stretch_mode = 6
+stretch_mode = 0
 
 [node name="Glow" type="Control" parent="Scroll/Content/Map"]
 layout_mode = 0

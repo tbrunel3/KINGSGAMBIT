@@ -73,10 +73,17 @@ var _bottom_bar_visible: bool = true
 var _bottom_bar_tween: Tween
 var _transitioning: bool = false
 
+## Facteur d'echelle de la carte : largeur reelle / largeur de maquette. Pose
+## par _layout_map, lu partout ou une coordonnee de la CARTE doit devenir une
+## coordonnee d'ECRAN (defilement, transition).
+var _map_scale: float = 1.0
+
 
 func _ready() -> void:
-	_content.custom_minimum_size = Vector2(CONTENT_WIDTH, CONTENT_HEIGHT)
 	_content.resized.connect(_layout_map)
+	# Le SCROLL aussi : c'est lui qui suit la fenetre, et c'est sa largeur que
+	# la mise en page mesure desormais.
+	_scroll.resized.connect(_layout_map)
 	_layout_map()
 
 	_build_seals()
@@ -90,7 +97,7 @@ func _ready() -> void:
 	# images pour stabiliser ce layout).
 	var vbar := _scroll.get_v_scroll_bar()
 	var guard := 0
-	while vbar.max_value < CONTENT_HEIGHT - 1.0 and guard < 20:
+	while vbar.max_value < _scrolled_height() - 1.0 and guard < 20:
 		await get_tree().process_frame
 		guard += 1
 	_scroll_to_battle(Game.unlocked_battle())
@@ -108,13 +115,45 @@ func _process(_delta: float) -> void:
 
 # ------------------------------- MISE EN PAGE --------------------------------
 
-## La carte garde sa largeur de maquette et se centre : sur un telephone plus
-## large que 393 points, c'est le bois du decor qui s'elargit, pas le
-## parchemin. Etirer la carte deplacerait les cachets sans deplacer les lieux
-## peints dessous.
+## La carte est MISE A L'ECHELLE de la largeur de l'ecran, pas centree dans une
+## largeur fixe.
+##
+## Elle gardait sa largeur de maquette (393) et se centrait : sur un telephone
+## plus large, il restait une bande de decor brun de chaque cote. Le joueur l'a
+## signalee comme un defaut, et il avait raison - rien ne peint ce "bois", ce
+## n'est qu'un aplat.
+##
+## Ce qu'il ne faut PAS faire, et la raison d'etre de la version d'avant :
+## ETIRER la carte deplacerait les cachets sans deplacer les lieux peints
+## dessous, et le cachet 3 ne serait plus sur sa forteresse. Mettre a l'echelle
+## le noeud PARENT n'a pas ce defaut - parchemin, sentier et cachets grandissent
+## du meme facteur, donc rien ne se desaligne. Les cachets restent touchables :
+## a 430 points de large le facteur vaut 1,09, a 360 il vaut 0,92.
 func _layout_map() -> void:
-	_map.position = Vector2(roundf((_content.size.x - CONTENT_WIDTH) / 2.0), 0.0)
+	# La largeur se lit sur le SCROLL, pas sur le contenu.
+	#
+	# `Content` est un Control ordinaire : il garde la largeur minimale qu'on
+	# lui donne et ne s'etire PAS dans son conteneur. Mesurer sur lui rendait
+	# donc toujours 393, quelle que soit la fenetre, et la carte ne s'elargissait
+	# jamais - c'est ce qui a fait croire pendant un moment que la mise a
+	# l'echelle ne servait a rien.
+	#
+	# Rappel utile : en etirement "expand", la largeur en UNITES DE JEU n'est
+	# jamais inferieure a 393. Une fenetre de 360 x 800 donne un viewport de
+	# 393 x 873 - c'est la HAUTEUR qui varie, pas la largeur.
+	var available := maxf(CONTENT_WIDTH, _scroll.size.x)
+	_map_scale = available / CONTENT_WIDTH
+
+	_map.position = Vector2.ZERO
 	_map.size = Vector2(CONTENT_WIDTH, CONTENT_HEIGHT)
+	_map.scale = Vector2(_map_scale, _map_scale)
+
+	# La hauteur a defiler suit l'echelle, sinon la carte agrandie se retrouve
+	# coupee en bas. Le test d'egalite evite de relancer `resized`, qui
+	# rappellerait cette fonction.
+	var scrolled := Vector2(available, _scrolled_height())
+	if not _content.custom_minimum_size.is_equal_approx(scrolled):
+		_content.custom_minimum_size = scrolled
 
 	_parchment.position = Vector2.ZERO
 	_parchment.size = _map.size
@@ -123,12 +162,18 @@ func _layout_map() -> void:
 	_path.size = PATH_RECT.size
 
 
+## Hauteur du parchemin A L'ECRAN, une fois la mise a l'echelle appliquee.
+func _scrolled_height() -> float:
+	return CONTENT_HEIGHT * _map_scale
+
+
 ## Amene la bataille demandee un peu au-dessus du milieu de l'ecran : assez
 ## haut pour qu'on la voie, assez bas pour qu'on devine la suite du chemin.
 func _scroll_to_battle(id: int) -> void:
 	var index := clampi(id - 1, 0, NODE_POS.size() - 1)
-	var target: float = NODE_POS[index].y - _scroll.size.y * 0.62
-	_scroll.scroll_vertical = int(clampf(target, 0.0, CONTENT_HEIGHT - _scroll.size.y))
+	var target: float = NODE_POS[index].y * _map_scale - _scroll.size.y * 0.62
+	_scroll.scroll_vertical = int(clampf(
+		target, 0.0, maxf(0.0, _scrolled_height() - _scroll.size.y)))
 	_last_scroll_y = _scroll.scroll_vertical
 
 
@@ -317,7 +362,7 @@ func _on_node_pressed(id: int) -> void:
 ## aller-retour plat vers la preparation manquait de poids.
 func _play_transition(id: int) -> void:
 	_transitioning = true
-	var viewport_pos := _seal_center(id) + _map.position \
+	var viewport_pos := _seal_center(id) * _map_scale + _map.position \
 		- Vector2(0, _scroll.scroll_vertical)
 	_scroll.pivot_offset = viewport_pos
 

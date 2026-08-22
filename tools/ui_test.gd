@@ -20,6 +20,7 @@ func _ready() -> void:
 	await _test_village()
 	await _test_codex()
 	await _test_battle()
+	await _test_composition()
 	await _test_series_chaining()
 
 	print("")
@@ -374,9 +375,115 @@ func _test_battle() -> void:
 ##
 ## Le combat est force plutot que joue : ce qui est teste ici est l'ENCHAINEMENT,
 ## et la bataille 2 peut tres bien finir nulle avec la formation de reference.
+# ------------------------------- COMPOSITION ---------------------------------
+#
+#  L'ecran de preparation ne se contente plus d'annoncer : le joueur y COMPOSE
+#  l'armee qui part, dans la limite de la charge du chateau. Ce que ce test
+#  verifie vraiment est la derniere assertion : le placement ne propose QUE ce
+#  qui a ete choisi. Sans elle, l'ecran serait de la decoration.
+
+func _test_composition() -> void:
+	print("")
+	print("[4] Preparation : composer l'armee qui part au combat")
+
+	Game.reset_progress()
+	# On remplit la caserne au-dela de ce que la charge laissera partir : c'est
+	# tout le propos du chantier. Recruter fait une RESERVE, la charge decide
+	# de l'ARMEE - et le jeu ne montrait cette difference nulle part.
+	while Game.units_owned(Balance.PION) < 10:
+		Game.add_gold(Game.recruit_cost(Balance.PION))
+		if not Game.recruit(Balance.PION):
+			break
+	var owned := Game.units_owned(Balance.PION)
+
+	Router.current_battle_id = 1
+	var prep: Node = load("res://scenes/battle/battle_prep.tscn").instantiate()
+	add_child(prep)
+	await _frames(3)
+
+	_check(prep._chosen_weight() == 0, "la composition s'ouvre vide")
+	_check(prep._cta.modulate.a < 1.0, "on ne part pas au combat sans une piece")
+	_check(_contains_text(prep, "CASERNE"), "la caserne est affichee")
+	_check(_contains_text(prep, "DEPLOIEMENT") or _contains_text(prep, "D\u00c9PLOIEMENT"),
+		"le panneau de deploiement est affiche")
+
+	# Les cartes sont RECONSTRUITES a chaque changement : on retrouve la carte
+	# avant chaque tap, sinon on appuie sur un noeud deja libere.
+	for i in range(3):
+		var card := _find_clickable(prep, "PION")
+		if card == null:
+			break
+		_press(card)
+		await _frames(1)
+	_check(int(prep._chosen.get(Balance.PION, 0)) == 3, "trois taps engagent trois pions")
+	_check(prep._chosen_weight() == 3 * Balance.deploy_weight(Balance.PION),
+		"la charge suit le POIDS des pieces, pas leur nombre")
+
+	# Une case occupee renvoie sa piece a la caserne.
+	var before := int(prep._chosen.get(Balance.PION, 0))
+	if prep._slot_flow.get_child_count() > 0:
+		_press(prep._slot_flow.get_child(0))
+		await _frames(1)
+	_check(int(prep._chosen.get(Balance.PION, 0)) == before - 1,
+		"toucher une case posee renvoie la piece a la caserne")
+
+	# On pousse jusqu'au refus, puis on renvoie deux pieces a la caserne : ce
+	# qui compte n'est pas le maximum, c'est que la composition puisse etre
+	# PLUS PETITE que la caserne - sinon l'ecran ne deciderait de rien.
+	var capacity := Game.deploy_capacity()
+	for i in range(60):
+		var card := _find_clickable(prep, "PION")
+		if card == null:
+			break
+		_press(card)
+		await _frames(1)
+	_check(prep._chosen_weight() <= capacity,
+		"la charge ne se depasse pas (%d/%d)" % [prep._chosen_weight(), capacity])
+	for i in range(2):
+		if prep._slot_flow.get_child_count() > 0:
+			_press(prep._slot_flow.get_child(0))
+			await _frames(1)
+	_check(int(prep._chosen.get(Balance.PION, 0)) < owned,
+		"la caserne garde une reserve que la charge ne laisse pas partir")
+
+	# Le mur de charge lui-meme se mesure sans l'ecran : au chateau Nv.1 la
+	# caserne des pions plafonne a 8, et 8 pions ne pesent que 8 pour 16 de
+	# charge. C'est la regle qu'on verifie, pas ce que l'ecran peut atteindre.
+	var probe := CampaignRun.new()
+	probe.roster = {Balance.PION: 999}
+	probe.set_lineup({Balance.PION: 999}, capacity)
+	_check(probe.lineup_weight() == capacity,
+		"la charge borne la composition quelle que soit la reserve")
+
+	_check(_find_clickable(prep, "LANCER LE COMBAT") != null,
+		"le bouton de depart est en place")
+
+	# Verse la composition sans partir : declencher la navigation depuis un
+	# banc emporterait le banc avec lui (cf. battle_prep._commit_lineup).
+	_check(prep._commit_lineup(), "la composition se verse dans la serie")
+	var chosen := int(prep._chosen.get(Balance.PION, 0))
+	var run := Game.current_run(1)
+	_check(run != null and int(run.lineup.get(Balance.PION, 0)) == chosen,
+		"la serie retient la composition")
+	prep.queue_free()
+	await _frames(2)
+
+	# LA verification du chantier : le placement ne propose que les pieces
+	# choisies, alors que la caserne en contient davantage.
+	var battle: Node = load("res://scenes/battle/battle.tscn").instantiate()
+	add_child(battle)
+	await _frames(3)
+	_check(int(battle._remaining.get(Balance.PION, 0)) == chosen,
+		"le placement ne propose que les %d pions composes" % chosen)
+	_check(Game.units_owned(Balance.PION) > chosen,
+		"...alors que la caserne en compte %d" % Game.units_owned(Balance.PION))
+	battle.queue_free()
+	await _frames(2)
+
+
 func _test_series_chaining() -> void:
 	print("")
-	print("[4] Serie : un combat gagne encha\u00eene sans ecran de victoire")
+	print("[5] Serie : un combat gagne encha\u00eene sans ecran de victoire")
 
 	Game.reset_progress()
 	var battle_id := 0
