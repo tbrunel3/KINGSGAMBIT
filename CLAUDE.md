@@ -187,11 +187,10 @@ que la campagne prête au joueur, face à ce qu'elle avait versé à ce stade :
 | | bataille 3 | bataille 7 | bataille 10 |
 |---|---|---|---|
 | demandé | 1 130 | 6 810 | 19 090 |
-| versé | 970 | 2 150 | 4 190 |
+| versé | 930 | 2 810 | 7 030 |
 
-Un facteur quatre et demi, qui ne se rattrape pas en jouant mieux : la sonde a
-dû rejouer **36 fois** une bataille déjà gagnée pour franchir la seule
-bataille 7. Les récompenses vont maintenant de 150 à 5 000. **Aucun coût n'a
+Un facteur deux et demi, qui ne se rattrape pas en jouant mieux : la sonde a dû
+rejouer **36 fois** une bataille déjà gagnée pour franchir la seule bataille 7. Les récompenses vont maintenant de 150 à 5 000. **Aucun coût n'a
 bougé** — c'est le rapport entre les deux qui était faux, pas les prix.
 
 **La récompense est celle d'un COMBAT, pas d'une bataille** : une série de trois

@@ -512,16 +512,17 @@ const RUN_REINFORCE_WEIGHT := 2
 #              ameliorations pour atteindre le niveau que la campagne prete au
 #              joueur :
 #
-#                bataille 3 ....  1 130 or     campagne versee a ce stade :   970
-#                bataille 5 ....  3 300 or                                  1 430
-#                bataille 7 ....  6 810 or                                  2 150
-#                bataille 9 ... 11 970 or                                   3 290
-#                bataille 10 .. 19 090 or                                   4 190
+#                bataille 3 ....  1 130 or     campagne versee a ce stade :   930
+#                bataille 5 ....  3 300 or                                  1 650
+#                bataille 7 ....  6 810 or                                  2 810
+#                bataille 9 ... 11 970 or                                   5 110
+#                bataille 10 .. 19 090 or                                   7 030
 #
-#              Un facteur quatre et demi a l'arrivee, et ca ne se rattrape pas
-#              en jouant mieux : la sonde a du rejouer 36 fois une bataille deja
-#              gagnee pour franchir la seule bataille 7. Ce n'etait pas de la
-#              difficulte, c'etait de la corvee.
+#              Un facteur deux et demi a l'arrivee, et ca ne se rattrape pas en
+#              jouant mieux. La sonde, qui sous-estimait alors les revenus, a du
+#              rejouer 36 fois une bataille deja gagnee pour franchir la seule
+#              bataille 7. Ce n'etait pas de la difficulte, c'etait de la
+#              corvee.
 #
 #              La courbe actuelle est calee pour que le cumul verse AVANT une
 #              bataille couvre ce qu'elle demande, avec une marge pour les
