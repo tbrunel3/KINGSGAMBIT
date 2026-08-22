@@ -13,10 +13,16 @@ extends Node
 ## que disaient les deux autres bancs sur les dernieres batailles portait donc
 ## sur une situation qui n'existe pas.
 ##
-## La sonde economique, elle, joue bien les series, et c'est elle qui a leve le
-## lievre : elle a monte TOUT au niveau 10 - chateau et casernes - et perdait
-## encore la bataille 10. Aucune somme d'or n'y change quoi que ce soit ; ce
-## n'est pas un probleme d'economie mais de combat.
+## CE QU'ELLE A REPONDU, et c'est le contraire de ce qu'on soupconnait. La sonde
+## economique declarait la derniere bataille hors de portee meme avec tout au
+## niveau 10, ce qui accusait le COMBAT. Ce banc, en donnant au joueur des
+## casernes pleines - donc une vraie reserve pour trois combats - la gagne 2 fois
+## sur 2, six combats sur six. La bataille 8 aussi, 3 fois sur 3.
+##
+## Le mecanisme de serie n'a donc rien de casse. Ce qui manquait, c'etait la
+## RESERVE : la sonde economique s'arretait de recruter a une seule charge, donc
+## a un seul deploiement, et entrait dans une serie de trois combats sans rien
+## derriere.
 ##
 ## CE QU'ELLE MESURE. La meme serie, jouee sous plusieurs reglages, pour voir
 ## lequel la rend franchissable :
