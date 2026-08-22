@@ -17,13 +17,22 @@ extends Control
 
 signal continued
 
+## Palette relevee sur Figma popup-combat-phase (410:7190). Ce bandeau ne
+## porte PAS la plaque royale bleu nuit du reste du jeu : le designer l'a posee
+## en brun de tente et or, la couleur du campement entre deux assauts. C'est
+## une decision d'apparence, donc la sienne (regle 2 du projet).
 static var PLATE_FILL := PackedColorArray([
-	Color("1e3278"), Color("0a1230"), Color("0e1a40")])
+	Color("1c1409"), Color("140f07")])
 
-const GOLD_EDGE := Color("ffe680")
-const TEXT_BRIGHT := Color("f0f3f8")
-const TEXT_DIM := Color("a0aabf")
+const GOLD_EDGE := Color("e6b940")
+const TEXT_BRIGHT := Color("f5efea")
+const TEXT_DIM := Color("a89b91")
+const BOX_FILL := Color("291e12")
 const RECOVERED := Color("5fb37a")
+const CONTINUE_FILL := Color("9b2c2c")
+
+## Au-dela, la rangee de silhouettes deborde de la plaque.
+const MAX_GLYPHS := 6
 
 var _done := false
 
@@ -65,25 +74,31 @@ func show_fight(fight: int, total: int, losses: Dictionary,
 	column.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	plate.add_child(column)
 
-	var title := UiTheme.gold_label("COMBAT %d SUR %d" % [fight, total], 22)
+	var eyebrow := UiTheme.make_label("PHASE DE COMBAT", 12, GOLD_EDGE)
+	eyebrow.add_theme_font_override("font", UiTheme.font_bold())
+	eyebrow.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	column.add_child(eyebrow)
+
+	# "COMBAT 2/3" et non "COMBAT 2 SUR 3" : c'est ce que dit la maquette, et
+	# c'est plus court sur un ecran de 361 points utiles.
+	var title := UiTheme.make_label("COMBAT %d/%d" % [fight, total], 28, TEXT_BRIGHT)
+	title.add_theme_font_override("font", UiTheme.font_black())
 	title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	column.add_child(title)
 
-	var caught := UiTheme.make_label("Combat remporté", 12, TEXT_DIM)
-	caught.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	column.add_child(caught)
-
 	column.add_child(preload("res://scenes/ui/components/ornate_divider.tscn").instantiate())
+
+	# L'encadre des renforts, la piece maitresse de la maquette : les pieces
+	# relevees sont DESSINEES, pas enumerees. Absent s'il n'y a rien a montrer -
+	# un cadre vide annoncerait des renforts qui n'existent pas.
+	if not recovered.is_empty():
+		column.add_child(_reinforcements_box(recovered))
 
 	column.add_child(_line("Pertes du combat",
 		"Aucune" if losses.is_empty() else _format(losses), TEXT_BRIGHT))
-	if not recovered.is_empty():
-		column.add_child(_line("Blessés relevés", _format(recovered), RECOVERED))
 	column.add_child(_line("Armée restante", "%d pièces" % pieces_left, TEXT_BRIGHT))
 
-	var hint := UiTheme.make_label("Touche pour continuer", 10, TEXT_DIM)
-	hint.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	column.add_child(hint)
+	column.add_child(_continue_button())
 
 	_animate(plate)
 	var timer := get_tree().create_timer(
@@ -122,6 +137,81 @@ func _animate(plate: Control) -> void:
 	tween.set_parallel(true)
 	tween.tween_property(plate, "modulate:a", 1.0, 0.22)
 	tween.tween_property(plate, "scale", Vector2.ONE, 0.3) 		.set_ease(Tween.EASE_OUT).set_trans(Tween.TRANS_BACK)
+
+
+## L'encadre des renforts (Figma reinforcements-box). Une silhouette par piece
+## relevee, jusqu'a un maximum lisible, puis le compte et la phrase.
+func _reinforcements_box(recovered: Dictionary) -> Control:
+	var box := PanelContainer.new()
+	var style := StyleBoxFlat.new()
+	style.bg_color = BOX_FILL
+	style.set_corner_radius_all(8)
+	style.set_content_margin_all(12)
+	box.add_theme_stylebox_override("panel", style)
+	box.mouse_filter = Control.MOUSE_FILTER_IGNORE
+
+	var column := VBoxContainer.new()
+	column.add_theme_constant_override("separation", 8)
+	column.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	box.add_child(column)
+
+	var row := HBoxContainer.new()
+	row.add_theme_constant_override("separation", 6)
+	row.alignment = BoxContainer.ALIGNMENT_CENTER
+	row.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	column.add_child(row)
+
+	# Une silhouette par piece, plafonnee : au-dela, la rangee deborde des 350
+	# points de la plaque et le compte chiffre dit deja tout.
+	var drawn := 0
+	for type in Balance.ARMY_TYPES:
+		if not recovered.has(type):
+			continue
+		for i in range(int(recovered[type])):
+			if drawn >= MAX_GLYPHS:
+				break
+			var glyph := _piece_glyph(type)
+			if glyph != null:
+				row.add_child(glyph)
+				drawn += 1
+
+	var count := UiTheme.make_label("+%s" % _format(recovered), 14, GOLD_EDGE)
+	count.add_theme_font_override("font", UiTheme.font_bold())
+	count.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	column.add_child(count)
+
+	var prose := UiTheme.make_label(
+		"Des troupes fraîches rejoignent vos rangs pour la prochaine confrontation.",
+		12, TEXT_DIM)
+	prose.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	prose.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	column.add_child(prose)
+	return box
+
+
+func _piece_glyph(type: String) -> TextureRect:
+	var path := "res://assets/pieces/bleu/%s.png" % type
+	if not ResourceLoader.exists(path):
+		return null
+	var rect := TextureRect.new()
+	rect.texture = load(path)
+	rect.custom_minimum_size = Vector2(24, 24)
+	rect.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+	rect.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+	rect.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	return rect
+
+
+## Le bouton CONTINUER de la maquette. Il ne remplace pas le depart
+## automatique : le bandeau part toujours seul apres series_banner_seconds, et
+## le bouton ne fait que rendre visible ce qu'un "touche pour continuer" ne
+## disait qu'a moitie.
+func _continue_button() -> Button:
+	var button := UiTheme.make_button("CONTINUER", CONTINUE_FILL, 14)
+	button.custom_minimum_size = Vector2(0, 42)
+	button.add_theme_color_override("font_color", TEXT_BRIGHT)
+	button.pressed.connect(_finish)
+	return button
 
 
 func _line(label_text: String, value_text: String, tint: Color) -> HBoxContainer:

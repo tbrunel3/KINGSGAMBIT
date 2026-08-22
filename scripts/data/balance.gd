@@ -706,6 +706,88 @@ const COMBAT := {
 	"max_activations": 1200,   # garde-fou absolu
 }
 
+# ------------------------------- BOUTIQUE ------------------------------------
+#
+#  Une DEUXIEME monnaie, les gemmes, et une seule chose a acheter avec :
+#  du TEMPS D'AMELIORATION. Pas d'or, pas de pieces, pas de rarete neuve.
+#
+#  POURQUOI LE TEMPS, ET RIEN D'AUTRE. C'est le seul contenu qui ne touche
+#  aucun chiffre mesure - ni upgrade_cost, ni les recompenses, ni les 10/10
+#  de smoke_test. Et c'est la vraie friction du jeu : 47,5 heures d'attente
+#  cumulees pour tout monter au niveau 10, dont 11,1 h rien que pour le
+#  Chateau Royal, le batiment qui commande la charge de deploiement.
+#
+#  Un coffre a PIECES aurait plafonne sur la capacite des casernes et, pour le
+#  Legendaire, offert une Dame - ce qui detruirait l'histoire du jeu : sa
+#  rarete est un resultat mesure (8 ramenees a 2), pas un accident. Un coffre
+#  a OR aurait rouvert le trou que economy_probe a mis des heures a fermer.
+#
+#  LE ROBINET COMMANDE TOUT LE RESTE. Les prix ci-dessous n'ont de sens que si
+#  une campagne produit de l'ordre de 1000 gemmes. En dessous, la boutique est
+#  une vitrine fermee ; au-dessus, le plus gros pack d'or s'achete trois fois
+#  et l'economie mesuree se rouvre. Les valeurs de free_chests sont donc a
+#  MESURER (tools/shop_probe.tscn), pas a croire.
+#
+#  Detail de la spec : chantier_h_boutique.md
+
+const SHOP := {
+	# Le robinet. Les gemmes ne s'achetent pas (aucun store n'existe) : elles
+	# se ramassent ici. Une seule piste par cle, un seul coffre en attente a
+	# la fois - sans ce plafond, partir une semaine rendrait 168 coffres.
+	"free_chests": {
+		"horaire":      {"seconds":  3600, "gems":  8},
+		"trois_heures": {"seconds": 10800, "gems": 25},
+	},
+	# Coffres achetes : des SECONDES d'amelioration, pas un tirage. Il n'y a
+	# aucune source d'alea dans ce jeu, et un coffre a probabilites serait la
+	# premiere.
+	#
+	# seconds < 0 : termine TOUTES les ameliorations en cours. Ce n'est pas
+	# une fantaisie, c'est de l'arithmetique - la plus longue amelioration du
+	# jeu dure 4 h et l'Epique en donne deja 3 h pour 400 gemmes. Un
+	# Legendaire qui n'en finirait qu'une seule couterait 1000 gemmes pour
+	# moins de temps que deux Epiques : strictement domine, donc jamais
+	# achete.
+	# `id` sert de clef (ASCII, comparable, sauvegardable) ; `name` est ce que
+	# le joueur lit. Deriver l'un de l'autre par capitalize() perdait l'accent
+	# d'"Epique".
+	"chests": [
+		{"id": "commun",     "name": "Commun",     "gems":   50, "seconds":   900},
+		{"id": "rare",       "name": "Rare",       "gems":  150, "seconds":  3600},
+		{"id": "epique",     "name": "Épique",     "gems":  400, "seconds": 10800},
+		{"id": "legendaire", "name": "Légendaire", "gems": 1000, "seconds":    -1},
+	],
+	# Section OR. Les prix en gemmes sont ceux de la maquette ; les montants
+	# d'or sont RECALIBRES. Le pack dessine a 25000 valait plus que le cumul
+	# d'ameliorations demande a la bataille 10 (19090) : il ne desequilibrait
+	# pas l'economie, il proposait de sauter la campagne.
+	#
+	# PROVISOIRE jusqu'a economy_probe.
+	# MESURE, pas choisi. La premiere version (500 / 2200 / 6000) passait le
+	# garde-fou de smoke_test, qui ne regarde qu'UN pack - mais shop_probe a
+	# montre que le budget ENTIER d'une campagne (~1600 gemmes) achetait alors
+	# 15 500 or, soit 39 % de ce que verse la campagne. Le trou economique se
+	# rouvrait par la somme, pas par le pack.
+	#
+	# Deuxieme defaut de cette version : le petit pack rendait 10 or/gemme et
+	# le gros 7,5. Un pack qui grossit doit devenir MEILLEUR, sinon c'est un
+	# piege pour qui ne fait pas le calcul.
+	"gold_packs": [
+		{"gems":  50, "gold":  150},   # 3,00 or/gemme
+		{"gems": 200, "gold":  700},   # 3,50
+		{"gems": 800, "gold": 3000},   # 3,75
+	],
+	# Section GEMMES. Dessinee, inerte : Godot n'a pas de facturation native
+	# et le build web ne peut rien vendre. gem_packs_enabled les rallumera le
+	# jour d'un export mobile signe.
+	"gem_packs": [
+		{"gems":  100, "price": "0,99 €"},
+		{"gems":  500, "price": "4,99 €"},
+		{"gems": 2500, "price": "19,99 €"},
+	],
+	"gem_packs_enabled": false,
+}
+
 # ------------------------------- ACCESSEURS ----------------------------------
 #
 #  Passer par ces fonctions plutot que de lire les dictionnaires directement :
@@ -935,3 +1017,24 @@ func battle_count() -> int:
 ## declare pas se joue en un seul combat.
 func battle_fights(battle: Dictionary) -> int:
 	return maxi(1, int(battle.get("fights", 1)))
+
+
+# ------------------------------- BOUTIQUE ------------------------------------
+
+## Coffre achete, par son identifiant. Rend un dictionnaire vide si l'id est
+## inconnu : l'appelant teste is_empty() plutot que de piocher a l'aveugle.
+func shop_chest(id: String) -> Dictionary:
+	for chest in SHOP["chests"]:
+		if chest["id"] == id:
+			return chest
+	return {}
+
+
+## Coffre gratuit, par sa piste ("horaire" ou "trois_heures").
+func free_chest(id: String) -> Dictionary:
+	return SHOP["free_chests"].get(id, {})
+
+
+## Les deux pistes de coffres gratuits, dans l'ordre d'affichage.
+func free_chest_ids() -> Array:
+	return SHOP["free_chests"].keys()

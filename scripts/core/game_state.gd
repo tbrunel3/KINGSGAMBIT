@@ -10,6 +10,7 @@ extends Node
 ##
 
 signal gold_changed(amount: int)
+signal gems_changed(amount: int)
 signal units_changed
 signal buildings_changed
 signal progress_changed
@@ -36,6 +37,13 @@ func _default_state() -> Dictionary:
 
 	return {
 		"gold": Balance.STARTING_GOLD,
+		# Deuxieme monnaie (cf. Balance.SHOP). On demarre a zero : les gemmes
+		# ne s'achetent pas, elles se ramassent dans les coffres gratuits.
+		"gems": 0,
+		# Coffres gratuits : piste -> timestamp Unix de DISPONIBILITE.
+		# Vide = les deux coffres sont prets, ce qui est le bon accueil pour
+		# une premiere partie.
+		"free_chests": {},
 		"units": units,
 		"buildings": buildings,
 		"unlocked_battle": 1,
@@ -86,6 +94,13 @@ func _load() -> void:
 ## Remet les types attendus apres un aller-retour JSON (qui rend tout flottant).
 func _normalize() -> void:
 	_state["gold"] = int(_state.get("gold", 0))
+	# Une sauvegarde d'avant le chantier H n'a ni gemmes ni coffres : elle doit
+	# se charger sans broncher. Meme doctrine que has_seen_series_warning.
+	_state["gems"] = int(_state.get("gems", 0))
+	var chests: Dictionary = _state.get("free_chests", {})
+	for key in chests.keys():
+		chests[key] = int(chests[key])
+	_state["free_chests"] = chests
 	_state["unlocked_battle"] = int(_state.get("unlocked_battle", 1))
 
 	var units: Dictionary = _state.get("units", {})
@@ -192,6 +207,78 @@ func spend_gold(amount: int) -> bool:
 	save()
 	gold_changed.emit(gold)
 	return true
+
+
+# ------------------------------- GEMMES --------------------------------------
+#
+#  La monnaie de l'impatience. Elle n'achete que du TEMPS D'AMELIORATION (et,
+#  a la marge, de l'or) : jamais de pieces, jamais de niveau. Elle ne touche
+#  donc rien de ce que les sondes mesurent.
+#
+#  Elle ne s'achete pas non plus - aucun store n'existe. Elle se ramasse dans
+#  les deux coffres gratuits ci-dessous, et c'est ce robinet qui fixe la
+#  valeur de tous les prix de Balance.SHOP.
+
+var gems: int:
+	get:
+		return int(_state.get("gems", 0))
+
+
+func add_gems(amount: int) -> void:
+	_state["gems"] = gems + amount
+	save()
+	gems_changed.emit(gems)
+
+
+func can_afford_gems(amount: int) -> bool:
+	return gems >= amount
+
+
+func spend_gems(amount: int) -> bool:
+	if not can_afford_gems(amount):
+		return false
+	_state["gems"] = gems - amount
+	save()
+	gems_changed.emit(gems)
+	return true
+
+
+# ------------------------------- COFFRES GRATUITS ----------------------------
+#
+#  Deux pistes, 1 h et 3 h. Le temps qui passe jeu ferme compte normalement -
+#  meme mecanique que les ameliorations, un simple timestamp de disponibilite.
+#
+#  UN SEUL COFFRE EN ATTENTE PAR PISTE : la minuterie repart au moment de
+#  l'OUVERTURE, pas a l'echeance. Sans ce plafond, partir une semaine rendrait
+#  168 coffres horaires et le robinet n'aurait plus de fond.
+
+## Secondes restantes avant que ce coffre soit pret. 0 = prenable maintenant.
+func free_chest_remaining(id: String) -> int:
+	var ready_at := int(_state["free_chests"].get(id, 0))
+	return maxi(0, ready_at - int(Time.get_unix_time_from_system()))
+
+
+func free_chest_ready(id: String) -> bool:
+	return not Balance.free_chest(id).is_empty() and free_chest_remaining(id) == 0
+
+
+## Ramasse un coffre gratuit. Rend les gemmes gagnees, ou 0 si le coffre
+## n'etait pas pret (ou n'existe pas).
+##
+## ATTENTION : aucune gemme ne doit pouvoir raccourcir cette minuterie. Une
+## gemme qui accelere un coffre qui rend des gemmes est une machine a imprimer
+## de la monnaie. Les gemmes accelerent les BATIMENTS, rien d'autre.
+func claim_free_chest(id: String) -> int:
+	var chest := Balance.free_chest(id)
+	if chest.is_empty() or not free_chest_ready(id):
+		return 0
+
+	var reward := int(chest["gems"])
+	_state["free_chests"][id] = int(Time.get_unix_time_from_system()) + int(chest["seconds"])
+	_state["gems"] = gems + reward
+	save()
+	gems_changed.emit(gems)
+	return reward
 
 
 # ------------------------------- UNITES --------------------------------------
@@ -536,6 +623,72 @@ func force_finish_upgrade(type: String) -> void:
 	if is_upgrading(type):
 		_state["upgrades"][type] = int(Time.get_unix_time_from_system())
 		check_upgrades()
+
+
+## Les types dont une amelioration tourne, dans l'ordre d'affichage du village.
+## Le seul moyen de savoir si un coffre a quelque chose a accelerer.
+func upgrades_in_progress() -> Array:
+	var out: Array = []
+	for type in [Balance.CASTLE] + Balance.UNIT_TYPES:
+		if is_upgrading(type):
+			out.append(type)
+	return out
+
+
+## Retranche des secondes a une amelioration en cours. seconds < 0 la termine.
+## C'est ce qu'achetent les coffres de la boutique - et la seule chose que les
+## gemmes peuvent accelerer.
+func accelerate_upgrade(type: String, seconds: int) -> bool:
+	if not is_upgrading(type):
+		return false
+	var now := int(Time.get_unix_time_from_system())
+	if seconds < 0:
+		_state["upgrades"][type] = now
+	else:
+		_state["upgrades"][type] = maxi(now, int(_state["upgrades"][type]) - seconds)
+	save()
+	check_upgrades()
+	buildings_changed.emit()
+	return true
+
+
+# ------------------------------- BOUTIQUE ------------------------------------
+
+## Achete un coffre et applique son temps.
+##
+## Les coffres Commun, Rare et Epique s'appliquent a UNE amelioration, passee
+## en second argument. Le Legendaire (seconds < 0) les termine TOUTES et
+## ignore target : c'est ce qui justifie son prix - terminer une seule
+## amelioration couterait plus cher que deux Epiques pour moins de temps.
+##
+## Rend false sans rien debiter si le coffre est inconnu, si les gemmes
+## manquent, ou s'il n'y a rien a accelerer.
+func buy_chest(chest_id: String, target: String = "") -> bool:
+	var chest := Balance.shop_chest(chest_id)
+	if chest.is_empty():
+		return false
+
+	var seconds := int(chest["seconds"])
+	var targets: Array = upgrades_in_progress() if seconds < 0 else ([target] if is_upgrading(target) else [])
+	if targets.is_empty():
+		return false
+	if not spend_gems(int(chest["gems"])):
+		return false
+
+	for type in targets:
+		accelerate_upgrade(type, seconds)
+	return true
+
+
+## Achete un pack d'or, par son rang dans Balance.SHOP.gold_packs.
+func buy_gold_pack(index: int) -> bool:
+	var packs: Array = Balance.SHOP["gold_packs"]
+	if index < 0 or index >= packs.size():
+		return false
+	if not spend_gems(int(packs[index]["gems"])):
+		return false
+	add_gold(int(packs[index]["gold"]))
+	return true
 
 
 # ------------------------------- DERNIERE FORMATION --------------------------

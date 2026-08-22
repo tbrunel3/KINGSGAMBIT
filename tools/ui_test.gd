@@ -22,6 +22,7 @@ func _ready() -> void:
 	await _test_battle()
 	await _test_composition()
 	await _test_series_chaining()
+	await _test_shop()
 
 	print("")
 	if _failures == 0:
@@ -197,10 +198,16 @@ func _test_codex() -> void:
 
 
 ## Tout le texte affiche par un ecran, mis bout a bout.
+##
+## Les BOUTONS en font partie. Ils ont ete oublies au depart, et ca ne se
+## voyait pas : un test qui verifie l'ABSENCE d'un mot passait alors meme
+## quand ce mot etait ecrit sur un bouton, en plein milieu de l'ecran.
 func _collect_text(node: Node) -> String:
 	var out := ""
 	if node is Label:
 		out += (node as Label).text + "\n"
+	elif node is Button:
+		out += (node as Button).text + "\n"
 	for child in node.get_children():
 		out += _collect_text(child)
 	return out
@@ -622,3 +629,74 @@ func _press(node: Control) -> void:
 	event.button_index = MOUSE_BUTTON_LEFT
 	event.pressed = true
 	node.gui_input.emit(event)
+
+
+# ------------------------------- BOUTIQUE ------------------------------------
+
+## La boutique : l'ecran s'ouvre, les coffres se ramassent, un achat sans
+## gemmes est refuse, et un achat valide RACCOURCIT vraiment un chantier.
+func _test_shop() -> void:
+	print("\n[6] Boutique : ramasser, acheter, accelerer")
+
+	Game.reset_progress()
+	var shop: Node = load("res://scenes/village/shop.tscn").instantiate()
+	add_child(shop)
+	await _frames(4)
+
+	var texte := _collect_text(shop)
+	for word in ["BOUTIQUE", "COFFRES", "GEMMES", "OR"]:
+		_check(texte.find(word) >= 0, "la section \"%s\" est affichee" % word)
+
+	# Les euros n'existent pas tant qu'aucun store n'est branche.
+	_check(texte.find("Bientôt") >= 0, "les packs en euros disent \"Bientôt\"")
+	_check(texte.find("€") < 0, "aucun prix en euros n'est affiche")
+
+	# La maquette portait un tableau de probabilites ; il n'y a aucun tirage
+	# au sort dans ce jeu, et ce test empeche qu'il revienne par recopie.
+	_check(texte.find("%") < 0, "aucun pourcentage de butin n'a survecu")
+	_check(texte.find("termine tout") >= 0, "la legende annonce ce que fait le Legendaire")
+
+	# --- ramasser un coffre gratuit --------------------------------------
+	var gems_before := Game.gems
+	shop._on_claim("horaire")
+	await _frames(3)
+	_check(Game.gems > gems_before, "le coffre horaire rend ses gemmes")
+	_check(not Game.free_chest_ready("horaire"), "il ne se reprend pas dans la foulee")
+
+	# --- acheter sans rien a accelerer ------------------------------------
+	Game.add_gems(2000)
+	Game.add_gold(50000)
+	await _frames(3)
+	var gems_kept := Game.gems
+	shop._on_buy_chest(Balance.shop_chest("rare"))
+	await _frames(2)
+	_check(Game.gems == gems_kept, "un coffre ne se paie pas quand aucun chantier ne tourne")
+
+	# --- acheter avec un seul chantier ouvert -----------------------------
+	Game.start_upgrade(Balance.CASTLE)
+	await _frames(2)
+	var level_before := Game.building_level(Balance.CASTLE)
+	gems_kept = Game.gems
+	shop._on_buy_chest(Balance.shop_chest("rare"))
+	await _frames(3)
+	_check(Game.gems < gems_kept, "le coffre est debite")
+	_check(Game.building_level(Balance.CASTLE) == level_before + 1,
+		"une heure achetee termine le palier en cours du chateau")
+
+	# --- un pack d'or ------------------------------------------------------
+	var gold_before := Game.gold
+	shop._on_buy_gold(0)
+	await _frames(3)
+	_check(Game.gold > gold_before, "le pack d'or verse son or")
+
+	shop.queue_free()
+	await _frames(2)
+
+	# --- la porte d'entree au village -------------------------------------
+	Game.reset_progress()
+	var village: Node = load("res://scenes/village/village.tscn").instantiate()
+	add_child(village)
+	await _frames(3)
+	_check(is_instance_valid(village._shop_button), "le village porte une entree vers la boutique")
+	village.queue_free()
+	await _frames(2)

@@ -88,6 +88,7 @@ var _promotions_this_battle: int = 0
 var _status_label: Label = null
 var _type_buttons: Dictionary = {}
 var _fight_button: Button = null
+var _reset_button: Button = null
 
 
 func _ready() -> void:
@@ -127,6 +128,7 @@ func _ready() -> void:
 	_grid_view.draggable_team = BattleUnit.TEAM_PLAYER
 
 	_enter_placement()
+	_animate_entry()
 	_warn_about_series()
 
 
@@ -542,6 +544,106 @@ func _spawn_enemies() -> void:
 			index += 1
 
 
+## ENTREE DU PLACEMENT - relevee sur Figma 04_Bataille_Placement (410:667),
+## 3 s et 17 noeuds, la timeline la plus riche du fichier.
+##
+## L'ecran se monte en cascade : le decor, puis le plateau qui se pose en
+## reculant d'un huitieme, puis le badge de tour qui tombe du haut, le HUD qui
+## glisse de la droite, le bandeau qui monte du bas, et enfin les puces qui
+## eclosent l'une apres l'autre. C'est l'ecran ou le joueur passe le plus de
+## temps ; il merite d'arriver, pas d'apparaitre.
+##
+## POURQUOI ON PEUT ANIMER LA POSITION ICI, ET PAS DANS battle_prep.
+##
+## La regle du projet est de ne JAMAIS animer la position d'un enfant de
+## conteneur : le tween se bat avec la mise en page, et c'est ce qui avait
+## colle le bandeau de serie en haut de l'ecran. Mais "Safe/Overlay" est un
+## Control NU, pas un conteneur : ses enfants sont places par ancres et
+## personne ne les repositionne pendant le tween. Les translations de la
+## maquette sont donc jouables telles quelles.
+##
+## Les PUCES, elles, vivent dans un VBoxContainer : elles n'ont droit qu'a
+## l'opacite et a l'echelle - ce que la maquette leur donne de toute facon.
+func _animate_entry() -> void:
+	var overlay := $BackgroundOverlay as ColorRect
+	var fades := $EdgeFades as Control
+
+	# Etat de depart, pose avant la premiere image pour qu'aucun element
+	# n'apparaisse une frame a sa place definitive.
+	var grid_home := _grid_view.position
+	var badge_home := _tour_badge.position
+	var hud_home := _stats_hud.position
+	var panel_home := _bottom_panel.position
+
+	for node in [overlay, fades, _grid_view, _tour_badge, _stats_hud, _bottom_panel]:
+		if is_instance_valid(node):
+			node.modulate.a = 0.0
+	_tour_badge.position = badge_home + Vector2(0, -80)
+	_stats_hud.position = hud_home + Vector2(70, 0)
+	_bottom_panel.position = panel_home + Vector2(0, 200)
+
+	var chips: Array = []
+	for type in Balance.ARMY_TYPES:
+		if _type_buttons.has(type):
+			var chip: Control = _type_buttons[type]
+			chip.modulate.a = 0.0
+			chip.scale = Vector2.ZERO
+			chips.append(chip)
+	for button in [_reset_button, _fight_button]:
+		if is_instance_valid(button):
+			button.modulate.a = 0.0
+			button.scale = Vector2(0.85, 0.85)
+
+	# Les pivots se posent APRES la mise en page, jamais a la construction :
+	# a la construction, size vaut encore zero et tout grandit depuis le coin.
+	await get_tree().process_frame
+	if not is_inside_tree():
+		return
+	for node in [_grid_view, _tour_badge]:
+		node.pivot_offset = node.size / 2.0
+	for chip in chips:
+		chip.pivot_offset = chip.size / 2.0
+	for button in [_reset_button, _fight_button]:
+		if is_instance_valid(button):
+			button.pivot_offset = button.size / 2.0
+
+	_grid_view.scale = Vector2(1.08, 1.08)
+
+	var tween := create_tween()
+	tween.set_parallel(true)
+
+	tween.tween_property(overlay, "modulate:a", 1.0, 0.6).set_ease(Tween.EASE_OUT)
+	tween.tween_property(fades, "modulate:a", 1.0, 0.35).set_delay(0.2).set_ease(Tween.EASE_OUT)
+
+	tween.tween_property(_grid_view, "modulate:a", 1.0, 0.4).set_delay(0.15)
+	tween.tween_property(_grid_view, "scale", Vector2.ONE, 0.45).set_delay(0.15) 		.set_ease(Tween.EASE_OUT).set_trans(Tween.TRANS_BACK)
+
+	tween.tween_property(_tour_badge, "modulate:a", 1.0, 0.2).set_delay(0.25)
+	tween.tween_property(_tour_badge, "position", badge_home, 0.4).set_delay(0.25) 		.set_ease(Tween.EASE_OUT).set_trans(Tween.TRANS_BACK)
+	tween.tween_property(_tour_badge, "scale", Vector2.ONE, 0.4).set_delay(0.25) 		.set_ease(Tween.EASE_OUT).set_trans(Tween.TRANS_BACK)
+
+	tween.tween_property(_bottom_panel, "modulate:a", 1.0, 0.3).set_delay(0.4)
+	tween.tween_property(_bottom_panel, "position", panel_home, 0.5).set_delay(0.4) 		.set_ease(Tween.EASE_OUT).set_trans(Tween.TRANS_EXPO)
+
+	tween.tween_property(_stats_hud, "modulate:a", 1.0, 0.25).set_delay(0.5)
+	tween.tween_property(_stats_hud, "position", hud_home, 0.45).set_delay(0.5) 		.set_ease(Tween.EASE_OUT).set_trans(Tween.TRANS_BACK)
+
+	# Les quatre puces eclosent en cascade, 80 ms d'ecart - le meme decalage
+	# que la maquette entre Chip-PION et Chip-CAVALIER.
+	for i in range(chips.size()):
+		var delay := 0.7 + i * 0.08
+		tween.tween_property(chips[i], "modulate:a", 1.0, 0.15).set_delay(delay)
+		tween.tween_property(chips[i], "scale", Vector2.ONE, 0.35).set_delay(delay) 			.set_ease(Tween.EASE_OUT).set_trans(Tween.TRANS_ELASTIC)
+
+	var button_delay := 1.05
+	for button in [_reset_button, _fight_button]:
+		if not is_instance_valid(button):
+			continue
+		tween.tween_property(button, "modulate:a", 1.0, 0.3).set_delay(button_delay)
+		tween.tween_property(button, "scale", Vector2.ONE, 0.3).set_delay(button_delay) 			.set_ease(Tween.EASE_OUT).set_trans(Tween.TRANS_BACK)
+		button_delay += 0.1
+
+
 # ------------------------------- PHASE PLACEMENT -----------------------------
 
 func _enter_placement() -> void:
@@ -664,6 +766,7 @@ FORMATION", Color(1, 1, 1, 0.08), 10)
 	reset.add_theme_color_override("font_color", Color("ccccd9"))
 	reset.pressed.connect(_on_reset_placement)
 	actions.add_child(reset)
+	_reset_button = reset
 
 	# Pas d'espaceur ici : sur 393 points de large, pousser COMBATTRE contre le
 	# bord droit le fait sortir du panneau. C'est REINITIALISER, le bouton le

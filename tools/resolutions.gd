@@ -54,6 +54,7 @@ const SCREENS := [
 	# serre du jeu en hauteur.
 	{"scene": "res://scenes/battle/battle_prep.tscn", "name": "preparation-dame", "battle": 10},
 	{"scene": "res://scenes/village/codex_popup.tscn", "name": "codex", "battle": 1},
+	{"scene": "res://scenes/village/shop.tscn", "name": "boutique", "battle": 1},
 	{"scene": "res://scenes/battle/battle.tscn", "name": "placement", "battle": 3},
 	# Le COMBAT est l'ecran le plus expose au changement de format : il n'a plus
 	# de bandeau du bas, donc le plateau prend toute la hauteur restante, et

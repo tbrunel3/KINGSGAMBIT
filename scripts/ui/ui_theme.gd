@@ -257,3 +257,21 @@ static func format_duration(seconds: int) -> String:
 	if m > 0:
 		return "%dm %02ds" % [m, s]
 	return "%ds" % s
+
+
+## Duree COMPACTE, pour les libelles de la boutique et les comptes a rebours
+## des coffres gratuits : "15 min", "1 h", "2 h 14".
+##
+## Distincte de format_duration ci-dessus, qui rend "15m 00s" - juste pour un
+## chrono d'amelioration qui defile sous les yeux du joueur, illisible sur une
+## etiquette de carte large de 84 points.
+static func format_span(seconds: int) -> String:
+	if seconds <= 0:
+		return "prêt"
+	var h := seconds / 3600
+	var m := (seconds % 3600) / 60
+	if h > 0:
+		return "%d h %02d" % [h, m] if m > 0 else "%d h" % h
+	if m > 0:
+		return "%d min" % m
+	return "%d s" % seconds

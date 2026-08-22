@@ -77,6 +77,7 @@ func _ready() -> void:
 	await _capture_draw()
 	await _capture_splash()
 	await _capture_intro()
+	await _capture_shop()
 	get_tree().quit()
 
 
@@ -476,3 +477,23 @@ func _save(_owner: Node, file_name: String) -> void:
 	var path := "%s/%s" % [OUTPUT_DIR, file_name]
 	image.save_png(path)
 	print("capture : %s (%d x %d)" % [path, image.get_width(), image.get_height()])
+
+
+## La boutique, dans son etat UTILE : des gemmes en poche et un chantier en
+## cours. Sans les deux, tout l'ecran est grise et la capture ne montre que
+## des cartes eteintes - ce qui est un etat legitime, mais pas celui qu'on
+## compare a la maquette.
+func _capture_shop() -> void:
+	Game.reset_progress()
+	Game.add_gems(1450)
+	Game.add_gold(50000)
+	Game.start_upgrade(Balance.CASTLE)
+	var shop: Node = load("res://scenes/village/shop.tscn").instantiate()
+	add_child(shop)
+	for i in range(5):
+		await RenderingServer.frame_post_draw
+	await _finish_animations()
+	_save(shop, "1k_boutique.png")
+	shop.queue_free()
+	for i in range(3):
+		await RenderingServer.frame_post_draw

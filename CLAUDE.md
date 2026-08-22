@@ -398,44 +398,54 @@ godot --headless --path . --import
 
 Fichier : `rqEdH4O2R21TuUFv7OUlF7`. Les écrans se lisent avec `get_design_context`
 en passant le node-id ci-dessous (le compte connecté a un siège Full, aucun droit
-à demander). **Tous les écrans du fichier sont à jour**, y compris ceux dont le
-nom n'a pas de suffixe `-v2` : le nom de la frame ne dit rien de son âge.
+à demander).
 
-| Écran | node-id | État |
+⚠️ **Le fichier a TROIS pages, et c'est la DERNIÈRE qui fait foi.**
+`get_metadata` sans `nodeId` n'en annonce qu'une ; les autres se découvrent par
+`figma.root.children` via `use_figma`. Le designer a rangé le 23/08 tous les
+écrans dans une page neuve — **les node-ids des versions précédentes sont
+morts**, et un relevé fait sur les anciennes pages parle d'un fichier périmé.
+
+| Page | node-id | Ce qu'elle porte |
 |---|---|---|
-| splash-screen | 123:7 | fait |
-| king-intro-before-dialogue | 169:136 | fait |
-| king-intro-dialogue | 123:32 | fait |
-| village-avec-dame / sans-dame | 162:4 / 188:2 | fait (le même écran sans les halos) |
-| chateau-royal-avec-dame / sans-dame | 178:5 / 178:51 | fait — écran plein, remplace la modale |
-| 02_Campagne | 58:90 | fait — parchemin défilant de 2300 points |
-| **preparation-bataille-v2** | 169:4 | fait — **refaite** : c'est l'écran de composition, et le **seul écran clair du jeu** (voir ci-dessous) |
-| 04_Bataille_Placement | 49:2 | fait |
-| 05_Bataille_Combat | 2:407 | fait |
-| 06_Bataille_Victoire | 2:546 | fait — écran plein |
-| 07-bataille-defaite | 2:835 | fait (même écran repeint en rouge) |
-| mission-popup | 228:9 | à intégrer (le panneau existe côté code) |
-| 09 / 10 / 11 — popups de bâtiment | 2:1048 / 2:1115 / 2:1165 | à intégrer — *le code couvre les quatre écrans dans une seule scène (`building_popup.gd`), et `screenshot.tscn` en capture deux états (`1e_`, `1f_`) pour comparer* |
-| confirm-upgrade-modal | 103:15 | fait — `confirm_upgrade.tscn` |
-| codex-popup / **codex-popup-v3** | 194:4 / 321:2 | fait — la v3 réécrit les données, la v1 décrivait un autre jeu (voir ci-dessous) |
-| **preparation-bataille-10-v3** | 330:2 | fait — la préparation, plus le bandeau de la Dame captive |
-| **shop-screen** | 347:4 | **jamais intégré** — la boutique est désormais DESSINÉE ; ses règles restent à écrire (coffres, gemmes, accélération) |
-| **popup-combat-phase** | 378:4 | **jamais intégré** — nouveau, à lire avant le chantier E |
-| 07-bataille-nulle *(copie)* | 343:126 | doublon de `348:2`, même timeline — rien à faire |
-| 12-composants | 2:1224 | planche de référence |
-| Pièces d'échecs SVG | 32:2 | déjà en jeu |
-| 🗺️ HIÉRARCHIE DU JEU | 203:6 | note de conception du designer, pas un écran |
-| KINGSGAMBIT_COIN | 114:2 | pièce d'or, déjà en jeu |
-| LOGO_STUDIOBNL | 116:573 | logo du studio — jamais récupéré |
+| **`MAINPROJECT`** | **`410:2`** | **la bibliothèque à jour** — 20 écrans rangés en 7 sections. On travaille ici, et nulle part ailleurs |
+| `Écrans triés` | `248:2` | les copies qui portent les **timelines que les originaux n'ont pas**, et le retour du designer `294:2` |
+| `KINGS GAMBIT` | `0:1` | la page d'origine : images sources, planche de composants `2:1224`, pièces SVG `32:2`, `KINGSGAMBIT_COIN` `114:2`, `LOGO_STUDIOBNL` `116:573` |
 
-⚠️ **Le fichier a TROIS pages**, et `get_metadata` sans `nodeId` n'en annonce
-qu'une (`0:1 KINGS GAMBIT`). Les deux autres se découvrent par
-`figma.root.children` via `use_figma` : **`248:2` « Écrans triés »** — des
-copies qui portent des **timelines que les originaux n'ont pas** (voir plus
-bas) et la section de retour du designer `294:2` — et **`353:2` « NEW UI »**,
-vide à ce jour.
+### Les 20 écrans de `MAINPROJECT`
 
-Inventaire relevé sur le fichier entier (`get_metadata` sur la page, 47 nœuds de
+| Section | Écran | node-id | État |
+|---|---|---|---|
+| 🎬 Intro `420:2` | splash-screen | `410:3` | fait |
+| | king-intro-before-dialogue | `410:35` | fait |
+| | king-intro-dialogue | `410:71` | fait |
+| 🏘️ Navigation `420:3` | village-avec-dame | `410:153` | fait — **corrigé le 23/08** : les quatre casernes portent enfin les noms du jeu, plus la pastille de gemmes et les entrées Boutique / Codex |
+| | village-sans-dame | `410:196` | fait (le même écran sans les halos) |
+| | chateau-royal-avec-dame | `410:233` | fait — écran plein, remplace la modale |
+| | chateau-royal-sans-dame | `410:286` | fait |
+| 🗺️ Campagne `420:4` | 02_Campagne | `410:342` | fait — parchemin défilant de 2300 points |
+| ⚔️ Combat `420:5` | preparation-bataille-v2 | `410:7227` | fait — l'écran de composition, et le **seul écran clair du jeu** |
+| | 04_Bataille_Placement | `410:667` | fait — son **entrée animée reste à porter** (voir plus bas) |
+| | 05_Bataille_Combat | `410:3764` | fait |
+| | **popup-combat-phase** | `410:7190` | **à porter** — c'est le **bandeau de série**, et il affiche les renforts (« +3 Pions ») que le nôtre ne dit pas |
+| 🏆 Résultats `420:6` | 06_Bataille_Victoire | `410:5121` | fait — écran plein |
+| | 07-bataille-defaite | `410:5430` | fait (même écran repeint en rouge) |
+| | 07-bataille-nulle | `410:5551` | fait — peau d'acier, `BattleResult.draw_skin` |
+| 📋 Popups `420:7` | mission-popup | `410:5664` | à intégrer (le panneau existe côté code) |
+| | 09-popup-batiment | `410:7342` | à intégrer — *le code couvre les quatre états dans une seule scène (`building_popup.gd`)* |
+| | 10-popup-batiment-verrouille | `410:7488` | idem |
+| | 11-popup-amelioration | `410:7629` | idem |
+| | confirm-upgrade-modal | `410:7769` | fait — `confirm_upgrade.tscn` |
+| 📖 Codex & Shop `420:8` | codex-popup-v3 | `410:6525` | fait — la v3 réécrit les données, la v1 décrivait un autre jeu (voir ci-dessous) |
+| | **shop-screen** | **`410:7061`** | **en cours (chantier H)** — corrigé le 23/08 : légende des quatre coffres, section OR recalibrée, euros grisés, **bloc de coffres gratuits dessiné**. Règles dans [`chantier_h_boutique.md`](chantier_h_boutique.md) |
+
+⚠️ **Deux écrans que la bibliothèque n'a PAS repris** et qui n'existent que sur
+les anciennes pages : `preparation-bataille-10-v3` (`330:2`, la préparation plus
+le bandeau de la Dame captive) et la planche `12-composants`. Le code de la
+bataille 10 s'appuie sur le premier (`battle_prep._build_stake_band`) : ne pas
+conclure qu'il a disparu du jeu parce qu'il a disparu de la page.
+
+Inventaire relevé sur la page d'origine `0:1` (`get_metadata`, 47 nœuds de
 premier niveau) : **rien d'autre n'y est un écran**. Le reste sont les images
 sources posées à côté des frames, et toutes sont déjà en jeu sauf deux, qui
 n'appartiennent à aucune frame :

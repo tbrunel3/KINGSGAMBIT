@@ -64,6 +64,12 @@ const DEV_BUTTON_RECT := Rect2(362, 14, 24, 24)
 ## discrete : le codex se consulte, il ne se joue pas - lui donner un libelle
 ## le mettrait au meme rang que MISSIONS, qui dit quoi faire ensuite.
 const CODEX_BUTTON_RECT := Rect2(319, 44, 28, 28)
+## Bouton BOUTIQUE, pose sous le codex. Meme traitement : une icone discrete.
+## La boutique ne dit pas quoi faire ensuite, elle attend qu'on ait un
+## chantier a accelerer - lui donner un libelle la mettrait au rang de
+## MISSIONS. Position ABSOLUE parce que le village est le dernier ecran qui
+## n'est pas encore decoupe en zones ancrees (cf. CLAUDE.md, regle 4).
+const SHOP_BUTTON_RECT := Rect2(319, 78, 28, 28)
 
 @onready var _overlay: Control = $Overlay
 
@@ -74,6 +80,7 @@ var _missions_button: PanelContainer
 var _missions_label: Label
 var _missions_badge: PanelContainer
 var _codex_button: PanelContainer
+var _shop_button: PanelContainer
 var _castle_label: PanelContainer
 var _castle_glow: TextureRect
 var _castle_glow_tween: Tween
@@ -186,6 +193,43 @@ func _build_top_bar() -> void:
 	settings.size = Vector2(28, 28)
 
 	_build_codex_button()
+	_shop_button = _build_icon_button("star", Color("ffe580"), Color("174971"),
+		SHOP_BUTTON_RECT, _on_shop_pressed)
+
+
+## Pastille cliquable a icone seule, le gabarit du codex et de la boutique.
+## Un PanelContainer et non un Button : c'est le seul moyen d'y inserer un
+## Icon, qui se DESSINE (cf. _make_clickable plus bas, meme raison).
+func _build_icon_button(icon_name: String, icon_color: Color, fill: Color,
+		rect: Rect2, on_press: Callable) -> PanelContainer:
+	var panel := PanelContainer.new()
+	var box := StyleBoxFlat.new()
+	box.bg_color = fill
+	box.set_corner_radius_all(14)
+	box.set_content_margin_all(7)
+	panel.add_theme_stylebox_override("panel", box)
+
+	var glyph := Icon.new()
+	glyph.icon_name = icon_name
+	glyph.color = icon_color
+	glyph.custom_minimum_size = Vector2(14, 14)
+	panel.add_child(glyph)
+
+	_overlay.add_child(panel)
+	panel.position = rect.position
+	panel.size = rect.size
+
+	UiTheme.ignore_mouse_recursive(glyph)
+	panel.mouse_filter = Control.MOUSE_FILTER_STOP
+	panel.gui_input.connect(func(event: InputEvent):
+		if event is InputEventMouseButton and event.pressed and event.button_index == MOUSE_BUTTON_LEFT:
+			on_press.call()
+	)
+	return panel
+
+
+func _on_shop_pressed() -> void:
+	Router.goto_shop()
 
 
 ## Bouton du CODEX DU ROYAUME. Le jeu n'expliquait nulle part ce que fait une

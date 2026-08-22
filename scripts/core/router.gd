@@ -15,6 +15,7 @@ const PREP_SCENE := "res://scenes/battle/battle_prep.tscn"
 const BATTLE_SCENE := "res://scenes/battle/battle.tscn"
 const CASTLE_SCENE := "res://scenes/village/castle_screen.tscn"
 const CODEX_SCENE := "res://scenes/village/codex_popup.tscn"
+const SHOP_SCENE := "res://scenes/village/shop.tscn"
 
 ## Bataille en cours de preparation ou de combat.
 var current_battle_id: int = 1
@@ -39,6 +40,12 @@ func goto_castle() -> void:
 ## qui ne defile pas en montrerait le dixieme.
 func goto_codex() -> void:
 	_change(CODEX_SCENE)
+
+
+## Boutique. En plein ecran defilant, comme le codex et pour la meme raison :
+## la maquette fait 982 points de haut, aucune modale ne la contient.
+func goto_shop() -> void:
+	_change(SHOP_SCENE)
 
 
 func goto_campaign() -> void:

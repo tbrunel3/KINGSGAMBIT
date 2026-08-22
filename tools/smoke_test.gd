@@ -20,7 +20,7 @@ var _finished: Array = []
 ## interrompue en cours de route.
 const SECTIONS := [
 	"donnees", "missions", "sauvegarde", "formation", "menaces", "pertes",
-	"regles", "serie", "batailles", "ecrans", "boucle",
+	"regles", "serie", "batailles", "ecrans", "boucle", "boutique",
 ]
 
 
@@ -54,6 +54,7 @@ func _ready() -> void:
 	_check_rules()
 	_check_run()
 	_check_endgame()
+	_check_shop()
 	_play_all_battles()
 	await _check_scenes()
 	_check_campaign_loop()
@@ -1273,3 +1274,149 @@ func _check_campaign_loop() -> void:
 	print("  rejouer la bataille 1 : %d or au lieu de %d" % [replay, full])
 	Game.reset_progress()
 	_done("boucle")
+
+
+# ------------------------------- BOUTIQUE ------------------------------------
+
+## La boutique (cf. Balance.SHOP et chantier_h_boutique.md).
+##
+## Deux choses a garder a l'oeil, et ce sont des REGLES, pas des reglages :
+## une gemme n'accelere jamais un coffre gratuit, et un pack d'or ne doit
+## jamais valoir de quoi sauter la campagne.
+func _check_shop() -> void:
+	# --- coherence des donnees -------------------------------------------
+	var ids: Array = []
+	var previous_gems := 0
+	for chest in Balance.SHOP["chests"]:
+		if ids.has(chest["id"]):
+			_fail("deux coffres portent l'identifiant '%s'" % chest["id"])
+		ids.append(chest["id"])
+		if int(chest["gems"]) <= previous_gems:
+			_fail("le coffre '%s' ne coute pas plus cher que le precedent" % chest["id"])
+		previous_gems = int(chest["gems"])
+
+	var unlimited := 0
+	for chest in Balance.SHOP["chests"]:
+		if int(chest["seconds"]) < 0:
+			unlimited += 1
+	if unlimited != 1:
+		_fail("il doit y avoir exactement un coffre qui termine tout, il y en a %d" % unlimited)
+
+	for id in Balance.free_chest_ids():
+		var free := Balance.free_chest(id)
+		if int(free["seconds"]) <= 0 or int(free["gems"]) <= 0:
+			_fail("le coffre gratuit '%s' ne rend rien ou n'attend rien" % id)
+
+	# --- le garde-fou economique -----------------------------------------
+	#
+	# Le pack dessine a 25000 or valait plus que le cumul d'ameliorations
+	# demande a la bataille 10 : il proposait de sauter la campagne. Un
+	# cinquieme de ce que verse une traversee simple est la limite.
+	var campaign_gold := 0
+	for battle in Balance.CAMPAIGN:
+		campaign_gold += int(battle["reward"]) * Balance.battle_fights(battle)
+	var biggest := 0
+	for pack in Balance.SHOP["gold_packs"]:
+		biggest = maxi(biggest, int(pack["gold"]))
+	if biggest * 5 > campaign_gold:
+		_fail("le plus gros pack d'or (%d) depasse un cinquieme de ce que verse la campagne (%d)"
+			% [biggest, campaign_gold])
+
+	# Un pack qui grossit doit devenir MEILLEUR. Le premier reglage rendait 10
+	# or par gemme sur le petit pack et 7,5 sur le gros : qui achetait le plus
+	# cher se faisait avoir, et seul un joueur qui fait la division s'en
+	# apercevait.
+	var previous_rate := 0.0
+	for pack in Balance.SHOP["gold_packs"]:
+		var rate := float(pack["gold"]) / float(pack["gems"])
+		if rate < previous_rate:
+			_fail("le pack a %d gemmes rend %.2f or/gemme, moins que le precedent (%.2f)"
+				% [int(pack["gems"]), rate, previous_rate])
+		previous_rate = rate
+
+	# ⚠️ Ce garde-fou-la ne suffit PAS a lui seul : il ne regarde qu'un pack a
+	# la fois. Ce qu'un joueur peut convertir en tout sur une campagne se
+	# mesure dans tools/shop_probe.tscn, qui seul connait le robinet.
+
+	# --- le robinet -------------------------------------------------------
+	Game.reset_progress()
+	if Game.gems != 0:
+		_fail("une partie neuve ne demarre pas a zero gemme")
+	if not Game.free_chest_ready("horaire"):
+		_fail("le coffre horaire n'est pas pret sur une partie neuve")
+
+	var gained := Game.claim_free_chest("horaire")
+	if gained != int(Balance.free_chest("horaire")["gems"]):
+		_fail("le coffre horaire ne rend pas ses gemmes")
+	if Game.gems != gained:
+		_fail("les gemmes ramassees n'arrivent pas en poche")
+	if Game.free_chest_ready("horaire"):
+		_fail("le coffre horaire se reprend deux fois de suite")
+	if Game.claim_free_chest("horaire") != 0:
+		_fail("un coffre non pret rend quand meme des gemmes")
+
+	# --- un coffre achete accelere une amelioration -----------------------
+	Game.add_gems(2000)
+	Game.add_gold(50000)
+	var gems_before := Game.gems
+	if Game.buy_chest("rare", Balance.PION):
+		_fail("un coffre s'achete alors qu'aucune amelioration ne tourne")
+	if Game.gems != gems_before:
+		_fail("un achat refuse a quand meme debite des gemmes")
+
+	# Le retranchement exact se mesure sur un petit nombre de secondes : tous
+	# les premiers paliers du jeu durent moins qu'un coffre Rare (le chateau
+	# 120 s, le pion 30 s), et une soustraction bornee a zero ne prouve rien.
+	Game.start_upgrade(Balance.CASTLE)
+	var remaining_before := Game.upgrade_remaining(Balance.CASTLE)
+	if not Game.accelerate_upgrade(Balance.CASTLE, 20):
+		_fail("l'acceleration refuse une amelioration qui tourne pourtant")
+	var lost := remaining_before - Game.upgrade_remaining(Balance.CASTLE)
+	if lost < 20 or lost > 21:
+		_fail("20 secondes achetees en ont retranche %d" % lost)
+
+	# Un coffre plus long que ce qui reste TERMINE l'amelioration : c'est le
+	# cas courant, un coffre Rare valant une heure et les premiers paliers
+	# quelques minutes.
+	var castle_level := Game.building_level(Balance.CASTLE)
+	if not Game.buy_chest("rare", Balance.CASTLE):
+		_fail("le coffre Rare ne s'achete pas alors que le chateau monte")
+	if Game.is_upgrading(Balance.CASTLE):
+		_fail("un coffre plus long que l'attente n'a pas termine l'amelioration")
+	if Game.building_level(Balance.CASTLE) != castle_level + 1:
+		_fail("l'amelioration terminee par un coffre n'a pas fait monter le chateau")
+
+	# --- une gemme n'accelere JAMAIS un coffre gratuit --------------------
+	gems_before = Game.gems
+	var chest_ready_before := Game.free_chest_remaining("horaire")
+	if Game.buy_chest("rare", "horaire"):
+		_fail("un coffre payant accelere un coffre gratuit - le robinet imprime")
+	if Game.gems != gems_before or Game.free_chest_remaining("horaire") != chest_ready_before:
+		_fail("viser un coffre gratuit a quand meme eu un effet")
+
+	# --- le Legendaire termine TOUT ---------------------------------------
+	Game.start_upgrade(Balance.CAVALIER)
+	if Game.upgrades_in_progress().is_empty():
+		_fail("aucune amelioration ne tourne avant le coffre Legendaire")
+	if not Game.buy_chest("legendaire"):
+		_fail("le coffre Legendaire ne s'achete pas")
+	if not Game.upgrades_in_progress().is_empty():
+		_fail("le coffre Legendaire a laisse une amelioration en cours")
+
+	# --- un pack d'or -----------------------------------------------------
+	var pack: Dictionary = Balance.SHOP["gold_packs"][0]
+	var gold_before := Game.gold
+	gems_before = Game.gems
+	if not Game.buy_gold_pack(0):
+		_fail("le premier pack d'or ne s'achete pas")
+	if Game.gold != gold_before + int(pack["gold"]):
+		_fail("le pack d'or n'a pas verse son or")
+	if Game.gems != gems_before - int(pack["gems"]):
+		_fail("le pack d'or n'a pas debite ses gemmes")
+
+	# --- une vieille sauvegarde n'a ni gemmes ni coffres ------------------
+	Game.reset_progress()
+	if Game.gems != 0 or Game.free_chest_remaining("horaire") != 0:
+		_fail("l'etat de la boutique ne se remet pas a neuf")
+
+	_done("boutique")
