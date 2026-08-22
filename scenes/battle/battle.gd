@@ -568,19 +568,12 @@ func _animate_entry() -> void:
 	var overlay := $BackgroundOverlay as ColorRect
 	var fades := $EdgeFades as Control
 
-	# Etat de depart, pose avant la premiere image pour qu'aucun element
-	# n'apparaisse une frame a sa place definitive.
-	var grid_home := _grid_view.position
-	var badge_home := _tour_badge.position
-	var hud_home := _stats_hud.position
-	var panel_home := _bottom_panel.position
-
-	for node in [overlay, fades, _grid_view, _tour_badge, _stats_hud, _bottom_panel]:
+	# On eteint TOUT des maintenant : rien ne doit apparaitre, pas meme une
+	# image, avant que la cascade commence.
+	var animated: Array = [overlay, fades, _grid_view, _tour_badge, _stats_hud, _bottom_panel]
+	for node in animated:
 		if is_instance_valid(node):
 			node.modulate.a = 0.0
-	_tour_badge.position = badge_home + Vector2(0, -80)
-	_stats_hud.position = hud_home + Vector2(70, 0)
-	_bottom_panel.position = panel_home + Vector2(0, 200)
 
 	var chips: Array = []
 	for type in Balance.ARMY_TYPES:
@@ -594,11 +587,29 @@ func _animate_entry() -> void:
 			button.modulate.a = 0.0
 			button.scale = Vector2(0.85, 0.85)
 
-	# Les pivots se posent APRES la mise en page, jamais a la construction :
-	# a la construction, size vaut encore zero et tout grandit depuis le coin.
+	# ⚠️ ON ATTEND LA MISE EN PAGE AVANT DE LIRE LA MOINDRE POSITION.
+	#
+	# Ces controles sont places par ANCRES : tant que Godot n'a pas fait sa
+	# passe de mise en page, leur `position` ne vaut rien. Les relever a la
+	# construction et tweener vers ces valeurs, c'est ramener le HUD et le
+	# bandeau vers des coordonnees fausses - mesure sur resolutions.tscn : le
+	# bandeau de deploiement restait INVISIBLE hors de l'ecran et le HUD de
+	# charge a demi sorti par la droite, sur TOUS les formats.
+	#
+	# Meme raison pour les pivots : a la construction, size vaut encore zero
+	# et tout grandirait depuis le coin superieur gauche.
 	await get_tree().process_frame
 	if not is_inside_tree():
 		return
+
+	var badge_home := _tour_badge.position
+	var hud_home := _stats_hud.position
+	var panel_home := _bottom_panel.position
+
+	_tour_badge.position = badge_home + Vector2(0, -80)
+	_stats_hud.position = hud_home + Vector2(70, 0)
+	_bottom_panel.position = panel_home + Vector2(0, 200)
+
 	for node in [_grid_view, _tour_badge]:
 		node.pivot_offset = node.size / 2.0
 	for chip in chips:
