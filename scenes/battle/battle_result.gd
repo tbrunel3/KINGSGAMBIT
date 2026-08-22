@@ -451,6 +451,18 @@ func add_reward_row(label_text: String, amount: int) -> void:
 	_stats.add_child(panel)
 
 
+## Puce de bilan : un ROND, comme la maquette. Un ColorRect ne sait faire qu'un
+## carre, et six pixels carres au bout d'une ligne de texte se lisent comme une
+## coquille, pas comme une puce.
+func _bullet(color: Color) -> Icon:
+	var dot := Icon.new()
+	dot.icon_name = "dot"
+	dot.color = color
+	dot.custom_minimum_size = Vector2(7, 7)
+	dot.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	return dot
+
+
 ## Ligne de bilan ordinaire, pointee d'une puce comme dans la maquette.
 func add_stat_row(label_text: String, value_text: String, bullet: int = 0,
 		value_color: Color = Color("f0f3f8")) -> void:
@@ -458,11 +470,8 @@ func add_stat_row(label_text: String, value_text: String, bullet: int = 0,
 
 	var left := HBoxContainer.new()
 	left.add_theme_constant_override("separation", 10)
-	var dot := ColorRect.new()
-	dot.color = _skin["bullets"][clampi(bullet, 0, _skin["bullets"].size() - 1)]
-	dot.custom_minimum_size = Vector2(6, 6)
-	dot.size_flags_vertical = Control.SIZE_SHRINK_CENTER
-	left.add_child(dot)
+	left.add_child(_bullet(
+		_skin["bullets"][clampi(bullet, 0, _skin["bullets"].size() - 1)]))
 	left.add_child(_label(label_text, 14, Color("9baac0"), UiTheme.font()))
 
 	var value := _label(value_text, 15, value_color, UiTheme.font_black())
@@ -486,11 +495,7 @@ func add_icon_row(label_text: String, icon_name: String, value_text: String,
 
 	var left := HBoxContainer.new()
 	left.add_theme_constant_override("separation", 10)
-	var dot := ColorRect.new()
-	dot.color = accent
-	dot.custom_minimum_size = Vector2(6, 6)
-	dot.size_flags_vertical = Control.SIZE_SHRINK_CENTER
-	left.add_child(dot)
+	left.add_child(_bullet(accent))
 	left.add_child(_label(label_text, 14, Color("9baac0"), UiTheme.font()))
 
 	_stats.add_child(_row(left, value, 13))

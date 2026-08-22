@@ -259,16 +259,22 @@ func _draw_crown_broken(c: Vector2, s: float, lw: float) -> void:
 
 ## Rose des vents simplifiee : cercle + aiguille losange - cf. Compass-Icon
 ## du bouton "Carte de campagne" dans les captures Figma.
+## ROSE DES VENTS - quatre branches dans un cercle.
+##
+## L'aiguille seule, en losange vertical, se lisait comme un CERCLE BARRE a
+## quatorze points : rien n'y disait le nord. Ce sont les quatre branches qui
+## font reconnaitre une boussole, et c'est ainsi que la maquette la dessine.
 func _draw_compass(c: Vector2, s: float, lw: float) -> void:
 	draw_arc(c, s * 0.4, 0.0, TAU, 24, color, lw, true)
-	var needle := PackedVector2Array([
-		c + Vector2(0, -s * 0.32),
-		c + Vector2(s * 0.1, 0),
-		c + Vector2(0, s * 0.32),
-		c + Vector2(-s * 0.1, 0),
-	])
-	draw_colored_polygon(needle, color)
-	draw_circle(c, s * 0.05, Color(0, 0, 0, 0.35))
+	var longue := s * 0.30
+	var courte := s * 0.09
+	for i in range(4):
+		var angle := i * PI / 2.0 - PI / 2.0
+		var pointe := Vector2(cos(angle), sin(angle)) * longue
+		var cote := Vector2(-sin(angle), cos(angle)) * courte
+		draw_colored_polygon(PackedVector2Array([
+			c + pointe, c + cote, c - cote]), color)
+	draw_circle(c, s * 0.06, color)
 
 
 ## Deux pieces empilees - cf. les montants "+X Or" dans les captures Figma.
