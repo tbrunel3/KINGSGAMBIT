@@ -156,7 +156,7 @@ func _inline_header() -> HBoxContainer:
 	title.autowrap_mode = TextServer.AUTOWRAP_OFF
 	texts.add_child(title)
 	var subtitle := UiTheme.make_label(
-		"Niveau %d  -  Troupes: %d/%d" % [
+		"Niveau %d  •  Troupes : %d/%d" % [
 			Game.building_level(_type), Game.units_owned(_type),
 			Balance.capacity(_type, Game.building_level(_type))],
 		12, UiTheme.TEXT_DIM)
@@ -341,8 +341,8 @@ func _add_recruit_row(body: VBoxContainer) -> void:
 	body.add_child(_action_row(
 		"RECRUTER %s" % Balance.unit_name(_type).to_upper(), Color("f0f3f8"),
 		"%d Or" % cost, "",
-		"Complet" if complete else "RECRUTER",
-		Color("2e5bff"), Color(0, 0, 0, 0),
+		"COMPLET" if complete else "RECRUTER",
+		UiTheme.GOLD, Color("b8860b"),
 		complete or not Game.can_afford(cost),
 		func(): Game.recruit(_type),
 		Color("2a2f45")))
@@ -376,7 +376,15 @@ func _action_row(title_text: String, title_color: Color, cost_text: String, extr
 	texts.add_child(title)
 
 	var cost_row := HBoxContainer.new()
-	cost_row.add_theme_constant_override("separation", 8)
+	cost_row.add_theme_constant_override("separation", 6)
+	# La piece devant le montant : la maquette en pose une sur chaque cout, et
+	# c'est ce qui distingue un prix d'un simple nombre.
+	var coin := Icon.new()
+	coin.icon_name = "coin"
+	coin.color = UiTheme.GOLD
+	coin.custom_minimum_size = Vector2(13, 13)
+	coin.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	cost_row.add_child(coin)
 	var cost_label := UiTheme.make_label(cost_text, 12, UiTheme.GOLD)
 	cost_label.add_theme_font_override("font", UiTheme.font_bold())
 	cost_label.autowrap_mode = TextServer.AUTOWRAP_OFF
@@ -493,7 +501,7 @@ func _add_upgrade_section(body: VBoxContainer) -> void:
 	body.add_child(_action_row(
 		"AMÉLIORER BÂTIMENT", UiTheme.GOLD,
 		"%d Or" % cost, UiTheme.format_duration(seconds),
-		"AMÉLIORER", UiTheme.GOLD_BUTTON, Color("ffd700"),
+		"AMÉLIORER", UiTheme.GOLD, Color("b8860b"),
 		not Game.can_afford(cost),
 		func(): Game.start_upgrade(_type),
 		Color("d4af37")))

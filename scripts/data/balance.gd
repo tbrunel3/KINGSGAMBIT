@@ -754,6 +754,20 @@ func jump_offsets(type: String, level: int) -> Array:
 	return [] if value == null else value
 
 
+## Le nom d'une figure de saut. Les deux premieres ont un nom d'echiquier, et
+## il vaut mieux que des coordonnees : "saut en L" dit a un joueur ce que
+## "1x2" ne lui dira jamais. Au-dela, aucune figure n'a de nom recu, alors on
+## donne les cases - c'est ce que la maquette fait aussi ("2+1 cases").
+func _jump_name(dx: int, dy: int) -> String:
+	var petit := mini(dx, dy)
+	var grand := maxi(dx, dy)
+	if petit == 1 and grand == 1:
+		return "saut diagonal"
+	if petit == 1 and grand == 2:
+		return "saut en L"
+	return "saut %d+%d cases" % [grand, petit]
+
+
 ## Description lisible du deplacement, affichee dans le popup de batiment.
 func move_description(type: String, level: int) -> String:
 	match move_type(type):
@@ -772,8 +786,8 @@ func move_description(type: String, level: int) -> String:
 			# ce palier.
 			var noms: Array = []
 			for figure in jump_offsets(type, level):
-				noms.append("%d×%d" % [int(figure[0]), int(figure[1])])
-			return "saut %s" % ", ".join(noms)
+				noms.append(_jump_name(int(figure[0]), int(figure[1])))
+			return ", ".join(noms)
 		_:
 			var reach := move_range(type, level)
 			var opening := first_move_range(type, level)
