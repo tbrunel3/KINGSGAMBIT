@@ -34,11 +34,17 @@ extends Node
 ## tune_probe : un combat deterministe n'est pas pour autant representatif).
 ##
 
-## Batailles mesurees - les series de trois, ou le probleme se pose.
-const BATAILLES := [8, 9, 10]
+## Batailles mesurees. La 10 seule par defaut : c'est celle que la sonde
+## economique declare hors de portee, et une serie au niveau MAXIMUM coute
+## cher a simuler - les pieces de niveau 10 portent a huit cases, donc la
+## recherche a bien plus de coups a examiner qu'en partie normale. Ajouter la 8
+## et la 9 ici, c'est multiplier le temps par trois pour confirmer ce que la
+## sonde economique dit deja : elles passent.
+const BATAILLES := [10]
 
-## Rangements essayes par configuration.
-const FORMATIONS := 3
+## Rangements essayes par configuration. Deux suffisent a distinguer "jamais"
+## de "parfois" ; c'est tout ce qu'on demande a ce banc.
+const FORMATIONS := 2
 
 ## Niveau du joueur : le MAXIMUM. La question n'est pas "a quel niveau faut-il
 ## etre" - la sonde economique a montre que meme tout au maximum ne suffit pas -
@@ -99,6 +105,9 @@ func _mesurer(battle: Dictionary, nom: String, fights: int, ratio_ennemi: float,
 		combats_joues += fights
 	print("    %-30s %d/%d            %d/%d" % [
 		nom, series_gagnees, FORMATIONS, combats_gagnes, combats_joues])
+	# Sinon rien ne sort avant la toute fin, et un banc qui met une heure sans
+	# donner signe de vie ne se distingue pas d'un banc plante.
+	OS.delay_msec(1)
 
 
 ## La serie entiere. L'armee ennemie revient au complet a chaque combat ; le

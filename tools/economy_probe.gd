@@ -260,11 +260,22 @@ func _pas_suivant(battle: Dictionary) -> Dictionary:
 				"libelle": "%s au niveau %d" % [
 					Balance.building_name(type), Game.building_level(type) + 1]}
 
-	# Charge : le poids de l'armee entiere, compare a ce que le chateau porte.
+	# LA RESERVE SE COMPTE EN COMBATS, PAS EN DEPLOIEMENTS. Une serie de trois
+	# combats se joue sans retour au village : les pertes du premier ne se
+	# recrutent pas avant le deuxieme. S'arreter a une seule charge, c'est
+	# entrer dans la serie avec exactement une armee et rien derriere - le
+	# deuxieme combat se joue alors a effectif reduit, le troisieme a presque
+	# rien, et la serie est perdue d'avance quel que soit le niveau des pieces.
+	#
+	# C'est exactement ce qui a fait conclure la sonde a un PLAFOND sur la
+	# derniere bataille : elle montait tout au niveau 10 sans jamais s'acheter
+	# de quoi tenir trois combats.
+	#
 	# On recrute le type dont on a le MOINS, pour garder l'armee variee - un mur
 	# de pions perd contre a peu pres tout, et c'est la formation de reference
 	# qui alterne les types.
-	if _poids_de_l_armee() < Game.deploy_capacity():
+	var reserve := Game.deploy_capacity() * Balance.battle_fights(battle)
+	if _poids_de_l_armee() < reserve:
 		var choisi := ""
 		for type in Balance.UNIT_TYPES:
 			if not Game.is_building_unlocked(type) or Game.is_at_capacity(type):
