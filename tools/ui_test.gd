@@ -16,6 +16,10 @@ var _failures: int = 0
 
 
 func _ready() -> void:
+	# Un banc ne joue pas la mise en scene : sans ca, chaque changement
+	# d'ecran ajoute un fondu complet et le banc ralentit sans rien
+	# mesurer de plus. Meme doctrine que BattleAI.budget_ms = 0.
+	ScreenVeil.instant = true
 	print("=== KING'S GAMBIT - test d'interface ===")
 	await _test_village()
 	await _test_codex()

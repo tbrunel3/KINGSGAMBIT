@@ -646,6 +646,65 @@ func mission(id: String) -> Dictionary:
 	return {}
 
 
+# ------------------------------- MOUVEMENT -----------------------------------
+#
+#  LES DUREES D'ANIMATION, TOUTES AU MEME ENDROIT.
+#
+#  ⚠️ Elles n'y etaient pas, et la regle 1 le demandait depuis le debut. Vingt-
+#  deux constantes de duree vivaient dans huit fichiers d'ecran : ZOOM_SECONDS
+#  dans village.gd, ENTRY_DURATION dans modal.gd, OPEN_DURATION dans
+#  mission_popup.gd... C'est pour ca que "ralentir toutes les transitions",
+#  demande par le joueur apres son test du 23/08, n'etait pas un geste mais
+#  huit.
+#
+#  `scale` est LE bouton. Il multiplie toutes les durees ci-dessous :
+#    1.0  les valeurs telles quelles
+#    1.4  tout dure 40 % de plus
+#  Le joueur trouvait le jeu "trop rapide, on voit des sautes de frame" : les
+#  valeurs de base ont donc DEJA ete rallongees par rapport a ce qu'elles
+#  etaient, et `scale` reste la pour ajuster sans y revenir.
+#
+#  Ne pas y mettre les durees qui ne sont pas des transitions : la frappe
+#  lettre par lettre du Roi ou le zoom ambiant de 14 s de l'intro sont de la
+#  mise en scene, pas du rythme de navigation.
+
+const MOTION := {
+	"scale": 1.0,
+
+	# --- Le voile de transition entre deux ecrans (cf. ScreenVeil).
+	# Etait absent : chaque ecran fondait dans son coin, et le changement de
+	# scene lui-meme n'avait aucun fondu - d'ou la coupure franche vers le
+	# chateau, et l'image non peinte qu'on apercevait derriere.
+	"veil_cover": 0.30,
+	"veil_reveal": 0.34,
+	# Temps laisse au nouvel ecran pour se construire et peindre sa premiere
+	# image AVANT qu'on leve le voile. Sans lui, castle_screen se montrait
+	# pendant qu'il chargeait encore son fond : le joueur voyait du gris.
+	"veil_settle": 0.12,
+
+	# --- Le zoom du village vers un batiment.
+	# Etait a 0,35 s : trop court pour qu'on suive le mouvement de l'oeil.
+	"village_zoom": 0.55,
+
+	# --- L'entree d'une modale (Modal.open).
+	"modal_entry": 0.45,
+	"modal_dim": 0.18,
+
+	# --- Les ecrans qui montent leur contenu par blocs.
+	"panel_entry": 0.42,
+	"card_entry": 0.34,
+	"card_stagger": 0.07,
+}
+
+
+## Duree d'animation `key`, mise a l'echelle par MOTION.scale.
+##
+## Passer par cette fonction plutot que de lire MOTION directement : c'est ce
+## qui fait que `scale` s'applique partout sans exception.
+static func motion(key: String) -> float:
+	return float(MOTION.get(key, 0.3)) * float(MOTION["scale"])
+
+
 # ------------------------------- COMBAT --------------------------------------
 #
 #  Le combat se joue au tour par tour : le joueur deplace UNE piece, l'IA

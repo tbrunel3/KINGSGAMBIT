@@ -30,11 +30,12 @@ enum Context { GOLD, RED, BLUE, NEUTRAL }
 ## etats dans une seule scene), la confirmation d'amelioration, le popup de
 ## missions, le popup de serie, l'aide de la bataille et la vitrine du kit.
 const ENTRY_DELAY := 0.15
-const ENTRY_DURATION := 0.45
 const ENTRY_SCALE := 0.92
-## Le voile est plus rapide que la modale : il assombrit d'abord, la modale
-## arrive dessus. 20 % de la timeline de la maquette.
-const DIM_SECONDS := 0.12
+
+## ⚠️ ENTRY_DURATION et DIM_SECONDS ont demenage dans Balance.MOTION
+## ("modal_entry" et "modal_dim"). Le joueur a demande a ralentir TOUTES les
+## transitions : tant que chaque ecran gardait ses durees chez lui, c'etait
+## huit fichiers a retoucher au lieu d'un seul reglage.
 
 signal closed
 
@@ -144,10 +145,10 @@ func _animate_entry() -> void:
 	_panel.scale = Vector2.ONE * ENTRY_SCALE
 
 	var tween := create_tween().set_parallel(true)
-	tween.tween_property(_dim, "modulate:a", 1.0, DIM_SECONDS)
-	tween.tween_property(_panel, "modulate:a", 1.0, ENTRY_DURATION) \
+	tween.tween_property(_dim, "modulate:a", 1.0, Balance.motion("modal_dim"))
+	tween.tween_property(_panel, "modulate:a", 1.0, Balance.motion("modal_entry")) \
 		.set_delay(ENTRY_DELAY)
-	tween.tween_property(_panel, "scale", Vector2.ONE, ENTRY_DURATION) \
+	tween.tween_property(_panel, "scale", Vector2.ONE, Balance.motion("modal_entry")) \
 		.set_delay(ENTRY_DELAY) \
 		.set_trans(Tween.TRANS_CUBIC).set_ease(Tween.EASE_OUT)
 

@@ -48,8 +48,14 @@ func goto_shop() -> void:
 	_change(SHOP_SCENE)
 
 
+## La carte s'ouvre sur un fondu au BLANC, pas au noir.
+##
+## Demande du joueur, dans ses mots : "un dezoom et fondu au blanc comme une
+## elevation, et ensuite ouverture sur la carte avec le fondu au blanc qui
+## disparait". Le blanc dit qu'on s'eleve au-dessus du village pour regarder
+## le royaume ; le noir dirait qu'on s'en va.
 func goto_campaign() -> void:
-	_change(CAMPAIGN_SCENE)
+	_change(CAMPAIGN_SCENE, ScreenVeil.WHITE)
 
 
 func goto_prep(battle_id: int) -> void:
@@ -66,7 +72,18 @@ func current_battle() -> Dictionary:
 	return Balance.battle(current_battle_id)
 
 
-func _change(path: String) -> void:
-	# Differe d'une frame : on peut ainsi appeler ces methodes depuis un signal
-	# de bouton sans detruire la scene pendant qu'elle traite son input.
-	get_tree().call_deferred("change_scene_to_file", path)
+## TOUT CHANGEMENT D'ECRAN PASSE PAR LE VOILE.
+##
+## C'est le seul endroit du jeu ou une scene est remplacee : y poser le voile
+## corrige d'un coup le chateau, la carte, la boutique, le codex et la
+## bataille, plutot que d'ajouter un fondu local a chacun.
+##
+## ScreenVeil est un autoload : il n'est pas detruit avec la scene sortante.
+## C'est exactement ce qui manquait - village.gd voilait l'ecran puis appelait
+## goto_castle(), et son voile mourait avec lui avant d'avoir pu se lever.
+##
+## L'attente du voile remplace aussi le call_deferred d'avant : on est de toute
+## facon sorti du traitement d'input quand la scene est remplacee, donc
+## l'appeler depuis un signal de bouton reste sans danger.
+func _change(path: String, veil_color: Color = ScreenVeil.BLACK) -> void:
+	ScreenVeil.go(func(): get_tree().change_scene_to_file(path), veil_color)

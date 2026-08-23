@@ -27,6 +27,7 @@ Balance="*res://scripts/data/balance.gd"
 SaveManager="*res://scripts/core/save_manager.gd"
 Game="*res://scripts/core/game_state.gd"
 Router="*res://scripts/core/router.gd"
+ScreenVeil="*res://scripts/ui/screen_veil.gd"
 
 [display]
 

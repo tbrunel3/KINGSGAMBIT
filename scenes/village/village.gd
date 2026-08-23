@@ -76,10 +76,9 @@ const CASTLE_HITBOX := Rect2(108, 292, 182, 140)
 ## ⚠️ Ces quatre valeurs sont le seul endroit a changer si le prototype Figma
 ## rend un mouvement different. Elles ne sont copiees nulle part ailleurs.
 const ZOOM_SCALE := 1.18
-const ZOOM_SECONDS := 0.35
-## Le voile monte sur la fin du zoom, pas des le debut : on doit VOIR le zoom.
-const VEIL_DELAY_RATIO := 0.6
-const VEIL_SECONDS := 0.22
+## ⚠️ ZOOM_SECONDS, VEIL_SECONDS et VEIL_DELAY_RATIO ont ete RETIREES d'ici.
+## La duree du zoom vit maintenant dans Balance.MOTION ("village_zoom"), et le
+## voile local a disparu au profit de ScreenVeil - voir _zoom_to et _unzoom.
 
 const SCREEN_WIDTH := 393.0
 const SCREEN_MARGIN := 8.0
@@ -1051,68 +1050,57 @@ func _open_building(type: String) -> void:
 	_popup.tree_exited.connect(_unzoom)
 
 
-## LE ZOOM VERS LE POINT TOUCHE, puis le voile.
+## LE ZOOM VERS LE POINT TOUCHE.
 ##
 ## Le fond et le calque de decor grossissent ensemble autour du point sous le
-## doigt, qui reste donc immobile. Le voile ne monte que sur la fin
-## (VEIL_DELAY_RATIO) : sans ce decalage on ne verrait pas le zoom, seulement
-## un fondu au noir de plus.
+## doigt, qui reste donc immobile.
+##
+## ⚠️ IL Y AVAIT UN VOILE NOIR ICI, ET C'ETAIT LE BUG DU POPUP EN DOUBLE.
+## L'ancienne version noircissait l'ecran sur la fin du zoom, ouvrait le popup
+## derriere, puis relevait le voile en 0,22 s - pendant que le popup, lui,
+## entrait en 0,45 s (Modal.ENTRY_DURATION). Le voile avait disparu quand le
+## popup n'etait qu'a moitie la : on le voyait surgir A TRAVERS le voile, puis
+## continuer d'apparaitre. Deux fondus concurrents a deux vitesses, ce que le
+## joueur decrivait comme "on le voit apparaitre deux fois".
+##
+## Le zoom ne voile donc plus rien : il zoome, et le popup joue SA propre
+## entree. Une seule apparition. Le changement d'ecran, lui, est voile par
+## ScreenVeil, qui survit a la scene - voir Router._change.
 ##
 ## ⚠️ L'INTERFACE NE ZOOME PAS. La barre haute et le bouton BATAILLE suivent
 ## l'ecran, pas le decor - les faire glisser avec la camera les detacherait du
 ## bord auquel ils sont ancres.
 func _zoom_to(point: Vector2, then: Callable) -> void:
 	_zooming = true
-	var veil := _build_veil()
-
 	for node in [_background, _decor]:
 		node.pivot_offset = point - node.position
 
 	var tween := create_tween().set_parallel(true)
 	for node in [_background, _decor]:
-		tween.tween_property(node, "scale", Vector2.ONE * ZOOM_SCALE, ZOOM_SECONDS) \
-			.set_trans(Tween.TRANS_CUBIC).set_ease(Tween.EASE_OUT)
-	tween.tween_property(veil, "color:a", 1.0, VEIL_SECONDS) \
-		.set_delay(ZOOM_SECONDS * VEIL_DELAY_RATIO)
+		tween.tween_property(node, "scale", Vector2.ONE * ZOOM_SCALE,
+				Balance.motion("village_zoom")) 			.set_trans(Tween.TRANS_CUBIC).set_ease(Tween.EASE_OUT)
 
 	await tween.finished
 	then.call()
-	# Le voile redescend PAR-DESSUS le popup deja ouvert : c'est ce qui fait
-	# que le popup est deja la quand la lumiere revient.
-	var lift := create_tween()
-	lift.tween_property(veil, "color:a", 0.0, VEIL_SECONDS)
-	lift.tween_callback(veil.queue_free)
-	lift.tween_callback(func(): _zooming = false)
+	_zooming = false
 
 
-## Le retour : voile, puis le decor reprend sa taille, puis la lumiere.
+## Le retour : le decor reprend sa taille, en glissant.
+##
+## ⚠️ IL Y AVAIT UN VOILE ICI, ET IL SERVAIT A CACHER UN SAUT. L'ancienne
+## version noircissait l'ecran, REMETTAIT l'echelle a 1 d'un coup, puis
+## rallumait. Un tween de retour ne cache rien parce qu'il n'y a plus rien a
+## cacher - et c'est plus doux que le fondu qu'il remplace.
 func _unzoom() -> void:
 	if not is_inside_tree():
 		return
 	_zooming = true
-	var veil := _build_veil()
-
-	var tween := create_tween()
-	tween.tween_property(veil, "color:a", 1.0, VEIL_SECONDS * 0.7)
-	tween.tween_callback(func():
-		for node in [_background, _decor]:
-			node.scale = Vector2.ONE)
-	tween.tween_property(veil, "color:a", 0.0, VEIL_SECONDS)
-	tween.tween_callback(veil.queue_free)
-	tween.tween_callback(func(): _zooming = false)
-
-
-## Un voile noir plein ecran, AU-DESSUS de tout - interface comprise. Il est
-## cree puis detruit a chaque transition : un voile permanent a l'opacite 0
-## avalerait les clics ou serait oublie allume.
-func _build_veil() -> ColorRect:
-	var veil := ColorRect.new()
-	veil.name = "Veil"
-	veil.color = Color(0, 0, 0, 0.0)
-	veil.mouse_filter = Control.MOUSE_FILTER_STOP
-	veil.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-	add_child(veil)
-	return veil
+	var tween := create_tween().set_parallel(true)
+	for node in [_background, _decor]:
+		tween.tween_property(node, "scale", Vector2.ONE,
+				Balance.motion("village_zoom")) 			.set_trans(Tween.TRANS_CUBIC).set_ease(Tween.EASE_IN_OUT)
+	await tween.finished
+	_zooming = false
 
 
 func _on_battle_pressed() -> void:

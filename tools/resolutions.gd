@@ -171,6 +171,10 @@ func _fill_result(screen: Node, kind: String) -> void:
 
 
 func _ready() -> void:
+	# Un banc ne joue pas la mise en scene : sans ca, chaque changement
+	# d'ecran ajoute un fondu complet et le banc ralentit sans rien
+	# mesurer de plus. Meme doctrine que BattleAI.budget_ms = 0.
+	ScreenVeil.instant = true
 	DirAccess.make_dir_recursive_absolute(ProjectSettings.globalize_path(OUTPUT_DIR))
 	Game.reset_progress()
 
