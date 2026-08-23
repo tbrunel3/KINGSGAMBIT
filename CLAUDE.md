@@ -24,6 +24,14 @@ documents complètent celui-ci et ne le répètent pas :
   l'inventaire des animations, celui des écrans, les sept pièges de portage, et
   la mesure de l'incohérence des boutons de coin — six tailles pour la même
   chose. **Partout où il dit « pas tranché », c'est la spec qui fait foi.**
+- [`passation_chantier_j.md`](passation_chantier_j.md) — **le travail en cours,
+  et le premier fichier à ouvrir après celui-ci.** Les vingt-deux retours du
+  joueur après ses tests sur téléphone, ce qui est corrigé et mesuré, ce qui
+  reste, et **trois pièges qui ne sont pas dans le code** : le site en ligne
+  peut mentir sur l'état du travail, `ui_test._press()` n'appuie sur rien pour
+  la moitié des contrôles, et j'ai annoncé une correction avant de l'avoir
+  prouvée. Le carnet de suivi vit dans un artefact web, dont l'adresse est dans
+  la passation.
 - [`chantier_i_missives.md`](chantier_i_missives.md) — **le chantier suivant,
   spec écrite le 23/08, pas encore commencé** : les quatre lettres scellées du
   Roi, qui portent le *pourquoi* du jeu là où `GuidePopup` porte le *comment*.
