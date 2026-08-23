@@ -476,6 +476,11 @@ morts**, et un relevé fait sur les anciennes pages parle d'un fichier périmé.
 | | 10-popup-batiment-verrouille | `410:7488` | fait — cerclé d'or comme la maquette le demande |
 | | 11-popup-amelioration | `410:7629` | fait |
 | | confirm-upgrade-modal | `410:7769` | fait — `confirm_upgrade.tscn` |
+| | 12-popup-donjon-tours | `492:2` | ajouté par le designer pour le prototype Make |
+| | **13-popup-guide-pat** | **`499:2`** | **chantier E** — première maquette posée par l'intégration, à retoucher |
+| | **14-popup-guide-composition** | **`500:2`** | **chantier E** — idem |
+| | **15-popup-guide-aura-dame** | **`500:55`** | **chantier E** — idem |
+| | **16-popup-guide-temps-reel** | **`500:108`** | **chantier E** — idem |
 | 📖 Codex & Shop `420:8` | codex-popup-v3 | `410:6525` | fait — la v3 réécrit les données, la v1 décrivait un autre jeu (voir ci-dessous) |
 | | shop-screen | `410:7061` | fait — cascade d'ouverture et dix illustrations posées le 23/08 — corrigé le 23/08 : légende des quatre coffres, section OR recalibrée, euros grisés, **bloc de coffres gratuits dessiné**. Règles dans [`chantier_h_boutique.md`](chantier_h_boutique.md) |
 

@@ -22,7 +22,7 @@ sous-systèmes, et parce que la première rendait les autres intestables.
 | **B** | La série s'enchaîne sans écran de victoire | ✅ commit `e2772b7` |
 | **C** | La composition d'armée | ✅ fait |
 | **D** | Polices et animations Figma | 🟡 **aux trois quarts** — voir ci-dessous |
-| **E** | Les popups d'accompagnement | à faire |
+| **E** | Les popups d'accompagnement | ✅ **fait le 23/08/2026** — les quatre sont en jeu et maquettés |
 | **G + F** | **L'assemblage Figma et le responsive**, ensemble | ✅ **fait le 23/08/2026** — voir [`chantier_g_f.md`](chantier_g_f.md) |
 
 **L'ordre a été fixé par le joueur** : A → B → C → D → E, puis **G et F menés
@@ -402,7 +402,19 @@ bandes**. Le parchemin a été recadré (786 → 726).
 
 ---
 
-# E — les popups d'accompagnement
+# E — les popups d'accompagnement ✅ FAIT
+
+> **Livré le 23/08/2026.** Les quatre candidats ci-dessous ont été retenus par
+> le joueur et construits : `scenes/ui/guide_popup.gd`, un seul fichier pour
+> les quatre. Les maquettes sont dans `MAINPROJECT` (`499:2`, `500:2`,
+> `500:55`, `500:108`), posées par l'intégration et **à retoucher par le
+> designer**.
+>
+> ⚠️ **Leur fond est celui du popup dont ils sont clonés** — la salle du
+> château. Il n'a aucun sens pour le pat, qui arrive en fin de combat, ni pour
+> la composition. C'est la première chose à corriger côté maquette.
+>
+> Le candidat 3 (le sacre) reste retiré : la règle n'existe plus.
 
 ## Ce que le joueur a demandé
 
