@@ -49,6 +49,38 @@ const DISABLED_EDGE := Color("4d5568")
 
 const CARD_MIN := Vector2(96, 0)
 
+## LES ILLUSTRATIONS DE LA MAQUETTE, enfin en place.
+##
+## L'ecran etait fonctionnel mais BRUT : ses dix cartes portaient trois glyphes
+## traces au trait - une etoile grise pour les quatre coffres, un losange pour
+## les trois packs de gemmes, une piece pour les trois packs d'or. Rien ne
+## distinguait un Commun d'un Legendaire avant d'en lire le prix.
+##
+## ⚠️ Ce sont les images SOURCES de Figma (download_assets > rawImages), pas
+## des exports de noeud : l'export arrive avec le fond de la frame cuit dedans,
+## alpha entierement opaque. Verifie sur les dix - alpha minimum 0.
+##
+## Ramenees de 1254 a 192 points et rognees de leur vide : 534 Ko au total, la
+## carte fait 56 points de haut.
+const ART_CHEST := {
+	"commun": "res://assets/shop/chest_commun.png",
+	"rare": "res://assets/shop/chest_rare.png",
+	"epique": "res://assets/shop/chest_epique.png",
+	"legendaire": "res://assets/shop/chest_legendaire.png",
+}
+## Les trois tailles de pack, du petit tas au coffre plein.
+const ART_GEMS := [
+	"res://assets/shop/gems_small.png",
+	"res://assets/shop/gems_medium.png",
+	"res://assets/shop/gems_large.png",
+]
+const ART_GOLD := [
+	"res://assets/shop/gold_small.png",
+	"res://assets/shop/gold_medium.png",
+	"res://assets/shop/gold_large.png",
+]
+
+
 @onready var _background: TextureRect = $Background
 @onready var _header: HBoxContainer = $Safe/Root/HeaderMargin/Header
 @onready var _body: VBoxContainer = $Safe/Root/Scroll/Body
@@ -95,6 +127,31 @@ func _process(delta: float) -> void:
 			label.text = UiTheme.format_span(Game.free_chest_remaining(id))
 	if rebuild:
 		_refresh()
+
+
+## Une illustration de carte. `available` a faux la grise, comme les cartes
+## desactivees de la maquette : le dessin reste lisible, mais il ne se propose
+## plus.
+func _illustration(path: String, height: float, available: bool = true) -> Control:
+	var art := TextureRect.new()
+	art.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+	art.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+	art.custom_minimum_size = Vector2(0, height)
+	art.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	if path != "" and ResourceLoader.exists(path):
+		art.texture = load(path)
+	if not available:
+		art.modulate = Color(0.55, 0.58, 0.66, 0.75)
+	return art
+
+
+## L'illustration de rang `index` dans une liste, ou la derniere si Balance en
+## declare plus que la maquette n'en a dessine. Un pack sans dessin vaudrait
+## mieux qu'un plantage, mais une carte vide serait pire que la derniere image.
+func _art(list: Array, index: int) -> String:
+	if list.is_empty():
+		return ""
+	return String(list[mini(index, list.size() - 1)])
 
 
 func _build_background() -> void:
@@ -399,12 +456,11 @@ func _chest_card(chest: Dictionary) -> Control:
 	col.add_theme_constant_override("separation", 4)
 	card.add_child(col)
 
-	var icon := Icon.new()
-	icon.icon_name = "star"
-	icon.color = GOLD if usable else TEXT_DIM
-	icon.custom_minimum_size = Vector2(0, 44)
-	icon.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	col.add_child(icon)
+	# L'illustration du coffre, et non plus une etoile grise pour les quatre.
+	# Chaque rarete a son dessin (410:7087) : bois pour le Commun, bleu pour le
+	# Rare, rouge pour l'Epique, pourpre couronne pour le Legendaire. C'est ce
+	# qui les distingue d'un coup d'oeil, avant meme de lire le prix.
+	col.add_child(_illustration(ART_CHEST.get(String(chest["id"]), ""), 44.0, usable))
 
 	var name_label := _text(_chest_name(chest), 10, TEXT_BRIGHT)
 	name_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
@@ -440,13 +496,13 @@ func _legend_panel() -> Control:
 	row.add_theme_constant_override("separation", 12)
 	panel.add_child(row)
 
-	var crown := Icon.new()
-	crown.icon_name = "crown"
-	crown.color = GOLD
-	crown.custom_minimum_size = Vector2(72, 72)
-	crown.size_flags_vertical = Control.SIZE_SHRINK_CENTER
-	crown.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	row.add_child(crown)
+	# LE COFFRE LUI-MEME, et non plus une couronne tracee. C'est le seul objet
+	# du jeu qui termine une amelioration d'un coup : il merite son dessin, et
+	# la maquette lui donne le plus riche des quatre.
+	var art := _illustration(ART_CHEST.get("legendaire", ""), 72.0)
+	art.custom_minimum_size = Vector2(72, 72)
+	art.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	row.add_child(art)
 
 	var col := VBoxContainer.new()
 	col.add_theme_constant_override("separation", 3)
@@ -501,8 +557,10 @@ func _build_gem_packs() -> void:
 	inner.add_child(row)
 
 	var enabled: bool = Balance.SHOP.get("gem_packs_enabled", false)
-	for pack in Balance.SHOP["gem_packs"]:
-		row.add_child(_pack_card("diamond", GEM,
+	var gem_packs: Array = Balance.SHOP["gem_packs"]
+	for i in range(gem_packs.size()):
+		var pack: Dictionary = gem_packs[i]
+		row.add_child(_pack_card(_art(ART_GEMS, i),
 			"%s Gemmes" % UiTheme.format_thousands(int(pack["gems"])),
 			String(pack["price"]) if enabled else "Bientôt",
 			enabled, Callable()))
@@ -531,12 +589,7 @@ func _build_gold_packs() -> void:
 		col.add_theme_constant_override("separation", 4)
 		card.add_child(col)
 
-		var icon := Icon.new()
-		icon.icon_name = "coin"
-		icon.color = GOLD
-		icon.custom_minimum_size = Vector2(0, 44)
-		icon.mouse_filter = Control.MOUSE_FILTER_IGNORE
-		col.add_child(icon)
+		col.add_child(_illustration(_art(ART_GOLD, index), 44.0))
 
 		var label := _text(
 			"%s Or" % UiTheme.format_thousands(int(pack["gold"])), 10, TEXT_BRIGHT)
@@ -549,7 +602,7 @@ func _build_gold_packs() -> void:
 		row.add_child(card)
 
 
-func _pack_card(icon_name: String, icon_color: Color, title: String,
+func _pack_card(art_path: String, title: String,
 		button_text: String, enabled: bool, on_press: Callable) -> Control:
 	var card := _plate(Color("3d4f6b"), 2.0, 10.0, CARD_FILL)
 	card.set_padding(6, 6, 6, 6)
@@ -561,12 +614,7 @@ func _pack_card(icon_name: String, icon_color: Color, title: String,
 	col.add_theme_constant_override("separation", 4)
 	card.add_child(col)
 
-	var icon := Icon.new()
-	icon.icon_name = icon_name
-	icon.color = icon_color
-	icon.custom_minimum_size = Vector2(0, 44)
-	icon.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	col.add_child(icon)
+	col.add_child(_illustration(art_path, 44.0, enabled))
 
 	var label := _text(title, 10, TEXT_BRIGHT)
 	label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
