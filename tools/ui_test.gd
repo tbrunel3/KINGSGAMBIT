@@ -24,6 +24,7 @@ func _ready() -> void:
 	await _test_series_chaining()
 	await _test_shop()
 	await _test_modal_entry()
+	await _test_shop_entry()
 
 	print("")
 	if _failures == 0:
@@ -108,6 +109,51 @@ func _test_modal_entry() -> void:
 	_check(absf(panel.scale.x - 1.0) < 0.01, "et a l'echelle 1 (%.3f)" % panel.scale.x)
 
 	village.queue_free()
+	await _frames(2)
+
+
+## LA CASCADE DE LA BOUTIQUE - et surtout : elle ne se rejoue PAS a l'achat.
+##
+## L'ecran se reconstruit en entier a chaque gemme depensee. Une entree qui se
+## rejouerait ferait re-tomber toute la boutique dans le dos du joueur au
+## moment ou il achete. C'est le vrai risque de cette animation, et c'est ce
+## que ce test garde.
+func _test_shop_entry() -> void:
+	print("\n[9] Boutique : la cascade s'ouvre une fois, et une seule")
+
+	Game.reset_progress()
+	Game.add_gems(2000)
+	var shop: Node = load("res://scenes/village/shop.tscn").instantiate()
+	add_child(shop)
+	await _frames(4)
+
+	var faded := 0
+	for section in shop._sections:
+		if section.modulate.a < 0.9:
+			faded += 1
+	_check(faded > 0, "la boutique part en fondu (%d sections)" % faded)
+
+	await _skip_animations()
+	await _frames(2)
+	var late := 0
+	for section in shop._sections:
+		if section.modulate.a < 0.99 or absf(section.scale.x - 1.0) > 0.01:
+			late += 1
+	_check(late == 0, "tout est en place a la fin (%d en retard)" % late)
+
+	# Un achat reconstruit l'ecran : la cascade ne doit pas repartir.
+	Game.add_gold(50000)
+	Game.start_upgrade(Balance.CASTLE)
+	await _frames(3)
+	shop._on_buy_chest(Balance.shop_chest("rare"))
+	await _frames(5)
+	var replayed := 0
+	for section in shop._sections:
+		if is_instance_valid(section) and section.modulate.a < 0.99:
+			replayed += 1
+	_check(replayed == 0, "elle ne se rejoue pas a l'achat (%d relancees)" % replayed)
+
+	shop.queue_free()
 	await _frames(2)
 
 

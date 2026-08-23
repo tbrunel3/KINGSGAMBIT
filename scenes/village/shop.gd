@@ -61,6 +61,12 @@ var _tick: float = 0.0
 ## lorsqu'un coffre devient pret - pas a chaque seconde.
 var _ready_state: Dictionary = {}
 
+## Les trois sections, dans l'ordre ou elles sont construites - et c'est aussi
+## celui de la cascade de la maquette : coffres, gemmes, or.
+var _sections: Array[Control] = []
+## L'entree ne se joue qu'une fois : l'ecran se reconstruit a chaque achat.
+var _entered: bool = false
+
 
 func _ready() -> void:
 	_build_background()
@@ -183,9 +189,92 @@ func _refresh() -> void:
 
 
 func _build_body() -> void:
+	_sections.clear()
 	_build_chests()
 	_build_gem_packs()
 	_build_gold_packs()
+
+	# ⚠️ L'ENTREE NE SE JOUE QU'UNE FOIS, A L'OUVERTURE.
+	#
+	# Cet ecran se RECONSTRUIT en entier a chaque signal : une gemme depensee,
+	# de l'or encaisse, un coffre qui devient pret. Rejouer la cascade a chaque
+	# fois ferait re-tomber toute la boutique dans le dos du joueur au moment
+	# ou il achete - il verrait son geste effacer l'ecran.
+	if not _entered:
+		_entered = true
+		_animate_entry.call_deferred()
+
+
+## L'ENTREE DE LA BOUTIQUE - cascade de haut en bas (shop-screen, 410:7061).
+##
+## Relevee sur une timeline de 1,5 s. Les trois sections arrivent a 0,15 s,
+## 0,50 s et 0,75 s ; dans chacune, les cartes eclosent 0,20 s apres leur
+## section, a 0,10 s d'ecart.
+##
+## ⚠️ NI TRANSLATION NI CASCADE CARTE PAR CARTE HORS SECTION. La maquette fait
+## monter les sections de 35 a 40 px, mais ce sont des enfants de conteneur :
+## le tween s'y bat avec la mise en page (piege deja paye sur le bandeau de
+## serie). Opacite et echelle seulement - ce sont les deux autres proprietes
+## que la maquette anime de toute facon.
+const ENTRY_SECTION_DELAY := [0.15, 0.50, 0.75]
+const ENTRY_CARD_OFFSET := 0.20
+const ENTRY_CARD_GAP := 0.10
+const ENTRY_DURATION := 0.35
+const ENTRY_CARD_DURATION := 0.30
+## Les sections se posent de 0,92 ; les cartes ECLOSENT de 0,5. La difference
+## est dans la maquette, et elle se voit : un panneau se pose, une carte nait.
+const ENTRY_SECTION_SCALE := 0.92
+const ENTRY_CARD_SCALE := 0.5
+
+
+func _animate_entry() -> void:
+	# Les pivots ne se lisent qu'une fois la mise en page faite : releves a la
+	# construction, ils valent zero et l'echelle partirait du coin.
+	await get_tree().process_frame
+	if not is_inside_tree():
+		return
+
+	var tween := create_tween().set_parallel(true)
+
+	for index in range(_sections.size()):
+		var section: Control = _sections[index]
+		if not is_instance_valid(section):
+			continue
+		var delay: float = ENTRY_SECTION_DELAY[mini(index, ENTRY_SECTION_DELAY.size() - 1)]
+		_pop(tween, section, delay, ENTRY_SECTION_SCALE, ENTRY_DURATION)
+
+		# Les cartes de la section, dans leur ordre d'ajout.
+		var cards := _cards_of(section)
+		for card_index in range(cards.size()):
+			_pop(tween, cards[card_index],
+				delay + ENTRY_CARD_OFFSET + float(card_index) * ENTRY_CARD_GAP,
+				ENTRY_CARD_SCALE, ENTRY_CARD_DURATION)
+
+
+## Un element qui apparait : opacite de 0 a 1, echelle de `from` a 1, avec le
+## leger depassement de la courbe Figma (cubic-bezier(0.45, 1.45, 0.8, 1)).
+func _pop(tween: Tween, node: Control, delay: float, from: float,
+		seconds: float) -> void:
+	node.pivot_offset = node.size * 0.5
+	node.modulate.a = 0.0
+	node.scale = Vector2.ONE * from
+	tween.tween_property(node, "modulate:a", 1.0, seconds).set_delay(delay)
+	tween.tween_property(node, "scale", Vector2.ONE, seconds).set_delay(delay) \
+		.set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
+
+
+## Les cartes d'une section : les enfants du panneau, pas ceux du bandeau de
+## titre. Une section est un VBox {CenterContainer(titre), Panel{inner}}.
+func _cards_of(section: Control) -> Array[Control]:
+	var cards: Array[Control] = []
+	for child in section.get_children():
+		if not (child is RoyalPlate):
+			continue
+		for inner in child.get_children():
+			for card in inner.get_children():
+				if card is Control:
+					cards.append(card)
+	return cards
 
 
 ## Bandeau de titre de section, la pastille arrondie de la maquette.
@@ -209,6 +298,10 @@ func _section(title: String) -> VBoxContainer:
 	var inner := VBoxContainer.new()
 	inner.add_theme_constant_override("separation", 10)
 	panel.add_child(inner)
+	# La liste est batie ICI, la ou les sections naissent, et jamais par
+	# find_children : celui-ci rendrait un ordre imprevisible, et la cascade
+	# n'a de sens que dans l'ordre de lecture.
+	_sections.append(wrap)
 	return inner
 
 
