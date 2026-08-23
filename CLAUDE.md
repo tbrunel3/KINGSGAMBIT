@@ -16,11 +16,14 @@ documents complètent celui-ci et ne le répètent pas :
   popups d'accompagnement restent. Il porte aussi les décisions déjà prises par
   le joueur — à lire avant d'y toucher, la moitié de ce qu'il demande existe
   déjà, et le rebâtir créerait des règles concurrentes.
-- [`passation_g_f.md`](passation_g_f.md) — **le chantier suivant** : l'assemblage
-  graphique et le format d'écran, menés ensemble. Il porte la décision qui les
-  ouvre (`expand` contre `keep`), l'inventaire des animations, celui des écrans,
-  et la mesure de l'incohérence des boutons de coin — six tailles pour la même
-  chose.
+- [`chantier_g_f.md`](chantier_g_f.md) — **le chantier en cours** : l'assemblage
+  graphique et le format d'écran, menés ensemble. Il porte les cinq décisions
+  prises le 23/08 (dont `expand`, qui commandait tout le reste), la mesure
+  chiffrée de la dérive du village, et le plan d'attaque en six temps.
+- [`passation_g_f.md`](passation_g_f.md) — la passation du même chantier :
+  l'inventaire des animations, celui des écrans, les sept pièges de portage, et
+  la mesure de l'incohérence des boutons de coin — six tailles pour la même
+  chose. **Partout où il dit « pas tranché », c'est la spec qui fait foi.**
 - [`chantier_h_boutique.md`](chantier_h_boutique.md) — la boutique : règles,
   mesures et décisions. Terminé.
 - [`figma_contexte_projet.md`](figma_contexte_projet.md) — pour le designer :

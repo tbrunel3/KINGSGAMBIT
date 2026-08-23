@@ -1,5 +1,11 @@
 # Passation — chantiers G et F
 
+> ⚠️ **LES DÉCISIONS SONT PRISES DEPUIS LE 23/08/2026.** Elles sont dans
+> [`chantier_g_f.md`](chantier_g_f.md), avec le plan d'attaque en six temps.
+> **Lis-le d'abord.** Ce document-ci reste la référence pour l'inventaire, les
+> mesures et les pièges — mais partout où il dit « pas tranché », c'est lui qui
+> est périmé, pas la spec.
+
 **Ce document existe pour la fenêtre qui prendra G et F à froid.** Il dit ce
 qu'ils sont, la décision qui les ouvre, l'inventaire de ce qui reste écran par
 écran, et les pièges déjà payés — avec leurs chiffres.
