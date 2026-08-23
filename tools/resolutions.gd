@@ -127,26 +127,37 @@ func _finish_animations() -> void:
 ## secondaires) - c'est la hauteur de contenu qui compte pour un banc de
 ## format, pas le detail des chiffres.
 func _fill_result(screen: Node, kind: String) -> void:
+	# ⚠️ LE TITRE VIDE N'EST PAS UN OUBLI. BattleResult a DEUX visages : une
+	# petite plaque ECRITE quand on lui donne un texte ("COMBAT 2 SUR 3"), et le
+	# grand lettrage GRAVE quand on ne lui en donne pas. C'est le second que
+	# montre la maquette (410:5121), et c'est celui de la fin d'une serie.
+	#
+	# Passer "VICTOIRE" ici sortait la petite plaque, et la capture donnait
+	# l'impression que l'image gravee manquait au depot. Elle n'a jamais
+	# manque : c'etait le banc qui demandait l'autre variante.
 	match kind:
 		"win":
-			screen.open(true, "VICTOIRE")
-			screen.add_reward_row("Butin", 1250)
-			screen.add_stat_row("Ennemis vaincus", "12 pieces")
-			screen.add_stat_row("Pertes du combat", "2 Pions", 1)
-			screen.add_stat_row("Armee restante", "9 pieces", 1)
+			screen.open(true, "")
+			screen.add_reward_row("Recompense totale", 450)
+			screen.add_stat_row("Ennemis vaincus", "11")
+			screen.add_stat_row("Pertes", "2 Pions", 1)
 		"loss":
-			screen.open(false, "DEFAITE")
+			screen.open(false, "")
 			screen.add_reward_row("Consolation", 180)
 			screen.add_stat_row("Serie rompue", "Combat 2 sur 3")
 			screen.add_stat_row("Pertes du combat", "3 Pions, 1 Tour", 1)
 		_:
-			screen.open_draw("NULLE")
+			# Le nul n'a JAMAIS le grand lettrage (cf. open_draw) : sa plaque
+			# d'acier gravee lui tient lieu de titre.
+			screen.open_draw("")
 			screen.add_reward_row("Butin promis", 900)
 			screen.add_stat_row("Combat nul", "Position morte")
 			screen.add_stat_row("Pertes du combat", "1 Cavalier", 1)
-			screen.add_stat_row("Armee restante", "7 pieces", 1)
 
-	screen.add_primary_button("CONTINUER", func(): pass)
+	# Quatre boutons, comme la maquette : principal, secondaire, et deux
+	# d'action. C'est la hauteur de contenu qui compte pour un banc de format.
+	screen.add_primary_button("BATAILLE SUIVANTE", func(): pass)
+	screen.add_secondary_button("REESSAYER", func(): pass)
 	screen.add_action_button("ROYAUME", "castle", func(): pass)
 	screen.add_action_button("CAMPAGNE", "compass", func(): pass)
 

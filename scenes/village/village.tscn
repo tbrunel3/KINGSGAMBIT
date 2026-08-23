@@ -43,7 +43,14 @@ grow_vertical = 2
 mouse_filter = 2
 script = ExtResource("3_fades")
 
-[node name="Overlay" type="Control" parent="."]
+[node name="DecorLayer" type="Control" parent="."]
+layout_mode = 1
+anchors_preset = 0
+offset_right = 864.0
+offset_bottom = 1821.0
+mouse_filter = 2
+
+[node name="UiLayer" type="Control" parent="."]
 layout_mode = 1
 anchors_preset = 15
 anchor_right = 1.0

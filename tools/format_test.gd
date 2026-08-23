@@ -41,6 +41,7 @@ var _failures: int = 0
 func _ready() -> void:
 	print("=== KING'S GAMBIT - banc de format ===")
 	_test_cover_fit()
+	_test_village_anchoring()
 
 	print("")
 	if _failures == 0:
@@ -109,3 +110,59 @@ func _test_cover_fit() -> void:
 		var r := CoverFit.rect(size, texture)
 		_check(r.size.x >= size.x - 0.01 and r.size.y >= size.y - 0.01,
 			"%s : le fond couvre l'ecran entier" % String(entry["name"]))
+
+
+# ------------------------------- LE VILLAGE ----------------------------------
+
+const Village := preload("res://scenes/village/village.gd")
+
+## Le village colle ses etiquettes a des batiments PEINTS DANS le fond. La
+## seule chose qui doive rester vraie sur tous les formats, c'est donc : une
+## etiquette tombe toujours sur le MEME POINT DE L'IMAGE.
+##
+## ⚠️ Ce test garde la FORMULE contre une regression, il ne remplace pas
+## l'oeil : la preuve que les etiquettes tombent bien sur leurs batiments
+## reste la comparaison visuelle de resolutions.tscn.
+func _test_village_anchoring() -> void:
+	print("\n[2] Village : les etiquettes suivent le decor, pas l'ecran")
+
+	var texture: Vector2 = Village.BACKGROUND_SIZE
+	var design: Vector2 = Village.DESIGN_SIZE
+
+	# Les quatre casernes, le chateau, et une lumiere de fenetre - relevees sur
+	# la maquette, donc exprimees dans le repere de la REFERENCE.
+	var points := {
+		"caserne des pions": Vector2(57, 240),
+		"ecuries": Vector2(235, 230),
+		"cloitre des fous": Vector2(45, 628),
+		"donjon des tours": Vector2(252, 619),
+		"chateau": Vector2(120, 425),
+		"fenetre centrale": Vector2(186, 385),
+	}
+
+	for label in points:
+		var design_point: Vector2 = points[label]
+		var expected := CoverFit.to_texture(design_point, design, texture)
+
+		# A la reference, la conversion doit etre l'identite : sinon le village
+		# a bouge par rapport a sa propre maquette.
+		var at_base: Vector2 = Village.design_to_decor(design_point, design)
+		_check(at_base.distance_to(design_point) < 0.5,
+			"%s : inchange a la reference (%.2f)" % [label, at_base.distance_to(design_point)])
+
+		# Sur les huit formats, le point d'image vise doit rester le meme.
+		var worst := 0.0
+		for entry in VIEWPORTS:
+			var size: Vector2 = entry["size"]
+			var placed: Vector2 = Village.design_to_decor(design_point, size)
+			var landed := CoverFit.to_texture(placed, size, texture)
+			worst = maxf(worst, landed.distance_to(expected))
+		_check(worst < 1.0, "%s : derive maximale %.2f pt sur les huit formats" % [label, worst])
+
+	# Le bouton BATAILLE suit l'ECRAN, pas le decor : il doit rester centre.
+	for entry in VIEWPORTS:
+		var size: Vector2 = entry["size"]
+		var center: float = Village.battle_center_x(size)
+		_check(_near(center, size.x * 0.5, 1.0),
+			"%s : BATAILLE centre (%.1f pour un centre a %.1f)"
+				% [String(entry["name"]), center, size.x * 0.5])

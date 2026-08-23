@@ -17,7 +17,15 @@ Thumbs.db
 
 # Captures des bancs (regenerees a la demande par tools/screenshot.tscn,
 # ui_test.tscn et resolutions.tscn) : sorties d'outil, pas des sources.
-tools/screenshots/
+#
+# Le .gdignore, lui, EST une source, et il doit survivre a un clone neuf :
+# sans lui Godot importe les 128 captures comme des textures de jeu, et le
+# lancement suivant les reimporte toutes. Mesure : 44 Mo de cache d'import et
+# plus de cinq minutes de demarrage. D'ou le motif en deux temps - git ne
+# descend pas dans un dossier ignore, une simple negation apres
+# "tools/screenshots/" ne servirait a rien.
+tools/screenshots/*
+!tools/screenshots/.gdignore
 
 # Build web (37 Mo de wasm + 15 Mo de pck a chaque export). Publie depuis la
 # branche gh-pages, pas depuis main : voir README, section "Regenerer les builds".
