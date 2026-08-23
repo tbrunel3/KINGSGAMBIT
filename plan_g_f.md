@@ -1740,6 +1740,195 @@ git commit -m "Les missions : l'ouverture et la reclamation sont deux animations
 
 ---
 
+## Tâche 9 bis : trois écrans de résultat, trois entrées
+
+**Ajoutée le 23/08 par le relevé de la tâche 1.** La passation déclarait la
+victoire et la défaite « sans aucune donnée de mouvement ». C'est faux : elles
+ont **24 et 8 nœuds**. Et le jeu leur joue aujourd'hui la timeline du **match
+nul**.
+
+**Fichiers :**
+- Modifier : `scenes/battle/battle_result.gd`
+
+**Interfaces :**
+- Consomme : `_animate_entry()`, `_slide_in()`, `_build_confetti()` — tous
+  existants.
+- Produit : `BattleResult.ENTRY` (une table de trois timelines).
+
+Vérifié ligne à ligne : `_animate_entry()` pose échelle 1,8 → 1 avec
+`TRANS_BACK` au délai 0,3, stats +40 à 1,0 s, boutons +30 à 1,3 s. Ce sont
+**exactement** les valeurs de `410:5551`, l'écran de nul.
+
+| | Durée | Le titre | Stats | Boutons |
+|---|---|---|---|---|
+| **Victoire** `410:5121` | 2,507 s | échelle **0,3 → 1** + montée de **+60**, ressort qui dépasse à **1,36** | +40 à 1,0 s | +50 à 1,3 s |
+| **Défaite** `410:5430` | 3,5 s | **tombe de −80**, échelle **1,15 → 1**, sans rebond | +30 à 1,6 s | +25 à 2,2 s |
+| **Nulle** `410:5551` *(porté)* | 3 s | échelle **1,8 → 1**, s'abat | +40 à 1,0 s | +30 à 1,3 s |
+
+La victoire **jaillit du bas en rebondissant**, la défaite **tombe d'en haut,
+lentement et sans rebond**, le nul **s'abat**. C'est trois lectures différentes
+du même écran — et c'est de l'apparence pure, donc la règle 2 donne raison à la
+maquette sans discussion.
+
+- [ ] **Étape 1 : écrire le test, qui échoue**
+
+Ajouter à `tools/ui_test.gd` :
+
+```gdscript
+# --------------------- LES TROIS ECRANS DE RESULTAT --------------------------
+
+## La maquette leur donne TROIS entrees, et le jeu n'en jouait qu'une : celle du
+## match nul, sur les trois peaux. Ce test ne juge pas l'esthetique - il
+## verifie que les trois timelines sont bel et bien DIFFERENTES.
+func _test_result_entries() -> void:
+	print("\n[10] Resultats : trois ecrans, trois entrees")
+
+	const ResultScript := preload("res://scenes/battle/battle_result.gd")
+	_check(ResultScript.ENTRY.size() == 3, "trois timelines declarees")
+
+	var win: Dictionary = ResultScript.ENTRY["win"]
+	var loss: Dictionary = ResultScript.ENTRY["loss"]
+	var draw: Dictionary = ResultScript.ENTRY["draw"]
+
+	_check(float(win["title_scale"]) < 1.0,
+		"la victoire jaillit du petit (%.2f)" % float(win["title_scale"]))
+	_check(float(loss["title_rise"]) < 0.0,
+		"la defaite tombe d'en haut (%.0f)" % float(loss["title_rise"]))
+	_check(float(draw["title_scale"]) > 1.0,
+		"le nul s'abat du grand (%.2f)" % float(draw["title_scale"]))
+	_check(float(loss["buttons_delay"]) > float(win["buttons_delay"]),
+		"la defaite est plus lente que la victoire (%.1f contre %.1f)"
+			% [float(loss["buttons_delay"]), float(win["buttons_delay"])])
+```
+
+Ajouter `await _test_result_entries()` dans `_ready()`.
+
+- [ ] **Étape 2 : le lancer pour vérifier qu'il échoue**
+
+```bash
+"$GODOT" --headless --path . tools/ui_test.tscn
+```
+
+Attendu : échec — `ENTRY` n'existe pas.
+
+- [ ] **Étape 3 : sortir les trois timelines en table**
+
+Dans `scenes/battle/battle_result.gd`, ajouter :
+
+```gdscript
+## LES TROIS ENTREES, une par peau.
+##
+## Elles etaient UNE SEULE - celle du match nul, jouee aussi sur la victoire et
+## la defaite. Releve sur MAINPROJECT le 23/08 : la passation les declarait
+## "sans aucune donnee de mouvement", et elles en ont 24 et 8.
+##
+## Ce que chacune raconte, et c'est le sujet : la victoire JAILLIT du bas en
+## rebondissant, la defaite TOMBE d'en haut lentement et sans rebond, le nul
+## S'ABAT comme un tampon. Aplatir les trois sur une seule, c'est faire lire la
+## meme chose a trois issues differentes.
+const ENTRY := {
+	"win": {
+		"title_scale": 0.3, "title_rise": 60.0, "title_delay": 0.40,
+		"title_time": 0.70, "title_trans": Tween.TRANS_ELASTIC,
+		"stats_rise": 40.0, "stats_delay": 1.00,
+		"buttons_rise": 50.0, "buttons_delay": 1.30,
+	},
+	"loss": {
+		# Pas de rebond, et c'est deliberé : TRANS_CUBIC descend et s'arrete.
+		"title_scale": 1.15, "title_rise": -80.0, "title_delay": 0.60,
+		"title_time": 1.00, "title_trans": Tween.TRANS_CUBIC,
+		"stats_rise": 30.0, "stats_delay": 1.60,
+		"buttons_rise": 25.0, "buttons_delay": 2.20,
+	},
+	"draw": {
+		"title_scale": 1.8, "title_rise": 0.0, "title_delay": 0.30,
+		"title_time": 0.60, "title_trans": Tween.TRANS_BACK,
+		"stats_rise": 40.0, "stats_delay": 1.00,
+		"buttons_rise": 30.0, "buttons_delay": 1.30,
+	},
+}
+
+## Quelle peau joue en ce moment - posee par _open(), lue par _animate_entry().
+var _entry_key: String = "draw"
+```
+
+- [ ] **Étape 4 : faire lire la table par `_animate_entry()`**
+
+Remplacer le bloc `if _title_block != null:` par :
+
+```gdscript
+	var entry: Dictionary = ENTRY.get(_entry_key, ENTRY["draw"])
+
+	if _title_block != null:
+		_title_block.modulate.a = 0.0
+		_title_block.scale = Vector2.ONE * float(entry["title_scale"])
+		var rise: float = float(entry["title_rise"])
+		var delay: float = float(entry["title_delay"])
+		var time: float = float(entry["title_time"])
+
+		tween.tween_property(_title_block, "modulate:a", 1.0, 0.4).set_delay(delay)
+		tween.tween_property(_title_block, "scale", Vector2.ONE, time).set_delay(delay) \
+			.set_ease(Tween.EASE_OUT).set_trans(int(entry["title_trans"]))
+
+		# Le titre n'est pas dans un conteneur (cf. _build_title_block, pose sur
+		# un Control nu) : sa position est donc animable - c'est l'exception du
+		# piege n1, la meme qui autorise _slide_in.
+		if not is_zero_approx(rise):
+			_title_block.position.y += rise
+			tween.tween_property(_title_block, "position:y",
+					_title_block.position.y - rise, time).set_delay(delay) \
+				.set_ease(Tween.EASE_OUT).set_trans(int(entry["title_trans"]))
+
+	_slide_in(tween, _stats_block, float(entry["stats_rise"]), float(entry["stats_delay"]))
+	_slide_in(tween, _buttons, float(entry["buttons_rise"]), float(entry["buttons_delay"]))
+```
+
+Et supprimer les deux `_slide_in` en dur qui suivaient.
+
+⚠️ **Vérifier que `_title_block` n'est PAS dans un conteneur** avant d'animer sa
+position. `_build_title_block()` rend un `VBoxContainer` : regarder à quoi il
+est ajouté. S'il est en conteneur, **ne garder que l'échelle** — la différence
+entre les trois écrans se lit déjà dessus (0,3 contre 1,15 contre 1,8).
+
+- [ ] **Étape 5 : poser la clé à l'ouverture**
+
+Dans `_open(skin, title_text)`, avant l'appel à `_animate_entry()`. `open()` et
+`open_draw()` passent déjà par là :
+
+```gdscript
+	_entry_key = String(skin.get("entry", "draw"))
+```
+
+Et ajouter `"entry": "win"` / `"loss"` / `"draw"` aux trois dictionnaires de
+peau.
+
+- [ ] **Étape 6 : la chorégraphie des confettis**
+
+`_build_confetti()` et `_draw_confetti()` existent déjà — **c'est la
+chorégraphie qui manque, pas les confettis.** Relevé : 12 confettis qui tombent
+de −135 à −200 px en tournant de ~8 rad à ~0, décalés de **80 ms**, plus 4
+étincelles en `scale 0 → 1,8 → 1`.
+
+Ne les jouer **que sur la victoire** : `if _entry_key == "win"`.
+
+- [ ] **Étape 7 : relancer et regarder**
+
+```bash
+"$GODOT" --headless --path . tools/ui_test.tscn
+"$GODOT" --path . tools/resolutions.tscn
+```
+
+Puis comparer `victoire_*.png`, `defaite_*.png`, `nulle_*.png` à leurs frames.
+
+- [ ] **Étape 8 : commit**
+
+```bash
+git add scenes/battle/battle_result.gd tools/ui_test.gd
+git commit -m "La victoire jaillit, la defaite tombe, le nul s'abat"
+```
+
+---
+
 ## Tâche 10 : « COMBATTEZ » et le cerclage d'or
 
 **Fichiers :**

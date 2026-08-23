@@ -68,6 +68,68 @@ quatre erreurs de la sonde économique.
 
 ---
 
+## L'inventaire des animations — relevé complet du 23/08/2026
+
+**Les quatre sections jamais interrogées l'ont été.** Relevé fait section par
+section (`get_motion_context` refuse une page entière), sur `MAINPROJECT`.
+
+⚠️ **La passation était périmée sur cinq lignes**, et pas dans le sens qu'on
+croyait : elle **sous-estimait** partout.
+
+| Section | Frame | node-id | Durée | Nœuds | État |
+|---|---|---|---|---|---|
+| 🎬 Intro | splash-screen | `410:3` | — | 0 | *aucun mouvement* |
+| | king-intro-before-dialogue | `410:35` | 2,5 s | **3** | porté — la passation disait **1** |
+| | king-intro-dialogue | `410:71` | **4 s** | **9** | porté — la passation disait **3 s / 6** |
+| 🏘️ Navigation | village-avec-dame | `410:153` | — | 0 | *aucun mouvement* |
+| | village-sans-dame | `410:196` | 2 s | 1 | ❌ un `Fondu au noir` |
+| | chateau-royal-avec-dame | `410:233` | 2 s | 1 | ❌ un `Fondu au noir` |
+| | chateau-royal-sans-dame | `410:286` | 2 s | 1 | ❌ un `Fondu au noir` |
+| 🗺️ Campagne | 02_Campagne | `410:342` | — | 0 | *aucun mouvement* — confirmé |
+| ⚔️ Combat | preparation-bataille-v2 | `410:7227` | 2 s | 12 | porté |
+| | 04_Bataille_Placement | `410:667` | 3 s | 17 | porté |
+| | popup-combat-phase | `410:7190` | 2 s | **3** | ❌ le bandeau de série |
+| 🏆 Résultats | **06_Bataille_Victoire** | `410:5121` | **2,507 s** | **24** | ❌ **jamais relevée** |
+| | **07-bataille-defaite** | `410:5430` | **3,5 s** | **8** | ❌ **jamais relevée** |
+| | 07-bataille-nulle | `410:5551` | 3 s | 7 | porté |
+| 📋 Popups | 09/10/11-popup-batiment | `410:7342` etc. | 2 s | 2 | ❌ — gabarit confirmé au chiffre près |
+| | mission-popup | `410:5664` | 2 s | 24 | ❌ — **à reconfirmer au portage** (tâche 9) |
+| 📖 Shop | shop-screen | `410:7061` | 1,5 s | 15 | ❌ — **à reconfirmer au portage** (tâche 8) |
+
+**Les trois `Fondu au noir` sont l'artefact d'export déjà documenté** dans
+`CLAUDE.md` : un rectangle noir plein écran à l'opacité 1, qui s'efface sur les
+40-49 premiers % de la timeline. C'est ce qui faisait rendre `287:308` en noir.
+Ce n'est pas une animation d'écran, c'est une transition **entre** écrans, et
+rien n'oblige à la porter.
+
+### Les trois écrans de résultat ont TROIS entrées, et le jeu n'en joue qu'une
+
+C'est la trouvaille du relevé. `battle_result._animate_entry()` applique la
+**timeline du match nul aux trois peaux** — vérifié ligne à ligne : échelle
+1,8 → 1 avec `TRANS_BACK` au délai 0,3 ; stats +40 à 1,0 s ; boutons +30 à
+1,3 s. Ce sont **exactement** les valeurs de `410:5551`.
+
+La maquette en veut trois, et elles ne disent pas la même chose :
+
+| | Durée | Le titre | Stats | Boutons |
+|---|---|---|---|---|
+| **Victoire** | 2,507 s | échelle **0,3 → 1** + montée de **+60**, ressort qui dépasse à **1,36** | +40 à 1,0 s | +50 à 1,3 s |
+| **Défaite** | 3,5 s | **tombe de −80**, échelle **1,15 → 1**, sans rebond | +30 à 1,6 s | +25 à 2,2 s |
+| **Nulle** *(porté)* | 3 s | échelle **1,8 → 1**, s'abat comme un tampon | +40 à 1,0 s | +30 à 1,3 s |
+
+La victoire **jaillit du bas en rebondissant**, la défaite **tombe d'en haut,
+lentement et sans rebond**, le nul **s'abat**. Trois lectures différentes du
+même écran, et le jeu joue « s'abat » pour les trois.
+
+**La victoire porte en plus 12 confettis et 4 étincelles** qui tombent en
+tournant, décalés de ~80 ms. `battle_result` a déjà `_build_confetti()` et
+`_draw_confetti()` : c'est la chorégraphie qui manque, pas les confettis.
+
+⚠️ **Ça ajoute du travail au chantier.** Voir la tâche 9 bis dans
+[`plan_g_f.md`](plan_g_f.md).
+
+---
+
 ## Le plan d'attaque, en six temps
 
 ### 1. Les instruments d'abord

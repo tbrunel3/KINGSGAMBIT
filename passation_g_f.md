@@ -119,10 +119,20 @@ Il faut l'appeler **section par section** : `420:2` à `420:8`.
 | **11-popup-amelioration** | `410:7629` | 2 s | 2 | ❌ |
 | **shop-screen** | `410:7061` | 1,5 s | **15** | ❌ |
 
-⚠️ **QUATRE SECTIONS N'ONT PAS ÉTÉ RELEVÉES** : `420:2` Intro (les deux frames
-connues sont à reconfirmer), `420:3` Navigation, `420:4` Campagne, `420:6`
-Résultats. **Cet inventaire est donc incomplet, et il le dit plutôt que de
-prétendre le contraire.** Commencer par là.
+✅ **RELEVÉ COMPLÉTÉ LE 23/08/2026.** Les quatre sections manquantes ont été
+interrogées. **Le tableau ci-dessus est périmé sur cinq lignes** — il
+sous-estimait partout. L'inventaire qui fait foi est dans
+[`chantier_g_f.md`](chantier_g_f.md) > « L'inventaire des animations ».
+
+Ce que le relevé a changé, en résumé :
+
+- `king-intro-before-dialogue` fait **3** nœuds, pas 1.
+- `king-intro-dialogue` fait **4 s et 9 nœuds**, pas 3 s et 6.
+- **`06_Bataille_Victoire` (24 nœuds) et `07-bataille-defaite` (8 nœuds)
+  étaient déclarées « aucune donnée de mouvement ». C'est faux**, et le jeu
+  leur joue aujourd'hui la timeline du match nul.
+- La campagne, le splash et `village-avec-dame` n'ont **réellement** aucun
+  mouvement — c'est confirmé, plus supposé.
 
 ### `mission-popup` — 24 nœuds, et ce sont DEUX animations
 
