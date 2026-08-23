@@ -135,12 +135,18 @@ func _ready() -> void:
 	# mesurer sa plage complete avant de fixer la position : un compte de
 	# frames fixe n'est pas fiable partout (le Web peut prendre plusieurs
 	# images pour stabiliser ce layout).
+	# Le voile attend qu'on soit positionne : sans ca il se levait pendant que
+	# la carte etait encore a son sommet, et le joueur voyait le saut - c'est le
+	# "flick" qu'il a signale.
+	ScreenVeil.hold()
 	var vbar := _scroll.get_v_scroll_bar()
 	var guard := 0
 	while vbar.max_value < _scrolled_height() - 1.0 and guard < 20:
 		await get_tree().process_frame
 		guard += 1
 	_scroll_to_battle(Game.unlocked_battle())
+	await get_tree().process_frame
+	ScreenVeil.release()
 
 
 func _process(_delta: float) -> void:

@@ -44,6 +44,7 @@ var instant: bool = false
 
 var _rect: ColorRect
 var _tween: Tween
+var _holds: int = 0
 
 
 func _ready() -> void:
@@ -97,6 +98,12 @@ func go(action: Callable, color: Color = BLACK) -> void:
 		guard += 1
 
 	await get_tree().create_timer(Balance.motion("veil_settle")).timeout
+	# Un ecran qui a besoin de plus de temps l'a dit avec hold() : on attend
+	# qu'il ait fini de se poser avant de le montrer.
+	var wait := 0
+	while _holds > 0 and wait < 120:
+		await get_tree().process_frame
+		wait += 1
 	await reveal()
 
 
@@ -118,3 +125,26 @@ func _fade_to(alpha: float, duration: float) -> void:
 ## veulent savoir s'ils sont deja visibles avant de lancer leur propre entree.
 func is_covering() -> bool:
 	return _rect != null and _rect.color.a > 0.01
+
+
+## RETENIR LE VOILE le temps qu'un ecran finisse de se poser.
+##
+## ⚠️ POURQUOI CA EXISTE. Le joueur voyait un "flick" en arrivant sur la carte
+## de campagne. veil_settle laisse au nouvel ecran le temps de peindre sa
+## premiere image - mais la carte fait davantage : elle attend que sa barre de
+## defilement ait mesure sa plage complete, ce qui peut prendre jusqu'a vingt
+## images sur le Web, PUIS se positionne sur la bataille en cours. Le voile se
+## levait avant, et on voyait la carte sauter de son sommet a la bonne hauteur.
+##
+## Un delai plus long aurait ralenti TOUTES les transitions pour un seul ecran.
+## Ici c'est l'ecran qui dit "attends-moi", et lui seul.
+##
+## Toujours appairer hold() et release(), release() dans tous les chemins de
+## sortie. Le garde-fou de go() borne l'attente a deux secondes : un release
+## oublie retarde une transition, il ne gele pas le jeu.
+func hold() -> void:
+	_holds += 1
+
+
+func release() -> void:
+	_holds = maxi(0, _holds - 1)
