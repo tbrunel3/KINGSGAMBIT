@@ -833,11 +833,14 @@ du jeu qui sache **lever le doigt**.
 
 ### Ce qui reste, et qui n'est PAS fait
 
-- **Le seuil de glissement du combat est réglé pour une souris.**
-  `grid_view._DRAG_THRESHOLD` vaut `8.0` points, soit ~1,5 mm. Un pouce en
-  produit 2 à 4. Le combat s'en sort quand même parce que la sélection se fait
-  sur l'appui (`cell_pressed` → `_select_unit`), donc un appui tremblé
-  sélectionne quand même — mais le réglage n'a jamais été mesuré au doigt.
+- **Le seuil de glissement du combat n'a pas été mesuré au doigt** — mais il
+  n'est probablement pas en cause. `grid_view._DRAG_THRESHOLD` vaut `8.0`
+  points, ce qui est **exactement le *touch slop* standard d'Android**
+  (`ViewConfiguration`, 8 dp). Ne pas le changer sur une intuition : c'est une
+  valeur éprouvée, et le combat s'en sort d'autant mieux que la sélection se
+  fait sur l'**appui** (`cell_pressed` → `_select_unit`), donc un appui tremblé
+  sélectionne quand même. S'il faut y toucher un jour, il faudra un relevé sur
+  appareil, pas un raisonnement.
 - **Aucun banc ne joue un geste dans le combat.** `[12]` ne couvre que la carte.
 - **Les quatre autres `ScrollContainer`** (préparation, codex, boutique,
   showcase) n'ont pas été audités : c'est le même patron de conflit qui peut s'y
