@@ -23,7 +23,7 @@ sous-systèmes, et parce que la première rendait les autres intestables.
 | **C** | La composition d'armée | ✅ fait |
 | **D** | Polices et animations Figma | 🟡 **aux trois quarts** — voir ci-dessous |
 | **E** | Les popups d'accompagnement | à faire |
-| **G + F** | **L'assemblage Figma et le responsive**, ensemble | à faire **en dernier** — voir ci-dessous |
+| **G + F** | **L'assemblage Figma et le responsive**, ensemble | ✅ **fait le 23/08/2026** — voir [`chantier_g_f.md`](chantier_g_f.md) |
 
 **L'ordre a été fixé par le joueur** : A → B → C → D → E, puis **G et F menés
 ensemble**. Sa formulation : « après le E ça devrait être l'assemblage de tout
