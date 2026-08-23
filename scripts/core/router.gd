@@ -25,8 +25,44 @@ func goto_intro() -> void:
 	_change(INTRO_SCENE)
 
 
+## ⚠️ LA PORTE UNIQUE VERS LE VILLAGE, ET DONC LE SEUL ENDROIT OU POSER LA
+## GARDE. Regle demandee par le joueur : repartir au royaume en pleine serie
+## l'abandonne.
+##
+## Ce n'etait pas pour boucher un exploit - celui qu'il craignait n'existe pas,
+## `CampaignRun.roster` est un instantane pris a l'ouverture et les pieces
+## achetees ensuite n'y entrent jamais. C'est une decision de jeu : une serie
+## est un engagement, on ne la met pas en pause pour aller faire ses courses.
+##
+## L'avertissement n'est pas negociable : sans lui, le joueur perdrait deux
+## combats gagnes en touchant un bouton qui, jusque-la, ne coutait rien.
+var ask_before_leaving: bool = true
+
+
 func goto_village() -> void:
-	_change(VILLAGE_SCENE)
+	var run := Game.current_run()
+	if run == null:
+		_change(VILLAGE_SCENE)
+		return
+
+	if not ask_before_leaving:
+		# Les bancs : la regle s'applique, la question ne se pose pas. Une
+		# modale y attendrait une reponse qui ne viendrait jamais.
+		Game.abandon_run()
+		_change(VILLAGE_SCENE)
+		return
+
+	# ⚠️ CHARGE A L'APPEL, PAS EN PRELOAD NI PAR SON class_name.
+	#
+	# Router est un autoload : le nommer a l'analyse tirait toute la chaine
+	# d'interface (Modal, UiTheme, les scenes de composants) dans le chargement
+	# des autoloads, et le jeu ne demarrait plus du tout - les bancs
+	# n'affichaient meme plus leur premiere ligne. Un routeur ne doit rien
+	# savoir des ecrans avant d'en avoir besoin.
+	var Confirm := load("res://scenes/ui/confirm_leave.gd")
+	Confirm.ask(get_tree().current_scene, run, func():
+		Game.abandon_run()
+		_change(VILLAGE_SCENE))
 
 
 ## Salle du trone, en plein ecran : le chateau est le batiment central du

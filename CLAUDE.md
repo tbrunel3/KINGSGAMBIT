@@ -871,6 +871,23 @@ du jeu qui sache **lever le doigt**.
 
 ---
 
+## Le piege des autoloads : ne jamais y nommer un ecran
+
+⚠️ **Un autoload qui reference une classe d'interface tire TOUT le graphe des
+ecrans au demarrage, et le jeu ne se lance plus.** Paye le 24/08/2026 : ajouter
+`ConfirmLeave.ask(...)` dans `Router.goto_village()` a suffi. Le nom de classe
+est resolu a l'ANALYSE, donc le chargement des autoloads s'est mis a tirer
+`Modal`, `UiTheme` et leurs scenes de composants — et plus rien ne demarrait.
+
+**Le symptome est trompeur** : ce n'est pas une erreur, c'est un blocage. Les
+bancs n'affichaient meme plus leur premiere ligne, et la sortie ne montrait que
+du bruit de fermeture. Chercher la cause dans le test etait une impasse.
+
+Le correctif : `load("res://…/confirm_leave.gd")` **au moment de l'appel**. Un
+routeur ne doit rien savoir des ecrans avant d'en avoir besoin.
+
+---
+
 ## Contraintes techniques
 
 - Godot 4.7, `gl_compatibility`, portrait uniquement.

@@ -45,6 +45,8 @@ func _ready() -> void:
 	# d'ecran ajoute un fondu complet et le banc ralentit sans rien
 	# mesurer de plus. Meme doctrine que BattleAI.budget_ms = 0.
 	ScreenVeil.instant = true
+	# Idem : la regle d'abandon s'applique, mais sans modale a attendre.
+	Router.ask_before_leaving = false
 	# Banc : recherche sans limite de temps, donc reproductible (cf.
 	# BattleAI.budget_ms).
 	BattleAI.budget_ms = 0

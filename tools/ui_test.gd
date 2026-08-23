@@ -20,6 +20,8 @@ func _ready() -> void:
 	# d'ecran ajoute un fondu complet et le banc ralentit sans rien
 	# mesurer de plus. Meme doctrine que BattleAI.budget_ms = 0.
 	ScreenVeil.instant = true
+	# Idem : la regle d'abandon s'applique, mais sans modale a attendre.
+	Router.ask_before_leaving = false
 	print("=== KING'S GAMBIT - test d'interface ===")
 	await _test_village()
 	await _test_codex()

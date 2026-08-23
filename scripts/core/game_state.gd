@@ -840,6 +840,25 @@ func finish_run(run: CampaignRun, victory: bool) -> int:
 	return stored
 
 
+## Abandonne la serie en cours : le joueur est reparti au royaume.
+##
+## ⚠️ REGLE DEMANDEE PAR LE JOUEUR le 24/08. Repartir au village en pleine
+## serie l'abandonne - il ne peut plus reprendre au combat ou il s'etait
+## arrete.
+##
+## Ce n'est ni une victoire ni une defaite, donc ni or ni consolation. Mais ce
+## qui a eu lieu a eu lieu : les pertes s'appliquent, et les Dames faites
+## pendant la serie rentrent au Chateau Royal. Effacer aussi ces deux-la
+## reviendrait a annuler des combats que le joueur a bel et bien joues.
+func abandon_run() -> void:
+	var run := current_run()
+	if run == null:
+		return
+	apply_losses(run.losses)
+	store_promotions(run.dames_made)
+	clear_run()
+
+
 # ------------------------------- CAMPAGNE ------------------------------------
 
 func unlocked_battle() -> int:
