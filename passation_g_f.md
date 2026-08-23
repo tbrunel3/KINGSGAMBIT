@@ -26,7 +26,7 @@ Le joueur a demandé les deux dans la même phrase, et les mener ensemble est le
 bon choix : **reprendre la peau d'un écran et l'ancrer sont le même geste sur
 le même fichier**. Les séparer ferait passer deux fois sur chaque écran.
 
-## ⚠️ LA DÉCISION QUI OUVRE G, ET QUI N'EST TOUJOURS PAS PRISE
+## ✅ LA DÉCISION QUI OUVRAIT G — PRISE LE 23/08/2026 : `expand`
 
 `window/stretch/aspect` vaut **`expand`** dans `project.godot`.
 
@@ -37,13 +37,30 @@ le même fichier**. Les séparer ferait passer deux fois sur chaque écran.
 | Ce qu'on perd | la fidélité au pixel | le responsive |
 
 **« Respect graphique absolu » et « formats responsive » étaient dans la même
-phrase de la demande, et ils ne peuvent pas être vrais tous les deux.** Poser
-la question au joueur AVANT de commencer : elle change la nature du chantier
-entier, et se tromper coûte le passage sur les sept écrans.
+phrase de la demande, et ils ne peuvent pas être vrais tous les deux.**
+
+Le joueur a tranché pour **`expand`** : le responsive l'emporte sur la fidélité
+au pixel. Tous les écrans sont ancrés depuis, village compris.
 
 ---
 
-## 1. L'ALIGNEMENT DES BOUTONS — demandé explicitement, et c'est le pire écart
+## 1. ✅ L'ALIGNEMENT DES BOUTONS — FAIT LE 23/08/2026
+
+> Le tableau ci-dessous décrit l'état d'AVANT. Il est conservé parce qu'il porte
+> la mesure — six tailles, quatre habillages — mais il ne décrit plus le jeu.
+> `scenes/ui/components/corner_button.gd` existe, et il n'y a plus que **deux**
+> tailles : 34 pour un bouton flottant, 52 pour un retour en tête d'écran.
+>
+> Trois exceptions assumées, chacune parce que la règle 2 donne l'apparence à la
+> maquette : la **préparation** garde son retour clair (c'est le seul écran clair
+> du jeu), la **croix de sortie** du combat reste un `Button` de scène (elle a
+> besoin de `hover` et `pressed`), et la **boutique** ne bouge ni de place ni de
+> taille (45 points en zone de pouce, choix du joueur).
+>
+> Le **bouton de développement** est passé derrière un appui long de 1,2 s dans
+> le coin haut-droit — le masquer en debug aurait retiré au joueur son raccourci
+> sur le build web exporté.
+
 
 > « il faudra aussi aligner les boutons des paramètres etc., sur les écrans,
 > parce que là c'est n'importe quoi »
@@ -274,11 +291,11 @@ ne s'importe pas. Un écran en Inter là où la maquette veut Poppins se lit
 
 ## 7. CE QUI N'EST PAS TRANCHÉ
 
-- ⚠️ **`expand` ou `keep`** — voir en tête. C'est la première question.
-- ⚠️ **Jua** : l'écran de nul porte « ROYAUME » et « CAMPAGNE » en Jua, 13
-  points. Jua pèse **2,1 Mo** (revérifié). Le joueur a dit « tu utilises les
-  polices de Figma, point final » — c'est le seul endroit où cette consigne se
-  heurte à une mesure. Embarquer, ou corriger la maquette sur deux mots.
+- ✅ **`expand` ou `keep`** — tranché le 23/08 : **`expand`**, inchangé. Chaque
+  écran doit être ancré, et ils le sont tous depuis.
+- ✅ **Jua** — tranchée le 23/08 : **abandonnée, c'est la maquette qu'on
+  corrige**. 2,1 Mo pour deux mots de 13 points. Aucun code n'a changé : elle
+  n'était ni embarquée ni référencée.
 - **La pastille `Codex`** posée dans la maquette du village vient de
   l'intégration, pas du designer : elle a été créée en clonant `Missions`. Le
   jeu met volontairement une icône discrète, parce qu'un libellé mettrait le

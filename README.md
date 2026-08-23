@@ -382,6 +382,8 @@ combats, puis simule les 10 batailles et charge tous les écrans.
 |---|---|
 | `tools/smoke_test.tscn` | est-ce que tout tient encore debout ? |
 | `tools/ui_test.tscn` | est-ce que les vrais boutons répondent ? |
+| `tools/format_test.tscn` | la géométrie tient-elle sur les huit formats ? (des **chiffres**, pas des images) |
+| `tools/hitbox_debug.tscn` | où tombent les zones de clic du village ? (sans `--headless`) |
 | `tools/ai_probe.tscn` | combien coûte un coup à chaque profondeur ? |
 | `tools/ai_bench.tscn` | est-ce que chercher plus loin fait gagner ? |
 | `tools/tune_probe.tscn` | de combien de niveaux le joueur doit-il dominer ? |

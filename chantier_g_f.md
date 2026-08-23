@@ -329,3 +329,65 @@ sur les huit formats, et BATAILLE centré partout.
   est le bon moment pour poser la question.
 - **`stalemate_is_draw`** traîne depuis le chantier A : le joueur doit jouer les
   deux réglages avant de trancher. Sans rapport avec G et F, mais il attend.
+
+
+---
+
+# CE QUI A ÉTÉ LIVRÉ — 23/08/2026
+
+Les douze tâches du plan sont faites. Les quatre bancs sont verts :
+`format_test`, `ui_test`, `smoke_test` (**10/10 batailles gagnables**, polices
+chargées) et `resolutions` (128 captures, zéro erreur).
+
+| | Livré | La mesure |
+|---|---|---|
+| **Instruments** | Inventaire d'animations complet ; `resolutions` passe de 8 à **16 écrans** | 5 lignes de la passation étaient fausses ; 2 timelines déclarées inexistantes en avaient 24 et 8 |
+| **Village** | Deux calques, bâtiments cliquables, zoom vers le point touché | dérive **34 pt → 0,00** ; BATAILLE **42 pt hors centre → centré** |
+| **Boutons de coin** | Un composant, `corner_button.gd` | **six tailles → deux** |
+| **Bouton dev** | Appui long de 1,2 s, coin haut-droit | zone à 40 pt, barre haute à 44 — 4 pt de marge |
+| **Modales** | Gabarit d'entrée dans `Modal` | **1 fichier, 6 écrans animés** |
+| **Boutique** | Cascade d'ouverture + 10 illustrations | 534 Ko, cartes de 56 pt |
+| **Missions** | Ouverture et réclamation **séparées** | 10 pièces traversent l'écran vers la bourse |
+| **Résultats** | Trois entrées au lieu d'une | victoire jaillit, défaite tombe, nul s'abat |
+| **Combat** | « COMBATTEZ » ; cerclage d'or du popup verrouillé | maintien réglable dans `Balance.COMBAT` |
+
+## Les six pièges découverts en chemin, et qui n'étaient pas dans le plan
+
+1. **Godot importait les 128 captures comme des textures de jeu** — 44 Mo de
+   cache, plus de cinq minutes de démarrage. Un `.gdignore` règle ça, et il est
+   suivi par git via une exception à deux temps dans `.gitignore` : git ne
+   descend pas dans un dossier ignoré, donc `tools/screenshots/*` puis
+   `!tools/screenshots/.gdignore`.
+2. **Le calque de décor ne peut pas porter l'échelle du fond.** Les positions
+   redeviendraient justes, mais le **texte** des enseignes rétrécirait de
+   moitié. Il porte le *rapport* à la référence — exactement 1,0 en 393 × 852.
+   Les deux modes ont été rendus côte à côte, le joueur a choisi « position
+   seule ».
+3. **`Modal.open()` est rappelé pour RECONSTRUIRE, pas pour rouvrir.** Le popup
+   de missions le fait à chaque réclamation, celui de bâtiment à chaque
+   recrutement, la boutique à chaque achat. Sans garde-fou, l'entrée se rejoue
+   dans le dos du joueur au moment précis où il vient d'agir.
+4. **Une animation d'entrée rend `ui_test` menteur.** Le popup de bâtiment
+   n'arrive plus qu'à la fin du zoom : un banc qui regarde trois images après
+   le clic conclut que le bouton ne répond pas. Il saute maintenant à la fin des
+   tweens, comme `screenshot` et `resolutions`.
+5. **Le banc de format mentait sur les écrans de résultat**, et le défaut était
+   dans l'instrument : `BattleResult.open()` seul ne pose ni récompense ni
+   bouton. L'écran se photographiait vide et avait l'air cassé. J'ai d'abord
+   accusé le format.
+6. **Le village met ses deux boutons CÔTE À CÔTE**, c'est la bataille qui les
+   empile — sa barre haute porte le badge de tour. J'avais aligné le code en
+   désalignant l'écran.
+
+## Ce qui reste
+
+- **Le chantier E**, les popups d'accompagnement, sur un jeu désormais habillé.
+- **Les transitions entre écrans.** Le jeu coupe franc sur ses 20 trajets ; le
+  joueur les fait prototyper dans Figma Make. Le brief est dans
+  [`figma_prompt_transitions.md`](figma_prompt_transitions.md).
+- **La pastille `Codex`** du village : icône discrète en jeu, libellé dans la
+  maquette. Toujours pas alignée dans un sens ou dans l'autre.
+- **`stalemate_is_draw`** — le joueur doit jouer les deux réglages.
+- **Les deux écarts où c'est la maquette qui a tort** (plateau de 12 rangées,
+  absence de croix de sortie sur le combat), signalés au designer et non
+  corrigés côté jeu.

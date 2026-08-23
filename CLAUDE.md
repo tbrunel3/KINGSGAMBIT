@@ -56,8 +56,15 @@ essayer ».
 sur 852 points se décale dès que l'appareil en fait 880. Chaque écran se découpe
 en zones ancrées — barre haute de hauteur fixe, contenu central qui prend la
 place restante, bandeau bas de hauteur fixe. Cadre utile : **361 × 824**
-(393 × 852 moins les marges de zone sûre). Convertis : `battle.tscn`,
-`campaign.tscn`, `battle_prep.tscn`. Reste à convertir : village.
+(393 × 852 moins les marges de zone sûre).
+
+✅ **Tous convertis** depuis le 23/08/2026. Le village était le dernier, et son
+cas était particulier : ses étiquettes sont collées à des bâtiments **peints
+dans l'illustration**, pas posées sur du contenu. Il se découpe donc en **deux
+calques** — `DecorLayer` suit le rectangle réel du fond, `UiLayer` suit l'écran.
+Mesure avant correction : **34 points de dérive** sur un écran court, et le
+bouton BATAILLE à **42 points du centre**. Après : dérive nulle sur les huit
+formats, vérifiée par [`tools/format_test.tscn`](tools/format_test.gd).
 
 **5. Ne jamais laisser un chantier sans trace.** Une fenêtre de contexte
 s'épuise en plein travail, et l'agent suivant arrive à froid. **Dès que le
@@ -401,6 +408,8 @@ représentatif**, et confondre les deux a coûté cher :
 | Banc | La question à laquelle il répond | Durée |
 |---|---|---|
 | `tools/smoke_test.tscn` | est-ce que tout tient encore debout ? (données, économie, règles, série, 10 batailles, écrans) | ~70 s |
+| `tools/format_test.tscn` | la géométrie tient-elle sur les huit formats ? **Le seul banc de format qui rende des CHIFFRES** — `resolutions` rend des images, et une image ne casse pas un banc quand elle régresse | instantané |
+| `tools/hitbox_debug.tscn` | où tombent les zones de clic du village ? (les rectangles sont relevés à l'œil ; aucun banc numérique ne peut dire s'ils couvrent le bon bâtiment) | court |
 | `tools/ui_test.tscn` | est-ce que les vrais boutons répondent ? (le codex dit-il encore la vérité, la composition borne-t-elle le placement, la série s'enchaîne-t-elle sans écran de victoire ?) | court |
 | `tools/ai_probe.tscn` | combien coûte un coup à chaque profondeur ? | ~7 s |
 | `tools/ai_bench.tscn` | est-ce que chercher plus loin fait gagner ? *(mesuré : chaque demi-coup gagne les six duels, dans les deux camps)* | long |
@@ -631,7 +640,7 @@ ce sont les décalages, les durées et les courbes.
    |---|---|---|
    | Inter, 6 graisses | 589 | partout |
    | **Poppins Bold 16 / SemiBold 14** | **14** | les deux frames du **village** : les cinq noms de bâtiments, Château Royal, Missions, Codex |
-   | Jua Regular 13 | 2 | `07-bataille-nulle` : « ROYAUME » et « CAMPAGNE » |
+   | ~~Jua Regular 13~~ | 2 | `07-bataille-nulle` — **abandonnée**, voir ci-dessous |
    | Comic Relief | 1 | la voix du Roi, déjà embarquée |
 
    **Poppins est embarquée**, décision du joueur : « tu utilises les polices de
@@ -644,10 +653,15 @@ ce sont les décalages, les durées et les courbes.
    trois endroits que la maquette passe en Poppins. Le fichier reste dans le
    dépôt, sans référence.
 
-   ⚠️ **Jua reste le cas non tranché** : 2,1 Mo — chiffre revérifié — pour
-   **deux mots de 13 points** sur le seul écran de match nul. C'est le seul
-   endroit où « les polices de Figma » se heurte à une mesure, et il faudra
-   trancher : embarquer, ou corriger la maquette.
+   ✅ **Jua est tranchée : abandonnée, c'est la MAQUETTE qu'on corrige.**
+   Décision du joueur le 23/08/2026. 2,1 Mo pour **deux mots de 13 points** sur
+   le seul écran de match nul — le tiers du poids de toutes les autres polices
+   réunies. C'était le seul endroit où « les polices de Figma, point final » se
+   heurtait à une mesure, et la mesure a gagné.
+
+   **Aucun code n'a changé** : Jua n'était ni embarquée ni référencée, le jeu
+   rendait déjà « ROYAUME » et « CAMPAGNE » en Inter. La correction est
+   demandée au designer sur `07-bataille-nulle`.
 
 ### Là où la maquette dit autre chose que le jeu
 
