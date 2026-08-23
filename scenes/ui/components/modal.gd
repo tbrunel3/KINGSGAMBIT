@@ -18,6 +18,24 @@ extends Control
 
 enum Context { GOLD, RED, BLUE, NEUTRAL }
 
+## L'ENTREE DE MODALE DU JEU ENTIER, posee ici une seule fois.
+##
+## Relevee sur les trois popups de batiment (410:7342, 410:7488, 410:7629),
+## qui portent exactement la meme timeline : le voile monte sur les 20 premiers
+## pour cent, puis la modale apparait de 0,15 s a 0,6 s en opacite et en
+## echelle, courbe cubic-bezier(0, 0, 0.2, 1).
+##
+## Elle sert d'un seul coup TOUT ce qui passe par Modal - verifie, six
+## appelants : les popups de batiment (building_popup.gd couvre ses quatre
+## etats dans une seule scene), la confirmation d'amelioration, le popup de
+## missions, le popup de serie, l'aide de la bataille et la vitrine du kit.
+const ENTRY_DELAY := 0.15
+const ENTRY_DURATION := 0.45
+const ENTRY_SCALE := 0.92
+## Le voile est plus rapide que la modale : il assombrit d'abord, la modale
+## arrive dessus. 20 % de la timeline de la maquette.
+const DIM_SECONDS := 0.12
+
 signal closed
 
 @export var close_on_dim_click: bool = true
@@ -66,6 +84,35 @@ func open(title: String = "", context: Context = Context.GOLD, header_icon: Stri
 	if not header_icon.is_empty():
 		_header_icon.set_icon(header_icon, _header_icon.color)
 	visible = true
+	_animate_entry()
+
+
+## ⚠️ PAS DE TRANSLATION ICI, et ce n'est pas un oubli.
+##
+## La maquette fait aussi monter la modale de 30 px. Mais _panel est
+## $Center/Panel, donc enfant d'un CenterContainer : un tween de position s'y
+## battrait avec la mise en page, exactement comme sur le bandeau de serie -
+## piege deja paye une fois. L'opacite et l'echelle suffisent a lire le
+## mouvement, et ce sont les deux autres proprietes que la maquette anime.
+func _animate_entry() -> void:
+	# La taille ne se lit qu'une fois la mise en page faite : relevee a
+	# l'ouverture, elle vaut encore zero, et le pivot tomberait dans le coin.
+	await get_tree().process_frame
+	if not is_inside_tree():
+		return
+
+	_panel.pivot_offset = _panel.size * 0.5
+	_dim.modulate.a = 0.0
+	_panel.modulate.a = 0.0
+	_panel.scale = Vector2.ONE * ENTRY_SCALE
+
+	var tween := create_tween().set_parallel(true)
+	tween.tween_property(_dim, "modulate:a", 1.0, DIM_SECONDS)
+	tween.tween_property(_panel, "modulate:a", 1.0, ENTRY_DURATION) \
+		.set_delay(ENTRY_DELAY)
+	tween.tween_property(_panel, "scale", Vector2.ONE, ENTRY_DURATION) \
+		.set_delay(ENTRY_DELAY) \
+		.set_trans(Tween.TRANS_CUBIC).set_ease(Tween.EASE_OUT)
 
 func set_context(context: Context) -> void:
 	var color := UiTheme.GOLD

@@ -23,6 +23,7 @@ func _ready() -> void:
 	await _test_composition()
 	await _test_series_chaining()
 	await _test_shop()
+	await _test_modal_entry()
 
 	print("")
 	if _failures == 0:
@@ -54,6 +55,13 @@ func _frames(count: int = 2) -> void:
 ##
 ## Meme reflexe que screenshot.tscn et resolutions.tscn : on saute a la fin des
 ## tweens plutot que d'attendre - c'est instantane, et c'est exact.
+func _skip_animations() -> void:
+	for tween in get_tree().get_processed_tweens():
+		if tween.is_valid():
+			tween.custom_step(10.0)
+	await get_tree().process_frame
+
+
 ## Tous les boutons batis par le composant partage, dans un ecran.
 func _corner_buttons(root: Node) -> Array[Control]:
 	var script := load("res://scenes/ui/components/corner_button.gd")
@@ -64,11 +72,43 @@ func _corner_buttons(root: Node) -> Array[Control]:
 	return found
 
 
-func _skip_animations() -> void:
-	for tween in get_tree().get_processed_tweens():
-		if tween.is_valid():
-			tween.custom_step(10.0)
-	await get_tree().process_frame
+## L'ENTREE DE MODALE, une seule fois pour six appelants.
+##
+## Une modale qui apparait d'un coup se lit comme un bug d'affichage. Ce test
+## ne juge pas l'esthetique : il verifie que l'entree EXISTE (la modale part
+## transparente et rapetissee) et qu'elle SE TERMINE (elle finit opaque et a
+## l'echelle 1). Une entree qui ne se termine pas laisserait un ecran a moitie
+## la, et aucune capture ne le dirait.
+func _test_modal_entry() -> void:
+	print("\n[8] Modales : l'entree se joue, et elle se termine")
+
+	Game.reset_progress()
+	var village: Node = load("res://scenes/village/village.tscn").instantiate()
+	add_child(village)
+	await _frames(3)
+
+	village._on_building_pressed(Balance.PION)
+	# Le zoom du village d'abord, la modale ensuite.
+	await _skip_animations()
+	await _frames(2)
+
+	var modal: Modal = village._popup.find_child("Modal", true, false)
+	if modal == null:
+		_check(false, "la modale du popup de batiment est introuvable")
+		village.queue_free()
+		return
+
+	var panel: Control = modal.get_node("Center/Panel")
+	_check(panel.modulate.a < 0.9, "la modale part transparente (%.2f)" % panel.modulate.a)
+	_check(panel.scale.x < 0.99, "et rapetissee (%.3f)" % panel.scale.x)
+
+	await _skip_animations()
+	await _frames(2)
+	_check(panel.modulate.a > 0.99, "elle finit opaque (%.2f)" % panel.modulate.a)
+	_check(absf(panel.scale.x - 1.0) < 0.01, "et a l'echelle 1 (%.3f)" % panel.scale.x)
+
+	village.queue_free()
+	await _frames(2)
 
 
 # ------------------------------- VILLAGE -------------------------------------
@@ -83,9 +123,7 @@ func _test_village() -> void:
 
 	# Ouvrir la caserne des pions (label cliquable, pas un Button - cf. village.gd)
 	_check(village._building_buttons.has(Balance.PION), "le label de la caserne existe")
-	# LES BATIMENTS EUX-MEMES SONT CLIQUABLES, pas seulement leurs enseignes.
-	# Les zones vivent sur le calque de decor : elles suivent l'illustration,
-	# donc elles tombent sur le bon batiment quel que soit le format.
+
 	# LES BOUTONS DE COIN : deux tailles, plus six.
 	#
 	# Ce test ne regarde pas a quoi ils ressemblent - il verifie qu'aucun ne
@@ -129,6 +167,9 @@ func _test_village() -> void:
 		village._popup = null
 		await _frames(2)
 
+	# LES BATIMENTS EUX-MEMES SONT CLIQUABLES, pas seulement leurs enseignes.
+	# Les zones vivent sur le calque de decor : elles suivent l'illustration,
+	# donc elles tombent sur le bon batiment quel que soit le format.
 	var hitboxes := village.find_children("Hitbox_*", "Control", true, false)
 	_check(hitboxes.size() == 5,
 		"les cinq batiments portent une zone de clic (%d)" % hitboxes.size())
