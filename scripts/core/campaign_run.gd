@@ -83,6 +83,11 @@ var dames_made: int = 0
 ## infinie - au-dela de Balance.RUN_DRAWS_ALLOWED, la serie s'acheve.
 var draws: int = 0
 
+## Promus NON-Dames faits pendant la serie et encore en ligne. Ils restent
+## jusqu'au dernier combat puis redeviennent des pions : le village n'en voit
+## jamais un seul, puisque seule `losses` lui est appliquee a la fin.
+var knights_made: int = 0
+
 
 ## Ouvre une serie sur cette bataille, avec l'armee du village au complet.
 static func start(id: int, fights: int, army: Dictionary) -> CampaignRun:
@@ -172,17 +177,17 @@ func _drop_from_lineup(type: String, count: int) -> void:
 ## Enregistre un combat gagne : ce qui est tombe sort de l'effectif, ce qui
 ## est gagne s'accumule, et les Dames faites restent en ligne.
 func record_victory(fight_losses: Dictionary, defeated: int, won_promotions: int,
-		dames: int, gold: int) -> void:
-	_record_fight(fight_losses, defeated, won_promotions, dames)
+		dames: int, gold: int, knights: int = 0) -> void:
+	_record_fight(fight_losses, defeated, won_promotions, dames, knights)
 	reward += gold
 
 
 ## Combat nul : la serie continue, mais ce combat-la n'a rien rapporte. Les
 ## survivants restent en ligne, les morts restent morts.
 func record_draw(fight_losses: Dictionary, defeated: int, won_promotions: int,
-		dames: int) -> void:
+		dames: int, knights: int = 0) -> void:
 	draws += 1
-	_record_fight(fight_losses, defeated, won_promotions, dames)
+	_record_fight(fight_losses, defeated, won_promotions, dames, knights)
 
 
 ## Enregistre le combat perdu qui met fin a la serie.
@@ -191,11 +196,12 @@ func record_defeat(fight_losses: Dictionary) -> void:
 
 
 func _record_fight(fight_losses: Dictionary, defeated: int, won_promotions: int,
-		dames: int) -> void:
+		dames: int, knights: int = 0) -> void:
 	_take_losses(fight_losses)
 	enemies_defeated += defeated
 	promotions += won_promotions
 	_enlist_dames(dames)
+	_enlist_knights(knights)
 
 
 ## Les Dames faites au combat precedent REPRENNENT LE CHEMIN au combat
@@ -220,6 +226,28 @@ func _enlist_dames(count: int) -> void:
 	dames_made += count
 
 
+## Les promus NON-Dames restent en ligne le temps de la serie.
+##
+## Calque sur _enlist_dames, a une difference pres qui fait tout : PAS de
+## compteur permanent. Le village n'apprend jamais leur existence - seule
+## `losses` lui est appliquee a la fin -, donc le pion qu'ils etaient est
+## toujours a la caserne quand la serie se termine. C'est exactement "il reste
+## pour la serie, puis redevient pion".
+func _enlist_knights(count: int) -> void:
+	if count <= 0:
+		return
+	var composed := has_lineup()
+	var from_pawns := mini(count, int(roster.get(Balance.PION, 0)))
+	if from_pawns <= 0:
+		return
+	roster[Balance.PION] = int(roster.get(Balance.PION, 0)) - from_pawns
+	roster[Balance.PROMOTION_FALLBACK] = 		int(roster.get(Balance.PROMOTION_FALLBACK, 0)) + from_pawns
+	if composed:
+		_drop_from_lineup(Balance.PION, from_pawns)
+		lineup[Balance.PROMOTION_FALLBACK] = 			int(lineup.get(Balance.PROMOTION_FALLBACK, 0)) + from_pawns
+	knights_made += from_pawns
+
+
 func _take_losses(fight_losses: Dictionary) -> void:
 	var composed := has_lineup()
 	for type in fight_losses.keys():
@@ -234,6 +262,20 @@ func _take_losses(fight_losses: Dictionary) -> void:
 		# Une Dame FAITE pendant la serie qui tombe ne coute pas une Dame au
 		# village - il n'y en avait aucune la-bas. Elle coute le PION qu'elle
 		# etait : c'est ce pion qui manquera a la caserne.
+		# Meme raisonnement que pour la Dame ci-dessous : un promu fait
+		# PENDANT la serie qui tombe ne coute pas une piece de ce type au
+		# village - il n'y en avait pas. Il coute le PION qu'il etait.
+		# Sans ca, un cavalier promu qui meurt supprimerait un VRAI cavalier
+		# de l'armee du joueur.
+		if type == Balance.PROMOTION_FALLBACK and knights_made > 0:
+			var was_knight := mini(count, knights_made)
+			knights_made -= was_knight
+			count -= was_knight
+			roster[type] = maxi(0, int(roster.get(type, 0)) - was_knight)
+			losses[Balance.PION] = int(losses.get(Balance.PION, 0)) + was_knight
+			if count <= 0:
+				continue
+
 		if type == Balance.DAME and dames_made > 0:
 			var was_made := mini(count, dames_made)
 			dames_made -= was_made
@@ -321,6 +363,7 @@ func to_dict() -> Dictionary:
 		"enemies_defeated": enemies_defeated,
 		"promotions": promotions,
 		"dames_made": dames_made,
+		"knights_made": knights_made,
 		"draws": draws,
 	}
 
@@ -336,6 +379,7 @@ static func from_dict(data: Dictionary) -> CampaignRun:
 	run.dames_made = int(data.get("dames_made", 0))
 	# Absent des sauvegardes d'avant le plafond de nuls : elles reprennent a zero.
 	run.draws = int(data.get("draws", 0))
+	run.knights_made = int(data.get("knights_made", 0))
 
 	# Les cles reviennent du disque en String et les valeurs en float (JSON) :
 	# on les repasse par des entiers, sinon un "3.0" se glisse dans un

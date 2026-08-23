@@ -1503,7 +1503,8 @@ func _show_result() -> void:
 	# C'est un tour d'usure paye pour rien, pas une deroute.
 	if draw:
 		_run.record_draw(losses, enemies_defeated, _promotions_this_battle,
-			_engine.promoted_survivors(BattleUnit.TEAM_PLAYER))
+			_engine.promoted_survivors(BattleUnit.TEAM_PLAYER),
+			_engine.promoted_knights(BattleUnit.TEAM_PLAYER))
 		_show_fight_drawn(losses)
 		return
 
@@ -1518,7 +1519,8 @@ func _show_result() -> void:
 	var gold := Game.reward_for(battle_id)
 	var dame_bonus := Game.dame_gold_bonus(gold, _dames_deployed)
 	_run.record_victory(losses, enemies_defeated, _promotions_this_battle,
-		_engine.promoted_survivors(BattleUnit.TEAM_PLAYER), gold + dame_bonus)
+		_engine.promoted_survivors(BattleUnit.TEAM_PLAYER), gold + dame_bonus,
+		_engine.promoted_knights(BattleUnit.TEAM_PLAYER))
 
 	if _run.is_last_fight():
 		_show_run_won(dame_bonus)

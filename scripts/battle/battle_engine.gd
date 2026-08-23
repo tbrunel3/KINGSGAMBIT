@@ -149,6 +149,26 @@ func promoted_survivors(team: int) -> int:
 			count += 1
 	return count
 
+
+## Les promus qui ne sont PAS des Dames, et qui ont survecu.
+##
+## ⚠️ AVANT, ILS DISPARAISSAIENT PUREMENT ET SIMPLEMENT. Le joueur, apres
+## test : "apres avoir pousse un pion jusqu'a faire un cavalier, je n'ai pas
+## gagne ce cavalier pour le combat par la suite". C'etait la regle ecrite, et
+## il a demande a la changer.
+##
+## Sa decision : le promu RESTE EN LIGNE jusqu'au bout de la serie, puis
+## redevient le pion qu'il etait. Meme traitement que la Dame pour la duree,
+## sans le gain permanent - sinon 17 promotions sur 19 parties de banc
+## rendraient les Ecuries inutiles, et il faudrait rejouer economy_probe
+## pendant des heures pour le verifier.
+func promoted_knights(team: int) -> int:
+	var count := 0
+	for unit in living(team):
+		if unit.promoted and unit.type != Balance.DAME:
+			count += 1
+	return count
+
 # ------------------------------- BOUCLE --------------------------------------
 
 ## Cases ou cette piece peut se rendre maintenant. C'est ce que la vue
