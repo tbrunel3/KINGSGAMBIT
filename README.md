@@ -28,9 +28,13 @@ pour modifier le jeu.
 autonome. Non versionné (109 Mo, au-delà de la limite GitHub) : il se régénère
 avec la commande d'export plus bas.
 
-**Navigateur, y compris iPhone** — le dossier `docs/` contient un build web prêt
-à publier. Une fois GitHub Pages activé (Settings → Pages → Branch `main`,
-dossier `/docs`), le jeu est jouable à
+**Navigateur, y compris iPhone** — `--export-release "Web"` écrit un build dans
+`docs/`, qui n'est **pas** versionné : 55 Mo de wasm et de pck à chaque export
+n'ont rien à faire dans l'historique du code. Le build est publié depuis la
+branche **`gh-pages`**, qui ne contient que lui.
+
+Une fois GitHub Pages activé (Settings → Pages → Branch `gh-pages`, dossier
+`/ (root)`), le jeu est jouable à
 `https://tbrunel3.github.io/KINGSGAMBIT/`, au doigt, sans rien installer. Le
 build est mono-thread et embarque un manifeste PWA : « Sur l'écran d'accueil »
 depuis Safari donne une icône et un affichage plein écran en portrait.
