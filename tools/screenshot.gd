@@ -78,6 +78,7 @@ func _ready() -> void:
 	await _capture_splash()
 	await _capture_intro()
 	await _capture_shop()
+	await _capture_village_advanced()
 	get_tree().quit()
 
 
@@ -497,3 +498,50 @@ func _capture_shop() -> void:
 	shop.queue_free()
 	for i in range(3):
 		await RenderingServer.frame_post_draw
+
+
+## Le village D'UNE PARTIE AVANCEE, et non du tout premier lancement.
+##
+## La capture ordinaire part d'une sauvegarde neuve : tout au niveau 1, deux
+## batiments encore verrouilles, zero gemme. Compare a la maquette - qui montre
+## un chateau Nv.5 et quatre casernes ouvertes - elle donne l'impression d'un
+## ecran different, alors que c'est le meme a un autre moment de la partie.
+##
+## Les niveaux sont montes par les VRAIES fonctions du jeu (start_upgrade puis
+## force_finish_upgrade), pas en ecrivant dans l'etat : c'est le seul moyen que
+## la capture montre ce que le joueur verra vraiment.
+func _capture_village_advanced() -> void:
+	Game.reset_progress()
+	Game.add_gold(500000)
+	Game.add_gems(145)
+
+	var targets := {
+		Balance.CASTLE: 5, Balance.PION: 3, Balance.CAVALIER: 2,
+		Balance.FOU: 2, Balance.TOUR: 1,
+	}
+	# Le chateau d'abord : c'est lui qui deverrouille le Cloitre (Nv.2) et le
+	# Donjon (Nv.3). Sans cet ordre, les deux dernieres casernes n'existent pas
+	# encore et rien ne monte.
+	for type in [Balance.CASTLE, Balance.PION, Balance.CAVALIER, Balance.FOU, Balance.TOUR]:
+		var wanted := int(targets[type])
+		var guard := 0
+		while Game.building_level(type) < wanted and guard < 20:
+			guard += 1
+			if not Game.start_upgrade(type):
+				break
+			Game.force_finish_upgrade(type)
+
+	# On rend l'or de test : une bourse a 496 350 rend la capture absurde et
+	# incomparable a la maquette, qui en montre 2 450.
+	Game.spend_gold(maxi(0, Game.gold - 2450))
+
+	var village: Node = load("res://scenes/village/village.tscn").instantiate()
+	add_child(village)
+	for i in range(5):
+		await RenderingServer.frame_post_draw
+	await _finish_animations()
+	_save(village, "1_village_avance.png")
+	village.queue_free()
+	for i in range(3):
+		await RenderingServer.frame_post_draw
+	Game.reset_progress()

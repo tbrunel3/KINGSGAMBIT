@@ -86,7 +86,7 @@ const SHOP_ICON := "res://assets/ui/shop_icon.png"
 
 var _popup: Control = null
 var _gold_pill: Pill
-var _level_pill: Pill
+var _gem_pill: Pill
 var _missions_button: PanelContainer
 var _missions_label: Label
 var _missions_badge: PanelContainer
@@ -121,6 +121,7 @@ func _ready() -> void:
 	_build_dev_button()
 
 	Game.gold_changed.connect(func(_g): _refresh())
+	Game.gems_changed.connect(func(_g): _refresh())
 	Game.units_changed.connect(_refresh)
 	Game.buildings_changed.connect(_refresh)
 	Game.progress_changed.connect(_refresh)
@@ -182,9 +183,18 @@ func _build_top_bar() -> void:
 	_gold_pill.set_texture(load("res://assets/ui/kg_coin.png"), 22.0)
 	_gold_pill.set_bold(true)
 
-	_level_pill = _place_pill(132, pill_y, "", Pill.Variant.TOPBAR)
-	_level_pill.set_data("crown", "", Pill.Variant.TOPBAR, Color("ffe580"))
-	_level_pill.set_text_color(Color("ffe580"))
+	# LA PASTILLE DE GEMMES, et non plus celle du niveau de chateau.
+	#
+	# La maquette (village-avec-dame, 410:153) met les gemmes juste apres l'or,
+	# et n'affiche AUCUN niveau de chateau en barre haute - il est deja ecrit
+	# sous "CHÂTEAU ROYAL", au milieu de l'ecran. La pastille de niveau faisait
+	# donc doublon, et elle occupait precisement la place des gemmes.
+	#
+	# Sans elle, la deuxieme monnaie du jeu n'existe que dans la boutique : on
+	# ne peut pas savoir ce qu'on a sans aller voir.
+	_gem_pill = _place_pill(122, pill_y, "", Pill.Variant.TOPBAR)
+	_gem_pill.set_data("diamond", "", Pill.Variant.TOPBAR, Color("4f9ff0"))
+	_gem_pill.set_text_color(Color("cfe3ff"))
 
 	_build_missions_button(pill_y)
 
@@ -685,14 +695,16 @@ func _refresh() -> void:
 	_gold_pill.size = _gold_pill.get_combined_minimum_size()
 	_gold_pill.position = Vector2(12, pill_y)
 
-	_level_pill.set_data("crown", "Nv. %d" % Game.castle_level(), Pill.Variant.TOPBAR, Color("ffe580"))
-	_level_pill.set_text_color(Color("ffe580"))
-	_level_pill.size = _level_pill.get_combined_minimum_size()
-	_level_pill.position = Vector2(_gold_pill.position.x + _gold_pill.size.x + 16, pill_y)
+	_gem_pill.set_data("diamond", _format_thousands(Game.gems),
+		Pill.Variant.TOPBAR, Color("4f9ff0"))
+	_gem_pill.set_text_color(Color("cfe3ff"))
+	_gem_pill.set_bold(true)
+	_gem_pill.size = _gem_pill.get_combined_minimum_size()
+	_gem_pill.position = Vector2(_gold_pill.position.x + _gold_pill.size.x + 16, pill_y)
 
 	_missions_button.reset_size()
 	_missions_button.position = Vector2(
-		_level_pill.position.x + _level_pill.size.x + 16, pill_y - 2)
+		_gem_pill.position.x + _gem_pill.size.x + 16, pill_y - 2)
 	_refresh_missions_button.call_deferred()
 
 	_refresh_castle_glow()
