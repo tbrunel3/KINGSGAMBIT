@@ -73,7 +73,9 @@ var _lock: Icon
 
 
 func _ready() -> void:
-	mouse_filter = Control.MOUSE_FILTER_STOP
+	# PASS et non STOP : le cachet lit le geste, mais le laisse remonter au
+	# ScrollContainer qui fait defiler la carte. Voir _gui_input.
+	mouse_filter = Control.MOUSE_FILTER_PASS
 	pivot_offset = size / 2.0
 	_build_glyphs()
 	_refresh_glyphs()
@@ -107,9 +109,51 @@ func radius() -> float:
 	return size.x / 2.0
 
 
+## Tolerance d'un appui au doigt, en points. Un pouce ne se pose pas au pixel :
+## en dessous de ce deplacement c'est un APPUI, au-dessus c'est un GESTE, et le
+## geste appartient a la carte.
+const TAP_SLOP := 12.0
+
+var _press_point: Vector2 = Vector2.INF
+
+
+## ⚠️ ON EMET SUR LE RELACHEMENT, PAS SUR L'APPUI - et c'est un bug de tactile,
+## pas un detail de style.
+##
+## Le cachet emettait `pressed` sur l'evenement ENFONCE, et campaign.gd enchaine
+## _play_transition() dans la foulee : zoom, fondu au noir, changement d'ecran.
+## Poser le doigt sur un cachet partait donc en bataille AVANT d'avoir bouge.
+##
+## Or la carte est un parchemin de 2300 points qu'on fait defiler, et elle porte
+## dix cachets alignes sur toute sa hauteur - exactement la ou le pouce se pose
+## pour la faire glisser. Le joueur ne pouvait pas faire defiler la carte en
+## partant d'un cachet, et ne pouvait pas non plus annuler en glissant a cote.
+##
+## Deux corrections, et il faut LES DEUX :
+##
+##   1. l'appui n'arme que le geste ; c'est le relachement qui decide, et
+##      seulement s'il retombe a moins de TAP_SLOP du point de depart ;
+##   2. mouse_filter passe de STOP a PASS. En STOP, Godot arrete la propagation
+##      des evenements de bouton vers les parents : le ScrollContainer ne voyait
+##      jamais le geste, et corriger le point 1 seul n'aurait toujours rien fait
+##      defiler.
 func _gui_input(event: InputEvent) -> void:
-	if event is InputEventMouseButton and event.pressed \
-			and event.button_index == MOUSE_BUTTON_LEFT:
+	# Cast explicite plutot que `event is ...` : sur une variable typee
+	# InputEvent, GDScript ne deduit pas le type de `event.position` et refuse
+	# d'inferer celui de `travelled`.
+	var click := event as InputEventMouseButton
+	if click == null or click.button_index != MOUSE_BUTTON_LEFT:
+		return
+
+	if click.pressed:
+		_press_point = click.position
+		return
+
+	if _press_point == Vector2.INF:
+		return
+	var travelled: float = click.position.distance_to(_press_point)
+	_press_point = Vector2.INF
+	if travelled <= TAP_SLOP:
 		pressed.emit(battle_id)
 
 

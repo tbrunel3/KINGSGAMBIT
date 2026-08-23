@@ -28,6 +28,7 @@ func _ready() -> void:
 	await _test_result_entries()
 	await _test_mission_claim()
 	await _test_guide_popups()
+	await _test_campaign_drag()
 
 	print("")
 	if _failures == 0:
@@ -1004,3 +1005,80 @@ func _test_shop() -> void:
 	_check(is_instance_valid(village._shop_button), "le village porte une entree vers la boutique")
 	village.queue_free()
 	await _frames(2)
+
+
+# ------------------------------- LA CARTE AU DOIGT ---------------------------
+
+const CampaignScene := preload("res://scenes/battle/campaign.tscn")
+
+## Faire glisser la carte en partant d'un CACHET doit la faire defiler, pas
+## lancer la bataille.
+##
+## ⚠️ CE TEST N'EXISTAIT PAS, ET AUCUN BANC NE POUVAIT LE PASSER. _press()
+## n'envoie qu'un APPUI, jamais de relachement : un banc qui ne sait pas lever
+## le doigt ne peut pas distinguer un appui d'un geste. C'est exactement le
+## defaut qu'il fallait attraper.
+##
+## ⚠️ ET _press() N'APPUYAIT SUR RIEN ICI. `gui_input` est un SIGNAL ; `_gui_input`
+## est une methode VIRTUELLE. Emettre le signal n'appelle pas la virtuelle : le
+## banc croyait presser campaign_seal, grid_view et series_banner, et ne pressait
+## rien. Seuls les controles qui font `gui_input.connect(...)` explicitement -
+## corner_button, selection_chip - repondaient. D'ou l'appel direct ci-dessous.
+##
+## Le cachet emettait `pressed` sur l'evenement ENFONCE, et campaign.gd lance
+## _play_transition() dans la foulee : zoom, fondu au noir, changement d'ecran.
+## Poser le doigt sur un cachet partait donc en bataille avant meme d'avoir
+## bouge - et la carte porte dix cachets sur toute sa hauteur, exactement la ou
+## le pouce se pose pour faire defiler.
+func _test_campaign_drag() -> void:
+	print("
+[12] La carte de campagne au doigt")
+
+	var screen: Control = CampaignScene.instantiate()
+	add_child(screen)
+	await _frames(3)
+	await _skip_animations()
+
+	var seal: Control = screen._nodes.get(1, null)
+	_check(seal != null, "le cachet de la bataille 1 existe")
+	if seal == null:
+		screen.queue_free()
+		return
+
+	# 1. Poser le doigt sur un cachet ne doit RIEN lancer.
+	var down := InputEventMouseButton.new()
+	down.button_index = MOUSE_BUTTON_LEFT
+	down.pressed = true
+	down.position = seal.size * 0.5
+	seal._gui_input(down)
+	await _frames(2)
+	_check(not screen._transitioning,
+		"poser le doigt sur un cachet ne lance pas la bataille")
+
+	# 2. Le relever LOIN du point de depart : c'est un geste, pas un appui.
+	var up_far := InputEventMouseButton.new()
+	up_far.button_index = MOUSE_BUTTON_LEFT
+	up_far.pressed = false
+	up_far.position = seal.size * 0.5 + Vector2(0, 60)
+	seal._gui_input(up_far)
+	await _frames(2)
+	_check(not screen._transitioning,
+		"glisser depuis un cachet ne lance pas la bataille")
+
+	# 3. Appuyer puis relever AU MEME ENDROIT : la, c'est un appui.
+	seal._gui_input(down)
+	var up := InputEventMouseButton.new()
+	up.button_index = MOUSE_BUTTON_LEFT
+	up.pressed = false
+	up.position = seal.size * 0.5
+	seal._gui_input(up)
+	await _frames(2)
+	_check(screen._transitioning,
+		"relever le doigt au meme endroit lance bien la bataille")
+
+	# 4. Le cachet doit LAISSER PASSER le geste au ScrollContainer.
+	_check(seal.mouse_filter == Control.MOUSE_FILTER_PASS,
+		"le cachet laisse le geste remonter a la carte (PASS, pas STOP)")
+
+	screen.queue_free()
+	await _frames(1)

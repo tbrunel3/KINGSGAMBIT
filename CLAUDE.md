@@ -437,7 +437,7 @@ représentatif**, et confondre les deux a coûté cher :
 | `tools/smoke_test.tscn` | est-ce que tout tient encore debout ? (données, économie, règles, série, 10 batailles, écrans) | ~70 s |
 | `tools/format_test.tscn` | la géométrie tient-elle sur les huit formats ? **Le seul banc de format qui rende des CHIFFRES** — `resolutions` rend des images, et une image ne casse pas un banc quand elle régresse. Trois cas : le fond, le village, l'intro | ~3 s |
 | `tools/hitbox_debug.tscn` | où tombent les zones de clic du village ? (les rectangles sont relevés à l'œil ; aucun banc numérique ne peut dire s'ils couvrent le bon bâtiment) | court |
-| `tools/ui_test.tscn` | est-ce que les vrais boutons répondent ? (le codex dit-il encore la vérité, la composition borne-t-elle le placement, la série s'enchaîne-t-elle sans écran de victoire ?) | court |
+| `tools/ui_test.tscn` | est-ce que les vrais boutons répondent ? (le codex dit-il encore la vérité, la composition borne-t-elle le placement, la série s'enchaîne-t-elle sans écran de victoire ?) — ⚠️ **son `_press()` n'appuie que sur les contrôles qui font `gui_input.connect(...)`**, voir ci-dessous | court |
 | `tools/ai_probe.tscn` | combien coûte un coup à chaque profondeur ? | ~7 s |
 | `tools/ai_bench.tscn` | est-ce que chercher plus loin fait gagner ? *(mesuré : chaque demi-coup gagne les six duels, dans les deux camps)* | long |
 | `tools/tune_probe.tscn` | de combien de niveaux le joueur doit-il dominer ? | ~45 min |
@@ -447,6 +447,18 @@ représentatif**, et confondre les deux a coûté cher :
 | `tools/debug_battle.tscn` | pourquoi cette bataille tourne mal ? (trace coup par coup) | court |
 | `tools/screenshot.tscn` | à quoi ressemblent les écrans ? (PNG dans `tools/screenshots/`) | ~1 min |
 | `tools/resolutions.tscn` | qu'est-ce qui déborde sur les autres téléphones ? | court |
+
+⚠️ **`ui_test._press()` n'appuyait sur rien, sur la moitié des contrôles du jeu.**
+`gui_input` est un **signal** ; `_gui_input()` est une **méthode virtuelle**, et
+émettre le signal n'appelle pas la virtuelle. Seuls les contrôles qui font
+`gui_input.connect(...)` explicitement — `corner_button`, `selection_chip` —
+répondaient. `campaign_seal`, `grid_view` et `series_banner` utilisent la
+virtuelle : le banc croyait les presser et ne pressait rien. Pour ceux-là,
+appeler `node._gui_input(event)` directement.
+
+⚠️ **Et `_press()` n'envoie qu'un APPUI, jamais de relâchement.** Un banc qui ne
+sait pas lever le doigt ne peut pas distinguer un appui d'un geste — c'est ce
+qui a laissé passer le bug des cachets (cf. « Le tactile » plus bas).
 
 ```bash
 godot --headless --path . tools/smoke_test.tscn
@@ -785,6 +797,51 @@ ne mesurait que la largeur, et ne pouvait structurellement pas voir un
 problème de format. Trois tailles hors format ont été ajoutées
 (`web-393x700`, `court-360x620`, `tres-long-430x1080`) : **ce sont celles-là
 qu'il faut regarder en premier.**
+
+---
+
+## Le tactile : appuyer n'est pas toucher
+
+**Tout le jeu écoute la SOURIS.** Il n'y a pas un seul `InputEventScreenTouch`
+ni `InputEventScreenDrag` dans le dépôt, et `project.godot` ne règle rien du
+tout côté `input_devices` — tout est au défaut Godot. Ça marche au doigt
+uniquement parce que `emulate_mouse_from_touch` vaut `true` par défaut. C'est
+une dépendance qui n'est écrite nulle part, et elle a un coût : **un second
+doigt produit un second appui émulé**, qui repasse par `_begin_press` et tue le
+glissement en cours. Paume, doigt qui traîne, et le geste meurt.
+
+### Le bug des cachets — corrigé le 23/08/2026
+
+`campaign_seal` émettait `pressed` sur l'événement **enfoncé**, et
+`campaign._on_node_pressed` enchaîne `_play_transition()` : zoom, fondu au noir,
+changement d'écran. **Poser le doigt sur un cachet partait en bataille avant
+d'avoir bougé.** Or la carte est un parchemin de 2 300 points qu'on fait
+défiler, et elle porte dix cachets alignés sur toute sa hauteur — exactement là
+où le pouce se pose pour la faire glisser.
+
+Il fallait **deux** corrections, et l'une sans l'autre ne servait à rien :
+
+1. l'appui n'arme que le geste ; c'est le **relâchement** qui décide, et
+   seulement s'il retombe à moins de `TAP_SLOP` (12 pt) du point de départ ;
+2. `mouse_filter` passe de `STOP` à **`PASS`**. En `STOP`, Godot arrête la
+   propagation des événements de bouton vers les parents : le `ScrollContainer`
+   ne voyait jamais le geste, et corriger le point 1 seul n'aurait toujours rien
+   fait défiler.
+
+`ui_test` a désormais un cas `[12]` qui pose, glisse, relâche — le premier banc
+du jeu qui sache **lever le doigt**.
+
+### Ce qui reste, et qui n'est PAS fait
+
+- **Le seuil de glissement du combat est réglé pour une souris.**
+  `grid_view._DRAG_THRESHOLD` vaut `8.0` points, soit ~1,5 mm. Un pouce en
+  produit 2 à 4. Le combat s'en sort quand même parce que la sélection se fait
+  sur l'appui (`cell_pressed` → `_select_unit`), donc un appui tremblé
+  sélectionne quand même — mais le réglage n'a jamais été mesuré au doigt.
+- **Aucun banc ne joue un geste dans le combat.** `[12]` ne couvre que la carte.
+- **Les quatre autres `ScrollContainer`** (préparation, codex, boutique,
+  showcase) n'ont pas été audités : c'est le même patron de conflit qui peut s'y
+  cacher dès qu'un enfant cliquable est en `MOUSE_FILTER_STOP`.
 
 ---
 
