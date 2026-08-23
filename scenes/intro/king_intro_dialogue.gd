@@ -129,20 +129,60 @@ func _build_background() -> void:
 		_background.texture = load(BG_PATH)
 	_background.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
 	_background.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_COVERED
-	_background_wrap.pivot_offset = Vector2(196.5, 426)
+
+	# Meme defaut que les degrades, meme cause : le pivot etait pose a
+	# (196.5, 426), soit la moitie de 393 x 852 en dur. Sur un viewport elargi
+	# a 478, le zoom de _start_zoom tirait l'illustration 42 points a cote du
+	# centre, et elle derivait sur le cote en se posant.
+	#
+	# ⚠️ Le pivot se pose APRES la mise en page, jamais a la construction - le
+	# piege deja paye sur le bandeau de serie. D'ou le `resized`, plus un appel
+	# differe pour la premiere image.
+	_background_wrap.resized.connect(_center_background_pivot)
+	_center_background_pivot.call_deferred()
+
+
+func _center_background_pivot() -> void:
+	_background_wrap.pivot_offset = _background_wrap.size * 0.5
 
 
 ## Vignette sombre en haut (lisibilite de la barre de statut) + degrade vers
 ## le noir en bas (lisibilite du bouton), cf. maquette Figma.
+##
+## ⚠️ ANCRES, PAS COORDONNEES - et c'est ici que la regle 4 avait ete oubliee.
+##
+## Les deux degrades etaient poses en absolu et LARGES DE 393 EN DUR. La regle
+## dit que la largeur en unites de jeu ne descend jamais sous 393, ce qui est
+## vrai - et ce qui a fait croire que 393 etait une valeur sure. Mais elle peut
+## MONTER : en etirement "expand", Godot choisit l'echelle sur l'axe le plus
+## contraint, et dans un navigateur c'est la HAUTEUR qui manque (la barre d'URL
+## en prend sa part). Mesure sur le cas web-393x700 : echelle 0,82, viewport
+## 478 x 852.
+##
+## Les degrades s'arretaient alors a x=393 et laissaient 85 POINTS DE BANDE NUE
+## A DROITE, avec un bord net la ou le degrade se coupe. C'est la ligne que le
+## joueur voyait sur la version web, et seulement sur elle. Meme defaut en bas :
+## 380..852 en dur laissait 21 points sans fondu sur un telephone en 393 x 873.
+##
+## Le patron correct est celui de castle_screen._build_vignettes : un preset
+## d'ancrage, et un seul offset pour l'epaisseur.
+const VIGNETTE_TOP_HEIGHT := 120.0
+const VIGNETTE_BOTTOM_HEIGHT := 472.0
+
+
 func _build_gradients() -> void:
-	var top := _gradient_rect(Vector2(0, 0), Vector2(393, 120), Color("0c0614", 0.4), Color("0c0614", 0.0))
+	var top := _gradient_rect(Color("0c0614", 0.4), Color("0c0614", 0.0))
+	top.set_anchors_preset(Control.PRESET_TOP_WIDE)
+	top.offset_bottom = VIGNETTE_TOP_HEIGHT
 	_overlay.add_child(top)
 
-	var bottom := _gradient_rect(Vector2(0, 380), Vector2(393, 472), Color("0c0614", 0.0), Color("0c0614", 0.97))
+	var bottom := _gradient_rect(Color("0c0614", 0.0), Color("0c0614", 0.97))
+	bottom.set_anchors_preset(Control.PRESET_BOTTOM_WIDE)
+	bottom.offset_top = -VIGNETTE_BOTTOM_HEIGHT
 	_overlay.add_child(bottom)
 
 
-func _gradient_rect(pos: Vector2, size: Vector2, top_color: Color, bottom_color: Color) -> TextureRect:
+func _gradient_rect(top_color: Color, bottom_color: Color) -> TextureRect:
 	var gradient := Gradient.new()
 	gradient.colors = PackedColorArray([top_color, bottom_color])
 	var texture := GradientTexture2D.new()
@@ -150,14 +190,14 @@ func _gradient_rect(pos: Vector2, size: Vector2, top_color: Color, bottom_color:
 	texture.fill_from = Vector2(0, 0)
 	texture.fill_to = Vector2(0, 1)
 	texture.width = 4
-	texture.height = int(size.y)
+	# Hauteur de TEXTURE, pas de rectangle : elle ne fait que la finesse du
+	# degrade, que le GPU etire ensuite sur la hauteur reelle du bord.
+	texture.height = 256
 
 	var rect := TextureRect.new()
 	rect.texture = texture
 	rect.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
 	rect.stretch_mode = TextureRect.STRETCH_SCALE
-	rect.position = pos
-	rect.size = size
 	rect.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	return rect
 

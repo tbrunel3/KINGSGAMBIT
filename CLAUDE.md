@@ -24,6 +24,12 @@ documents complètent celui-ci et ne le répètent pas :
   l'inventaire des animations, celui des écrans, les sept pièges de portage, et
   la mesure de l'incohérence des boutons de coin — six tailles pour la même
   chose. **Partout où il dit « pas tranché », c'est la spec qui fait foi.**
+- [`chantier_i_missives.md`](chantier_i_missives.md) — **le chantier suivant,
+  spec écrite le 23/08, pas encore commencé** : les quatre lettres scellées du
+  Roi, qui portent le *pourquoi* du jeu là où `GuidePopup` porte le *comment*.
+  Il contient les mesures des deux illustrations (plissures à 39,5 % et 65,4 %,
+  marge intérieure 8,5 %) et la seule pièce de données manquante — le jeu n'a
+  **aucun compteur de défaite**.
 - [`chantier_h_boutique.md`](chantier_h_boutique.md) — la boutique : règles,
   mesures et décisions. Terminé.
 - [`figma_contexte_projet.md`](figma_contexte_projet.md) — pour le designer :
@@ -65,6 +71,27 @@ calques** — `DecorLayer` suit le rectangle réel du fond, `UiLayer` suit l'éc
 Mesure avant correction : **34 points de dérive** sur un écran court, et le
 bouton BATAILLE à **42 points du centre**. Après : dérive nulle sur les huit
 formats, vérifiée par [`tools/format_test.tscn`](tools/format_test.gd).
+
+⚠️ **« Tous » était faux : les écrans d'INTRO n'avaient jamais été passés**, et
+le joueur a vu le défaut sur la version web avant qu'un banc ne le voie. Corrigé
+le 23/08/2026 — mais la leçon compte plus que le correctif, parce qu'elle
+retourne le piège n°1 :
+
+**La largeur ne descend pas sous 393, donc 393 a l'air d'une valeur sûre. Elle
+ne l'est pas : elle MONTE.** En `expand`, Godot choisit l'échelle sur l'axe le
+plus contraint ; dans un navigateur c'est la **hauteur** qui manque, la barre
+d'URL en prenant sa part. Sur `web-393x700` le viewport fait **478 × 852**, sur
+`court-360x620` il fait **495**. Les deux vignettes de `king_intro_dialogue`
+étaient posées en absolu, larges de 393 en dur : **85,34 points de bande nue à
+droite** sur le premier cas, **101,71** sur le second — mesurés en réintroduisant
+la régression, pas estimés.
+
+Le pivot de zoom du même écran avait le même défaut, à `(196.5, 426)` — la
+moitié de 393 × 852 en dur. **Un `393` ou un `852` littéral dans du code de mise
+en page est presque toujours un bug qui attend un navigateur.**
+
+`format_test` a désormais un cas `[3] Intro` qui instancie le vrai écran et
+mesure la bande nue sur les huit formats.
 
 **5. Ne jamais laisser un chantier sans trace.** Une fenêtre de contexte
 s'épuise en plein travail, et l'agent suivant arrive à froid. **Dès que le
@@ -408,7 +435,7 @@ représentatif**, et confondre les deux a coûté cher :
 | Banc | La question à laquelle il répond | Durée |
 |---|---|---|
 | `tools/smoke_test.tscn` | est-ce que tout tient encore debout ? (données, économie, règles, série, 10 batailles, écrans) | ~70 s |
-| `tools/format_test.tscn` | la géométrie tient-elle sur les huit formats ? **Le seul banc de format qui rende des CHIFFRES** — `resolutions` rend des images, et une image ne casse pas un banc quand elle régresse | instantané |
+| `tools/format_test.tscn` | la géométrie tient-elle sur les huit formats ? **Le seul banc de format qui rende des CHIFFRES** — `resolutions` rend des images, et une image ne casse pas un banc quand elle régresse. Trois cas : le fond, le village, l'intro | ~3 s |
 | `tools/hitbox_debug.tscn` | où tombent les zones de clic du village ? (les rectangles sont relevés à l'œil ; aucun banc numérique ne peut dire s'ils couvrent le bon bâtiment) | court |
 | `tools/ui_test.tscn` | est-ce que les vrais boutons répondent ? (le codex dit-il encore la vérité, la composition borne-t-elle le placement, la série s'enchaîne-t-elle sans écran de victoire ?) | court |
 | `tools/ai_probe.tscn` | combien coûte un coup à chaque profondeur ? | ~7 s |

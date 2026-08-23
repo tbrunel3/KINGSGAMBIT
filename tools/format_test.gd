@@ -42,6 +42,7 @@ func _ready() -> void:
 	print("=== KING'S GAMBIT - banc de format ===")
 	_test_cover_fit()
 	_test_village_anchoring()
+	await _test_intro_overlays()
 
 	print("")
 	if _failures == 0:
@@ -166,3 +167,59 @@ func _test_village_anchoring() -> void:
 		_check(_near(center, size.x * 0.5, 1.0),
 			"%s : BATAILLE centre (%.1f pour un centre a %.1f)"
 				% [String(entry["name"]), center, size.x * 0.5])
+
+
+# ------------------------------- L'INTRO -------------------------------------
+
+const KingIntro := preload("res://scenes/intro/king_intro_dialogue.tscn")
+
+## Les vignettes de l'intro doivent couvrir TOUTE la largeur du viewport.
+##
+## ⚠️ CE TEST EXISTE PARCE QU'IL MANQUAIT. Le banc ne couvrait que le village :
+## les deux ecrans d'intro n'ont jamais ete passes au crible des formats, et
+## c'est la que le defaut a survecu. Les deux degrades etaient poses en absolu,
+## larges de 393 EN DUR. Sur web-393x700, le viewport fait 478 de large : la
+## bande de droite restait nue sur 85 points, avec un bord net. Le joueur l'a
+## vu sur la version web, et aucun banc ne pouvait le voir.
+##
+## Le test instancie le VRAI ecran plutot que de reproduire sa formule : ce
+## qu'on garde ici, c'est que personne ne recable une largeur en dur.
+func _test_intro_overlays() -> void:
+	print("\n[3] Intro : les vignettes couvrent toute la largeur")
+
+	var host := Control.new()
+	add_child(host)
+	var screen: Control = KingIntro.instantiate()
+	host.add_child(screen)
+	await get_tree().process_frame
+
+	var overlay: Control = screen.get_node_or_null("Overlay")
+	if overlay == null:
+		_check(false, "l'ecran d'intro expose bien un noeud Overlay")
+		host.queue_free()
+		return
+
+	var vignettes: Array[Control] = []
+	for child in overlay.get_children():
+		if child is TextureRect:
+			vignettes.append(child)
+	_check(vignettes.size() == 2,
+		"deux vignettes trouvees (%d)" % vignettes.size())
+
+	for entry in VIEWPORTS:
+		var size: Vector2 = entry["size"]
+		host.size = size
+		screen.size = size
+		await get_tree().process_frame
+
+		var worst := 0.0
+		for rect in vignettes:
+			# Le bord droit de chaque vignette doit tomber sur le bord droit de
+			# l'ecran. Un ecart, c'est la bande nue.
+			worst = maxf(worst, absf(rect.position.x + rect.size.x - size.x))
+			worst = maxf(worst, absf(rect.position.x))
+		_check(worst < 1.0,
+			"%s : bande nue maximale %.2f pt (viewport %.0f de large)"
+				% [String(entry["name"]), worst, size.x])
+
+	host.queue_free()
