@@ -104,6 +104,31 @@ func _test_village() -> void:
 	_check(is_instance_valid(village._codex_button), "le bouton codex repond encore")
 	_check(is_instance_valid(village._shop_button), "le bouton boutique repond encore")
 
+	# LE BOUTON DE DEVELOPPEMENT A QUITTE L'ECRAN, mais pas le jeu : le joueur
+	# teste sur le build web EXPORTE, donc en release, et un masquage en debug
+	# lui retirerait son seul raccourci.
+	_check(village.find_child("DevGesture", true, false) != null,
+		"la zone de geste du panneau dev existe")
+	_check(village.find_child("DevButton", true, false) == null,
+		"le bouton dev n'est plus a l'ecran")
+	# La zone doit s'arreter AU-DESSUS de la barre haute, sinon elle vole ses
+	# taps a l'engrenage.
+	var gesture: Control = village.find_child("DevGesture", true, false)
+	if gesture != null:
+		_check(gesture.get_global_rect().end.y <= village.TOP_BAR_Y,
+			"elle ne mord pas sur la barre haute (%.0f <= %.0f)"
+				% [gesture.get_global_rect().end.y, village.TOP_BAR_Y])
+
+	# Et l'ACCES survit : c'est tout l'interet du geste plutot que du masquage
+	# en build de debug.
+	village._on_dev_pressed()
+	await _frames(3)
+	_check(is_instance_valid(village._popup), "le panneau dev s'ouvre encore")
+	if is_instance_valid(village._popup):
+		village._popup.queue_free()
+		village._popup = null
+		await _frames(2)
+
 	var hitboxes := village.find_children("Hitbox_*", "Control", true, false)
 	_check(hitboxes.size() == 5,
 		"les cinq batiments portent une zone de clic (%d)" % hitboxes.size())

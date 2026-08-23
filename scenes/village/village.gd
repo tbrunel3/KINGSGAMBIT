@@ -91,11 +91,18 @@ const TOP_BAR_HEIGHT := 30.0
 const TOP_FADE_HEIGHT := 143.0
 const BOTTOM_FADE_TOP := 720.0
 const BOTTOM_FADE_HEIGHT := 132.0
-const DEV_BUTTON_RECT := Rect2(362, 14, 24, 24)
-## Bouton CODEX, cale a gauche de l'engrenage des reglages. Icone seule et
-## discrete : le codex se consulte, il ne se joue pas - lui donner un libelle
-## le mettrait au meme rang que MISSIONS, qui dit quoi faire ensuite.
-const CODEX_BUTTON_RECT := Rect2(319, 44, 28, 28)
+## LE GESTE QUI OUVRE LE PANNEAU DE DEVELOPPEMENT.
+##
+## Plus large que haute, et calee AU-DESSUS de la barre du haut : les boutons
+## de reglages et de codex commencent a y=44, une zone plus profonde leur
+## volerait leurs taps.
+const DEV_GESTURE_SIZE := Vector2(72, 40)
+const DEV_GESTURE_HOLD := 1.2
+## ⚠️ LE CODEX N'A PLUS DE RECTANGLE A LUI. Il est ancre au bord droit par le
+## composant partage, comme l'engrenage. Son icone reste discrete et sans
+## libelle, decision inchangee : le codex se consulte, il ne se joue pas - lui
+## donner un libelle le mettrait au meme rang que MISSIONS, qui dit quoi faire
+## ensuite.
 ## Bouton BOUTIQUE, pose A GAUCHE DE "BATAILLE" et non plus en haut a droite
 ## avec le codex : c'est le joueur qui l'a place la dans la maquette
 ## (Boutique-Button, 445:6). Le bas de l'ecran est la zone du POUCE, et la
@@ -180,7 +187,7 @@ func _ready() -> void:
 	for type in Balance.UNIT_TYPES:
 		_build_building_label(type)
 	_build_battle_button()
-	_build_dev_button()
+	_build_dev_gesture()
 
 	Game.gold_changed.connect(func(_g): _refresh())
 	Game.gems_changed.connect(func(_g): _refresh())
@@ -753,33 +760,50 @@ func _build_battle_button() -> void:
 	UiTheme.ignore_mouse_recursive(row)
 
 
-## Discret, 24x24 - cf. CLAUDE.md ("Bouton DEV : discret, 24x24, radius 4,
-## emoji outil"). Une icone plutot que du texte : illisible a cette taille.
-func _build_dev_button() -> void:
-	var dev := Button.new()
-	dev.theme_type_variation = "SecondaryButton"
-	var box := StyleBoxFlat.new()
-	box.bg_color = UiTheme.PANEL_LIGHT
-	box.set_corner_radius_all(4)
-	box.set_content_margin_all(0)
-	dev.add_theme_stylebox_override("normal", box)
-	dev.add_theme_stylebox_override("hover", box)
-	dev.add_theme_stylebox_override("pressed", box)
-	_ui.add_child(dev)
-	dev.position = DEV_BUTTON_RECT.position
-	dev.size = DEV_BUTTON_RECT.size
-	dev.pressed.connect(_on_dev_pressed)
+## LE PANNEAU DE DEVELOPPEMENT N'A PLUS DE BOUTON.
+##
+## Il n'etait dans aucune maquette, il chevauchait la rangee des reglages, et
+## c'est un des ecarts que le joueur a signales.
+##
+## ⚠️ MAIS LE MASQUER HORS BUILD DE DEBUG NE MARCHE PAS ICI. Le joueur teste
+## sur son telephone via le build web EXPORTE, donc en release :
+## OS.is_debug_build() lui retirerait son seul raccourci. D'ou un geste - le
+## panneau reste accessible, l'ecran redevient celui de la maquette.
+##
+## Le geste : UN APPUI LONG DE 1,2 s dans le coin haut-droit, sur une zone
+## invisible. Elle est volontairement PLUS BASSE QUE HAUTE et s'arrete au-
+## dessus de la barre du haut : une zone de 60 x 60 descendrait jusqu'a y=60 et
+## volerait ses taps a l'engrenage, qui commence a y=44.
+func _build_dev_gesture() -> void:
+	var zone := Control.new()
+	zone.name = "DevGesture"
+	zone.mouse_filter = Control.MOUSE_FILTER_STOP
+	zone.anchor_left = 1.0
+	zone.anchor_right = 1.0
+	zone.grow_horizontal = Control.GROW_DIRECTION_BEGIN
+	zone.offset_left = -DEV_GESTURE_SIZE.x
+	zone.offset_right = 0.0
+	zone.offset_top = 0.0
+	zone.offset_bottom = DEV_GESTURE_SIZE.y
+	_ui.add_child(zone)
 
-	# Une CLE et non un engrenage : le bouton voisin est celui des reglages, et
-	# deux ronds dentes identiques cote a cote ne disent pas lequel fait quoi.
-	var icon := Icon.new()
-	icon.icon_name = "wrench"
-	icon.color = UiTheme.TEXT_DIM
-	icon.custom_minimum_size = Vector2(14, 14)
-	icon.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	dev.add_child(icon)
-	icon.set_anchors_preset(Control.PRESET_CENTER)
-	icon.position = DEV_BUTTON_RECT.size / 2.0 - icon.custom_minimum_size / 2.0
+	# Un Timer a un coup plutot qu'un compteur dans _process : le doigt qui se
+	# leve l'arrete, et il n'y a rien a remettre a zero a la main.
+	var hold := Timer.new()
+	hold.one_shot = true
+	hold.wait_time = DEV_GESTURE_HOLD
+	hold.timeout.connect(_on_dev_pressed)
+	zone.add_child(hold)
+
+	zone.gui_input.connect(func(event: InputEvent):
+		if event is InputEventMouseButton and event.button_index == MOUSE_BUTTON_LEFT:
+			if event.pressed:
+				hold.start()
+			else:
+				hold.stop())
+	# Le doigt qui glisse hors de la zone annule aussi : sans ca, un balayage
+	# qui commence dans le coin ouvre le panneau une seconde plus tard.
+	zone.mouse_exited.connect(hold.stop)
 
 
 ## Chaque label a la teinte de son batiment en bordure + halo - cf. captures
