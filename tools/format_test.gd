@@ -203,8 +203,11 @@ func _test_intro_overlays() -> void:
 	for child in overlay.get_children():
 		if child is TextureRect:
 			vignettes.append(child)
-	_check(vignettes.size() == 2,
-		"deux vignettes trouvees (%d)" % vignettes.size())
+	# Trois depuis le 24/08 : le vignetage radial autour du Roi s'est ajoute aux
+	# deux fondus de bord. Il est plein ecran comme eux, donc il doit passer le
+	# meme test - un vignetage qui s'arreterait a 393 laisserait le meme bord net.
+	_check(vignettes.size() >= 2,
+		"les calques pleine largeur sont la (%d)" % vignettes.size())
 
 	for entry in VIEWPORTS:
 		var size: Vector2 = entry["size"]

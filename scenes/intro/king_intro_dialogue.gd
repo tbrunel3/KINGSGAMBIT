@@ -171,6 +171,9 @@ const VIGNETTE_BOTTOM_HEIGHT := 472.0
 
 
 func _build_gradients() -> void:
+	# Le vignetage EN PREMIER : les deux fondus de bord se posent par-dessus.
+	_overlay.add_child(_build_vignette())
+
 	var top := _gradient_rect(Color("0c0614", 0.4), Color("0c0614", 0.0))
 	top.set_anchors_preset(Control.PRESET_TOP_WIDE)
 	top.offset_bottom = VIGNETTE_TOP_HEIGHT
@@ -180,6 +183,55 @@ func _build_gradients() -> void:
 	bottom.set_anchors_preset(Control.PRESET_BOTTOM_WIDE)
 	bottom.offset_top = -VIGNETTE_BOTTOM_HEIGHT
 	_overlay.add_child(bottom)
+
+
+## LE VIGNETAGE AUTOUR DU ROI.
+##
+## Idee du joueur, en remplacement du dezoom qui tremblait : "pourquoi pas un
+## vignetage plutot autour du personnage, un truc discret mais qui renforce
+## l'aspect de la mission".
+##
+## Un degrade RADIAL transparent au centre et sombre aux bords. Il n'assombrit
+## pas le Roi, il ferme le champ autour de lui - c'est ce qui fait qu'on le
+## regarde LUI plutot que la salle.
+##
+## Le centre est pose un peu AU-DESSUS du milieu (0,42) : le Roi est assis sur
+## son trone, pas au centre geometrique de l'image.
+##
+## ⚠️ Le rectangle n'est pas carre, donc le cercle s'etire en ellipse verticale.
+## C'est voulu : sur un ecran portrait, un vignetage rond laisserait les coins
+## hauts et bas trop clairs.
+const VIGNETTE_CENTER := Vector2(0.5, 0.42)
+## Rayon en fraction de largeur. Au-dela, l'assombrissement commence.
+const VIGNETTE_RADIUS := 0.62
+const VIGNETTE_ALPHA := 0.5
+
+
+func _build_vignette() -> TextureRect:
+	var gradient := Gradient.new()
+	gradient.offsets = PackedFloat32Array([0.0, 0.55, 1.0])
+	gradient.colors = PackedColorArray([
+		Color("0c0614", 0.0),
+		Color("0c0614", 0.0),
+		Color("0c0614", VIGNETTE_ALPHA),
+	])
+
+	var texture := GradientTexture2D.new()
+	texture.gradient = gradient
+	texture.fill = GradientTexture2D.FILL_RADIAL
+	texture.fill_from = VIGNETTE_CENTER
+	texture.fill_to = VIGNETTE_CENTER + Vector2(VIGNETTE_RADIUS, 0.0)
+	texture.width = 256
+	texture.height = 256
+
+	var rect := TextureRect.new()
+	rect.name = "Vignette"
+	rect.texture = texture
+	rect.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+	rect.stretch_mode = TextureRect.STRETCH_SCALE
+	rect.set_anchors_preset(Control.PRESET_FULL_RECT)
+	rect.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	return rect
 
 
 func _gradient_rect(top_color: Color, bottom_color: Color) -> TextureRect:
@@ -444,14 +496,23 @@ func _build_commencer_button() -> PanelContainer:
 ## decrit une ENTREE - l'image arrive a 1,08 et se pose sur 1,2 s - la ou l'on
 ## voulait un zoom ambiant qui dure tout l'ecran. Les enchainer donne les deux :
 ## l'image se pose comme un objet qu'on repose, puis elle respire.
+## ⚠️ IL Y AVAIT UN DEZOOM AVANT LE ZOOM, et c'est exactement ce que le joueur
+## a decrit : "apres l'appui il y a un effet de dezoom etrange, il faudrait un
+## effet zoom et pas de tremblement".
+##
+## L'ancienne version partait de SETTLE_SCALE (1,08), redescendait a 1,0, PUIS
+## montait a 1,12. L'image retrecissait avant de grandir, et ce changement de
+## sens se lit comme un tremblement.
+##
+## La cause est un contresens de portage : le settle 1,08 -> 1,0 vient de
+## l'ENTREE de la frame Figma - le moment ou l'ecran apparait - et il avait ete
+## branche sur le TAP, ou il n'a rien a faire. Le zoom part donc maintenant de
+## 1,0 et ne fait que monter.
 func _start_zoom() -> void:
+	_background_wrap.scale = Vector2.ONE
 	var tween := create_tween()
-	_background_wrap.scale = Vector2(SETTLE_SCALE, SETTLE_SCALE)
-	var pose := tween.tween_property(_background_wrap, "scale", Vector2.ONE, SETTLE_DURATION)
-	pose.set_trans(Tween.TRANS_CUBIC).set_ease(Tween.EASE_OUT)
-	var derive := tween.tween_property(_background_wrap, "scale",
-		Vector2(ZOOM_TARGET, ZOOM_TARGET), ZOOM_DURATION)
-	derive.set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN_OUT)
+	tween.tween_property(_background_wrap, "scale",
+			Vector2(ZOOM_TARGET, ZOOM_TARGET), ZOOM_DURATION) 		.set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN_OUT)
 
 
 ## La bulle MONTE en apparaissant, elle ne fait pas que se fondre.
@@ -495,10 +556,14 @@ func _unlock_button() -> void:
 	montee.set_trans(Tween.TRANS_EXPO).set_ease(Tween.EASE_OUT)
 
 
+## ⚠️ LE FONDU LOCAL A ETE RETIRE. L'intro noircissait avec son propre
+## _fade_overlay, puis Router.goto_village() noircissait a nouveau avec le voile
+## global : deux noirs a la suite, et surtout AUCUN fondu entrant sur le village
+## - le joueur a demande "un petit fade in sur l'ouverture sur le village".
+##
+## Le voile global le donne des qu'on lui laisse la place : il couvre, l'ecran
+## change derriere lui, et il se leve sur un village deja peint.
 func _on_commencer_pressed() -> void:
 	_commencer_ready = false
 	Game.mark_intro_seen()
-	var tween := create_tween()
-	tween.tween_property(_fade_overlay, "color:a", 1.0, FADE_DURATION).set_trans(Tween.TRANS_SINE)
-	await tween.finished
 	Router.goto_village()
