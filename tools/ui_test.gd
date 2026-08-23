@@ -45,6 +45,22 @@ func _frames(count: int = 2) -> void:
 		await get_tree().process_frame
 
 
+## Pousse toutes les animations en cours jusqu'a leur fin.
+##
+## ⚠️ INDISPENSABLE DEPUIS QUE LE VILLAGE ZOOME. Ouvrir un batiment ne pose
+## plus le popup tout de suite : le decor zoome d'abord vers le point touche
+## (0,35 s), et le popup n'arrive qu'apres. Un banc qui regarde trois images
+## apres le clic ne voit donc RIEN, et conclut que le bouton ne repond pas.
+##
+## Meme reflexe que screenshot.tscn et resolutions.tscn : on saute a la fin des
+## tweens plutot que d'attendre - c'est instantane, et c'est exact.
+func _skip_animations() -> void:
+	for tween in get_tree().get_processed_tweens():
+		if tween.is_valid():
+			tween.custom_step(10.0)
+	await get_tree().process_frame
+
+
 # ------------------------------- VILLAGE -------------------------------------
 
 func _test_village() -> void:
@@ -57,7 +73,18 @@ func _test_village() -> void:
 
 	# Ouvrir la caserne des pions (label cliquable, pas un Button - cf. village.gd)
 	_check(village._building_buttons.has(Balance.PION), "le label de la caserne existe")
+	# LES BATIMENTS EUX-MEMES SONT CLIQUABLES, pas seulement leurs enseignes.
+	# Les zones vivent sur le calque de decor : elles suivent l'illustration,
+	# donc elles tombent sur le bon batiment quel que soit le format.
+	var hitboxes := village.find_children("Hitbox_*", "Control", true, false)
+	_check(hitboxes.size() == 5,
+		"les cinq batiments portent une zone de clic (%d)" % hitboxes.size())
+	for zone in hitboxes:
+		_check(zone.size.x > 0.0 and zone.size.y > 0.0,
+			"%s a une surface (%.0f x %.0f)" % [zone.name, zone.size.x, zone.size.y])
+
 	village._on_building_pressed(Balance.PION)
+	await _skip_animations()
 	await _frames(3)
 	_check(is_instance_valid(village._popup), "le popup de batiment s'ouvre")
 	if not is_instance_valid(village._popup):

@@ -49,6 +49,38 @@ const GLOW_LIGHTS := [
 	{"asset": "glow_crown.svg", "rect": Rect2(182, 305, 28, 20)},
 ]
 
+## LES BATIMENTS EUX-MEMES SONT CLIQUABLES, pas seulement leurs enseignes.
+##
+## Demande du joueur. Les enseignes restent visees naturellement - elles
+## portent le niveau et la progression - mais viser une enseigne de 24 points
+## de haut quand un batiment entier est dessine juste au-dessus n'a aucun sens
+## au pouce.
+##
+## Rectangles releves sur le rendu en 393 x 852, VOLONTAIREMENT plus larges que
+## le dessin : au pouce, une cible trop juste se rate. Ils vivent sur le calque
+## de decor et suivent donc l'illustration exactement comme les enseignes -
+## sans quoi ils seraient decales de 34 points sur un ecran court, ce qui est
+## pire que pas de zone du tout.
+const BUILDING_HITBOX := {
+	"pion": Rect2(28, 92, 130, 152),
+	"cavalier": Rect2(238, 126, 146, 126),
+	"fou": Rect2(30, 470, 130, 162),
+	"tour": Rect2(226, 486, 150, 150),
+}
+## Le chateau a la sienne, plus grande : c'est le batiment central, et il mene
+## a un ecran plein plutot qu'a un popup.
+const CASTLE_HITBOX := Rect2(108, 292, 182, 140)
+
+## LA TRANSITION VERS UN BATIMENT - zoom vers le point touche, puis voile.
+##
+## ⚠️ Ces quatre valeurs sont le seul endroit a changer si le prototype Figma
+## rend un mouvement different. Elles ne sont copiees nulle part ailleurs.
+const ZOOM_SCALE := 1.18
+const ZOOM_SECONDS := 0.35
+## Le voile monte sur la fin du zoom, pas des le debut : on doit VOIR le zoom.
+const VEIL_DELAY_RATIO := 0.6
+const VEIL_SECONDS := 0.22
+
 const SCREEN_WIDTH := 393.0
 const SCREEN_MARGIN := 8.0
 const BATTLE_RECT := Rect2(102, 765, 189, 59)
@@ -103,6 +135,13 @@ const DESIGN_SIZE := Vector2(393, 852)
 ## s'eloignerait du bord parce que le decor a grossi serait faux.
 @onready var _decor: Control = $DecorLayer
 @onready var _ui: Control = $UiLayer
+## Le fond illustre : il zoome avec le decor, sinon le decor glisserait sur une
+## image immobile.
+@onready var _background: TextureRect = $BackgroundImage
+
+## Une transition est en cours : elle avale les clics, sinon un double appui
+## empile deux zooms.
+var _zooming: bool = false
 
 ## Les noeuds poses sur le decor, avec leur coordonnee MAQUETTE d'origine.
 ## C'est la seule source de verite de leur position : elle est reappliquee a
@@ -134,6 +173,9 @@ func _ready() -> void:
 	# Avant tout le reste : premier enfant du DECOR, donc dessine DERRIERE les
 	# labels de batiments.
 	_build_castle_glow()
+	# Puis les zones de clic, AVANT les enseignes : celles-ci restent donc
+	# au-dessus et gardent leur clic a elles.
+	_build_building_hitboxes()
 	_build_top_bar()
 	_build_castle_label()
 	for type in Balance.UNIT_TYPES:
@@ -667,7 +709,9 @@ func _build_castle_label() -> void:
 	vbox.add_child(_castle_sub_row)
 
 	_anchor_on_decor(_castle_label, CASTLE_POS)
-	_make_clickable(_castle_label, func(): _on_building_pressed(Balance.CASTLE))
+	_make_clickable(_castle_label,
+		func(): _on_building_pressed(Balance.CASTLE,
+			_castle_label.get_global_rect().get_center()))
 	_building_buttons[Balance.CASTLE] = _castle_label
 	UiTheme.ignore_mouse_recursive(margin)
 
@@ -705,7 +749,10 @@ func _build_building_label(type: String) -> void:
 
 	_anchor_on_decor(panel, BUILDING_POS[type])
 	_building_labels[type] = {"panel": panel, "sub_row": sub_row}
-	_make_clickable(panel, func(): _on_building_pressed(type))
+	# L'enseigne zoome depuis SA position, pas depuis le centre de l'ecran :
+	# c'est le meme geste que sur le batiment, vise un peu plus bas.
+	_make_clickable(panel,
+		func(): _on_building_pressed(type, panel.get_global_rect().get_center()))
 	_building_buttons[type] = panel
 	UiTheme.ignore_mouse_recursive(margin)
 
@@ -979,17 +1026,121 @@ func _progress_bar(fraction: float, color: Color) -> Control:
 
 # ------------------------------- ACTIONS -------------------------------------
 
-func _on_building_pressed(type: String) -> void:
-	if is_instance_valid(_popup):
+## Une zone de clic posee sur un batiment de l'illustration.
+##
+## Un Control nu, invisible et sans dessin : il n'existe que pour recevoir le
+## doigt. Il est marque "artwork" pour suivre l'echelle du decor - une zone a
+## taille fixe couvrirait le mauvais bout d'une illustration qui a grossi.
+func _build_building_hitboxes() -> void:
+	var zones := {Balance.CASTLE: CASTLE_HITBOX}
+	for type in BUILDING_HITBOX:
+		zones[type] = BUILDING_HITBOX[type]
+
+	for type in zones:
+		var rect: Rect2 = zones[type]
+		var zone := Control.new()
+		zone.name = "Hitbox_%s" % type
+		zone.size = rect.size
+		zone.mouse_filter = Control.MOUSE_FILTER_STOP
+		_decor.add_child(zone)
+		_anchor_on_decor(zone, rect.position, true)
+
+		var building := String(type)
+		zone.gui_input.connect(func(event: InputEvent):
+			if event is InputEventMouseButton and event.pressed \
+					and event.button_index == MOUSE_BUTTON_LEFT:
+				_on_building_pressed(building, zone.get_global_rect().get_center()))
+
+
+func _on_building_pressed(type: String, from: Vector2 = Vector2.INF) -> void:
+	if is_instance_valid(_popup) or _zooming:
 		return
-	# Le Chateau Royal a son propre ecran : la salle du trone, ou l'on voit
-	# d'un coup d'oeil si la Dame est rentree.
+	# Sans point de depart (un clic sur l'enseigne, ou un appel de banc), le
+	# zoom part du centre de l'ecran : il reste lisible, il ne vise juste rien
+	# en particulier.
+	var target := from
+	if not target.is_finite():
+		target = get_viewport_rect().size * 0.5
+	_zoom_to(target, func(): _open_building(type))
+
+
+## Ce qui s'ouvre au bout du zoom. Le Chateau Royal a son propre ecran - la
+## salle du trone, ou l'on voit d'un coup d'oeil si la Dame est rentree - donc
+## il change de scene la ou les quatre autres posent un popup.
+func _open_building(type: String) -> void:
 	if type == Balance.CASTLE:
 		Router.goto_castle()
 		return
 	_popup = BuildingPopupScene.instantiate()
 	add_child(_popup)
 	_popup.open(type)
+	# Le village reprend sa taille quand le popup se ferme, pas avant : le
+	# decor zoome reste visible DERRIERE lui, ce qui est tout l'interet.
+	_popup.tree_exited.connect(_unzoom)
+
+
+## LE ZOOM VERS LE POINT TOUCHE, puis le voile.
+##
+## Le fond et le calque de decor grossissent ensemble autour du point sous le
+## doigt, qui reste donc immobile. Le voile ne monte que sur la fin
+## (VEIL_DELAY_RATIO) : sans ce decalage on ne verrait pas le zoom, seulement
+## un fondu au noir de plus.
+##
+## ⚠️ L'INTERFACE NE ZOOME PAS. La barre haute et le bouton BATAILLE suivent
+## l'ecran, pas le decor - les faire glisser avec la camera les detacherait du
+## bord auquel ils sont ancres.
+func _zoom_to(point: Vector2, then: Callable) -> void:
+	_zooming = true
+	var veil := _build_veil()
+
+	for node in [_background, _decor]:
+		node.pivot_offset = point - node.position
+
+	var tween := create_tween().set_parallel(true)
+	for node in [_background, _decor]:
+		tween.tween_property(node, "scale", Vector2.ONE * ZOOM_SCALE, ZOOM_SECONDS) \
+			.set_trans(Tween.TRANS_CUBIC).set_ease(Tween.EASE_OUT)
+	tween.tween_property(veil, "color:a", 1.0, VEIL_SECONDS) \
+		.set_delay(ZOOM_SECONDS * VEIL_DELAY_RATIO)
+
+	await tween.finished
+	then.call()
+	# Le voile redescend PAR-DESSUS le popup deja ouvert : c'est ce qui fait
+	# que le popup est deja la quand la lumiere revient.
+	var lift := create_tween()
+	lift.tween_property(veil, "color:a", 0.0, VEIL_SECONDS)
+	lift.tween_callback(veil.queue_free)
+	lift.tween_callback(func(): _zooming = false)
+
+
+## Le retour : voile, puis le decor reprend sa taille, puis la lumiere.
+func _unzoom() -> void:
+	if not is_inside_tree():
+		return
+	_zooming = true
+	var veil := _build_veil()
+
+	var tween := create_tween()
+	tween.tween_property(veil, "color:a", 1.0, VEIL_SECONDS * 0.7)
+	tween.tween_callback(func():
+		for node in [_background, _decor]:
+			node.scale = Vector2.ONE)
+	tween.tween_property(veil, "color:a", 0.0, VEIL_SECONDS)
+	tween.tween_callback(veil.queue_free)
+	tween.tween_callback(func(): _zooming = false)
+
+
+## Un voile noir plein ecran, AU-DESSUS de tout - interface comprise. Il est
+## cree puis detruit a chaque transition : un voile permanent a l'opacite 0
+## avalerait les clics ou serait oublie allume.
+func _build_veil() -> ColorRect:
+	var veil := ColorRect.new()
+	veil.name = "Veil"
+	veil.color = Color(0, 0, 0, 0.0)
+	veil.mouse_filter = Control.MOUSE_FILTER_STOP
+	veil.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	add_child(veil)
+	return veil
 
 
 func _on_battle_pressed() -> void:
