@@ -661,6 +661,13 @@ const COMBAT := {
 	# manuel. Purement cosmetique : sans lui, la reponse adverse est si
 	# instantanee qu'on ne voit pas quelle piece a bouge.
 	"ai_think_delay": 0.45,
+	# Temps pendant lequel le mot COMBATTEZ barre le plateau au lancement du
+	# combat, une fois qu'il a fini de surgir. Ce n'est pas de la decoration :
+	# c'est un delai avant que le joueur puisse jouer son premier coup, et
+	# c'est pour ca qu'il est reglable ici plutot qu'ecrit dans l'ecran.
+	# Releve sur 05_Bataille_Combat (433:3) : 0,45 s de maintien entre une
+	# irruption de 0,25 s et une disparition de 0,60 s.
+	"opening_word_seconds": 0.45,
 	# Enlisement : nombre de TOURS COMPLETS sans la moindre prise avant de
 	# trancher aux pieces restantes. Compte en tours et non en activations,
 	# sinon une grande armee declencherait le verdict avant meme le contact.

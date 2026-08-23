@@ -153,6 +153,19 @@ func set_context(context: Context) -> void:
 	_header_icon.set_icon(_header_icon.icon_name, color)
 
 
+## Recercle la modale sans toucher a la couleur de son titre.
+##
+## Le popup de batiment VERROUILLE en a besoin : la maquette (410:7488) le
+## cercle d'OR alors que son titre et son cadenas restent gris. Un batiment
+## verrouille est ce que le joueur VEUT - un cadre sourd le lit comme
+## "indisponible pour toujours".
+func set_border_color(color: Color) -> void:
+	var box := _panel.get_theme_stylebox("panel") as StyleBoxFlat
+	var edged := box.duplicate() as StyleBoxFlat
+	edged.border_color = color
+	_panel.add_theme_stylebox_override("panel", edged)
+
+
 func close() -> void:
 	closed.emit()
 	queue_free()

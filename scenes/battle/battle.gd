@@ -255,6 +255,53 @@ func _place_corner_button(node: Control, rank: int) -> void:
 	node.offset_bottom = node.offset_top + _CORNER_BUTTON
 
 
+## LE MOT QUI OUVRE LE COMBAT - il barre le plateau, puis s'efface.
+##
+## Releve sur 05_Bataille_Combat (433:3) : il surgit de 1,5 a 1 en 0,25 s avec
+## un ressort, tient, puis ENFLE a 2 en s'effacant sur 0,60 s. Ce n'est pas un
+## fondu : le mot grandit en partant, comme s'il passait devant la camera.
+##
+## Il marque le passage du placement au combat. Sans lui, le joueur pose sa
+## derniere piece et se retrouve deja en train de jouer, sans transition.
+##
+## ⚠️ Enfant de Safe/Overlay, un Control NU : c'est ce qui autorise a lui poser
+## une echelle et une position sans que la mise en page les reprenne.
+const OPENING_WORD_IN := 0.25
+const OPENING_WORD_OUT := 0.60
+
+
+func _show_opening_word() -> void:
+	var word := UiTheme.make_label("COMBATTEZ", 40, UiTheme.GOLD)
+	word.name = "OpeningWord"
+	word.add_theme_font_override("font", UiTheme.font_display())
+	# ⚠️ make_label pose SIZE_EXPAND_FILL et l'autowrap sur TOUT libelle : sans
+	# ces deux lignes, "COMBATTEZ" se replie sur plusieurs lignes.
+	word.autowrap_mode = TextServer.AUTOWRAP_OFF
+	word.size_flags_horizontal = Control.SIZE_FILL
+	word.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	word.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_tour_badge.get_parent().add_child(word)
+	word.set_anchors_and_offsets_preset(Control.PRESET_CENTER)
+
+	await get_tree().process_frame
+	if not is_instance_valid(word):
+		return
+	word.pivot_offset = word.size * 0.5
+	word.scale = Vector2(1.5, 1.5)
+	word.modulate.a = 0.0
+
+	var tween := create_tween()
+	tween.tween_property(word, "modulate:a", 1.0, OPENING_WORD_IN * 0.8)
+	tween.parallel().tween_property(word, "scale", Vector2.ONE, OPENING_WORD_IN) \
+		.set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
+	tween.tween_interval(float(Balance.COMBAT.get("opening_word_seconds", 0.45)))
+	tween.tween_property(word, "modulate:a", 0.0, OPENING_WORD_OUT) \
+		.set_trans(Tween.TRANS_CUBIC).set_ease(Tween.EASE_IN)
+	tween.parallel().tween_property(word, "scale", Vector2(2, 2), OPENING_WORD_OUT) \
+		.set_trans(Tween.TRANS_CUBIC).set_ease(Tween.EASE_IN)
+	tween.tween_callback(word.queue_free)
+
+
 ## Le point d'aide passe au composant partage. Il perd au passage son glyphe
 ## trace en LIBELLE ("i" dans un Label, centre a la main) au profit de l'icone
 ## "info" que icon.gd dessine deja - le meme glyphe que le codex au village.
@@ -1145,6 +1192,7 @@ func _start_combat() -> void:
 	_build_combat_ui()
 	_build_blockage_badge()
 	_refresh_stats_hud()
+	_show_opening_word()
 	_hand_over_to_player()
 
 
