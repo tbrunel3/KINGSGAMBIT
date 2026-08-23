@@ -107,14 +107,13 @@ const CODEX_BUTTON_RECT := Rect2(319, 44, 28, 28)
 ## Position ABSOLUE parce que le village est le dernier ecran qui n'est pas
 ## encore decoupe en zones ancrees (cf. CLAUDE.md, regle 4).
 const SHOP_BUTTON_RECT := Rect2(40, 761, 45, 45)
-const SHOP_BUTTON_FILL := Color("3873f2")
-const SHOP_BUTTON_EDGE := Color("b6c0f3")
 ## Le picto dessine par le joueur. C'est l'image SOURCE de la maquette, la
 ## seule detouree : l'export du noeud, lui, arrive avec le fond bleu du bouton
 ## cuit dedans (alpha entierement opaque - verifie).
 const SHOP_ICON := "res://assets/ui/shop_icon.png"
 
 const CoverFit := preload("res://scripts/ui/cover_fit.gd")
+const CornerButton := preload("res://scenes/ui/components/corner_button.gd")
 
 ## Taille REELLE du fichier de fond, relevee sur le PNG - pas celle de la
 ## maquette. Son rapport (0,4745) differe de celui de la reference (0,4613), et
@@ -154,8 +153,8 @@ var _gem_pill: Pill
 var _missions_button: PanelContainer
 var _missions_label: Label
 var _missions_badge: PanelContainer
-var _codex_button: PanelContainer
-var _shop_button: PanelContainer
+var _codex_button: Control
+var _shop_button: Control
 var _castle_label: PanelContainer
 var _castle_glow: TextureRect
 var _castle_glow_tween: Tween
@@ -360,110 +359,48 @@ func _build_top_bar() -> void:
 
 	_build_missions_button(pill_y)
 
-	var settings := PanelContainer.new()
-	var box := StyleBoxFlat.new()
-	box.bg_color = Color("174971")
-	box.set_corner_radius_all(14)
-	box.set_content_margin_all(7)
-	settings.add_theme_stylebox_override("panel", box)
-	var gear := Icon.new()
-	gear.icon_name = "gear"
-	gear.color = Color("ccccd9")
-	gear.custom_minimum_size = Vector2(14, 14)
-	settings.add_child(gear)
+	# LES DEUX BOUTONS DE LA BARRE HAUTE, un seul composant pour les deux.
+	#
+	# Ils etaient a 28 x 28 en coordonnees absolues, (319, 44) et (353, 44) :
+	# sur un viewport de 478 de large ils se retrouvaient au MILIEU de la barre
+	# au lieu de son bord. Ancres a droite, ils y restent, et ils passent a 34
+	# comme tous les boutons de coin du jeu.
+	#
+	# ⚠️ EN RANGEE, PAS EN COLONNE. La maquette du village (410:153) les met
+	# cote a cote ; c'est la BATAILLE qui les empile, parce que sa barre haute
+	# est prise par le badge de tour. Aligner le code en desalignant l'ecran
+	# serait exactement ce que la regle 2 interdit.
+	var settings: Control = CornerButton.floating("gear", func(): pass)
 	_ui.add_child(settings)
-	settings.position = Vector2(353, TOP_BAR_Y)
-	settings.size = Vector2(28, 28)
+	settings.row_top_right(0, Vector2(12, TOP_BAR_Y))
 
-	_build_codex_button()
-	_shop_button = _build_icon_button("", Color("ffe580"), SHOP_BUTTON_FILL,
-		SHOP_BUTTON_RECT, _on_shop_pressed, SHOP_ICON)
-	# La boutique voisine BATAILLE, qui vient de passer en ancrage bas : la
-	# laisser a y=761 absolu la ferait remonter au milieu de l'ecran sur un
-	# telephone long, pendant que son voisin resterait en bas.
+	_codex_button = CornerButton.floating("info", _on_codex_pressed)
+	_ui.add_child(_codex_button)
+	_codex_button.row_top_right(1, Vector2(12, TOP_BAR_Y))
+
+	# LA BOUTIQUE NE CHANGE PAS DE PLACE. Elle est en bas a gauche parce que le
+	# joueur l'y a mise : le bas de l'ecran est la zone du POUCE, et on y passe
+	# entre deux batailles. Elle prend seulement l'habillage commun.
+	#
+	# ⚠️ Elle garde aussi sa TAILLE (45, pas 34). Les deux tailles du composant
+	# valent pour les boutons de COIN ; celle-ci est une action de bas d'ecran,
+	# voisine de BATAILLE, et la retrecir de 45 a 34 la rendrait plus dure a
+	# viser la ou le pouce tombe naturellement.
+	_shop_button = CornerButton.with_texture(SHOP_ICON, _on_shop_pressed)
+	_shop_button.custom_minimum_size = SHOP_BUTTON_RECT.size
+	_shop_button.size = SHOP_BUTTON_RECT.size
+	_ui.add_child(_shop_button)
+	_shop_button.position = SHOP_BUTTON_RECT.position
 	_shop_button.anchor_top = 1.0
 	_shop_button.anchor_bottom = 1.0
+	_shop_button.offset_left = SHOP_BUTTON_RECT.position.x
+	_shop_button.offset_right = SHOP_BUTTON_RECT.position.x + SHOP_BUTTON_RECT.size.x
 	_shop_button.offset_top = -(DESIGN_SIZE.y - SHOP_BUTTON_RECT.position.y)
 	_shop_button.offset_bottom = _shop_button.offset_top + SHOP_BUTTON_RECT.size.y
 
 
-## Pastille cliquable a icone seule, le gabarit du codex et de la boutique.
-## Un PanelContainer et non un Button : c'est le seul moyen d'y inserer un
-## Icon, qui se DESSINE (cf. _make_clickable plus bas, meme raison).
-##
-## `texture_path` non vide remplace le glyphe trace par une IMAGE - c'est le
-## cas de la boutique, dont le picto vient de la maquette.
-func _build_icon_button(icon_name: String, icon_color: Color, fill: Color,
-		rect: Rect2, on_press: Callable, texture_path: String = "") -> PanelContainer:
-	var panel := PanelContainer.new()
-	var box := StyleBoxFlat.new()
-	box.bg_color = fill
-	box.set_corner_radius_all(10 if texture_path != "" else 14)
-	box.set_content_margin_all(9 if texture_path != "" else 7)
-	if texture_path != "":
-		box.border_color = SHOP_BUTTON_EDGE
-		box.set_border_width_all(1)
-	panel.add_theme_stylebox_override("panel", box)
-
-	var glyph: Control
-	if texture_path != "" and ResourceLoader.exists(texture_path):
-		var image := TextureRect.new()
-		image.texture = load(texture_path)
-		image.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
-		image.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
-		glyph = image
-	else:
-		var icon := Icon.new()
-		icon.icon_name = icon_name
-		icon.color = icon_color
-		glyph = icon
-	glyph.custom_minimum_size = Vector2(14, 14)
-	panel.add_child(glyph)
-
-	_ui.add_child(panel)
-	panel.position = rect.position
-	panel.size = rect.size
-
-	UiTheme.ignore_mouse_recursive(glyph)
-	panel.mouse_filter = Control.MOUSE_FILTER_STOP
-	panel.gui_input.connect(func(event: InputEvent):
-		if event is InputEventMouseButton and event.pressed and event.button_index == MOUSE_BUTTON_LEFT:
-			on_press.call()
-	)
-	return panel
-
-
 func _on_shop_pressed() -> void:
 	Router.goto_shop()
-
-
-## Bouton du CODEX DU ROYAUME. Le jeu n'expliquait nulle part ce que fait une
-## piece, ce que coute la recrue suivante, ni pourquoi une bataille demande
-## trois combats : c'est la porte de cette reference.
-func _build_codex_button() -> void:
-	_codex_button = PanelContainer.new()
-	var box := StyleBoxFlat.new()
-	box.bg_color = Color("174971")
-	box.set_corner_radius_all(14)
-	box.set_content_margin_all(7)
-	_codex_button.add_theme_stylebox_override("panel", box)
-
-	var glyph := Icon.new()
-	glyph.icon_name = "info"
-	glyph.color = Color("ffe580")
-	glyph.custom_minimum_size = Vector2(14, 14)
-	_codex_button.add_child(glyph)
-
-	_ui.add_child(_codex_button)
-	_codex_button.position = CODEX_BUTTON_RECT.position
-	_codex_button.size = CODEX_BUTTON_RECT.size
-
-	UiTheme.ignore_mouse_recursive(glyph)
-	_codex_button.mouse_filter = Control.MOUSE_FILTER_STOP
-	_codex_button.gui_input.connect(func(event: InputEvent):
-		if event is InputEventMouseButton and event.pressed and event.button_index == MOUSE_BUTTON_LEFT:
-			_on_codex_pressed()
-	)
 
 
 func _on_codex_pressed() -> void:

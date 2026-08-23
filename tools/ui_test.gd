@@ -54,6 +54,16 @@ func _frames(count: int = 2) -> void:
 ##
 ## Meme reflexe que screenshot.tscn et resolutions.tscn : on saute a la fin des
 ## tweens plutot que d'attendre - c'est instantane, et c'est exact.
+## Tous les boutons batis par le composant partage, dans un ecran.
+func _corner_buttons(root: Node) -> Array[Control]:
+	var script := load("res://scenes/ui/components/corner_button.gd")
+	var found: Array[Control] = []
+	for node in root.find_children("*", "Control", true, false):
+		if node.get_script() == script:
+			found.append(node)
+	return found
+
+
 func _skip_animations() -> void:
 	for tween in get_tree().get_processed_tweens():
 		if tween.is_valid():
@@ -76,6 +86,24 @@ func _test_village() -> void:
 	# LES BATIMENTS EUX-MEMES SONT CLIQUABLES, pas seulement leurs enseignes.
 	# Les zones vivent sur le calque de decor : elles suivent l'illustration,
 	# donc elles tombent sur le bon batiment quel que soit le format.
+	# LES BOUTONS DE COIN : deux tailles, plus six.
+	#
+	# Ce test ne regarde pas a quoi ils ressemblent - il verifie qu'aucun ne
+	# revient a une taille inventee, et qu'ils repondent toujours. Une reprise
+	# graphique qui casse un bouton ne se voit sur aucune capture.
+	const CornerButton := preload("res://scenes/ui/components/corner_button.gd")
+	var corners := _corner_buttons(village)
+	_check(corners.size() >= 3,
+		"le village porte au moins trois boutons de coin (%d)" % corners.size())
+	for button in corners:
+		_check(button.size.x == CornerButton.FLOATING_SIZE
+				or button.size.x == CornerButton.BACK_SIZE
+				or button.size.x == 45.0,
+			"%s : taille %.0f (34, 52, ou 45 pour la boutique)"
+				% [button.name, button.size.x])
+	_check(is_instance_valid(village._codex_button), "le bouton codex repond encore")
+	_check(is_instance_valid(village._shop_button), "le bouton boutique repond encore")
+
 	var hitboxes := village.find_children("Hitbox_*", "Control", true, false)
 	_check(hitboxes.size() == 5,
 		"les cinq batiments portent une zone de clic (%d)" % hitboxes.size())

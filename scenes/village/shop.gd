@@ -26,6 +26,7 @@ extends Control
 ## Les regles completes sont dans chantier_h_boutique.md.
 ##
 
+const CornerButton := preload("res://scenes/ui/components/corner_button.gd")
 const RoyalPlateScript := preload("res://scenes/ui/components/royal_plate.gd")
 const ModalScene := preload("res://scenes/ui/components/modal.tscn")
 
@@ -107,26 +108,12 @@ func _build_background() -> void:
 # ------------------------------- EN-TETE -------------------------------------
 
 func _build_header() -> void:
-	var back := _plate(GOLD_EDGE, 3.5, 12.0, PLATE_FILL)
-	back.set_padding_all(6)
-	back.inner_outline_color = Color("ffd700", 0.25)
-	back.inner_radius = 8.0
-	back.custom_minimum_size = Vector2(52, 52)
+	# Le retour vient du composant partage. Ces vingt lignes etaient copiees a
+	# l'identique ici et dans l'autre ecran plein defilant - meme plaque, meme
+	# padding, meme fleche.
+	var back: Control = CornerButton.back(Router.goto_village)
 	back.size_flags_vertical = Control.SIZE_SHRINK_CENTER
-	back.mouse_filter = Control.MOUSE_FILTER_STOP
-	back.gui_input.connect(func(event: InputEvent):
-		if event is InputEventMouseButton and event.pressed and event.button_index == MOUSE_BUTTON_LEFT:
-			Router.goto_village())
 	_header.add_child(back)
-
-	var arrow := Icon.new()
-	arrow.icon_name = "arrow_left"
-	arrow.color = TEXT_BRIGHT
-	arrow.custom_minimum_size = Vector2(14, 14)
-	arrow.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
-	arrow.size_flags_vertical = Control.SIZE_SHRINK_CENTER
-	arrow.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	back.add_child(arrow)
 
 	var plate := _plate(GOLD_EDGE, 4.0, 16.0, PLATE_FILL)
 	plate.set_padding(16, 12, 16, 12)

@@ -16,6 +16,7 @@ extends Control
 ##
 
 const ConfirmUpgradeScene := preload("res://scenes/village/confirm_upgrade.tscn")
+const CornerButton := preload("res://scenes/ui/components/corner_button.gd")
 
 const BG_AVEC_DAME := "res://assets/castle/throne_room_avec_dame.png"
 const BG_SANS_DAME := "res://assets/castle/throne_room_sans_dame.png"
@@ -25,7 +26,9 @@ const PANEL_MARGIN := 12.0
 const PANEL_RADIUS := 24
 const PANEL_PADDING := 20
 const HEADER_PADDING := 16.0
-const BACK_SIZE := 44.0
+## Le retour vient du composant partage : il n'y a plus qu'un endroit ou la
+## taille des boutons de coin est ecrite.
+const BACK_SIZE := CornerButton.BACK_SIZE
 
 const GOLD := Color("ffd700")
 const PANEL_BG := Color("0b1628", 0.85)
@@ -181,34 +184,14 @@ func _build_header() -> void:
 	row.add_child(spacer)
 
 
-func _back_button() -> PanelContainer:
-	var button := PanelContainer.new()
-	var box := StyleBoxFlat.new()
-	box.bg_color = BADGE_BG
-	box.border_color = GOLD
-	box.set_border_width_all(2)
-	box.set_corner_radius_all(8)
-	box.shadow_color = Color(0, 0, 0, 0.5)
-	box.shadow_size = 4
-	box.shadow_offset = Vector2(0, 3)
-	button.add_theme_stylebox_override("panel", box)
-	button.custom_minimum_size = Vector2(BACK_SIZE, BACK_SIZE)
+## Le retour passe au composant partage, et de 44 a 52 points.
+##
+## C'etait le seul des quatre retours du jeu a etre a 44, et le seul en
+## StyleBoxFlat carre : la preparation, le codex et la boutique etaient deja a
+## 52 sur plaque royale. Le chateau etait l'exception, pas la regle.
+func _back_button() -> Control:
+	var button: Control = CornerButton.back(Router.goto_village)
 	button.size_flags_vertical = Control.SIZE_SHRINK_BEGIN
-	button.mouse_filter = Control.MOUSE_FILTER_STOP
-
-	var center := CenterContainer.new()
-	button.add_child(center)
-	var arrow := Icon.new()
-	arrow.icon_name = "arrow_left"
-	arrow.color = GOLD
-	arrow.custom_minimum_size = Vector2(20, 20)
-	center.add_child(arrow)
-
-	UiTheme.ignore_mouse_recursive(center)
-	button.gui_input.connect(func(event: InputEvent):
-		if event is InputEventMouseButton and event.pressed and event.button_index == MOUSE_BUTTON_LEFT:
-			Router.goto_village()
-	)
 	return button
 
 
