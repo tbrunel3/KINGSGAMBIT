@@ -1378,34 +1378,11 @@ func _play_events(events: Array) -> void:
 				await _grid_view.play_promotion(
 					event["cell"], String(event["result"]),
 					float(Balance.COMBAT["promotion_duration"]))
-			"crowning":
-				# Le sacre prend un tour : le pion est arrive, il n'est pas
-				# encore Dame. On le signale et on marque la case - c'est
-				# maintenant que les deux camps doivent la regarder.
-				_refresh_crowning()
-				var mine := _engine.unit_by_id(
-					int(event["unit"])).team == BattleUnit.TEAM_PLAYER
-				_status_message("SACRE AU PROCHAIN TOUR" if mine
-					else "L'ENNEMI VA FAIRE UNE DAME")
-				await _wait(float(Balance.COMBAT["promotion_duration"]))
 			"pass":
 				_status_message("CAMP BLOQUÉ : TOUR PASSÉ")
 				await _wait(float(Balance.COMBAT["step_delay"]))
 			_:
 				pass
-	_refresh_crowning()
-
-
-## Cases des pions qui attendent leur couronne. La vue les entoure d'un anneau
-## qui bat : une Dame annoncee est aussi une cible designee.
-func _refresh_crowning() -> void:
-	var cells: Array = []
-	for unit in _engine.units:
-		if unit.awaiting_crown and unit.is_alive():
-			cells.append(unit.cell)
-	_grid_view.crowning_cells = cells
-	_refresh_threats()
-	_grid_view.queue_redraw()
 
 
 ## Pieces du joueur que l'ennemi peut prendre a son prochain coup. La vue les

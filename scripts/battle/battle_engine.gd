@@ -254,17 +254,16 @@ func _resolve(unit: BattleUnit, destination: Vector2i) -> Array:
 	var promotion_row := unit.promotion_row(grid.rows)
 	if unit.origin_type == Balance.PION and not unit.promoted and destination.y == promotion_row:
 		var result := _promotion_for(unit)
-		if result == Balance.DAME and Balance.PROMOTION_TAKES_A_TURN:
-			# LE SACRE PREND UN TOUR : le pion attend, immobile et sans coup
-			# legal, le debut du prochain tour de son camp. L'adversaire a
-			# exactement un coup pour l'en empecher.
-			unit.awaiting_crown = true
-			events.append({"type": "crowning", "unit": unit.id, "cell": destination})
-		else:
-			unit.promote_to(result)
-			events.append({
-				"type": "promotion", "unit": unit.id, "cell": destination, "result": unit.type,
-			})
+		unit.promote_to(result)
+		# ⚠️ Le compteur des couronnes se tient ICI, et nulle part ailleurs.
+		# Il vivait dans le chemin differe du sacre ; en retirant ce chemin,
+		# l'oublier aurait laisse un camp couronner plusieurs Dames dans la
+		# meme bataille, malgre PROMOTION_ONE_PER_BATTLE.
+		if result == Balance.DAME:
+			_crowned[unit.team] = int(_crowned.get(unit.team, 0)) + 1
+		events.append({
+			"type": "promotion", "unit": unit.id, "cell": destination, "result": unit.type,
+		})
 
 	_idle_activations = 0 if captured else _idle_activations + 1
 	# Une prise vient d'avoir lieu : la position n'etait donc pas morte.
@@ -300,9 +299,6 @@ func _end_of_activation(events: Array) -> void:
 	if current_team == TEAM_PLAYER:
 		turn += 1
 
-	# Le camp qui reprend la main couronne ses pions qui ont tenu.
-	_crown_pending(current_team, events)
-
 	if _check_end(events):
 		return
 
@@ -311,9 +307,6 @@ func _end_of_activation(events: Array) -> void:
 	#
 	# Avant, ce cas partait en verdict au materiel : un camp bloque pouvait
 	# donc GAGNER une bataille qu'il ne jouait plus, ou la perdre sans avoir
-	# rien fait de mal. Le test se fait apres _crown_pending, parce que
-	# couronner un pion en attente rend precisement des coups a un camp qui
-	# n'en avait plus.
 	if not has_any_move(current_team):
 		if bool(Balance.COMBAT["stalemate_is_draw"]):
 			_finish(TEAM_NONE, "plus aucun coup possible", events)
@@ -444,22 +437,6 @@ func _finish_on_material(reason: String, events: Array) -> void:
 	_finish(TEAM_PLAYER if mine > theirs else TEAM_ENEMY, reason, events)
 
 
-## Couronne les pions de ce camp qui attendaient et sont encore debout. Ceux
-## qui sont tombes entre-temps n'ont rien : c'est tout l'interet du delai.
-func _crown_pending(team: int, events: Array) -> void:
-	for unit in units:
-		if not unit.awaiting_crown or unit.team != team:
-			continue
-		unit.awaiting_crown = false
-		if not unit.is_alive():
-			continue
-		unit.promote_to(Balance.DAME)
-		_crowned[team] = int(_crowned.get(team, 0)) + 1
-		events.append({
-			"type": "promotion", "unit": unit.id, "cell": unit.cell, "result": unit.type,
-		})
-
-
 ## Vrai quand la bataille est finie sans vainqueur.
 func is_draw() -> bool:
 	return finished and winner == TEAM_NONE
@@ -504,15 +481,9 @@ func _promotion_for(unit: BattleUnit) -> String:
 	return Balance.PROMOTION_FALLBACK
 
 
-## Vrai si ce camp a deja sa Dame de la bataille - couronnee, ou en train de
-## l'etre.
+## Vrai si ce camp a deja sa Dame de la bataille.
 func _crown_taken(team: int) -> bool:
-	if int(_crowned.get(team, 0)) > 0:
-		return true
-	for unit in units:
-		if unit.team == team and unit.awaiting_crown:
-			return true
-	return false
+	return int(_crowned.get(team, 0)) > 0
 
 
 ## Cases centrales du fond adverse, quand le trone remplace la rangee entiere.

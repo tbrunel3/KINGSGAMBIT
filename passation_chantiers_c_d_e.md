@@ -316,7 +316,7 @@ Ce qui est déjà porté, et qui donne le langage à reprendre :
 
 **Les deux moitiés du chantier reposaient sur des relevés périmés. Refaits.**
 
-## Les polices : il n'y a rien à faire
+## Les polices : il n'y avait rien à faire, et ce n'est plus vrai
 
 La demande était « change les polices comme sur Figma », et ce document
 annonçait des maquettes en **Geist**. **C'est faux aujourd'hui.** Relevé sur
@@ -326,7 +326,14 @@ les 1 200 nœuds de texte des 30 frames, via `use_figma` et
 **tout le fichier est en Inter**, la police que le jeu embarque déjà. Restent
 quatre glyphes égarés — `Jua` dans `village-avec-dame` et `07-bataille-nulle`,
 `Lilita One` dans `king-intro-dialogue`. Jua ayant été retirée pour son poids
-(2,1 Mo pour un mot), il n'y a **ni arbitrage à poser, ni police à embarquer**.
+(2,1 Mo pour un mot), il n'y avait **ni arbitrage à poser, ni police à
+embarquer**.
+
+⚠️ **PÉRIMÉ depuis la réorganisation Figma.** Poppins est apparue dans la
+bibliothèque `MAINPROJECT`, sur les quatorze enseignes du village. Elle est
+embarquée depuis, et le détail est dans [`CLAUDE.md`](CLAUDE.md) > « Les
+polices viennent de la maquette ». **La leçon vaut plus que le fait : un
+relevé de polices périme dès que le designer touche au fichier.**
 Les trois options de ce document sont sans objet.
 
 ## Les animations : le relevé était périmé, et pour une raison précise
@@ -439,9 +446,12 @@ Le designer a ajouté depuis le découpage, et ni l'un ni l'autre n'est intégr�
 2. **Réserve ou armée ?** La distinction que C va introduire. Recruter remplit
    une réserve ; la charge décide de ce qui part au combat. C'est exactement ce
    que le joueur lui-même n'avait pas compris.
-3. **Le sacre prend un tour.** `Balance.PROMOTION_TAKES_A_TURN` : un pion arrivé
-   au fond attend un tour avant de devenir Dame, et l'adversaire a un coup pour
-   l'en empêcher. Subtil, décisif, et expliqué nulle part.
+3. ~~**Le sacre prend un tour.**~~ **RETIRÉ** — la règle n'existe plus, donc le
+   popup non plus. Mesuré avant de la retirer, sur les deux bancs et dans les
+   deux réglages : `promo_probe` rend 4 promotions et 1 Dame, `smoke_test` 17
+   promotions sur 19 parties — **identique**. Elle ne coûtait pas une seule
+   Dame ; son seul effet était de décaler le sacre d'un tour, en laissant le
+   pion immobile et sans défense, donc sans aucune prise pour le joueur.
 4. **L'aura de la Dame.** Une Dame laissée au village rapporte +15 % d'or. C'est
    un vrai choix — la déployer ou l'encaisser — et il est indevinable.
 5. **Les améliorations en temps réel**, de 30 secondes à 4 heures.

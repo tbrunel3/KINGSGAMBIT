@@ -37,9 +37,25 @@ const PAD := 12
 ## secours de Godot plutot que de planter.
 const INTER_PATH := "res://assets/fonts/Inter.ttf"
 const DIALOGUE_PATH := "res://assets/fonts/ComicRelief-Regular.ttf"
-## Jaro : l'ecriture d'enseigne de la maquette, reservee aux NOMS DE LIEUX -
-## les labels de batiments du village. Partout ailleurs c'est Inter.
-const DISPLAY_PATH := "res://assets/fonts/Jaro.ttf"
+## POPPINS : l'ecriture d'enseigne, reservee aux NOMS DE LIEUX - les labels de
+## batiments du village, le bandeau du Chateau Royal, la pastille MISSIONS.
+## Partout ailleurs c'est Inter.
+##
+## Elle REMPLACE Jaro, qui tenait ce role. Ce n'est pas un changement de gout :
+## le relevé de la bibliotheque Figma (page MAINPROJECT) donne ces quatorze
+## libelles en Poppins Bold 16 et SemiBold 14, et le manuel dit que la maquette
+## apporte l'apparence. Le relevé precedent, qui concluait "tout le fichier est
+## en Inter, il n'y a rien a faire", portait sur les ANCIENNES pages et a vieilli.
+##
+## Poids, mesure avant de decider comme le veut la regle du projet :
+## SemiBold 150 Ko + Bold 151 Ko = 302 Ko, soit l'ordre de grandeur de Lora
+## (212 Ko pour deux usages). Sans rapport avec Jua, retiree a 2,1 Mo pour un
+## seul mot - chiffre reverifie a cette occasion, il est exact.
+##
+## Jaro.ttf reste dans le depot mais n'est plus reference nulle part.
+const DISPLAY_PATH := "res://assets/fonts/Poppins-Bold.ttf"
+## La graisse moyenne de la meme famille, pour les pastilles de navigation.
+const DISPLAY_MEDIUM_PATH := "res://assets/fonts/Poppins-SemiBold.ttf"
 ## Lora : la serif des bandeaux de titre (Chateau Royal). Variable elle aussi.
 const TITLE_PATH := "res://assets/fonts/Lora.ttf"
 
@@ -54,6 +70,7 @@ static var _font_bold: Font = null
 static var _font_black: Font = null
 static var _font_dialogue: Font = null
 static var _font_display: Font = null
+static var _font_display_medium: Font = null
 static var _font_title: Font = null
 
 
@@ -85,7 +102,7 @@ static func font_dialogue() -> Font:
 	return _font_dialogue
 
 
-## Police d'enseigne des batiments. Retombe sur Inter gras si Jaro manque.
+## Police d'enseigne des batiments. Retombe sur Inter gras si elle manque.
 static func font_display() -> Font:
 	if _font_display == null:
 		if ResourceLoader.exists(DISPLAY_PATH):
@@ -93,6 +110,16 @@ static func font_display() -> Font:
 		else:
 			_font_display = font_bold()
 	return _font_display
+
+
+## La meme, en graisse moyenne : les pastilles de navigation du village.
+static func font_display_medium() -> Font:
+	if _font_display_medium == null:
+		if ResourceLoader.exists(DISPLAY_MEDIUM_PATH):
+			_font_display_medium = load(DISPLAY_MEDIUM_PATH)
+		else:
+			_font_display_medium = font_display()
+	return _font_display_medium
 
 
 ## Serif des bandeaux de titre. Retombe sur Inter gras si Lora manque.

@@ -41,7 +41,6 @@ var captures: int = 0
 ## Pion arrive au fond adverse et EN ATTENTE de couronnement. Il sera fait
 ## Dame au debut du prochain tour de son camp, s'il est encore debout
 ## (cf. BattleEngine, le sacre prend un tour).
-var awaiting_crown: bool = false
 
 var move_range: int = 1
 ## Portee du tout premier coup. Egale a move_range pour toutes les pieces

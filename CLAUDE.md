@@ -586,17 +586,37 @@ ce sont les décalages, les durées et les courbes.
 3. **Un label ne peut pas être rempli d'un dégradé** sans un shader par glyphe.
    `UiTheme.gold_label()` garde l'or médian à plat, avec l'ombre portée — à 9-19
    points la différence ne se voit pas.
-4. **Pas de nouvelle police.** `assets/fonts` en contient **quatre** : Inter
-   (variable, tout le jeu), Comic Relief (la voix du Roi), Jaro (les
-   enseignes), Lora (`font_title`, deux usages). Jua avait servi pour un seul
-   mot et pesait 2,1 Mo — c'est le précédent qui fait règle.
+4. **Les polices viennent de la maquette, et le relevé se refait.**
+   `assets/fonts` en contient **six** : Inter (variable, tout le jeu),
+   **Poppins SemiBold et Bold** (les enseignes), Comic Relief (la voix du Roi),
+   Jaro (retirée de l'usage, voir plus bas), Lora (`font_title`, deux usages).
 
-   **La maquette est en Inter, elle aussi.** Relevé sur les 1 200 nœuds de
-   texte des 30 frames : tout est en Inter, sauf quatre glyphes égarés — `Jua`
-   dans `village-avec-dame` et `07-bataille-nulle`, `Lilita One` dans
-   `king-intro-dialogue`. La demande « change les polices comme sur Figma »
-   partait d'un fichier en Geist qui n'existe plus : **il n'y a rien à
-   changer**, et surtout rien à embarquer.
+   ⚠️ **Un relevé de polices vieillit.** Celui qui concluait « tout le fichier
+   est en Inter, il n'y a rien à faire » portait sur les **anciennes pages** ;
+   depuis la réorganisation en `MAINPROJECT`, **Poppins est apparue**. Relevé
+   refait, sur les ~600 nœuds de texte de la page :
+
+   | Police | Occurrences | Où |
+   |---|---|---|
+   | Inter, 6 graisses | 589 | partout |
+   | **Poppins Bold 16 / SemiBold 14** | **14** | les deux frames du **village** : les cinq noms de bâtiments, Château Royal, Missions, Codex |
+   | Jua Regular 13 | 2 | `07-bataille-nulle` : « ROYAUME » et « CAMPAGNE » |
+   | Comic Relief | 1 | la voix du Roi, déjà embarquée |
+
+   **Poppins est embarquée**, décision du joueur : « tu utilises les polices de
+   Figma, point final ». Pesée avant de décider, comme le veut la règle —
+   **SemiBold 150 Ko + Bold 151 Ko = 302 Ko**, l'ordre de grandeur de Lora
+   (212 Ko pour deux usages). `UiTheme.font_display()` rend désormais Poppins
+   Bold et `font_display_medium()` la SemiBold.
+
+   **Jaro tenait ce rôle et ne sert plus.** Elle n'était référencée qu'aux
+   trois endroits que la maquette passe en Poppins. Le fichier reste dans le
+   dépôt, sans référence.
+
+   ⚠️ **Jua reste le cas non tranché** : 2,1 Mo — chiffre revérifié — pour
+   **deux mots de 13 points** sur le seul écran de match nul. C'est le seul
+   endroit où « les polices de Figma » se heurte à une mesure, et il faudra
+   trancher : embarquer, ou corriger la maquette.
 
 ### Là où la maquette dit autre chose que le jeu
 

@@ -342,7 +342,8 @@ func _build_missions_button(y: float) -> void:
 	row.add_child(icon)
 
 	_missions_label = UiTheme.make_label("Missions", 14, Color.WHITE)
-	_missions_label.add_theme_font_override("font", UiTheme.font_display())
+	# Poppins SemiBold 14, releve sur la maquette (village-avec-dame, 410:153).
+	_missions_label.add_theme_font_override("font", UiTheme.font_display_medium())
 	_missions_label.autowrap_mode = TextServer.AUTOWRAP_OFF
 	row.add_child(_missions_label)
 
@@ -515,6 +516,7 @@ func _build_castle_label() -> void:
 	vbox.add_theme_constant_override("separation", 4)
 	margin.add_child(vbox)
 
+	# Poppins Bold 16, comme les autres enseignes de la maquette.
 	var title := UiTheme.make_label("CHÂTEAU ROYAL", 16, Color("ffd933"))
 	title.add_theme_font_override("font", UiTheme.font_display())
 	title.autowrap_mode = TextServer.AUTOWRAP_OFF
@@ -551,7 +553,8 @@ func _build_building_label(type: String) -> void:
 	# Le nom vient de Balance, comme celui qu'affiche le popup du batiment : il
 	# y avait deux tables pour la meme chose, et elles ne disaient deja plus
 	# tout a fait la meme chose.
-	var title := UiTheme.make_label(Balance.building_name(type), 15, Color.WHITE)
+	# 16 et non 15 : la maquette met tous les noms de batiments a 16 points.
+	var title := UiTheme.make_label(Balance.building_name(type), 16, Color.WHITE)
 	title.add_theme_font_override("font", UiTheme.font_display())
 	title.autowrap_mode = TextServer.AUTOWRAP_OFF
 	title.size_flags_horizontal = Control.SIZE_SHRINK_BEGIN

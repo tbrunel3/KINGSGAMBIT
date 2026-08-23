@@ -774,9 +774,12 @@ func _check_rules() -> void:
 	if rook_moves.has(Vector2i(0, 1)):
 		_fail("la tour depasse la piece qu'elle capture")
 
-	# LE SACRE. Un pion qui atteint le fond ne devient plus Dame d'office : il
-	# faut une bataille encore disputee, un pion qui a fait ses preuves, et un
-	# tour d'attente pendant lequel l'adversaire peut l'en empecher.
+	# LE SACRE. Un pion qui atteint le fond ne devient pas Dame d'office : il
+	# faut une bataille encore disputee, et un pion qui a fait ses preuves.
+	#
+	# Le sacre etait AUSSI differe d'un tour ; la regle a ete retiree apres
+	# mesure - elle ne coutait pas une seule Dame sur les deux bancs, et elle
+	# contredisait les echecs sans laisser aucune prise au joueur.
 	#
 	# Cas 1 : le pion capture en chemin, donc il a droit a la couronne.
 	var engine3 := BattleEngine.new(5, 8)
@@ -791,23 +794,26 @@ func _check_rules() -> void:
 		_fail("la prise du pion n'a pas ete comptee")
 	engine3.step()                                 # reponse ennemie
 
-	var crowning := false
-	for event in engine3.play_move(runner, Vector2i(1, 0)):
-		if String(event["type"]) == "crowning":
-			crowning = true
-	if not crowning:
-		_fail("un pion arrive au fond devrait attendre son sacre")
-	if runner.type != Balance.PION:
-		_fail("le pion ne doit pas etre couronne avant son prochain tour")
-	if MovementRules.legal_moves(runner, engine3.grid).size() != 0:
-		_fail("un pion en attente de sacre devrait etre immobile")
-
 	var crowned := ""
-	for event in engine3.step():                   # l'ennemi joue, puis le sacre
+	for event in engine3.play_move(runner, Vector2i(1, 0)):
 		if String(event["type"]) == "promotion":
 			crowned = String(event["result"])
 	if crowned != Balance.DAME:
-		_fail("le pion qui a tenu un tour devrait etre fait Dame : %s" % crowned)
+		_fail("le pion qui a capture devrait etre fait Dame en arrivant : %s" % crowned)
+	if runner.type != Balance.DAME:
+		_fail("la promotion doit etre IMMEDIATE, sans tour d'attente")
+
+	# Une seule couronne par camp et par bataille : le compteur se tenait dans
+	# le chemin differe, et l'oublier en le retirant aurait laisse un camp
+	# couronner autant de Dames qu'il amenait de pions au fond.
+	var second := engine3.add_unit(Balance.PION, 4, BattleUnit.TEAM_PLAYER, Vector2i(3, 1))
+	second.captures = 1
+	var again := ""
+	for event in engine3.play_move(second, Vector2i(3, 0)):
+		if String(event["type"]) == "promotion":
+			again = String(event["result"])
+	if again == Balance.DAME:
+		_fail("un camp a couronne une DEUXIEME Dame dans la meme bataille")
 	if runner.origin_type != Balance.PION:
 		_fail("la piece promue a perdu son type d'origine, elle ne redeviendra pas un pion")
 	if runner.move_range != Balance.move_range(Balance.DAME, 4):
@@ -825,7 +831,7 @@ func _check_rules() -> void:
 	if lesser != Balance.PROMOTION_FALLBACK:
 		_fail("un pion qui n'a rien pris ne devrait pas etre fait Dame : %s" % lesser)
 
-	print("  pion, tour, sacre differe et conditions de la couronne : OK")
+	print("  pion, tour, et conditions de la couronne : OK")
 	_done("regles")
 
 

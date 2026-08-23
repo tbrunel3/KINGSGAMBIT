@@ -441,19 +441,23 @@ func ai_depth(skill: int) -> int:
 const PROMOTION_CONTESTED_RATIO := 0.5
 const PROMOTION_FALLBACK := CAVALIER
 
-## LE SACRE PREND UN TOUR. Un pion arrive au fond ne recoit pas la couronne
-## sur-le-champ : il attend le debut de son prochain tour. L'adversaire a donc
-## UN coup pour l'en empecher.
+## LE SACRE ETAIT DIFFERE D'UN TOUR, ET IL NE L'EST PLUS.
 ##
-## Un pion pose sur la derniere rangee n'a plus aucun coup legal (il n'avance
-## plus, ses diagonales de prise sortent du plateau) : il attend, immobile et
-## sans defense. Le sacre se paie d'un tour d'exposition - la recompense porte
-## son propre risque.
+## Un pion arrive au fond attendait le debut de son prochain tour pour recevoir
+## la couronne, immobile et sans coup legal ; l'adversaire avait exactement un
+## coup pour l'en empecher.
 ##
-## Ne concerne QUE la couronne : un pion qui ne remplit pas les conditions de
-## la Dame promeut tout de suite en PROMOTION_FALLBACK. Rester expose n'aurait
-## aucun sens pour une piece qu'on n'attend pas.
-const PROMOTION_TAKES_A_TURN := true
+## MESURE AVANT DE RETIRER, sur les deux bancs, regle active puis retiree :
+## promo_probe rend 4 promotions et 1 Dame dans les deux cas ; smoke_test rend
+## 17 promotions sur ses 19 parties dans les deux cas. La regle ne coutait pas
+## une seule Dame - son unique effet mesurable etait de decaler le sacre d'un
+## tour.
+##
+## Ce qu'elle coutait, en revanche : elle contredit les echecs, ou la promotion
+## est immediate ; elle ne laissait AUCUNE prise au joueur pendant ce tour ; et
+## elle etait indevinable. Les trois autres freins (capture obligatoire,
+## bataille encore disputee, une couronne par camp) gardent la Dame rare et se
+## lisent, eux.
 
 ## UNE SEULE DAME PAR BATAILLE ET PAR CAMP. Les pions suivants montent en
 ## PROMOTION_FALLBACK. La sonde montrait des batailles a trois Dames : une
