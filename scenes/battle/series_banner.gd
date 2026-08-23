@@ -120,23 +120,53 @@ func _finish() -> void:
 	continued.emit()
 
 
-## Meme entree que l'ecran de resultat, en plus court (cf.
-## BattleResult._animate_entry).
+## L'ENTREE DU BANDEAU, portee depuis popup-combat-phase (410:7190).
+##
+## ⚠️ ELLE NE VENAIT PAS DE LA MAQUETTE avant le 23/08/2026. Elle avait ete
+## calquee a la main sur l'ecran de resultat, "en plus court" - et elle etait
+## deux fois trop rapide. Le releve donne une timeline de 2 s : la carte
+## d'annonce apparait de 0 a 0,50 s et finit de se poser a 0,60 s, en montant
+## de 40 points et en passant de 0,85 a 1.
+##
+## C'est l'ecran que le joueur voit le PLUS souvent apres le combat lui-meme :
+## huit batailles sur dix sont des series, donc il passe par ici une a deux
+## fois par bataille.
 ##
 ## On anime l'OPACITE et l'ECHELLE, jamais la position : la plaque est placee
 ## par un CenterContainer, et un tween de position se bat avec lui - la plaque
-## se collait en haut de l'ecran.
+## se collait en haut de l'ecran. La montee de 40 points de la maquette n'est
+## donc pas portable ; l'echelle 0,85 la remplace, et c'est elle qui porte
+## l'idee de la carte qui surgit.
+const ENTRY_FADE := 0.50
+const ENTRY_POP := 0.60
+const ENTRY_SCALE := 0.85
+## Le blason du bas arrive apres la carte, comme dans la maquette (de 0,30 s a
+## 0,70 s) : c'est ce qui evite que tout le bandeau apparaisse d'un bloc.
+const ENTRY_CREST_DELAY := 0.30
+const ENTRY_CREST_FADE := 0.40
+
+
 func _animate(plate: Control) -> void:
 	plate.modulate.a = 0.0
-	plate.scale = Vector2(0.94, 0.94)
+	plate.scale = Vector2.ONE * ENTRY_SCALE
 	await get_tree().process_frame
 	if not is_instance_valid(plate):
 		return
 	plate.pivot_offset = plate.size / 2.0
+
 	var tween := create_tween()
 	tween.set_parallel(true)
-	tween.tween_property(plate, "modulate:a", 1.0, 0.22)
-	tween.tween_property(plate, "scale", Vector2.ONE, 0.3) 		.set_ease(Tween.EASE_OUT).set_trans(Tween.TRANS_BACK)
+	tween.tween_property(plate, "modulate:a", 1.0, ENTRY_FADE)
+	tween.tween_property(plate, "scale", Vector2.ONE, ENTRY_POP) \
+		.set_ease(Tween.EASE_OUT).set_trans(Tween.TRANS_BACK)
+
+	# Le bouton CONTINUER tient lieu de blason : c'est le dernier element du
+	# bandeau, et le seul qui appelle un geste.
+	var crest: Control = plate.find_child("ContinueButton", true, false)
+	if crest != null:
+		crest.modulate.a = 0.0
+		tween.tween_property(crest, "modulate:a", 1.0, ENTRY_CREST_FADE) \
+			.set_delay(ENTRY_CREST_DELAY)
 
 
 ## L'encadre des renforts (Figma reinforcements-box). Une silhouette par piece
@@ -208,6 +238,8 @@ func _piece_glyph(type: String) -> TextureRect:
 ## disait qu'a moitie.
 func _continue_button() -> Button:
 	var button := UiTheme.make_button("CONTINUER", CONTINUE_FILL, 14)
+	# Nomme pour que l entree puisse le retarder (cf. _animate).
+	button.name = "ContinueButton"
 	button.custom_minimum_size = Vector2(0, 42)
 	button.add_theme_color_override("font_color", TEXT_BRIGHT)
 	button.pressed.connect(_finish)

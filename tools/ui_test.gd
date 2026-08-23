@@ -23,6 +23,10 @@ func _ready() -> void:
 	await _test_composition()
 	await _test_series_chaining()
 	await _test_shop()
+	await _test_modal_entry()
+	await _test_shop_entry()
+	await _test_result_entries()
+	await _test_mission_claim()
 
 	print("")
 	if _failures == 0:
@@ -45,6 +49,205 @@ func _frames(count: int = 2) -> void:
 		await get_tree().process_frame
 
 
+## Pousse toutes les animations en cours jusqu'a leur fin.
+##
+## ⚠️ INDISPENSABLE DEPUIS QUE LE VILLAGE ZOOME. Ouvrir un batiment ne pose
+## plus le popup tout de suite : le decor zoome d'abord vers le point touche
+## (0,35 s), et le popup n'arrive qu'apres. Un banc qui regarde trois images
+## apres le clic ne voit donc RIEN, et conclut que le bouton ne repond pas.
+##
+## Meme reflexe que screenshot.tscn et resolutions.tscn : on saute a la fin des
+## tweens plutot que d'attendre - c'est instantane, et c'est exact.
+func _skip_animations() -> void:
+	for tween in get_tree().get_processed_tweens():
+		if tween.is_valid():
+			tween.custom_step(10.0)
+	await get_tree().process_frame
+
+
+## Tous les boutons batis par le composant partage, dans un ecran.
+func _corner_buttons(root: Node) -> Array[Control]:
+	var script := load("res://scenes/ui/components/corner_button.gd")
+	var found: Array[Control] = []
+	for node in root.find_children("*", "Control", true, false):
+		if node.get_script() == script:
+			found.append(node)
+	return found
+
+
+## L'ENTREE DE MODALE, une seule fois pour six appelants.
+##
+## Une modale qui apparait d'un coup se lit comme un bug d'affichage. Ce test
+## ne juge pas l'esthetique : il verifie que l'entree EXISTE (la modale part
+## transparente et rapetissee) et qu'elle SE TERMINE (elle finit opaque et a
+## l'echelle 1). Une entree qui ne se termine pas laisserait un ecran a moitie
+## la, et aucune capture ne le dirait.
+func _test_modal_entry() -> void:
+	print("\n[8] Modales : l'entree se joue, et elle se termine")
+
+	Game.reset_progress()
+	var village: Node = load("res://scenes/village/village.tscn").instantiate()
+	add_child(village)
+	await _frames(3)
+
+	village._on_building_pressed(Balance.PION)
+	# Le zoom du village d'abord, la modale ensuite.
+	await _skip_animations()
+	await _frames(2)
+
+	var modal: Modal = village._popup.find_child("Modal", true, false)
+	if modal == null:
+		_check(false, "la modale du popup de batiment est introuvable")
+		village.queue_free()
+		return
+
+	var panel: Control = modal.get_node("Center/Panel")
+	_check(panel.modulate.a < 0.9, "la modale part transparente (%.2f)" % panel.modulate.a)
+	_check(panel.scale.x < 0.99, "et rapetissee (%.3f)" % panel.scale.x)
+
+	await _skip_animations()
+	await _frames(2)
+	_check(panel.modulate.a > 0.99, "elle finit opaque (%.2f)" % panel.modulate.a)
+	_check(absf(panel.scale.x - 1.0) < 0.01, "et a l'echelle 1 (%.3f)" % panel.scale.x)
+
+	village.queue_free()
+	await _frames(2)
+
+
+## LA CASCADE DE LA BOUTIQUE - et surtout : elle ne se rejoue PAS a l'achat.
+##
+## L'ecran se reconstruit en entier a chaque gemme depensee. Une entree qui se
+## rejouerait ferait re-tomber toute la boutique dans le dos du joueur au
+## moment ou il achete. C'est le vrai risque de cette animation, et c'est ce
+## que ce test garde.
+func _test_shop_entry() -> void:
+	print("\n[9] Boutique : la cascade s'ouvre une fois, et une seule")
+
+	Game.reset_progress()
+	Game.add_gems(2000)
+	var shop: Node = load("res://scenes/village/shop.tscn").instantiate()
+	add_child(shop)
+	await _frames(4)
+
+	var faded := 0
+	for section in shop._sections:
+		if section.modulate.a < 0.9:
+			faded += 1
+	_check(faded > 0, "la boutique part en fondu (%d sections)" % faded)
+
+	await _skip_animations()
+	await _frames(2)
+	var late := 0
+	for section in shop._sections:
+		if section.modulate.a < 0.99 or absf(section.scale.x - 1.0) > 0.01:
+			late += 1
+	_check(late == 0, "tout est en place a la fin (%d en retard)" % late)
+
+	# Un achat reconstruit l'ecran : la cascade ne doit pas repartir.
+	Game.add_gold(50000)
+	Game.start_upgrade(Balance.CASTLE)
+	await _frames(3)
+	shop._on_buy_chest(Balance.shop_chest("rare"))
+	await _frames(5)
+	var replayed := 0
+	for section in shop._sections:
+		if is_instance_valid(section) and section.modulate.a < 0.99:
+			replayed += 1
+	_check(replayed == 0, "elle ne se rejoue pas a l'achat (%d relancees)" % replayed)
+
+	shop.queue_free()
+	await _frames(2)
+
+
+## LES TROIS ECRANS DE RESULTAT ONT TROIS ENTREES, et le jeu n'en jouait
+## qu'une - celle du match nul, sur les trois peaux.
+##
+## Ce test ne juge pas l'esthetique : il verifie que les trois timelines sont
+## bel et bien DIFFERENTES, et dans le bon sens. Une regression les aplatirait
+## sans qu'aucune capture ne le montre, puisqu'une capture attend la fin des
+## tweens.
+func _test_result_entries() -> void:
+	print("\n[10] Resultats : trois ecrans, trois entrees")
+
+	var script := load("res://scenes/battle/battle_result.gd")
+	_check(script.ENTRY.size() == 3, "trois timelines declarees (%d)" % script.ENTRY.size())
+
+	var win: Dictionary = script.ENTRY["win"]
+	var loss: Dictionary = script.ENTRY["loss"]
+	var draw: Dictionary = script.ENTRY["draw"]
+
+	_check(float(win["title_scale"]) < 1.0,
+		"la victoire jaillit du petit (%.2f)" % float(win["title_scale"]))
+	_check(float(win["title_rise"]) > 0.0,
+		"et elle monte (%.0f)" % float(win["title_rise"]))
+	_check(float(loss["title_rise"]) < 0.0,
+		"la defaite tombe d'en haut (%.0f)" % float(loss["title_rise"]))
+	_check(int(loss["title_trans"]) != Tween.TRANS_BACK,
+		"et elle ne rebondit pas")
+	_check(float(draw["title_scale"]) > 1.0,
+		"le nul s'abat du grand (%.2f)" % float(draw["title_scale"]))
+	_check(is_zero_approx(float(draw["title_rise"])), "et il ne bouge pas")
+	_check(float(loss["buttons_delay"]) > float(win["buttons_delay"]),
+		"la defaite est plus lente que la victoire (%.1f contre %.1f)"
+			% [float(loss["buttons_delay"]), float(win["buttons_delay"])])
+
+	# Et la peau choisit bien SA timeline.
+	var screen: Node = script.new()
+	add_child(screen)
+	screen.open(true, "")
+	await _frames(2)
+	_check(screen._entry_key == "win", "la victoire prend la sienne (%s)" % screen._entry_key)
+	screen.queue_free()
+	await _frames(2)
+
+
+## LE POPUP DE MISSIONS PORTE DEUX ANIMATIONS, pas une.
+##
+## La maquette les met dans une seule timeline parce que Figma ne sait pas dire
+## "au clic". Les porter ensemble ferait voler les pieces a l'OUVERTURE, sans
+## que le joueur ait rien reclame - et c'est exactement l'erreur que ce test
+## empeche.
+func _test_mission_claim() -> void:
+	print("\n[11] Missions : l'ouverture et la reclamation sont deux animations")
+
+	Game.reset_progress()
+	var village: Node = load("res://scenes/village/village.tscn").instantiate()
+	add_child(village)
+	await _frames(3)
+
+	village._on_missions_pressed()
+	await _frames(3)
+	var popup: Node = village._popup
+	_check(is_instance_valid(popup), "le popup de missions s'ouvre")
+	if not is_instance_valid(popup):
+		village.queue_free()
+		return
+
+	_check(popup.purse != null, "il a recu la bourse du village")
+
+	# A l'ouverture, RIEN de la reclamation ne doit avoir demarre.
+	await _skip_animations()
+	await _frames(2)
+	_check(get_tree().root.find_child("CoinFlight", true, false) == null,
+		"aucune piece ne vole tant que rien n'est reclame")
+
+	# Les barres, elles, ont fait leur compte - chacune jusqu'a SA valeur.
+	#
+	# ⚠️ Sur une sauvegarde neuve la seule mission visible est a 0/1 : sa cible
+	# EST zero. Verifier "la barre est remplie" ferait echouer un code juste -
+	# c'est ce que la premiere version de ce test faisait.
+	var wrong := 0
+	for entry in popup._fills:
+		var fill: Control = entry["node"]
+		if is_instance_valid(fill) and absf(fill.anchor_right - float(entry["target"])) > 0.01:
+			wrong += 1
+	_check(wrong == 0, "les %d barres ont atteint leur cible (%d en ecart)"
+		% [popup._fills.size(), wrong])
+
+	village.queue_free()
+	await _frames(2)
+
+
 # ------------------------------- VILLAGE -------------------------------------
 
 func _test_village() -> void:
@@ -57,7 +260,62 @@ func _test_village() -> void:
 
 	# Ouvrir la caserne des pions (label cliquable, pas un Button - cf. village.gd)
 	_check(village._building_buttons.has(Balance.PION), "le label de la caserne existe")
+
+	# LES BOUTONS DE COIN : deux tailles, plus six.
+	#
+	# Ce test ne regarde pas a quoi ils ressemblent - il verifie qu'aucun ne
+	# revient a une taille inventee, et qu'ils repondent toujours. Une reprise
+	# graphique qui casse un bouton ne se voit sur aucune capture.
+	const CornerButton := preload("res://scenes/ui/components/corner_button.gd")
+	var corners := _corner_buttons(village)
+	_check(corners.size() >= 3,
+		"le village porte au moins trois boutons de coin (%d)" % corners.size())
+	for button in corners:
+		_check(button.size.x == CornerButton.FLOATING_SIZE
+				or button.size.x == CornerButton.BACK_SIZE
+				or button.size.x == 45.0,
+			"%s : taille %.0f (34, 52, ou 45 pour la boutique)"
+				% [button.name, button.size.x])
+	_check(is_instance_valid(village._codex_button), "le bouton codex repond encore")
+	_check(is_instance_valid(village._shop_button), "le bouton boutique repond encore")
+
+	# LE BOUTON DE DEVELOPPEMENT A QUITTE L'ECRAN, mais pas le jeu : le joueur
+	# teste sur le build web EXPORTE, donc en release, et un masquage en debug
+	# lui retirerait son seul raccourci.
+	_check(village.find_child("DevGesture", true, false) != null,
+		"la zone de geste du panneau dev existe")
+	_check(village.find_child("DevButton", true, false) == null,
+		"le bouton dev n'est plus a l'ecran")
+	# La zone doit s'arreter AU-DESSUS de la barre haute, sinon elle vole ses
+	# taps a l'engrenage.
+	var gesture: Control = village.find_child("DevGesture", true, false)
+	if gesture != null:
+		_check(gesture.get_global_rect().end.y <= village.TOP_BAR_Y,
+			"elle ne mord pas sur la barre haute (%.0f <= %.0f)"
+				% [gesture.get_global_rect().end.y, village.TOP_BAR_Y])
+
+	# Et l'ACCES survit : c'est tout l'interet du geste plutot que du masquage
+	# en build de debug.
+	village._on_dev_pressed()
+	await _frames(3)
+	_check(is_instance_valid(village._popup), "le panneau dev s'ouvre encore")
+	if is_instance_valid(village._popup):
+		village._popup.queue_free()
+		village._popup = null
+		await _frames(2)
+
+	# LES BATIMENTS EUX-MEMES SONT CLIQUABLES, pas seulement leurs enseignes.
+	# Les zones vivent sur le calque de decor : elles suivent l'illustration,
+	# donc elles tombent sur le bon batiment quel que soit le format.
+	var hitboxes := village.find_children("Hitbox_*", "Control", true, false)
+	_check(hitboxes.size() == 5,
+		"les cinq batiments portent une zone de clic (%d)" % hitboxes.size())
+	for zone in hitboxes:
+		_check(zone.size.x > 0.0 and zone.size.y > 0.0,
+			"%s a une surface (%.0f x %.0f)" % [zone.name, zone.size.x, zone.size.y])
+
 	village._on_building_pressed(Balance.PION)
+	await _skip_animations()
 	await _frames(3)
 	_check(is_instance_valid(village._popup), "le popup de batiment s'ouvre")
 	if not is_instance_valid(village._popup):

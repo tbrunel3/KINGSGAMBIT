@@ -26,6 +26,7 @@ extends Control
 ## Les regles completes sont dans chantier_h_boutique.md.
 ##
 
+const CornerButton := preload("res://scenes/ui/components/corner_button.gd")
 const RoyalPlateScript := preload("res://scenes/ui/components/royal_plate.gd")
 const ModalScene := preload("res://scenes/ui/components/modal.tscn")
 
@@ -48,6 +49,38 @@ const DISABLED_EDGE := Color("4d5568")
 
 const CARD_MIN := Vector2(96, 0)
 
+## LES ILLUSTRATIONS DE LA MAQUETTE, enfin en place.
+##
+## L'ecran etait fonctionnel mais BRUT : ses dix cartes portaient trois glyphes
+## traces au trait - une etoile grise pour les quatre coffres, un losange pour
+## les trois packs de gemmes, une piece pour les trois packs d'or. Rien ne
+## distinguait un Commun d'un Legendaire avant d'en lire le prix.
+##
+## ⚠️ Ce sont les images SOURCES de Figma (download_assets > rawImages), pas
+## des exports de noeud : l'export arrive avec le fond de la frame cuit dedans,
+## alpha entierement opaque. Verifie sur les dix - alpha minimum 0.
+##
+## Ramenees de 1254 a 192 points et rognees de leur vide : 534 Ko au total, la
+## carte fait 56 points de haut.
+const ART_CHEST := {
+	"commun": "res://assets/shop/chest_commun.png",
+	"rare": "res://assets/shop/chest_rare.png",
+	"epique": "res://assets/shop/chest_epique.png",
+	"legendaire": "res://assets/shop/chest_legendaire.png",
+}
+## Les trois tailles de pack, du petit tas au coffre plein.
+const ART_GEMS := [
+	"res://assets/shop/gems_small.png",
+	"res://assets/shop/gems_medium.png",
+	"res://assets/shop/gems_large.png",
+]
+const ART_GOLD := [
+	"res://assets/shop/gold_small.png",
+	"res://assets/shop/gold_medium.png",
+	"res://assets/shop/gold_large.png",
+]
+
+
 @onready var _background: TextureRect = $Background
 @onready var _header: HBoxContainer = $Safe/Root/HeaderMargin/Header
 @onready var _body: VBoxContainer = $Safe/Root/Scroll/Body
@@ -59,6 +92,12 @@ var _tick: float = 0.0
 ## Etat de disponibilite au dernier rendu, pour ne reconstruire l'ecran QUE
 ## lorsqu'un coffre devient pret - pas a chaque seconde.
 var _ready_state: Dictionary = {}
+
+## Les trois sections, dans l'ordre ou elles sont construites - et c'est aussi
+## celui de la cascade de la maquette : coffres, gemmes, or.
+var _sections: Array[Control] = []
+## L'entree ne se joue qu'une fois : l'ecran se reconstruit a chaque achat.
+var _entered: bool = false
 
 
 func _ready() -> void:
@@ -90,6 +129,31 @@ func _process(delta: float) -> void:
 		_refresh()
 
 
+## Une illustration de carte. `available` a faux la grise, comme les cartes
+## desactivees de la maquette : le dessin reste lisible, mais il ne se propose
+## plus.
+func _illustration(path: String, height: float, available: bool = true) -> Control:
+	var art := TextureRect.new()
+	art.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+	art.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+	art.custom_minimum_size = Vector2(0, height)
+	art.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	if path != "" and ResourceLoader.exists(path):
+		art.texture = load(path)
+	if not available:
+		art.modulate = Color(0.55, 0.58, 0.66, 0.75)
+	return art
+
+
+## L'illustration de rang `index` dans une liste, ou la derniere si Balance en
+## declare plus que la maquette n'en a dessine. Un pack sans dessin vaudrait
+## mieux qu'un plantage, mais une carte vide serait pire que la derniere image.
+func _art(list: Array, index: int) -> String:
+	if list.is_empty():
+		return ""
+	return String(list[mini(index, list.size() - 1)])
+
+
 func _build_background() -> void:
 	var gradient := Gradient.new()
 	gradient.set_color(0, Color("141d3a"))
@@ -107,26 +171,12 @@ func _build_background() -> void:
 # ------------------------------- EN-TETE -------------------------------------
 
 func _build_header() -> void:
-	var back := _plate(GOLD_EDGE, 3.5, 12.0, PLATE_FILL)
-	back.set_padding_all(6)
-	back.inner_outline_color = Color("ffd700", 0.25)
-	back.inner_radius = 8.0
-	back.custom_minimum_size = Vector2(52, 52)
+	# Le retour vient du composant partage. Ces vingt lignes etaient copiees a
+	# l'identique ici et dans l'autre ecran plein defilant - meme plaque, meme
+	# padding, meme fleche.
+	var back: Control = CornerButton.back(Router.goto_village)
 	back.size_flags_vertical = Control.SIZE_SHRINK_CENTER
-	back.mouse_filter = Control.MOUSE_FILTER_STOP
-	back.gui_input.connect(func(event: InputEvent):
-		if event is InputEventMouseButton and event.pressed and event.button_index == MOUSE_BUTTON_LEFT:
-			Router.goto_village())
 	_header.add_child(back)
-
-	var arrow := Icon.new()
-	arrow.icon_name = "arrow_left"
-	arrow.color = TEXT_BRIGHT
-	arrow.custom_minimum_size = Vector2(14, 14)
-	arrow.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
-	arrow.size_flags_vertical = Control.SIZE_SHRINK_CENTER
-	arrow.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	back.add_child(arrow)
 
 	var plate := _plate(GOLD_EDGE, 4.0, 16.0, PLATE_FILL)
 	plate.set_padding(16, 12, 16, 12)
@@ -196,9 +246,92 @@ func _refresh() -> void:
 
 
 func _build_body() -> void:
+	_sections.clear()
 	_build_chests()
 	_build_gem_packs()
 	_build_gold_packs()
+
+	# ⚠️ L'ENTREE NE SE JOUE QU'UNE FOIS, A L'OUVERTURE.
+	#
+	# Cet ecran se RECONSTRUIT en entier a chaque signal : une gemme depensee,
+	# de l'or encaisse, un coffre qui devient pret. Rejouer la cascade a chaque
+	# fois ferait re-tomber toute la boutique dans le dos du joueur au moment
+	# ou il achete - il verrait son geste effacer l'ecran.
+	if not _entered:
+		_entered = true
+		_animate_entry.call_deferred()
+
+
+## L'ENTREE DE LA BOUTIQUE - cascade de haut en bas (shop-screen, 410:7061).
+##
+## Relevee sur une timeline de 1,5 s. Les trois sections arrivent a 0,15 s,
+## 0,50 s et 0,75 s ; dans chacune, les cartes eclosent 0,20 s apres leur
+## section, a 0,10 s d'ecart.
+##
+## ⚠️ NI TRANSLATION NI CASCADE CARTE PAR CARTE HORS SECTION. La maquette fait
+## monter les sections de 35 a 40 px, mais ce sont des enfants de conteneur :
+## le tween s'y bat avec la mise en page (piege deja paye sur le bandeau de
+## serie). Opacite et echelle seulement - ce sont les deux autres proprietes
+## que la maquette anime de toute facon.
+const ENTRY_SECTION_DELAY := [0.15, 0.50, 0.75]
+const ENTRY_CARD_OFFSET := 0.20
+const ENTRY_CARD_GAP := 0.10
+const ENTRY_DURATION := 0.35
+const ENTRY_CARD_DURATION := 0.30
+## Les sections se posent de 0,92 ; les cartes ECLOSENT de 0,5. La difference
+## est dans la maquette, et elle se voit : un panneau se pose, une carte nait.
+const ENTRY_SECTION_SCALE := 0.92
+const ENTRY_CARD_SCALE := 0.5
+
+
+func _animate_entry() -> void:
+	# Les pivots ne se lisent qu'une fois la mise en page faite : releves a la
+	# construction, ils valent zero et l'echelle partirait du coin.
+	await get_tree().process_frame
+	if not is_inside_tree():
+		return
+
+	var tween := create_tween().set_parallel(true)
+
+	for index in range(_sections.size()):
+		var section: Control = _sections[index]
+		if not is_instance_valid(section):
+			continue
+		var delay: float = ENTRY_SECTION_DELAY[mini(index, ENTRY_SECTION_DELAY.size() - 1)]
+		_pop(tween, section, delay, ENTRY_SECTION_SCALE, ENTRY_DURATION)
+
+		# Les cartes de la section, dans leur ordre d'ajout.
+		var cards := _cards_of(section)
+		for card_index in range(cards.size()):
+			_pop(tween, cards[card_index],
+				delay + ENTRY_CARD_OFFSET + float(card_index) * ENTRY_CARD_GAP,
+				ENTRY_CARD_SCALE, ENTRY_CARD_DURATION)
+
+
+## Un element qui apparait : opacite de 0 a 1, echelle de `from` a 1, avec le
+## leger depassement de la courbe Figma (cubic-bezier(0.45, 1.45, 0.8, 1)).
+func _pop(tween: Tween, node: Control, delay: float, from: float,
+		seconds: float) -> void:
+	node.pivot_offset = node.size * 0.5
+	node.modulate.a = 0.0
+	node.scale = Vector2.ONE * from
+	tween.tween_property(node, "modulate:a", 1.0, seconds).set_delay(delay)
+	tween.tween_property(node, "scale", Vector2.ONE, seconds).set_delay(delay) \
+		.set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
+
+
+## Les cartes d'une section : les enfants du panneau, pas ceux du bandeau de
+## titre. Une section est un VBox {CenterContainer(titre), Panel{inner}}.
+func _cards_of(section: Control) -> Array[Control]:
+	var cards: Array[Control] = []
+	for child in section.get_children():
+		if not (child is RoyalPlate):
+			continue
+		for inner in child.get_children():
+			for card in inner.get_children():
+				if card is Control:
+					cards.append(card)
+	return cards
 
 
 ## Bandeau de titre de section, la pastille arrondie de la maquette.
@@ -222,6 +355,10 @@ func _section(title: String) -> VBoxContainer:
 	var inner := VBoxContainer.new()
 	inner.add_theme_constant_override("separation", 10)
 	panel.add_child(inner)
+	# La liste est batie ICI, la ou les sections naissent, et jamais par
+	# find_children : celui-ci rendrait un ordre imprevisible, et la cascade
+	# n'a de sens que dans l'ordre de lecture.
+	_sections.append(wrap)
 	return inner
 
 
@@ -319,12 +456,11 @@ func _chest_card(chest: Dictionary) -> Control:
 	col.add_theme_constant_override("separation", 4)
 	card.add_child(col)
 
-	var icon := Icon.new()
-	icon.icon_name = "star"
-	icon.color = GOLD if usable else TEXT_DIM
-	icon.custom_minimum_size = Vector2(0, 44)
-	icon.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	col.add_child(icon)
+	# L'illustration du coffre, et non plus une etoile grise pour les quatre.
+	# Chaque rarete a son dessin (410:7087) : bois pour le Commun, bleu pour le
+	# Rare, rouge pour l'Epique, pourpre couronne pour le Legendaire. C'est ce
+	# qui les distingue d'un coup d'oeil, avant meme de lire le prix.
+	col.add_child(_illustration(ART_CHEST.get(String(chest["id"]), ""), 44.0, usable))
 
 	var name_label := _text(_chest_name(chest), 10, TEXT_BRIGHT)
 	name_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
@@ -360,13 +496,13 @@ func _legend_panel() -> Control:
 	row.add_theme_constant_override("separation", 12)
 	panel.add_child(row)
 
-	var crown := Icon.new()
-	crown.icon_name = "crown"
-	crown.color = GOLD
-	crown.custom_minimum_size = Vector2(72, 72)
-	crown.size_flags_vertical = Control.SIZE_SHRINK_CENTER
-	crown.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	row.add_child(crown)
+	# LE COFFRE LUI-MEME, et non plus une couronne tracee. C'est le seul objet
+	# du jeu qui termine une amelioration d'un coup : il merite son dessin, et
+	# la maquette lui donne le plus riche des quatre.
+	var art := _illustration(ART_CHEST.get("legendaire", ""), 72.0)
+	art.custom_minimum_size = Vector2(72, 72)
+	art.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	row.add_child(art)
 
 	var col := VBoxContainer.new()
 	col.add_theme_constant_override("separation", 3)
@@ -421,8 +557,10 @@ func _build_gem_packs() -> void:
 	inner.add_child(row)
 
 	var enabled: bool = Balance.SHOP.get("gem_packs_enabled", false)
-	for pack in Balance.SHOP["gem_packs"]:
-		row.add_child(_pack_card("diamond", GEM,
+	var gem_packs: Array = Balance.SHOP["gem_packs"]
+	for i in range(gem_packs.size()):
+		var pack: Dictionary = gem_packs[i]
+		row.add_child(_pack_card(_art(ART_GEMS, i),
 			"%s Gemmes" % UiTheme.format_thousands(int(pack["gems"])),
 			String(pack["price"]) if enabled else "Bientôt",
 			enabled, Callable()))
@@ -451,12 +589,7 @@ func _build_gold_packs() -> void:
 		col.add_theme_constant_override("separation", 4)
 		card.add_child(col)
 
-		var icon := Icon.new()
-		icon.icon_name = "coin"
-		icon.color = GOLD
-		icon.custom_minimum_size = Vector2(0, 44)
-		icon.mouse_filter = Control.MOUSE_FILTER_IGNORE
-		col.add_child(icon)
+		col.add_child(_illustration(_art(ART_GOLD, index), 44.0))
 
 		var label := _text(
 			"%s Or" % UiTheme.format_thousands(int(pack["gold"])), 10, TEXT_BRIGHT)
@@ -469,7 +602,7 @@ func _build_gold_packs() -> void:
 		row.add_child(card)
 
 
-func _pack_card(icon_name: String, icon_color: Color, title: String,
+func _pack_card(art_path: String, title: String,
 		button_text: String, enabled: bool, on_press: Callable) -> Control:
 	var card := _plate(Color("3d4f6b"), 2.0, 10.0, CARD_FILL)
 	card.set_padding(6, 6, 6, 6)
@@ -481,12 +614,7 @@ func _pack_card(icon_name: String, icon_color: Color, title: String,
 	col.add_theme_constant_override("separation", 4)
 	card.add_child(col)
 
-	var icon := Icon.new()
-	icon.icon_name = icon_name
-	icon.color = icon_color
-	icon.custom_minimum_size = Vector2(0, 44)
-	icon.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	col.add_child(icon)
+	col.add_child(_illustration(art_path, 44.0, enabled))
 
 	var label := _text(title, 10, TEXT_BRIGHT)
 	label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER

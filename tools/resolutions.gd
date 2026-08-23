@@ -18,6 +18,8 @@ extends Node
 ##
 
 const Driver := preload("res://tools/battle_driver.gd")
+## BattleResult n'a pas de .tscn : c'est un script monte a la main.
+const BattleResultScript := preload("res://scenes/battle/battle_result.gd")
 
 const OUTPUT_DIR := "res://tools/screenshots/echelle"
 
@@ -63,6 +65,37 @@ const SCREENS := [
 	# sont les plus petites et ou un debordement se voit en premier.
 	{"scene": "res://scenes/battle/battle.tscn", "name": "combat", "battle": 10,
 		"combat": true},
+
+	# --- LES ECRANS QUE LE BANC NE REGARDAIT PAS ---------------------------
+	#
+	# Le chateau, les trois resultats et les quatre popups n'avaient jamais ete
+	# passes au crible des formats. Ils heritent ici des huit tailles ET de
+	# _finish_animations(), sans quoi une entree animee les photographierait a
+	# moitie apparus - le piege deja paye sur la preparation.
+	{"scene": "res://scenes/village/castle_screen.tscn", "name": "chateau", "battle": 1},
+
+	# Les deux popups prennent la meme cle "popup" parce qu'ils exposent la
+	# meme methode : open(type). Sans elle, ils s'affichent vides.
+	{"scene": "res://scenes/village/building_popup.tscn", "name": "popup-batiment",
+		"battle": 1, "popup": Balance.PION},
+	# Le DONJON DES TOURS est verrouille sur une sauvegarde neuve : c'est
+	# l'etat qu'on veut photographier, et celui dont la maquette cercle le
+	# cadre d'or.
+	{"scene": "res://scenes/village/building_popup.tscn", "name": "popup-verrouille",
+		"battle": 1, "popup": Balance.TOUR},
+	{"scene": "res://scenes/village/confirm_upgrade.tscn", "name": "popup-amelioration",
+		"battle": 1, "popup": Balance.CASTLE},
+	# Le popup de missions se remplit tout seul dans son _ready().
+	{"scene": "res://scenes/village/mission_popup.tscn", "name": "popup-missions",
+		"battle": 1},
+
+	# LES TROIS RESULTATS N'ONT PAS DE SCENE : BattleResult est un script qui
+	# etend Control, monte a la main par battle.gd (BattleResult.new(), trois
+	# appels). On le construit donc pareil ici - sans quoi ce banc
+	# photographierait un montage qui n'existe nulle part dans le jeu.
+	{"result": "win", "name": "victoire", "battle": 3},
+	{"result": "loss", "name": "defaite", "battle": 3},
+	{"result": "draw", "name": "nulle", "battle": 3},
 ]
 
 
@@ -80,6 +113,55 @@ func _finish_animations() -> void:
 			tween.custom_step(10.0)
 	await RenderingServer.frame_post_draw
 
+## Remplit un ecran de resultat comme le JEU le remplit.
+##
+## ⚠️ open() seul ne pose ni recompense, ni statistique, ni bouton : c'est
+## battle.gd qui les ajoute apres, en trois endroits. Un ecran ouvert et laisse
+## nu se photographie avec une plaque VIDE et sans boutons - il ressemble a un
+## ecran casse alors qu'il n'a simplement jamais ete rempli. C'est le piege de
+## "l'etat de partie egal", sous une forme neuve : le banc doit montrer ce que
+## le joueur voit, pas ce que la classe sait faire toute seule.
+##
+## Les lignes ci-dessous reprennent la FORME des appels de battle.gd (une
+## recompense, deux a trois statistiques, un bouton principal et deux
+## secondaires) - c'est la hauteur de contenu qui compte pour un banc de
+## format, pas le detail des chiffres.
+func _fill_result(screen: Node, kind: String) -> void:
+	# ⚠️ LE TITRE VIDE N'EST PAS UN OUBLI. BattleResult a DEUX visages : une
+	# petite plaque ECRITE quand on lui donne un texte ("COMBAT 2 SUR 3"), et le
+	# grand lettrage GRAVE quand on ne lui en donne pas. C'est le second que
+	# montre la maquette (410:5121), et c'est celui de la fin d'une serie.
+	#
+	# Passer "VICTOIRE" ici sortait la petite plaque, et la capture donnait
+	# l'impression que l'image gravee manquait au depot. Elle n'a jamais
+	# manque : c'etait le banc qui demandait l'autre variante.
+	match kind:
+		"win":
+			screen.open(true, "")
+			screen.add_reward_row("Recompense totale", 450)
+			screen.add_stat_row("Ennemis vaincus", "11")
+			screen.add_stat_row("Pertes", "2 Pions", 1)
+		"loss":
+			screen.open(false, "")
+			screen.add_reward_row("Consolation", 180)
+			screen.add_stat_row("Serie rompue", "Combat 2 sur 3")
+			screen.add_stat_row("Pertes du combat", "3 Pions, 1 Tour", 1)
+		_:
+			# Le nul n'a JAMAIS le grand lettrage (cf. open_draw) : sa plaque
+			# d'acier gravee lui tient lieu de titre.
+			screen.open_draw("")
+			screen.add_reward_row("Butin promis", 900)
+			screen.add_stat_row("Combat nul", "Position morte")
+			screen.add_stat_row("Pertes du combat", "1 Cavalier", 1)
+
+	# Quatre boutons, comme la maquette : principal, secondaire, et deux
+	# d'action. C'est la hauteur de contenu qui compte pour un banc de format.
+	screen.add_primary_button("BATAILLE SUIVANTE", func(): pass)
+	screen.add_secondary_button("REESSAYER", func(): pass)
+	screen.add_action_button("ROYAUME", "castle", func(): pass)
+	screen.add_action_button("CAMPAGNE", "compass", func(): pass)
+
+
 func _ready() -> void:
 	DirAccess.make_dir_recursive_absolute(ProjectSettings.globalize_path(OUTPUT_DIR))
 	Game.reset_progress()
@@ -93,8 +175,25 @@ func _ready() -> void:
 
 		for screen in SCREENS:
 			Router.current_battle_id = int(screen["battle"])
-			var instance: Node = load(String(screen["scene"])).instantiate()
+
+			var instance: Node
+			if screen.has("result"):
+				instance = BattleResultScript.new()
+			else:
+				instance = load(String(screen["scene"])).instantiate()
 			add_child(instance)
+
+			# Un popup de batiment ne montre rien tant qu'on ne lui a pas dit
+			# QUEL batiment : sans ca les huit captures sont vides.
+			if screen.has("popup"):
+				instance.open(String(screen["popup"]))
+
+			# L'ecran de resultat prend sa peau a l'ouverture - c'est elle qui
+			# fait la difference entre la victoire, la defaite et l'acier du
+			# match nul, qui a ses propres assets (assets/results/draw_*).
+			if screen.has("result"):
+				_fill_result(instance, String(screen["result"]))
+
 			for i in range(4):
 				await RenderingServer.frame_post_draw
 			await _finish_animations()

@@ -56,8 +56,15 @@ essayer ».
 sur 852 points se décale dès que l'appareil en fait 880. Chaque écran se découpe
 en zones ancrées — barre haute de hauteur fixe, contenu central qui prend la
 place restante, bandeau bas de hauteur fixe. Cadre utile : **361 × 824**
-(393 × 852 moins les marges de zone sûre). Convertis : `battle.tscn`,
-`campaign.tscn`, `battle_prep.tscn`. Reste à convertir : village.
+(393 × 852 moins les marges de zone sûre).
+
+✅ **Tous convertis** depuis le 23/08/2026. Le village était le dernier, et son
+cas était particulier : ses étiquettes sont collées à des bâtiments **peints
+dans l'illustration**, pas posées sur du contenu. Il se découpe donc en **deux
+calques** — `DecorLayer` suit le rectangle réel du fond, `UiLayer` suit l'écran.
+Mesure avant correction : **34 points de dérive** sur un écran court, et le
+bouton BATAILLE à **42 points du centre**. Après : dérive nulle sur les huit
+formats, vérifiée par [`tools/format_test.tscn`](tools/format_test.gd).
 
 **5. Ne jamais laisser un chantier sans trace.** Une fenêtre de contexte
 s'épuise en plein travail, et l'agent suivant arrive à froid. **Dès que le
@@ -401,6 +408,8 @@ représentatif**, et confondre les deux a coûté cher :
 | Banc | La question à laquelle il répond | Durée |
 |---|---|---|
 | `tools/smoke_test.tscn` | est-ce que tout tient encore debout ? (données, économie, règles, série, 10 batailles, écrans) | ~70 s |
+| `tools/format_test.tscn` | la géométrie tient-elle sur les huit formats ? **Le seul banc de format qui rende des CHIFFRES** — `resolutions` rend des images, et une image ne casse pas un banc quand elle régresse | instantané |
+| `tools/hitbox_debug.tscn` | où tombent les zones de clic du village ? (les rectangles sont relevés à l'œil ; aucun banc numérique ne peut dire s'ils couvrent le bon bâtiment) | court |
 | `tools/ui_test.tscn` | est-ce que les vrais boutons répondent ? (le codex dit-il encore la vérité, la composition borne-t-elle le placement, la série s'enchaîne-t-elle sans écran de victoire ?) | court |
 | `tools/ai_probe.tscn` | combien coûte un coup à chaque profondeur ? | ~7 s |
 | `tools/ai_bench.tscn` | est-ce que chercher plus loin fait gagner ? *(mesuré : chaque demi-coup gagne les six duels, dans les deux camps)* | long |
@@ -456,19 +465,19 @@ morts**, et un relevé fait sur les anciennes pages parle d'un fichier périmé.
 | | chateau-royal-sans-dame | `410:286` | fait |
 | 🗺️ Campagne `420:4` | 02_Campagne | `410:342` | fait — parchemin défilant de 2300 points |
 | ⚔️ Combat `420:5` | preparation-bataille-v2 | `410:7227` | fait — l'écran de composition, et le **seul écran clair du jeu** |
-| | 04_Bataille_Placement | `410:667` | fait — son **entrée animée reste à porter** (voir plus bas) |
+| | 04_Bataille_Placement | `410:667` | fait — entrée animée portée |
 | | 05_Bataille_Combat | `410:3764` | fait |
-| | **popup-combat-phase** | `410:7190` | **à porter** — c'est le **bandeau de série**, et il affiche les renforts (« +3 Pions ») que le nôtre ne dit pas |
+| | popup-combat-phase | `410:7190` | fait — c'est le **bandeau de série** ; son entrée a été portée le 23/08, elle était jusque-là calquée à la main sur l'écran de résultat et deux fois trop rapide |
 | 🏆 Résultats `420:6` | 06_Bataille_Victoire | `410:5121` | fait — écran plein |
 | | 07-bataille-defaite | `410:5430` | fait (même écran repeint en rouge) |
 | | 07-bataille-nulle | `410:5551` | fait — peau d'acier, `BattleResult.draw_skin` |
-| 📋 Popups `420:7` | mission-popup | `410:5664` | à intégrer (le panneau existe côté code) |
-| | 09-popup-batiment | `410:7342` | à intégrer — *le code couvre les quatre états dans une seule scène (`building_popup.gd`)* |
-| | 10-popup-batiment-verrouille | `410:7488` | idem |
-| | 11-popup-amelioration | `410:7629` | idem |
+| 📋 Popups `420:7` | mission-popup | `410:5664` | fait — ses **deux** animations sont séparées : l'ouverture, et la réclamation |
+| | 09-popup-batiment | `410:7342` | fait — *le code couvre les quatre états dans une seule scène (`building_popup.gd`)*, et leur entrée commune vit dans `Modal` |
+| | 10-popup-batiment-verrouille | `410:7488` | fait — cerclé d'or comme la maquette le demande |
+| | 11-popup-amelioration | `410:7629` | fait |
 | | confirm-upgrade-modal | `410:7769` | fait — `confirm_upgrade.tscn` |
 | 📖 Codex & Shop `420:8` | codex-popup-v3 | `410:6525` | fait — la v3 réécrit les données, la v1 décrivait un autre jeu (voir ci-dessous) |
-| | **shop-screen** | **`410:7061`** | **en cours (chantier H)** — corrigé le 23/08 : légende des quatre coffres, section OR recalibrée, euros grisés, **bloc de coffres gratuits dessiné**. Règles dans [`chantier_h_boutique.md`](chantier_h_boutique.md) |
+| | shop-screen | `410:7061` | fait — cascade d'ouverture et dix illustrations posées le 23/08 — corrigé le 23/08 : légende des quatre coffres, section OR recalibrée, euros grisés, **bloc de coffres gratuits dessiné**. Règles dans [`chantier_h_boutique.md`](chantier_h_boutique.md) |
 
 ⚠️ **Deux écrans que la bibliothèque n'a PAS repris** et qui n'existent que sur
 les anciennes pages : `preparation-bataille-10-v3` (`330:2`, la préparation plus
@@ -631,7 +640,7 @@ ce sont les décalages, les durées et les courbes.
    |---|---|---|
    | Inter, 6 graisses | 589 | partout |
    | **Poppins Bold 16 / SemiBold 14** | **14** | les deux frames du **village** : les cinq noms de bâtiments, Château Royal, Missions, Codex |
-   | Jua Regular 13 | 2 | `07-bataille-nulle` : « ROYAUME » et « CAMPAGNE » |
+   | ~~Jua Regular 13~~ | 2 | `07-bataille-nulle` — **abandonnée**, voir ci-dessous |
    | Comic Relief | 1 | la voix du Roi, déjà embarquée |
 
    **Poppins est embarquée**, décision du joueur : « tu utilises les polices de
@@ -644,10 +653,15 @@ ce sont les décalages, les durées et les courbes.
    trois endroits que la maquette passe en Poppins. Le fichier reste dans le
    dépôt, sans référence.
 
-   ⚠️ **Jua reste le cas non tranché** : 2,1 Mo — chiffre revérifié — pour
-   **deux mots de 13 points** sur le seul écran de match nul. C'est le seul
-   endroit où « les polices de Figma » se heurte à une mesure, et il faudra
-   trancher : embarquer, ou corriger la maquette.
+   ✅ **Jua est tranchée : abandonnée, c'est la MAQUETTE qu'on corrige.**
+   Décision du joueur le 23/08/2026. 2,1 Mo pour **deux mots de 13 points** sur
+   le seul écran de match nul — le tiers du poids de toutes les autres polices
+   réunies. C'était le seul endroit où « les polices de Figma, point final » se
+   heurtait à une mesure, et la mesure a gagné.
+
+   **Aucun code n'a changé** : Jua n'était ni embarquée ni référencée, le jeu
+   rendait déjà « ROYAUME » et « CAMPAGNE » en Inter. La correction est
+   demandée au designer sur `07-bataille-nulle`.
 
 ### Là où la maquette dit autre chose que le jeu
 

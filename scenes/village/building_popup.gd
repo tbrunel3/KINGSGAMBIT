@@ -73,6 +73,11 @@ func _refresh() -> void:
 		_add_upgrade_section(body)
 	elif not Game.is_building_unlocked(_type):
 		_modal.open(Balance.building_name(_type).to_upper(), Modal.Context.NEUTRAL, "lock")
+		# LA MAQUETTE CERCLE D'OR le cadre verrouille (410:7488) alors que son
+		# titre et son cadenas restent gris. Ce n'est pas de la decoration : un
+		# batiment verrouille est ce que le joueur VEUT, et un cadre entierement
+		# sourd se lit "indisponible pour toujours" plutot que "bientot".
+		_modal.set_border_color(Color(UiTheme.GOLD, 0.55))
 		body.add_child(_centered_pill("VERROUILLÉ", Pill.Variant.DEFAULT))
 		body.add_child(DividerScene.instantiate())
 		_add_piece_card(body)

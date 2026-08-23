@@ -37,6 +37,7 @@ extends Control
 #  Relevee sur la maquette 169:4. Aucune de ces couleurs n'est celle du reste
 #  du jeu : cet ecran ne partage pas la plaque royale, il a sa propre peau.
 
+const CornerButton := preload("res://scenes/ui/components/corner_button.gd")
 const PAGE_BG := Color("f6f1e8")
 const PAGE_BG_DEEP := Color("efe7d9")
 const PANEL_BG := Color("ffffff")
@@ -151,9 +152,20 @@ func _build_background() -> void:
 
 # ------------------------------- EN-TETE -------------------------------------
 
+## ⚠️ CE RETOUR NE PASSE PAS AU COMPOSANT PARTAGE, et c'est delibere.
+##
+## Il est bien a 52 points comme les trois autres - la taille, elle, est
+## commune - mais sa PEAU est celle d'un ecran CLAIR : coquille blanche, filet
+## bleu pale, biseau creuse. La preparation est le seul ecran clair du jeu
+## (maquette 410:7227), quand la carte qui la precede et le placement qui la
+## suit restent en nuit et or.
+##
+## Lui poser la plaque royale doree du composant repeindrait un ecran que la
+## maquette veut clair - ce serait faire primer une regle de code sur une
+## decision de design, exactement l'inverse de la regle 2.
 func _build_header() -> void:
 	var back := _shell(PANEL_BG, TILE_EDGE, 1.5, 16.0, 4)
-	back.custom_minimum_size = Vector2(52, 52)
+	back.custom_minimum_size = Vector2(CornerButton.BACK_SIZE, CornerButton.BACK_SIZE)
 	back.size_flags_vertical = Control.SIZE_SHRINK_CENTER
 	back.mouse_filter = Control.MOUSE_FILTER_STOP
 	back.gui_input.connect(func(event: InputEvent):

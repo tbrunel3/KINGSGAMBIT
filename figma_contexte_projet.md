@@ -253,6 +253,16 @@ positions en pourcentages.
   Roi, Jaro pour les enseignes. Jua avait servi pour un seul mot et pesait
   2,1 Mo.
 
+⚠️ **CORRECTION DEMANDÉE — `07-bataille-nulle`.** Les deux mots « ROYAUME » et
+« CAMPAGNE » y sont en **Jua Regular 13**. Jua pèse **2,1 Mo** : le tiers du
+poids de toutes les autres polices du jeu réunies, pour deux mots de 13 points
+sur l'écran le plus rare. Décision du joueur le 23/08/2026 : **on ne l'embarque
+pas**. Peux-tu les repasser en Inter, ou en Poppins qui est déjà dans le jeu ?
+
+C'est le seul endroit où « tu utilises les polices de Figma, point final » s'est
+heurté à une mesure — et partout ailleurs la consigne tient : Poppins a été
+embarquée pour les enseignes du village sans discuter.
+
 **4. Le langage visuel est établi : la plaque royale.** Rectangle arrondi,
 dégradé bleu nuit (`#1e3278` → `#0a1230` → `#0e1a40`), cerclé d'un trait d'or
 épais `#ffe680`, doublé à l'intérieur d'un filet d'or fin. Elle sert déjà de

@@ -20,6 +20,7 @@ extends Control
 
 enum Phase { PLACEMENT, COMBAT, RESULT }
 
+const CornerButton := preload("res://scenes/ui/components/corner_button.gd")
 const ModalScene := preload("res://scenes/ui/components/modal.tscn")
 const SelectionChipScene := preload("res://scenes/ui/components/selection_chip.tscn")
 
@@ -208,17 +209,32 @@ func _owned(type: String) -> int:
 ## Ils remplacent le gros bouton rouge "X" et le rond gris qui l'accompagnait.
 ## Quitter une bataille n'est pas une action dangereuse qu'il faut peindre en
 ## rouge : c'est une sortie, et le rouge de l'ecran est celui de l'ennemi.
-const _CORNER_BUTTON := 34.0
-const _CORNER_TOP := 12.0
-const _CORNER_GAP := 8.0
+## ⚠️ CES TROIS VALEURS NE SONT PLUS DECLAREES ICI.
+##
+## La bataille etait la reference - 34 points, ancres a droite - et c'est elle
+## qui a donne sa taille au composant partage. Elles viennent donc de lui
+## maintenant : six tailles de bouton de coin ramenees a deux ne tiennent que
+## s'il n'y a qu'UN endroit qui les ecrit.
+const _CORNER_BUTTON := CornerButton.FLOATING_SIZE
+const _CORNER_TOP := CornerButton.STACK_MARGIN.y
+const _CORNER_GAP := CornerButton.STACK_GAP
 
 
 ## Habillage commun aux deux ronds, cf. Btn-Exit / Btn-Info.
+## ⚠️ LA CROIX DE SORTIE RESTE UN Button DE LA SCENE, elle.
+##
+## battle.tscn la declare ($Safe/Overlay/QuitButton), et un Button sait ce
+## qu'un Control ne sait pas : les etats hover et pressed. La sortir de la
+## scene pour gagner quelques lignes couterait une chirurgie de .tscn sur
+## l'ecran le plus teste du jeu, sans rien changer a ce que le joueur voit.
+##
+## Ce qui compte est ailleurs : la TAILLE et les COULEURS viennent desormais du
+## composant partage. Il n'y a plus qu'un endroit ou les changer.
 func _corner_button_style() -> StyleBoxFlat:
 	var box := StyleBoxFlat.new()
-	box.bg_color = Color("0a1230", 0.85)
+	box.bg_color = CornerButton.FILL[CornerButton.Tone.NIGHT]
 	box.set_corner_radius_all(int(_CORNER_BUTTON * 0.5))
-	box.border_color = Color("ffe580", 0.8)
+	box.border_color = CornerButton.EDGE[CornerButton.Tone.NIGHT]
 	box.set_border_width_all(1.5)
 	box.set_content_margin_all(0)
 	return box
@@ -239,23 +255,60 @@ func _place_corner_button(node: Control, rank: int) -> void:
 	node.offset_bottom = node.offset_top + _CORNER_BUTTON
 
 
+## LE MOT QUI OUVRE LE COMBAT - il barre le plateau, puis s'efface.
+##
+## Releve sur 05_Bataille_Combat (433:3) : il surgit de 1,5 a 1 en 0,25 s avec
+## un ressort, tient, puis ENFLE a 2 en s'effacant sur 0,60 s. Ce n'est pas un
+## fondu : le mot grandit en partant, comme s'il passait devant la camera.
+##
+## Il marque le passage du placement au combat. Sans lui, le joueur pose sa
+## derniere piece et se retrouve deja en train de jouer, sans transition.
+##
+## ⚠️ Enfant de Safe/Overlay, un Control NU : c'est ce qui autorise a lui poser
+## une echelle et une position sans que la mise en page les reprenne.
+const OPENING_WORD_IN := 0.25
+const OPENING_WORD_OUT := 0.60
+
+
+func _show_opening_word() -> void:
+	var word := UiTheme.make_label("COMBATTEZ", 40, UiTheme.GOLD)
+	word.name = "OpeningWord"
+	word.add_theme_font_override("font", UiTheme.font_display())
+	# ⚠️ make_label pose SIZE_EXPAND_FILL et l'autowrap sur TOUT libelle : sans
+	# ces deux lignes, "COMBATTEZ" se replie sur plusieurs lignes.
+	word.autowrap_mode = TextServer.AUTOWRAP_OFF
+	word.size_flags_horizontal = Control.SIZE_FILL
+	word.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	word.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_tour_badge.get_parent().add_child(word)
+	word.set_anchors_and_offsets_preset(Control.PRESET_CENTER)
+
+	await get_tree().process_frame
+	if not is_instance_valid(word):
+		return
+	word.pivot_offset = word.size * 0.5
+	word.scale = Vector2(1.5, 1.5)
+	word.modulate.a = 0.0
+
+	var tween := create_tween()
+	tween.tween_property(word, "modulate:a", 1.0, OPENING_WORD_IN * 0.8)
+	tween.parallel().tween_property(word, "scale", Vector2.ONE, OPENING_WORD_IN) \
+		.set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
+	tween.tween_interval(float(Balance.COMBAT.get("opening_word_seconds", 0.45)))
+	tween.tween_property(word, "modulate:a", 0.0, OPENING_WORD_OUT) \
+		.set_trans(Tween.TRANS_CUBIC).set_ease(Tween.EASE_IN)
+	tween.parallel().tween_property(word, "scale", Vector2(2, 2), OPENING_WORD_OUT) \
+		.set_trans(Tween.TRANS_CUBIC).set_ease(Tween.EASE_IN)
+	tween.tween_callback(word.queue_free)
+
+
+## Le point d'aide passe au composant partage. Il perd au passage son glyphe
+## trace en LIBELLE ("i" dans un Label, centre a la main) au profit de l'icone
+## "info" que icon.gd dessine deja - le meme glyphe que le codex au village.
 func _build_help_button() -> void:
-	var help := PanelContainer.new()
-	help.add_theme_stylebox_override("panel", _corner_button_style())
-	help.mouse_filter = Control.MOUSE_FILTER_STOP
-
-	var glyph := UiTheme.make_label("i", 16, Color("ffe580"))
-	glyph.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	glyph.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
-	glyph.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	help.add_child(glyph)
-
+	var help: Control = CornerButton.floating("info", _open_help)
 	_quit_button.get_parent().add_child(help)
-	_place_corner_button(help, 1)
-	help.gui_input.connect(func(event: InputEvent):
-		if event is InputEventMouseButton and event.pressed and event.button_index == MOUSE_BUTTON_LEFT:
-			_open_help()
-	)
+	help.stack_top_right(1, Vector2(6.0, _CORNER_TOP))
 
 
 ## La croix de sortie, premier des deux ronds du bord droit.
@@ -1139,6 +1192,7 @@ func _start_combat() -> void:
 	_build_combat_ui()
 	_build_blockage_badge()
 	_refresh_stats_hud()
+	_show_opening_word()
 	_hand_over_to_player()
 
 

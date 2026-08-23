@@ -49,6 +49,38 @@ const GLOW_LIGHTS := [
 	{"asset": "glow_crown.svg", "rect": Rect2(182, 305, 28, 20)},
 ]
 
+## LES BATIMENTS EUX-MEMES SONT CLIQUABLES, pas seulement leurs enseignes.
+##
+## Demande du joueur. Les enseignes restent visees naturellement - elles
+## portent le niveau et la progression - mais viser une enseigne de 24 points
+## de haut quand un batiment entier est dessine juste au-dessus n'a aucun sens
+## au pouce.
+##
+## Rectangles releves sur le rendu en 393 x 852, VOLONTAIREMENT plus larges que
+## le dessin : au pouce, une cible trop juste se rate. Ils vivent sur le calque
+## de decor et suivent donc l'illustration exactement comme les enseignes -
+## sans quoi ils seraient decales de 34 points sur un ecran court, ce qui est
+## pire que pas de zone du tout.
+const BUILDING_HITBOX := {
+	"pion": Rect2(28, 92, 130, 152),
+	"cavalier": Rect2(238, 126, 146, 126),
+	"fou": Rect2(30, 470, 130, 162),
+	"tour": Rect2(226, 486, 150, 150),
+}
+## Le chateau a la sienne, plus grande : c'est le batiment central, et il mene
+## a un ecran plein plutot qu'a un popup.
+const CASTLE_HITBOX := Rect2(108, 292, 182, 140)
+
+## LA TRANSITION VERS UN BATIMENT - zoom vers le point touche, puis voile.
+##
+## ⚠️ Ces quatre valeurs sont le seul endroit a changer si le prototype Figma
+## rend un mouvement different. Elles ne sont copiees nulle part ailleurs.
+const ZOOM_SCALE := 1.18
+const ZOOM_SECONDS := 0.35
+## Le voile monte sur la fin du zoom, pas des le debut : on doit VOIR le zoom.
+const VEIL_DELAY_RATIO := 0.6
+const VEIL_SECONDS := 0.22
+
 const SCREEN_WIDTH := 393.0
 const SCREEN_MARGIN := 8.0
 const BATTLE_RECT := Rect2(102, 765, 189, 59)
@@ -59,11 +91,18 @@ const TOP_BAR_HEIGHT := 30.0
 const TOP_FADE_HEIGHT := 143.0
 const BOTTOM_FADE_TOP := 720.0
 const BOTTOM_FADE_HEIGHT := 132.0
-const DEV_BUTTON_RECT := Rect2(362, 14, 24, 24)
-## Bouton CODEX, cale a gauche de l'engrenage des reglages. Icone seule et
-## discrete : le codex se consulte, il ne se joue pas - lui donner un libelle
-## le mettrait au meme rang que MISSIONS, qui dit quoi faire ensuite.
-const CODEX_BUTTON_RECT := Rect2(319, 44, 28, 28)
+## LE GESTE QUI OUVRE LE PANNEAU DE DEVELOPPEMENT.
+##
+## Plus large que haute, et calee AU-DESSUS de la barre du haut : les boutons
+## de reglages et de codex commencent a y=44, une zone plus profonde leur
+## volerait leurs taps.
+const DEV_GESTURE_SIZE := Vector2(72, 40)
+const DEV_GESTURE_HOLD := 1.2
+## ⚠️ LE CODEX N'A PLUS DE RECTANGLE A LUI. Il est ancre au bord droit par le
+## composant partage, comme l'engrenage. Son icone reste discrete et sans
+## libelle, decision inchangee : le codex se consulte, il ne se joue pas - lui
+## donner un libelle le mettrait au meme rang que MISSIONS, qui dit quoi faire
+## ensuite.
 ## Bouton BOUTIQUE, pose A GAUCHE DE "BATAILLE" et non plus en haut a droite
 ## avec le codex : c'est le joueur qui l'a place la dans la maquette
 ## (Boutique-Button, 445:6). Le bas de l'ecran est la zone du POUCE, et la
@@ -75,14 +114,45 @@ const CODEX_BUTTON_RECT := Rect2(319, 44, 28, 28)
 ## Position ABSOLUE parce que le village est le dernier ecran qui n'est pas
 ## encore decoupe en zones ancrees (cf. CLAUDE.md, regle 4).
 const SHOP_BUTTON_RECT := Rect2(40, 761, 45, 45)
-const SHOP_BUTTON_FILL := Color("3873f2")
-const SHOP_BUTTON_EDGE := Color("b6c0f3")
 ## Le picto dessine par le joueur. C'est l'image SOURCE de la maquette, la
 ## seule detouree : l'export du noeud, lui, arrive avec le fond bleu du bouton
 ## cuit dedans (alpha entierement opaque - verifie).
 const SHOP_ICON := "res://assets/ui/shop_icon.png"
 
-@onready var _overlay: Control = $Overlay
+const CoverFit := preload("res://scripts/ui/cover_fit.gd")
+const CornerButton := preload("res://scenes/ui/components/corner_button.gd")
+
+## Taille REELLE du fichier de fond, relevee sur le PNG - pas celle de la
+## maquette. Son rapport (0,4745) differe de celui de la reference (0,4613), et
+## c'est tout le probleme : en KEEP_ASPECT_COVERED l'illustration GROSSIT avec
+## la hauteur du viewport pendant que des coordonnees calees sur 852 ne bougent
+## pas. Mesure avant correction : ~34 points de derive sur un ecran court, et
+## le bouton BATAILLE a 42 points du centre.
+const BACKGROUND_SIZE := Vector2(864, 1821)
+
+## La reference du projet, celle dans laquelle toutes les coordonnees Figma de
+## ce fichier sont exprimees.
+const DESIGN_SIZE := Vector2(393, 852)
+
+## LE DECOR suit l'illustration, L'INTERFACE suit l'ecran.
+##
+## Deux calques, parce que ce sont deux choses : les etiquettes sont collees a
+## des batiments PEINTS DANS l'image, alors qu'un bouton de reglages qui
+## s'eloignerait du bord parce que le decor a grossi serait faux.
+@onready var _decor: Control = $DecorLayer
+@onready var _ui: Control = $UiLayer
+## Le fond illustre : il zoome avec le decor, sinon le decor glisserait sur une
+## image immobile.
+@onready var _background: TextureRect = $BackgroundImage
+
+## Une transition est en cours : elle avale les clics, sinon un double appui
+## empile deux zooms.
+var _zooming: bool = false
+
+## Les noeuds poses sur le decor, avec leur coordonnee MAQUETTE d'origine.
+## C'est la seule source de verite de leur position : elle est reappliquee a
+## chaque redimensionnement.
+var _decor_anchors: Dictionary = {}
 
 var _popup: Control = null
 var _gold_pill: Pill
@@ -90,8 +160,8 @@ var _gem_pill: Pill
 var _missions_button: PanelContainer
 var _missions_label: Label
 var _missions_badge: PanelContainer
-var _codex_button: PanelContainer
-var _shop_button: PanelContainer
+var _codex_button: Control
+var _shop_button: Control
 var _castle_label: PanelContainer
 var _castle_glow: TextureRect
 var _castle_glow_tween: Tween
@@ -102,23 +172,22 @@ var _battle_button: PanelContainer
 var _battle_label: Label
 
 
-## Hauteur de reference du village. Tous les labels sont poses aux
-## coordonnees de la maquette Figma, qui suppose un ecran de 393 x 852.
-const DESIGN_HEIGHT := 852.0
-
-
 func _ready() -> void:
-	_fit_overlay_to_design()
+	_fit_decor_to_background()
+	get_viewport().size_changed.connect(_fit_decor_to_background)
 
-	# Avant tout le reste : premier enfant de l'Overlay, donc dessine DERRIERE
-	# les labels de batiments.
+	# Avant tout le reste : premier enfant du DECOR, donc dessine DERRIERE les
+	# labels de batiments.
 	_build_castle_glow()
+	# Puis les zones de clic, AVANT les enseignes : celles-ci restent donc
+	# au-dessus et gardent leur clic a elles.
+	_build_building_hitboxes()
 	_build_top_bar()
 	_build_castle_label()
 	for type in Balance.UNIT_TYPES:
 		_build_building_label(type)
 	_build_battle_button()
-	_build_dev_button()
+	_build_dev_gesture()
 
 	Game.gold_changed.connect(func(_g): _refresh())
 	Game.gems_changed.connect(func(_g): _refresh())
@@ -141,25 +210,102 @@ func _ready() -> void:
 
 # ------------------------------- CONSTRUCTION --------------------------------
 
-## Le village est entierement pose en coordonnees absolues, calees sur la
-## maquette 393 x 852 : chaque label est colle a son batiment sur le fond
-## illustre. Sur un telephone d'un autre format, le mode d'etirement du
-## projet REVELE de la hauteur en plus (873, 880...) et ces coordonnees ne
-## veulent plus rien dire - le bouton BATAILLE flotte, les labels glissent.
+## LES DEUX CALQUES, et pourquoi ce n'est pas un decoupage arbitraire.
 ##
-## On garde donc au calque une bande de 852 points de haut, centree
-## verticalement : les coordonnees Figma restent vraies partout, et l'espace
-## supplementaire montre simplement un peu plus de decor en haut et en bas.
-## Le fond illustre, lui, couvre tout l'ecran (il est en dehors de ce calque).
-func _fit_overlay_to_design() -> void:
-	_overlay.anchor_left = 0.0
-	_overlay.anchor_right = 1.0
-	_overlay.anchor_top = 0.5
-	_overlay.anchor_bottom = 0.5
-	_overlay.offset_left = 0.0
-	_overlay.offset_right = 0.0
-	_overlay.offset_top = -DESIGN_HEIGHT * 0.5
-	_overlay.offset_bottom = DESIGN_HEIGHT * 0.5
+## Les coordonnees de ce fichier sont relevees sur la maquette 393 x 852, et
+## chaque etiquette est collee a un batiment PEINT DANS l'illustration. Or le
+## fond est pose en KEEP_ASPECT_COVERED et fait 864 x 1821 : son rapport n'est
+## pas celui de la reference, donc il GROSSIT avec la hauteur du viewport.
+##
+## Une bande de 852 points centree - ce qu'on faisait avant - laissait donc les
+## etiquettes derriere leur decor : ~34 points sur un ecran court. Et le calque
+## unique faisait sa largeur du viewport tout en gardant des coordonnees calees
+## sur 393, ce qui mettait le bouton BATAILLE a 42 points du centre.
+##
+## D'ou DEUX calques : le DECOR suit l'illustration, l'INTERFACE suit l'ecran.
+
+
+## Le rectangle que l'illustration occupe reellement, pour un viewport donne.
+## STATIQUE : c'est ce qui la rend mesurable sans instancier l'ecran
+## (cf. tools/format_test.gd).
+static func decor_rect(viewport: Vector2) -> Rect2:
+	return CoverFit.rect(viewport, BACKGROUND_SIZE)
+
+
+## Une coordonnee de la MAQUETTE, placee la ou elle tombe reellement sur le
+## decor. Elle passe par le repere de l'IMAGE, qui est son repere d'origine -
+## c'est pour ca qu'elle redevient vraie sur tous les formats.
+static func design_to_decor(point: Vector2, viewport: Vector2) -> Vector2:
+	var in_texture := CoverFit.to_texture(point, DESIGN_SIZE, BACKGROUND_SIZE)
+	return CoverFit.from_texture(in_texture, viewport, BACKGROUND_SIZE)
+
+
+## Le bouton BATAILLE suit l'ECRAN, pas le decor : un bouton d'action qui
+## glisse parce que l'illustration a grossi serait faux. Il est donc centre, et
+## non plus pose a x=102 comme le voulait un Rect2 cale sur 393 de large - dont
+## le centre tombait a 196,5 quand le viewport peut faire 478.
+static func battle_center_x(viewport: Vector2) -> float:
+	return viewport.x * 0.5
+
+
+## Recale le calque de decor sur le fond. Appelee au demarrage et a chaque
+## redimensionnement : c'est le seul endroit du fichier qui connaisse la taille
+## de l'ecran.
+##
+## ⚠️ LE CALQUE PORTE UN RAPPORT, PAS L'ECHELLE DU FOND. Poser directement
+## l'echelle du KEEP_ASPECT_COVERED (0,468 a la reference) rendrait les
+## coordonnees justes mais retrecirait le TEXTE des etiquettes de moitie - une
+## etiquette a une position en points ET une taille en points, et seule la
+## premiere doit suivre l'image. On met donc le rapport entre l'echelle
+## courante et celle de la reference : il vaut exactement 1,0 en 393x852, donc
+## l'ecran de reference est rigoureusement inchange.
+func _fit_decor_to_background() -> void:
+	var viewport := get_viewport_rect().size
+	var design_rect := decor_rect(DESIGN_SIZE)
+	var design_scale := CoverFit.scale(DESIGN_SIZE, BACKGROUND_SIZE)
+
+	var ratio := CoverFit.scale(viewport, BACKGROUND_SIZE) / design_scale
+
+	# ⚠️ LE CALQUE NE PORTE PAS L'ECHELLE, et c'est une decision mesuree.
+	#
+	# Lui donner le rapport (1,22 sur un ecran court) reposait bien les
+	# enseignes sur leurs batiments, mais les faisait GROSSIR avec l'image -
+	# une enseigne a une position en points ET une taille en points, et seule
+	# la premiere doit suivre le decor. Mesure : "Caserne des Pions" et
+	# "Ecuries" se frolaient en 360x620, et le texte variait de 22 % d'un
+	# telephone a l'autre. Les deux modes ont ete rendus cote a cote et le
+	# joueur a tranche pour celui-ci.
+	#
+	# Chaque enfant est donc repose a la main, en gardant sa taille.
+	_decor.scale = Vector2.ONE
+	_decor.position = Vector2.ZERO
+	_decor.size = viewport
+
+	for node in _decor_anchors:
+		_apply_decor_anchor(node, ratio)
+
+
+## Pose un noeud sur le decor a une coordonnee de la MAQUETTE, et retient
+## cette coordonnee : c'est elle la source de verite, jamais la position
+## courante, qui depend du format.
+func _anchor_on_decor(node: Control, design_pos: Vector2, is_artwork: bool = false) -> void:
+	_decor_anchors[node] = design_pos
+	node.set_meta("decor_artwork", is_artwork)
+	if is_inside_tree():
+		var design_scale := CoverFit.scale(DESIGN_SIZE, BACKGROUND_SIZE)
+		_apply_decor_anchor(node,
+			CoverFit.scale(get_viewport_rect().size, BACKGROUND_SIZE) / design_scale)
+
+
+func _apply_decor_anchor(node: Control, ratio: float) -> void:
+	if not is_instance_valid(node):
+		return
+	var design_pos: Vector2 = _decor_anchors[node]
+	node.position = design_to_decor(design_pos, get_viewport_rect().size)
+	# Le halo est de l'ILLUSTRATION : il doit grandir avec le chateau qu'il
+	# eclaire, meme quand les enseignes, elles, gardent leur taille.
+	if bool(node.get_meta("decor_artwork", false)):
+		node.scale = Vector2(ratio, ratio)
 
 
 ## Bandeau plein (rgba(10,13,20,0.75), h46, y38) derriere les pastilles -
@@ -168,12 +314,34 @@ func _fit_overlay_to_design() -> void:
 ## La maquette V2 ne pose plus de bandeau plein en haut : les pastilles
 ## reposent sur un simple fondu sombre, qui laisse voir l'ile.
 func _build_top_bar() -> void:
-	_overlay.add_child(_fade_rect(
-		Vector2(0, 0), Vector2(SCREEN_WIDTH, TOP_FADE_HEIGHT),
-		Color("0a0d14", 0.65), Color("0a0d14", 0.0)))
-	_overlay.add_child(_fade_rect(
-		Vector2(0, BOTTOM_FADE_TOP), Vector2(SCREEN_WIDTH, BOTTOM_FADE_HEIGHT),
-		Color("0a0d14", 0.0), Color("0a0d14", 0.95)))
+	# LES DEUX FONDUS SUIVENT L'ECRAN, en largeur comme en position verticale.
+	#
+	# Ils etaient larges de SCREEN_WIDTH (393) : sur un viewport de 478, ils
+	# laissaient 85 points de decor en pleine lumiere a droite, et les pastilles
+	# du bout de la barre flottaient sur l'illustration.
+	#
+	# Le fondu du BAS s'ancre au bas de l'ecran, pas a y=720 : il est la pour
+	# detacher le bouton BATAILLE du decor, et le bouton vient lui aussi de
+	# passer en ancrage bas.
+	var top_fade := _fade_rect(
+		Vector2.ZERO, Vector2(SCREEN_WIDTH, TOP_FADE_HEIGHT),
+		Color("0a0d14", 0.65), Color("0a0d14", 0.0))
+	_ui.add_child(top_fade)
+	top_fade.anchor_right = 1.0
+	top_fade.offset_left = 0.0
+	top_fade.offset_right = 0.0
+
+	var bottom_fade := _fade_rect(
+		Vector2.ZERO, Vector2(SCREEN_WIDTH, BOTTOM_FADE_HEIGHT),
+		Color("0a0d14", 0.0), Color("0a0d14", 0.95))
+	_ui.add_child(bottom_fade)
+	bottom_fade.anchor_right = 1.0
+	bottom_fade.anchor_top = 1.0
+	bottom_fade.anchor_bottom = 1.0
+	bottom_fade.offset_left = 0.0
+	bottom_fade.offset_right = 0.0
+	bottom_fade.offset_top = -(DESIGN_SIZE.y - BOTTOM_FADE_TOP)
+	bottom_fade.offset_bottom = 0.0
 
 	var pill_y := TOP_BAR_Y
 
@@ -198,103 +366,48 @@ func _build_top_bar() -> void:
 
 	_build_missions_button(pill_y)
 
-	var settings := PanelContainer.new()
-	var box := StyleBoxFlat.new()
-	box.bg_color = Color("174971")
-	box.set_corner_radius_all(14)
-	box.set_content_margin_all(7)
-	settings.add_theme_stylebox_override("panel", box)
-	var gear := Icon.new()
-	gear.icon_name = "gear"
-	gear.color = Color("ccccd9")
-	gear.custom_minimum_size = Vector2(14, 14)
-	settings.add_child(gear)
-	_overlay.add_child(settings)
-	settings.position = Vector2(353, TOP_BAR_Y)
-	settings.size = Vector2(28, 28)
+	# LES DEUX BOUTONS DE LA BARRE HAUTE, un seul composant pour les deux.
+	#
+	# Ils etaient a 28 x 28 en coordonnees absolues, (319, 44) et (353, 44) :
+	# sur un viewport de 478 de large ils se retrouvaient au MILIEU de la barre
+	# au lieu de son bord. Ancres a droite, ils y restent, et ils passent a 34
+	# comme tous les boutons de coin du jeu.
+	#
+	# ⚠️ EN RANGEE, PAS EN COLONNE. La maquette du village (410:153) les met
+	# cote a cote ; c'est la BATAILLE qui les empile, parce que sa barre haute
+	# est prise par le badge de tour. Aligner le code en desalignant l'ecran
+	# serait exactement ce que la regle 2 interdit.
+	var settings: Control = CornerButton.floating("gear", func(): pass)
+	_ui.add_child(settings)
+	settings.row_top_right(0, Vector2(12, TOP_BAR_Y))
 
-	_build_codex_button()
-	_shop_button = _build_icon_button("", Color("ffe580"), SHOP_BUTTON_FILL,
-		SHOP_BUTTON_RECT, _on_shop_pressed, SHOP_ICON)
+	_codex_button = CornerButton.floating("info", _on_codex_pressed)
+	_ui.add_child(_codex_button)
+	_codex_button.row_top_right(1, Vector2(12, TOP_BAR_Y))
 
-
-## Pastille cliquable a icone seule, le gabarit du codex et de la boutique.
-## Un PanelContainer et non un Button : c'est le seul moyen d'y inserer un
-## Icon, qui se DESSINE (cf. _make_clickable plus bas, meme raison).
-##
-## `texture_path` non vide remplace le glyphe trace par une IMAGE - c'est le
-## cas de la boutique, dont le picto vient de la maquette.
-func _build_icon_button(icon_name: String, icon_color: Color, fill: Color,
-		rect: Rect2, on_press: Callable, texture_path: String = "") -> PanelContainer:
-	var panel := PanelContainer.new()
-	var box := StyleBoxFlat.new()
-	box.bg_color = fill
-	box.set_corner_radius_all(10 if texture_path != "" else 14)
-	box.set_content_margin_all(9 if texture_path != "" else 7)
-	if texture_path != "":
-		box.border_color = SHOP_BUTTON_EDGE
-		box.set_border_width_all(1)
-	panel.add_theme_stylebox_override("panel", box)
-
-	var glyph: Control
-	if texture_path != "" and ResourceLoader.exists(texture_path):
-		var image := TextureRect.new()
-		image.texture = load(texture_path)
-		image.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
-		image.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
-		glyph = image
-	else:
-		var icon := Icon.new()
-		icon.icon_name = icon_name
-		icon.color = icon_color
-		glyph = icon
-	glyph.custom_minimum_size = Vector2(14, 14)
-	panel.add_child(glyph)
-
-	_overlay.add_child(panel)
-	panel.position = rect.position
-	panel.size = rect.size
-
-	UiTheme.ignore_mouse_recursive(glyph)
-	panel.mouse_filter = Control.MOUSE_FILTER_STOP
-	panel.gui_input.connect(func(event: InputEvent):
-		if event is InputEventMouseButton and event.pressed and event.button_index == MOUSE_BUTTON_LEFT:
-			on_press.call()
-	)
-	return panel
+	# LA BOUTIQUE NE CHANGE PAS DE PLACE. Elle est en bas a gauche parce que le
+	# joueur l'y a mise : le bas de l'ecran est la zone du POUCE, et on y passe
+	# entre deux batailles. Elle prend seulement l'habillage commun.
+	#
+	# ⚠️ Elle garde aussi sa TAILLE (45, pas 34). Les deux tailles du composant
+	# valent pour les boutons de COIN ; celle-ci est une action de bas d'ecran,
+	# voisine de BATAILLE, et la retrecir de 45 a 34 la rendrait plus dure a
+	# viser la ou le pouce tombe naturellement.
+	_shop_button = CornerButton.with_texture(SHOP_ICON, _on_shop_pressed)
+	_shop_button.custom_minimum_size = SHOP_BUTTON_RECT.size
+	_shop_button.size = SHOP_BUTTON_RECT.size
+	_ui.add_child(_shop_button)
+	_shop_button.position = SHOP_BUTTON_RECT.position
+	_shop_button.anchor_top = 1.0
+	_shop_button.anchor_bottom = 1.0
+	_shop_button.offset_left = SHOP_BUTTON_RECT.position.x
+	_shop_button.offset_right = SHOP_BUTTON_RECT.position.x + SHOP_BUTTON_RECT.size.x
+	_shop_button.offset_top = -(DESIGN_SIZE.y - SHOP_BUTTON_RECT.position.y)
+	_shop_button.offset_bottom = _shop_button.offset_top + SHOP_BUTTON_RECT.size.y
 
 
 func _on_shop_pressed() -> void:
 	Router.goto_shop()
-
-
-## Bouton du CODEX DU ROYAUME. Le jeu n'expliquait nulle part ce que fait une
-## piece, ce que coute la recrue suivante, ni pourquoi une bataille demande
-## trois combats : c'est la porte de cette reference.
-func _build_codex_button() -> void:
-	_codex_button = PanelContainer.new()
-	var box := StyleBoxFlat.new()
-	box.bg_color = Color("174971")
-	box.set_corner_radius_all(14)
-	box.set_content_margin_all(7)
-	_codex_button.add_theme_stylebox_override("panel", box)
-
-	var glyph := Icon.new()
-	glyph.icon_name = "info"
-	glyph.color = Color("ffe580")
-	glyph.custom_minimum_size = Vector2(14, 14)
-	_codex_button.add_child(glyph)
-
-	_overlay.add_child(_codex_button)
-	_codex_button.position = CODEX_BUTTON_RECT.position
-	_codex_button.size = CODEX_BUTTON_RECT.size
-
-	UiTheme.ignore_mouse_recursive(glyph)
-	_codex_button.mouse_filter = Control.MOUSE_FILTER_STOP
-	_codex_button.gui_input.connect(func(event: InputEvent):
-		if event is InputEventMouseButton and event.pressed and event.button_index == MOUSE_BUTTON_LEFT:
-			_on_codex_pressed()
-	)
 
 
 func _on_codex_pressed() -> void:
@@ -338,7 +451,7 @@ func _build_missions_button(y: float) -> void:
 	box.content_margin_top = 5
 	box.content_margin_bottom = 5
 	_missions_button.add_theme_stylebox_override("panel", box)
-	_overlay.add_child(_missions_button)
+	_ui.add_child(_missions_button)
 	_missions_button.position.y = y
 
 	var row := HBoxContainer.new()
@@ -370,7 +483,7 @@ func _build_missions_button(y: float) -> void:
 	badge_box.content_margin_bottom = 1
 	_missions_badge.add_theme_stylebox_override("panel", badge_box)
 	_missions_badge.visible = false
-	_overlay.add_child(_missions_badge)
+	_ui.add_child(_missions_badge)
 
 	var badge_label := UiTheme.make_label("", 9, Color("331f00"))
 	badge_label.name = "Count"
@@ -406,12 +519,15 @@ func _on_missions_pressed() -> void:
 	if is_instance_valid(_popup):
 		return
 	_popup = MissionPopupScene.instantiate()
+	# La bourse d'or lui est DONNEE : les pieces d'une mission reclamee y
+	# volent, et elle vit dans cet ecran-ci, pas dans le popup.
+	_popup.purse = _gold_pill
 	add_child(_popup)
 
 
 func _place_pill(x: float, y: float, text: String, variant: Pill.Variant) -> Pill:
 	var pill: Pill = preload("res://scenes/ui/components/pill.tscn").instantiate()
-	_overlay.add_child(pill)
+	_ui.add_child(pill)
 	pill.set_data("", text, variant)
 	pill.size = pill.get_combined_minimum_size()
 	pill.position = Vector2(x, y)
@@ -427,7 +543,8 @@ func _place_pill(x: float, y: float, text: String, variant: Pill.Variant) -> Pil
 func _build_castle_glow() -> void:
 	# Le grand halo reste discret : c'est la lueur qui deborde du chateau.
 	_castle_glow = _glow_rect(0.34, CASTLE_GLOW_RECT)
-	_overlay.add_child(_castle_glow)
+	_decor.add_child(_castle_glow)
+	_anchor_on_decor(_castle_glow, CASTLE_GLOW_RECT.position, true)
 
 	# Les lumieres des fenetres et de la couronne s'allument avec le halo :
 	# c'est ce qui separe village-avec-dame de village-sans-dame dans la
@@ -513,7 +630,7 @@ func _refresh_castle_glow() -> void:
 func _build_castle_label() -> void:
 	_castle_label = PanelContainer.new()
 	_style_building_panel(_castle_label, Color("ffd933", 1.22), 14)
-	_overlay.add_child(_castle_label)
+	_decor.add_child(_castle_label)
 
 	var margin := MarginContainer.new()
 	margin.add_theme_constant_override("margin_left", 14)
@@ -538,8 +655,10 @@ func _build_castle_label() -> void:
 	_castle_sub_row.add_theme_constant_override("separation", 8)
 	vbox.add_child(_castle_sub_row)
 
-	_castle_label.position = CASTLE_POS
-	_make_clickable(_castle_label, func(): _on_building_pressed(Balance.CASTLE))
+	_anchor_on_decor(_castle_label, CASTLE_POS)
+	_make_clickable(_castle_label,
+		func(): _on_building_pressed(Balance.CASTLE,
+			_castle_label.get_global_rect().get_center()))
 	_building_buttons[Balance.CASTLE] = _castle_label
 	UiTheme.ignore_mouse_recursive(margin)
 
@@ -547,7 +666,7 @@ func _build_castle_label() -> void:
 func _build_building_label(type: String) -> void:
 	var panel := PanelContainer.new()
 	_style_building_panel(panel, Color(String(BUILDING_ACCENT[type])), 12)
-	_overlay.add_child(panel)
+	_decor.add_child(panel)
 
 	var margin := MarginContainer.new()
 	margin.add_theme_constant_override("margin_left", 12)
@@ -575,9 +694,12 @@ func _build_building_label(type: String) -> void:
 	sub_row.add_theme_constant_override("separation", 8)
 	vbox.add_child(sub_row)
 
-	panel.position = BUILDING_POS[type]
+	_anchor_on_decor(panel, BUILDING_POS[type])
 	_building_labels[type] = {"panel": panel, "sub_row": sub_row}
-	_make_clickable(panel, func(): _on_building_pressed(type))
+	# L'enseigne zoome depuis SA position, pas depuis le centre de l'ecran :
+	# c'est le meme geste que sur le batiment, vise un peu plus bas.
+	_make_clickable(panel,
+		func(): _on_building_pressed(type, panel.get_global_rect().get_center()))
 	_building_buttons[type] = panel
 	UiTheme.ignore_mouse_recursive(margin)
 
@@ -605,9 +727,21 @@ func _build_battle_button() -> void:
 	box.shadow_size = 10
 	box.shadow_offset = Vector2(0, 4)
 	_battle_button.add_theme_stylebox_override("panel", box)
-	_overlay.add_child(_battle_button)
-	_battle_button.position = BATTLE_RECT.position
-	_battle_button.size = BATTLE_RECT.size
+	_ui.add_child(_battle_button)
+	# ANCRE, PAS POSITIONNE. Son Rect2 d'origine (102, 765, 189, 59) a un centre
+	# a 196,5 - exactement 393/2, donc juste a la reference et faux partout
+	# ailleurs : sur un viewport de 478 de large, le bouton le plus important du
+	# village se retrouvait a 42 points a gauche du centre reel.
+	_battle_button.anchor_left = 0.5
+	_battle_button.anchor_right = 0.5
+	_battle_button.anchor_top = 1.0
+	_battle_button.anchor_bottom = 1.0
+	_battle_button.offset_left = -BATTLE_RECT.size.x * 0.5
+	_battle_button.offset_right = BATTLE_RECT.size.x * 0.5
+	# Sa distance au BAS de l'ecran, et non plus son y absolu : c'est la seule
+	# des deux qui veuille encore dire quelque chose quand la hauteur varie.
+	_battle_button.offset_top = -(DESIGN_SIZE.y - BATTLE_RECT.position.y)
+	_battle_button.offset_bottom = _battle_button.offset_top + BATTLE_RECT.size.y
 
 	var row := HBoxContainer.new()
 	row.alignment = BoxContainer.ALIGNMENT_CENTER
@@ -629,33 +763,50 @@ func _build_battle_button() -> void:
 	UiTheme.ignore_mouse_recursive(row)
 
 
-## Discret, 24x24 - cf. CLAUDE.md ("Bouton DEV : discret, 24x24, radius 4,
-## emoji outil"). Une icone plutot que du texte : illisible a cette taille.
-func _build_dev_button() -> void:
-	var dev := Button.new()
-	dev.theme_type_variation = "SecondaryButton"
-	var box := StyleBoxFlat.new()
-	box.bg_color = UiTheme.PANEL_LIGHT
-	box.set_corner_radius_all(4)
-	box.set_content_margin_all(0)
-	dev.add_theme_stylebox_override("normal", box)
-	dev.add_theme_stylebox_override("hover", box)
-	dev.add_theme_stylebox_override("pressed", box)
-	_overlay.add_child(dev)
-	dev.position = DEV_BUTTON_RECT.position
-	dev.size = DEV_BUTTON_RECT.size
-	dev.pressed.connect(_on_dev_pressed)
+## LE PANNEAU DE DEVELOPPEMENT N'A PLUS DE BOUTON.
+##
+## Il n'etait dans aucune maquette, il chevauchait la rangee des reglages, et
+## c'est un des ecarts que le joueur a signales.
+##
+## ⚠️ MAIS LE MASQUER HORS BUILD DE DEBUG NE MARCHE PAS ICI. Le joueur teste
+## sur son telephone via le build web EXPORTE, donc en release :
+## OS.is_debug_build() lui retirerait son seul raccourci. D'ou un geste - le
+## panneau reste accessible, l'ecran redevient celui de la maquette.
+##
+## Le geste : UN APPUI LONG DE 1,2 s dans le coin haut-droit, sur une zone
+## invisible. Elle est volontairement PLUS BASSE QUE HAUTE et s'arrete au-
+## dessus de la barre du haut : une zone de 60 x 60 descendrait jusqu'a y=60 et
+## volerait ses taps a l'engrenage, qui commence a y=44.
+func _build_dev_gesture() -> void:
+	var zone := Control.new()
+	zone.name = "DevGesture"
+	zone.mouse_filter = Control.MOUSE_FILTER_STOP
+	zone.anchor_left = 1.0
+	zone.anchor_right = 1.0
+	zone.grow_horizontal = Control.GROW_DIRECTION_BEGIN
+	zone.offset_left = -DEV_GESTURE_SIZE.x
+	zone.offset_right = 0.0
+	zone.offset_top = 0.0
+	zone.offset_bottom = DEV_GESTURE_SIZE.y
+	_ui.add_child(zone)
 
-	# Une CLE et non un engrenage : le bouton voisin est celui des reglages, et
-	# deux ronds dentes identiques cote a cote ne disent pas lequel fait quoi.
-	var icon := Icon.new()
-	icon.icon_name = "wrench"
-	icon.color = UiTheme.TEXT_DIM
-	icon.custom_minimum_size = Vector2(14, 14)
-	icon.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	dev.add_child(icon)
-	icon.set_anchors_preset(Control.PRESET_CENTER)
-	icon.position = DEV_BUTTON_RECT.size / 2.0 - icon.custom_minimum_size / 2.0
+	# Un Timer a un coup plutot qu'un compteur dans _process : le doigt qui se
+	# leve l'arrete, et il n'y a rien a remettre a zero a la main.
+	var hold := Timer.new()
+	hold.one_shot = true
+	hold.wait_time = DEV_GESTURE_HOLD
+	hold.timeout.connect(_on_dev_pressed)
+	zone.add_child(hold)
+
+	zone.gui_input.connect(func(event: InputEvent):
+		if event is InputEventMouseButton and event.button_index == MOUSE_BUTTON_LEFT:
+			if event.pressed:
+				hold.start()
+			else:
+				hold.stop())
+	# Le doigt qui glisse hors de la zone annule aussi : sans ca, un balayage
+	# qui commence dans le coin ouvre le panneau une seconde plus tard.
+	zone.mouse_exited.connect(hold.stop)
 
 
 ## Chaque label a la teinte de son batiment en bordure + halo - cf. captures
@@ -804,7 +955,10 @@ func _refresh_building(type: String) -> void:
 
 	UiTheme.ignore_mouse_recursive(sub_row)
 	panel.size = panel.get_combined_minimum_size()
-	panel.position.x = _clamp_x(BUILDING_POS[type].x, panel.size.x)
+	# Le garde-fou s'applique dans le repere de la MAQUETTE, avant conversion :
+	# c'est la que les largeurs des enseignes sont exprimees.
+	_anchor_on_decor(panel, Vector2(
+		_clamp_x(BUILDING_POS[type].x, panel.size.x), BUILDING_POS[type].y))
 
 
 ## Les positions de BUILDING_POS/CASTLE_POS sont des coins haut-gauche fixes,
@@ -836,17 +990,121 @@ func _progress_bar(fraction: float, color: Color) -> Control:
 
 # ------------------------------- ACTIONS -------------------------------------
 
-func _on_building_pressed(type: String) -> void:
-	if is_instance_valid(_popup):
+## Une zone de clic posee sur un batiment de l'illustration.
+##
+## Un Control nu, invisible et sans dessin : il n'existe que pour recevoir le
+## doigt. Il est marque "artwork" pour suivre l'echelle du decor - une zone a
+## taille fixe couvrirait le mauvais bout d'une illustration qui a grossi.
+func _build_building_hitboxes() -> void:
+	var zones := {Balance.CASTLE: CASTLE_HITBOX}
+	for type in BUILDING_HITBOX:
+		zones[type] = BUILDING_HITBOX[type]
+
+	for type in zones:
+		var rect: Rect2 = zones[type]
+		var zone := Control.new()
+		zone.name = "Hitbox_%s" % type
+		zone.size = rect.size
+		zone.mouse_filter = Control.MOUSE_FILTER_STOP
+		_decor.add_child(zone)
+		_anchor_on_decor(zone, rect.position, true)
+
+		var building := String(type)
+		zone.gui_input.connect(func(event: InputEvent):
+			if event is InputEventMouseButton and event.pressed \
+					and event.button_index == MOUSE_BUTTON_LEFT:
+				_on_building_pressed(building, zone.get_global_rect().get_center()))
+
+
+func _on_building_pressed(type: String, from: Vector2 = Vector2.INF) -> void:
+	if is_instance_valid(_popup) or _zooming:
 		return
-	# Le Chateau Royal a son propre ecran : la salle du trone, ou l'on voit
-	# d'un coup d'oeil si la Dame est rentree.
+	# Sans point de depart (un clic sur l'enseigne, ou un appel de banc), le
+	# zoom part du centre de l'ecran : il reste lisible, il ne vise juste rien
+	# en particulier.
+	var target := from
+	if not target.is_finite():
+		target = get_viewport_rect().size * 0.5
+	_zoom_to(target, func(): _open_building(type))
+
+
+## Ce qui s'ouvre au bout du zoom. Le Chateau Royal a son propre ecran - la
+## salle du trone, ou l'on voit d'un coup d'oeil si la Dame est rentree - donc
+## il change de scene la ou les quatre autres posent un popup.
+func _open_building(type: String) -> void:
 	if type == Balance.CASTLE:
 		Router.goto_castle()
 		return
 	_popup = BuildingPopupScene.instantiate()
 	add_child(_popup)
 	_popup.open(type)
+	# Le village reprend sa taille quand le popup se ferme, pas avant : le
+	# decor zoome reste visible DERRIERE lui, ce qui est tout l'interet.
+	_popup.tree_exited.connect(_unzoom)
+
+
+## LE ZOOM VERS LE POINT TOUCHE, puis le voile.
+##
+## Le fond et le calque de decor grossissent ensemble autour du point sous le
+## doigt, qui reste donc immobile. Le voile ne monte que sur la fin
+## (VEIL_DELAY_RATIO) : sans ce decalage on ne verrait pas le zoom, seulement
+## un fondu au noir de plus.
+##
+## ⚠️ L'INTERFACE NE ZOOME PAS. La barre haute et le bouton BATAILLE suivent
+## l'ecran, pas le decor - les faire glisser avec la camera les detacherait du
+## bord auquel ils sont ancres.
+func _zoom_to(point: Vector2, then: Callable) -> void:
+	_zooming = true
+	var veil := _build_veil()
+
+	for node in [_background, _decor]:
+		node.pivot_offset = point - node.position
+
+	var tween := create_tween().set_parallel(true)
+	for node in [_background, _decor]:
+		tween.tween_property(node, "scale", Vector2.ONE * ZOOM_SCALE, ZOOM_SECONDS) \
+			.set_trans(Tween.TRANS_CUBIC).set_ease(Tween.EASE_OUT)
+	tween.tween_property(veil, "color:a", 1.0, VEIL_SECONDS) \
+		.set_delay(ZOOM_SECONDS * VEIL_DELAY_RATIO)
+
+	await tween.finished
+	then.call()
+	# Le voile redescend PAR-DESSUS le popup deja ouvert : c'est ce qui fait
+	# que le popup est deja la quand la lumiere revient.
+	var lift := create_tween()
+	lift.tween_property(veil, "color:a", 0.0, VEIL_SECONDS)
+	lift.tween_callback(veil.queue_free)
+	lift.tween_callback(func(): _zooming = false)
+
+
+## Le retour : voile, puis le decor reprend sa taille, puis la lumiere.
+func _unzoom() -> void:
+	if not is_inside_tree():
+		return
+	_zooming = true
+	var veil := _build_veil()
+
+	var tween := create_tween()
+	tween.tween_property(veil, "color:a", 1.0, VEIL_SECONDS * 0.7)
+	tween.tween_callback(func():
+		for node in [_background, _decor]:
+			node.scale = Vector2.ONE)
+	tween.tween_property(veil, "color:a", 0.0, VEIL_SECONDS)
+	tween.tween_callback(veil.queue_free)
+	tween.tween_callback(func(): _zooming = false)
+
+
+## Un voile noir plein ecran, AU-DESSUS de tout - interface comprise. Il est
+## cree puis detruit a chaque transition : un voile permanent a l'opacite 0
+## avalerait les clics ou serait oublie allume.
+func _build_veil() -> ColorRect:
+	var veil := ColorRect.new()
+	veil.name = "Veil"
+	veil.color = Color(0, 0, 0, 0.0)
+	veil.mouse_filter = Control.MOUSE_FILTER_STOP
+	veil.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	add_child(veil)
+	return veil
 
 
 func _on_battle_pressed() -> void:

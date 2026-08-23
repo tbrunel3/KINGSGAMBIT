@@ -109,6 +109,7 @@ static func victory_skin() -> Dictionary:
 		"cta_inner": PackedColorArray([
 			Color("1e3278"), Color("0a1230"), Color("0e1a40")]),
 		"confetti": true,
+		"entry": "win",
 	}
 
 
@@ -139,6 +140,7 @@ static func defeat_skin() -> Dictionary:
 		"cta_inner": PackedColorArray([
 			Color("3d0a0a"), Color("1a0305"), Color("2a0608")]),
 		"confetti": false,
+		"entry": "loss",
 	}
 
 
@@ -148,6 +150,7 @@ static func defeat_skin() -> Dictionary:
 static func draw_skin() -> Dictionary:
 	var skin := victory_skin()
 	skin["confetti"] = false
+	skin["entry"] = "draw"
 	skin["bg"] = DRAW_BG_PATH
 	skin["title"] = DRAW_TITLE_PATH
 	skin["glow"] = Color("c9d3e6", 0.34)
@@ -194,6 +197,7 @@ func open_draw(title_text: String) -> void:
 func _open(skin: Dictionary, title_text: String) -> void:
 	_skin = skin
 	_title_text = title_text
+	_entry_key = String(skin.get("entry", "draw"))
 
 	set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	# L'ecran de resultat avale les clics : le plateau reste visible au-dessus
@@ -233,15 +237,52 @@ func _open(skin: Dictionary, title_text: String) -> void:
 	_animate_entry.call_deferred()
 
 
-## ENTREE DE L'ECRAN DE RESULTAT - relevee sur la timeline Figma de l'ecran de
-## nul (348:2, 3 s, sept noeuds), la troisieme et derniere animation du
-## fichier.
+## LES TROIS ENTREES, une par peau.
 ##
-## Elle vaut pour les TROIS peaux : le designer ne l'a dessinee qu'une fois,
-## mais elle decrit comment un ecran de resultat ARRIVE, pas comment un nul
-## arrive. La faire jouer sur la victoire et la defaite evite d'avoir trois
-## entrees differentes pour un meme ecran.
+## ⚠️ ELLES N'EN FAISAIENT QU'UNE, et c'etait une erreur - la mienne, pas celle
+## du designer. Le commentaire d'origine disait : "le designer ne l'a dessinee
+## qu'une fois". C'etait vrai quand il a ete ecrit, et faux depuis : le releve
+## complet du 23/08/2026 a trouve 24 noeuds de mouvement sur la victoire
+## (410:5121) et 8 sur la defaite (410:5430), la ou la passation les declarait
+## sans aucune donnee. Le jeu leur jouait la timeline du MATCH NUL.
 ##
+## Ce que chacune raconte, et c'est tout le sujet :
+##
+##   VICTOIRE - le titre JAILLIT du bas, d'une echelle de 0,3, avec un ressort
+##              qui depasse a 1,36. Plus rapide que les deux autres (2,5 s).
+##   DEFAITE  - le titre TOMBE de 80 points au-dessus, d'une echelle de 1,15,
+##              SANS rebond, et tout est plus lent (3,5 s).
+##   NUL      - le titre S'ABAT de 1,8, comme un tampon (3 s).
+##
+## Trois issues, trois lectures. Les aplatir sur une seule faisait lire la meme
+## chose a trois fins de bataille differentes.
+const ENTRY := {
+	"win": {
+		"title_scale": 0.3, "title_rise": 60.0, "title_delay": 0.40,
+		"title_time": 0.70, "title_trans": Tween.TRANS_ELASTIC,
+		"stats_rise": 40.0, "stats_delay": 1.00,
+		"buttons_rise": 50.0, "buttons_delay": 1.30,
+	},
+	"loss": {
+		# TRANS_CUBIC et non BACK : la defaite descend et s'arrete. Un rebond
+		# lui donnerait de l'entrain.
+		"title_scale": 1.15, "title_rise": -80.0, "title_delay": 0.60,
+		"title_time": 1.00, "title_trans": Tween.TRANS_CUBIC,
+		"stats_rise": 30.0, "stats_delay": 1.60,
+		"buttons_rise": 25.0, "buttons_delay": 2.20,
+	},
+	"draw": {
+		"title_scale": 1.8, "title_rise": 0.0, "title_delay": 0.30,
+		"title_time": 0.60, "title_trans": Tween.TRANS_BACK,
+		"stats_rise": 40.0, "stats_delay": 1.00,
+		"buttons_rise": 30.0, "buttons_delay": 1.30,
+	},
+}
+
+## Quelle peau joue en ce moment. Posee par _open, lue par _animate_entry.
+var _entry_key: String = "draw"
+
+
 ## Ce qui est repris : les DECALAGES et les DUREES. La boucle de Figma est un
 ## artefact d'apercu - l'entree ne se joue qu'une fois (cf. CLAUDE.md).
 func _animate_entry() -> void:
@@ -268,18 +309,38 @@ func _animate_entry() -> void:
 		tween.tween_property(vignette, "modulate:a", 1.0, 1.0) \
 			.set_ease(Tween.EASE_OUT).set_trans(Tween.TRANS_CUBIC)
 
-	if _title_block != null:
-		_title_block.modulate.a = 0.0
-		_title_block.scale = Vector2(1.8, 1.8)
-		tween.tween_property(_title_block, "modulate:a", 1.0, 0.4).set_delay(0.3)
-		# Le mot s'abat de 1,8 avec un LEGER depassement : la courbe Figma
-		# monte a 1,006 avant de revenir. C'est ce rebond qui lui donne son
-		# poids - sans lui, le titre se contente de grandir.
-		tween.tween_property(_title_block, "scale", Vector2.ONE, 0.6).set_delay(0.3) \
-			.set_ease(Tween.EASE_OUT).set_trans(Tween.TRANS_BACK)
+	var entry: Dictionary = ENTRY.get(_entry_key, ENTRY["draw"])
 
-	_slide_in(tween, _stats_block, 40.0, 1.0)
-	_slide_in(tween, _buttons, 30.0, 1.3)
+	if _title_block != null:
+		var delay: float = float(entry["title_delay"])
+		var seconds: float = float(entry["title_time"])
+		var curve: int = int(entry["title_trans"])
+
+		_title_block.modulate.a = 0.0
+		_title_block.scale = Vector2.ONE * float(entry["title_scale"])
+		tween.tween_property(_title_block, "modulate:a", 1.0, 0.4).set_delay(delay)
+		tween.tween_property(_title_block, "scale", Vector2.ONE, seconds).set_delay(delay) \
+			.set_ease(Tween.EASE_OUT).set_trans(curve)
+
+		# La victoire monte, la defaite tombe, le nul ne bouge pas : seules les
+		# deux premieres ont une translation.
+		var rise: float = float(entry["title_rise"])
+		if not is_zero_approx(rise):
+			_title_block.position.y += rise
+			tween.tween_property(_title_block, "position:y",
+					_title_block.position.y - rise, seconds).set_delay(delay) \
+				.set_ease(Tween.EASE_OUT).set_trans(curve)
+
+	_slide_in(tween, _stats_block, float(entry["stats_rise"]), float(entry["stats_delay"]))
+	_slide_in(tween, _buttons, float(entry["buttons_rise"]), float(entry["buttons_delay"]))
+
+	# La pluie ne tombe QUE sur la victoire : c'est la seule peau qui la porte
+	# (cf. _skin["confetti"]), et la seule des trois dont la maquette en a.
+	if is_instance_valid(_confetti_layer):
+		_confetti_progress = 0.0
+		var total := float(CONFETTI.size() + SPARKS.size()) * CONFETTI_STAGGER \
+			+ CONFETTI_SPAN
+		tween.tween_method(_set_confetti_progress, 0.0, 1.0 + total, total)
 
 
 ## Un bloc qui monte a sa place en s'allumant, apres `delay` secondes.
@@ -348,12 +409,45 @@ func _vignette(color: Color, from_top: bool, height: float) -> TextureRect:
 	return rect
 
 
+## LES CONFETTIS TOMBENT, ils ne sont plus poses.
+##
+## Ils existaient deja, mais peints d'un coup a leur position finale : la
+## victoire s'ouvrait sur une pluie DEJA tombee. Le releve du 23/08 donne 12
+## confettis qui chutent de 135 a 200 points en tournant de ~8 radians a ~0,
+## decales de 80 ms, plus 4 etincelles qui eclosent en depassant a 1,8.
+##
+## Un seul Control qui se redessine, et non douze noeuds : ils sont deja
+## dessines au polygone, et douze TextureRect couteraient douze fois plus pour
+## le meme resultat.
+const CONFETTI_FALL := 190.0
+const CONFETTI_STAGGER := 0.08
+const CONFETTI_SPAN := 0.85
+const CONFETTI_SPIN := 8.0
+
+var _confetti_layer: Control = null
+## 0 au depart, 1 quand tout est tombe. Le dessin lit cette seule valeur.
+var _confetti_progress: float = 0.0
+
+
 func _build_confetti() -> void:
 	var layer := Control.new()
 	layer.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	layer.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	layer.draw.connect(_draw_confetti.bind(layer))
 	add_child(layer)
+	_confetti_layer = layer
+
+
+## Avancement d'une piece, entre 0 et 1, une fois son decalage passe.
+func _confetti_phase(index: int) -> float:
+	var start := float(index) * CONFETTI_STAGGER
+	return clampf((_confetti_progress - start) / CONFETTI_SPAN, 0.0, 1.0)
+
+
+func _set_confetti_progress(value: float) -> void:
+	_confetti_progress = value
+	if is_instance_valid(_confetti_layer):
+		_confetti_layer.queue_redraw()
 
 
 ## Les confettis sont poses en coordonnees du cadre de reference : on les
@@ -362,19 +456,37 @@ func _build_confetti() -> void:
 ## tombent du haut de l'ecran, pas du milieu.
 func _draw_confetti(layer: Control) -> void:
 	var scale_x := layer.size.x / REFERENCE_WIDTH
-	for piece in CONFETTI:
-		var center := Vector2(float(piece[0]) * scale_x, float(piece[1]))
+	for index in range(CONFETTI.size()):
+		var piece: Array = CONFETTI[index]
+		var phase := _confetti_phase(index)
+		if phase <= 0.0:
+			continue
+		# Ralenti en fin de course : la courbe Figma est un "ease", pas une
+		# chute libre - un confetti qui arrive a pleine vitesse a l'air de
+		# tomber au sol plutot que de se poser.
+		var eased := 1.0 - pow(1.0 - phase, 3.0)
+		var center := Vector2(float(piece[0]) * scale_x,
+			float(piece[1]) - CONFETTI_FALL * (1.0 - eased))
 		var half := Vector2(float(piece[2]), float(piece[3])) / 2.0
 		var color := Color(piece[5])
-		color.a = float(piece[6])
-		layer.draw_set_transform(center, deg_to_rad(float(piece[4])), Vector2.ONE)
+		color.a = float(piece[6]) * minf(phase * 4.0, 1.0)
+		var spin := CONFETTI_SPIN * (1.0 - eased)
+		layer.draw_set_transform(center, deg_to_rad(float(piece[4])) + spin, Vector2.ONE)
 		layer.draw_colored_polygon(
 			RoyalPlate.rounded_rect(Rect2(-half, half * 2.0), 2.0), color)
 	layer.draw_set_transform(Vector2.ZERO, 0.0, Vector2.ONE)
-	for spark in SPARKS:
+
+	for index in range(SPARKS.size()):
+		var spark: Array = SPARKS[index]
+		# Les etincelles partent APRES les confettis, et elles depassent a 1,8
+		# avant de revenir - c'est ce qui les fait scintiller plutot que grandir.
+		var phase := _confetti_phase(CONFETTI.size() + index)
+		if phase <= 0.0:
+			continue
+		var pop := 1.8 * sin(phase * PI) + phase
 		layer.draw_circle(
 			Vector2(float(spark[0]) * scale_x, float(spark[1])),
-			float(spark[2]), Color("ffd700", 0.9))
+			float(spark[2]) * minf(pop, 1.8), Color("ffd700", 0.9 * phase))
 
 
 ## Le mot grave (une image : c'est un lettrage dessine, pas du texte) pose sur
