@@ -1076,7 +1076,25 @@ func _test_campaign_drag() -> void:
 	_check(screen._transitioning,
 		"relever le doigt au meme endroit lance bien la bataille")
 
-	# 4. Le cachet doit LAISSER PASSER le geste au ScrollContainer.
+	# 4. TOUTE LA CHAINE doit laisser passer le geste jusqu'au ScrollContainer.
+	#
+	# ⚠️ Corriger le cachet seul N'A PAS SUFFI, et c'est le joueur qui l'a
+	# signale apres coup : le noeud `Content` de campaign.tscn n'avait aucun
+	# mouse_filter, donc STOP par defaut, et il avalait le geste avant le
+	# ScrollContainer. La carte ne defilait NULLE PART, pas seulement sur les
+	# cachets. Un seul maillon en STOP suffit a tout bloquer - d'ou une garde
+	# sur la chaine entiere plutot que sur un noeud.
+	var scroll: ScrollContainer = screen.get_node("Scroll")
+	var blockers: Array[String] = []
+	var node: Node = seal.get_parent()
+	while node != null and node != scroll:
+		var ctrl := node as Control
+		if ctrl != null and ctrl.mouse_filter == Control.MOUSE_FILTER_STOP:
+			blockers.append(ctrl.name)
+		node = node.get_parent()
+	_check(blockers.is_empty(),
+		"aucun maillon n'avale le geste entre le cachet et la carte (%s)"
+			% ("rien" if blockers.is_empty() else ", ".join(blockers)))
 	_check(seal.mouse_filter == Control.MOUSE_FILTER_PASS,
 		"le cachet laisse le geste remonter a la carte (PASS, pas STOP)")
 

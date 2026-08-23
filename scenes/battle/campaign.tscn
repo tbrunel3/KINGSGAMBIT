@@ -37,6 +37,7 @@ vertical_scroll_mode = 3
 
 [node name="Content" type="Control" parent="Scroll"]
 layout_mode = 2
+mouse_filter = 2
 
 [node name="Map" type="Control" parent="Scroll/Content"]
 layout_mode = 0
