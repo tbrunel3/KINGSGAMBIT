@@ -78,6 +78,11 @@ var promotions: int = 0
 ## jusqu'au dernier.
 var dames_made: int = 0
 
+## Combats nuls depuis le debut de la serie. Un nul rejoue le combat au lieu
+## de le consommer (cf. replay) ; ce compteur est ce qui empeche la boucle
+## infinie - au-dela de Balance.RUN_DRAWS_ALLOWED, la serie s'acheve.
+var draws: int = 0
+
 
 ## Ouvre une serie sur cette bataille, avec l'armee du village au complet.
 static func start(id: int, fights: int, army: Dictionary) -> CampaignRun:
@@ -176,6 +181,7 @@ func record_victory(fight_losses: Dictionary, defeated: int, won_promotions: int
 ## survivants restent en ligne, les morts restent morts.
 func record_draw(fight_losses: Dictionary, defeated: int, won_promotions: int,
 		dames: int) -> void:
+	draws += 1
 	_record_fight(fight_losses, defeated, won_promotions, dames)
 
 
@@ -252,6 +258,21 @@ func advance(reinforce_weight: int, capacity: int = 0) -> Dictionary:
 	return _reinforce(reinforce_weight, capacity)
 
 
+## Rejoue LE MEME combat : on releve les blesses, mais le compteur de combats
+## ne bouge pas. C'est ce que fait un nul.
+##
+## Un nul est un tour d'usure paye pour rien, pas un combat gagne : le faire
+## avancer revenait a offrir la serie a qui savait bloquer la position. Le
+## garde-fou est le plafond de nuls (draws_spent).
+func replay(reinforce_weight: int, capacity: int = 0) -> Dictionary:
+	return _reinforce(reinforce_weight, capacity)
+
+
+## Vrai quand la serie a epuise sa tolerance aux nuls et doit s'achever.
+func draws_spent(limit: int) -> bool:
+	return draws >= limit
+
+
 ## Rend au roster, en piochant dans les pertes de la serie, jusqu'a epuiser le
 ## budget de poids. Les moins cheres d'abord : c'est la pietaille qu'on releve.
 ##
@@ -300,6 +321,7 @@ func to_dict() -> Dictionary:
 		"enemies_defeated": enemies_defeated,
 		"promotions": promotions,
 		"dames_made": dames_made,
+		"draws": draws,
 	}
 
 
@@ -312,6 +334,8 @@ static func from_dict(data: Dictionary) -> CampaignRun:
 	run.enemies_defeated = int(data.get("enemies_defeated", 0))
 	run.promotions = int(data.get("promotions", 0))
 	run.dames_made = int(data.get("dames_made", 0))
+	# Absent des sauvegardes d'avant le plafond de nuls : elles reprennent a zero.
+	run.draws = int(data.get("draws", 0))
 
 	# Les cles reviennent du disque en String et les valeurs en float (JSON) :
 	# on les repasse par des entiers, sinon un "3.0" se glisse dans un

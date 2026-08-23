@@ -660,13 +660,25 @@ func _test_battle() -> void:
 	elif drawn:
 		_check(Game.gold == gold_before, "un combat nul ne paie rien")
 		if fights == 1:
-			# Une bataille qui ne compte qu'un combat n'a pas de serie a
-			# poursuivre : le nul la cloture, et elle se rejoue depuis le
-			# debut. Cette branche n'existait pas - la bataille 1 ne pouvait
-			# pas finir nulle avant que le PAT ne devienne un nul.
-			_check(_find_clickable(battle, "REPRENDRE LA SÉRIE") != null,
-				"un nul propose de rejouer la bataille")
-			_check(Game.current_run() == null, "le nul cloture la serie d'un seul combat")
+			# ⚠️ CETTE ASSERTION A CHANGE AVEC LA REGLE, le 24/08/2026.
+			#
+			# Avant, un nul cloturait la serie et le bouton "REPRENDRE LA
+			# SERIE" en rouvrait une neuve au combat 1 : le libelle promettait
+			# de reprendre, le code recommencait, et le joueur l'a vu.
+			#
+			# Un nul REJOUE maintenant le meme combat, avec les survivants et
+			# les blesses releves - un tour d'usure paye pour rien n'a pas a
+			# faire avancer le compteur. La serie reste donc en cours, et le
+			# plafond de Balance.RUN_DRAWS_ALLOWED est ce qui l'empeche de
+			# devenir un abri.
+			_check(_find_clickable(battle, "REJOUER LE COMBAT 1 SUR 1") != null,
+				"un nul propose de rejouer LE MEME combat")
+			var drawn_run := Game.current_run()
+			_check(drawn_run != null, "le nul ne cloture PAS la serie")
+			_check(drawn_run != null and drawn_run.fight == 1,
+				"le combat nul se rejoue au meme numero")
+			_check(drawn_run != null and drawn_run.draws == 1,
+				"le nul est compte (1 sur %d)" % Balance.RUN_DRAWS_ALLOWED)
 		else:
 			_check(_find_clickable(battle, "COMBAT 2 SUR %d" % fights) != null,
 				"un nul ne rompt pas la serie")

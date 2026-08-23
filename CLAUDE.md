@@ -258,8 +258,23 @@ mais des coups restent possibles. Tranché **au matériel restant** ; à égalit
 stricte, personne n'a gagné.
 
 Au nul, les survivants rentrent, le combat ne rapporte rien, mais **la série
-n'est pas rompue** : c'est un tour d'usure payé pour rien, pas une déroute. Un
-nul au dernier combat achève la série sans qu'elle soit remportée. L'écran de
+n'est pas rompue** : c'est un tour d'usure payé pour rien, pas une déroute.
+
+⚠️ **Un nul REJOUE le combat, il ne le consomme pas** — corrigé le 24/08/2026,
+sur signalement du joueur. Avant, un nul au dernier combat achevait la série :
+`finish_run` effaçait la partie en cours, et le bouton **« REPRENDRE LA SÉRIE »
+en rouvrait une neuve au combat 1**. Le libellé promettait de reprendre, le
+code recommençait. Le combat se rejoue donc au même numéro, avec les survivants
+et les blessés relevés, et le compteur de combats ne bouge pas.
+
+**Le plafond est ce qui l'empêche de devenir un abri.** Sans lui, on ne pourrait
+plus jamais perdre une série par nul : bloquer la position deviendrait un moyen
+de retenter indéfiniment sans rien risquer — et le pat est fréquent ici, 6 des
+19 parties du banc. Au troisième nul (`Balance.RUN_DRAWS_ALLOWED`), la série
+s'achève sans être remportée. Le compteur vit dans `CampaignRun.draws` et
+survit à la sauvegarde.
+
+L'écran de
 résultat a sa propre peau (`BattleResult.draw_skin`) et ses propres assets
 (`assets/results/draw_*`, Figma 348:2) : champ de bataille gris, mot **NULLE**
 gravé, plaque d'acier. Il dit aussi **pourquoi** c'est nul — sans cette phrase,

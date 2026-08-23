@@ -1555,23 +1555,36 @@ func _show_fight_drawn(losses: Dictionary) -> void:
 	var battle_id := _run.battle_id
 	var done := _run.fight
 	var fights := _run.total
-	var last := _run.is_last_fight()
+	# ⚠️ CE N'EST PLUS `last` QUI DECIDE, C'EST LE PLAFOND DE NULS.
+	#
+	# Avant, un nul au dernier combat achevait la serie : finish_run effacait
+	# la partie en cours, et le bouton "REPRENDRE LA SERIE" rouvrait en fait
+	# une serie NEUVE au combat 1. Le libelle promettait de reprendre, le code
+	# recommencait - c'est ce que le joueur a vu.
+	#
+	# Un nul est un tour d'usure paye pour rien, pas un combat gagne : il
+	# REJOUE le meme combat, avec les survivants et les blesses releves, et le
+	# compteur de combats ne bouge pas.
+	#
+	# Le plafond est ce qui l'empeche de devenir un abri : au troisieme nul
+	# (Balance.RUN_DRAWS_ALLOWED), la serie s'acheve sans etre remportee.
+	var closing := _run.draws_spent(Balance.RUN_DRAWS_ALLOWED)
 
 	var recovered: Dictionary = {}
 	var consolation := 0
-	if last:
+	if closing:
 		var promised := _run.reward
 		Game.finish_run(_run, false)
 		consolation = int(round(float(promised) * Balance.DEFEAT_CONSOLATION_RATIO))
 	else:
-		recovered = _run.advance(Balance.RUN_REINFORCE_WEIGHT, Game.deploy_capacity())
+		recovered = _run.replay(Balance.RUN_REINFORCE_WEIGHT, Game.deploy_capacity())
 		Game.save_run(_run)
 
 	var screen := BattleResult.new()
 	add_child(screen)
 	# Le grand mot grave est reserve a la fin de la serie (Figma 348:2) ; un
 	# combat intermediaire garde sa plaque ecrite, comme pour la victoire.
-	screen.open_draw("" if last else "COMBAT %d SUR %d — NUL" % [done, fights])
+	screen.open_draw("" if closing else "COMBAT %d SUR %d — NUL" % [done, fights])
 
 	# ⚠️ SEULEMENT POUR UN VRAI PAT, pas pour les deux autres facons de finir
 	# nul. La position morte et l'enlisement ont leurs propres raisons, et le
@@ -1581,7 +1594,7 @@ func _show_fight_drawn(losses: Dictionary) -> void:
 
 	if consolation > 0:
 		screen.add_reward_row("Consolation", consolation)
-	elif not last:
+	elif not closing:
 		screen.add_reward_row("Butin promis", _run.reward)
 	screen.add_stat_row("Combat nul", _draw_reason())
 	screen.add_stat_row("Pertes du combat",
@@ -1589,14 +1602,14 @@ func _show_fight_drawn(losses: Dictionary) -> void:
 	if not recovered.is_empty():
 		screen.add_icon_row("Blessés relevés", "check",
 			_format_losses(recovered), Color("5fb37a"))
-	if not last:
+	if not closing:
 		screen.add_stat_row("Armée restante", "%d pièces" % _run.pieces_left(), 1)
 
-	if last:
-		screen.add_primary_button("REPRENDRE LA SÉRIE",
+	if closing:
+		screen.add_primary_button("REJOUER LA SERIE",
 			func(): Router.goto_battle(battle_id))
 	else:
-		screen.add_primary_button("COMBAT %d SUR %d" % [_run.fight, fights],
+		screen.add_primary_button("REJOUER LE COMBAT %d SUR %d" % [done, fights],
 			func(): Router.goto_battle(battle_id))
 	screen.add_action_button("ROYAUME", "castle", Router.goto_village)
 	screen.add_action_button("CAMPAGNE", "compass", Router.goto_campaign)

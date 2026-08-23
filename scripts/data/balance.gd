@@ -498,6 +498,22 @@ const PROMOTION_THRONE_WIDTH := 0
 ## perdues qui font mal.
 const RUN_REINFORCE_WEIGHT := 2
 
+## Combien de combats NULS une serie tolere avant de s'achever.
+##
+## Un nul ne consomme plus le combat : on le rejoue, avec ses survivants et
+## les blesses releves. C'est coherent avec "un nul ne rompt pas la serie" -
+## un tour d'usure paye pour rien n'a aucune raison de faire avancer le
+## compteur de combats.
+##
+## ⚠️ MAIS SANS PLAFOND, ON NE PEUT PLUS JAMAIS PERDRE UNE SERIE PAR NUL.
+## Le pat est frequent ici - 6 des 19 parties du banc, bataille 1 comprise -
+## et rejouer indefiniment le meme combat serait un moyen de ne jamais rien
+## risquer. Au troisieme nul, la serie s'acheve sans etre remportee.
+##
+## Decision du joueur le 24/08/2026, apres avoir vu un nul renvoyer au premier
+## combat de la serie.
+const RUN_DRAWS_ALLOWED := 3
+
 #  reward    LA RECOMPENSE EST CELLE D'UN COMBAT, PAS D'UNE BATAILLE. Une serie
 #              de trois combats paie donc trois fois cette valeur (cf.
 #              CampaignRun.record_victory, et l'ecran de preparation qui annonce
