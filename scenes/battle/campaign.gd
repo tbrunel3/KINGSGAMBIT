@@ -61,7 +61,11 @@ const BOTTOM_BAR_SLIDE := 100.0
 @onready var _path: TextureRect = $Scroll/Content/Map/Path
 @onready var _seals: Control = $Scroll/Content/Map/Seals
 @onready var _bottom_bar: Control = $Safe/BottomBar
-@onready var _fade_overlay: ColorRect = $FadeOverlay
+## ⚠️ PLUS PERSONNE NE S'EN SERT. Le fondu au noir de la carte est passe a
+## ScreenVeil (cf. _play_transition). Le noeud FadeOverlay reste dans la scene,
+## transparent et en MOUSE_FILTER_IGNORE : il ne coute rien et servira si la
+## carte a un jour besoin d'un voile a elle. La variable, elle, n'a plus
+## d'usage - la garder ferait croire qu'il en existe un.
 
 var _nodes: Dictionary = {}   # id -> CampaignSeal
 var _medallion_glow: TextureRect
@@ -368,10 +372,14 @@ func _play_transition(id: int) -> void:
 
 	var tween := create_tween()
 	tween.set_parallel(true)
-	tween.tween_property(_scroll, "scale", Vector2(1.22, 1.22), 0.38) \
+	# ⚠️ LE FONDU AU NOIR A ETE RETIRE D'ICI. Depuis que Router._change passe
+	# par ScreenVeil, la carte fondait une premiere fois avec son propre
+	# _fade_overlay, puis une seconde avec le voile global : deux noirs a la
+	# suite. Le zoom sur le cachet reste - c'est lui qui donne le poids -, le
+	# noir appartient desormais au voile.
+	tween.tween_property(_scroll, "scale", Vector2(1.22, 1.22),
+				Balance.motion("map_zoom")) \
 		.set_trans(Tween.TRANS_CUBIC).set_ease(Tween.EASE_IN)
-	tween.tween_property(_fade_overlay, "color:a", 1.0, 0.38) \
-		.set_delay(0.05).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN)
 	await tween.finished
 
 	Router.goto_prep(id)

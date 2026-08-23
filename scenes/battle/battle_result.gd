@@ -234,6 +234,18 @@ func _open(skin: Dictionary, title_text: String) -> void:
 	_buttons.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	column.add_child(_buttons)
 
+	# ⚠️ L'ECRAN NAIT INVISIBLE, ET C'EST LA CORRECTION DU CLIGNOTEMENT.
+	#
+	# _animate_entry est DIFFERE (il lui faut la mise en page pour poser les
+	# pivots et lire les tailles). Mais tout ce qui precede a construit l'ecran
+	# a pleine opacite : entre la construction et l'appel differe, au moins une
+	# image etait rendue en entier. Le joueur voyait donc image -> noir ->
+	# fondu, sur les trois issues. "Il ne faut pas que l'image clignotte".
+	#
+	# Eteindre la RACINE plutot que chaque bloc : impossible d'en oublier un.
+	# _animate_entry rallume la racine et eteint les blocs dans le meme appel,
+	# donc rien n'est jamais visible entre les deux.
+	modulate.a = 0.0
 	_animate_entry.call_deferred()
 
 
@@ -286,6 +298,9 @@ var _entry_key: String = "draw"
 ## Ce qui est repris : les DECALAGES et les DUREES. La boucle de Figma est un
 ## artefact d'apercu - l'entree ne se joue qu'une fois (cf. CLAUDE.md).
 func _animate_entry() -> void:
+	# La racine se rallume AVANT le garde-fou : un ecran qui sortirait de
+	# l'arbre entre-temps ne doit pas rester eteint pour toujours.
+	modulate.a = 1.0
 	if not is_inside_tree():
 		return
 	# Le fond arrive de 1,1 : sans pivot centre, il grandirait par le coin.

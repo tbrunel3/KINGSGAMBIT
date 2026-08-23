@@ -686,6 +686,11 @@ const MOTION := {
 	# Etait a 0,35 s : trop court pour qu'on suive le mouvement de l'oeil.
 	"village_zoom": 0.55,
 
+	# --- Le zoom de la carte sur le cachet tape, avant la preparation.
+	# La carte avait son propre fondu au noir EN PLUS : il faisait doublon avec
+	# le voile global et noircissait deux fois de suite. Seul le zoom reste.
+	"map_zoom": 0.50,
+
 	# --- L'entree d'une modale (Modal.open).
 	"modal_entry": 0.45,
 	"modal_dim": 0.18,
