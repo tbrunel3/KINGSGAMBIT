@@ -5,7 +5,7 @@
 interdit précisément d'en déduire les secondes. Le graphiste a dessiné
 `shop-screen` (`347:4`) ; ce document écrit ce qui tourne derrière.
 
-Lis [`CLAUDE.md`](CLAUDE.md) d'abord — les quatre règles qui priment, la
+Lis [`CLAUDE.md`](CLAUDE.md) d'abord — les cinq règles qui priment, la
 discipline des bancs et les pièges d'import ne sont pas répétés ici.
 
 ---

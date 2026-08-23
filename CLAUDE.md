@@ -28,7 +28,7 @@ documents complètent celui-ci et ne le répètent pas :
 
 ---
 
-## Les quatre règles qui priment sur tout
+## Les cinq règles qui priment sur tout
 
 **1. Aucune valeur de gameplay hors de [`scripts/data/balance.gd`](scripts/data/balance.gd).**
 Tailles de plateau, compositions ennemies, portées, coûts, durées d'animation,
@@ -55,6 +55,27 @@ en zones ancrées — barre haute de hauteur fixe, contenu central qui prend la
 place restante, bandeau bas de hauteur fixe. Cadre utile : **361 × 824**
 (393 × 852 moins les marges de zone sûre). Convertis : `battle.tscn`,
 `campaign.tscn`, `battle_prep.tscn`. Reste à convertir : village.
+
+**5. Ne jamais laisser un chantier sans trace.** Une fenêtre de contexte
+s'épuise en plein travail, et l'agent suivant arrive à froid. **Dès que le
+crédit restant ne suffit manifestement plus à finir ce qui est engagé : on
+s'arrête, on commit, et on écrit la passation** — dans cet ordre, avant la
+dernière goutte, pas après. Un travail à moitié fait et documenté vaut mieux
+qu'un travail aux trois quarts fait dont personne ne sait où il s'est arrêté.
+
+- **Le commit d'abord.** Même incomplet, même « en cours » — il faut que l'état
+  décrit par la passation existe dans l'historique. Un message qui dit ce qui
+  marche ET ce qui ne marche pas encore.
+- **Puis un fichier de passation**, sur le modèle de
+  [`passation_g_f.md`](passation_g_f.md) : ce qu'est le chantier, ce qui est
+  fait, ce qui reste, les décisions déjà prises par le joueur, les pièges déjà
+  payés avec leurs chiffres, et les mesures à relancer. Il s'adresse à une
+  fenêtre qui n'a rien vu de la session.
+- **Puis le lien dans ce fichier**, dans la liste d'ouverture — une passation
+  que le manuel ne cite pas ne sera pas ouverte.
+- **Ne jamais garder une mesure ou une décision pour la fin.** Ce qu'on vient
+  d'apprendre s'écrit quand on l'apprend : c'est ce qui est perdu en premier
+  quand la fenêtre se ferme d'un coup.
 
 ---
 
