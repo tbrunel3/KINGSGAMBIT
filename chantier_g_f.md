@@ -130,6 +130,34 @@ tournant, décalés de ~80 ms. `battle_result` a déjà `_build_confetti()` et
 
 ---
 
+## Les huit écrans neufs au crible des formats — relevé du 23/08/2026
+
+`resolutions.tscn` regarde désormais **16 familles d'écrans sur 8 formats**,
+soit 128 captures. Les huit ajoutées : château, popup de bâtiment, popup
+verrouillé, popup d'amélioration, popup de missions, victoire, défaite, nulle.
+
+**Verdict : les huit tiennent, y compris sur les trois tailles hors format.**
+Aucun débordement, aucun décentrage, aucun contenu coupé. Ce sont tous des
+écrans déjà découpés en zones ancrées — ce qui est la démonstration en creux du
+défaut du village.
+
+⚠️ **Le banc mentait sur les trois écrans de résultat, et le défaut était dans
+l'instrument.** `BattleResult.open()` seul ne pose ni récompense, ni
+statistique, ni bouton : c'est `battle.gd` qui les ajoute après, en trois
+endroits. Ouvert et laissé nu, l'écran se photographiait avec **une plaque vide
+et aucun bouton** — il avait l'air cassé alors qu'il n'avait jamais été rempli.
+J'ai d'abord cru à un débordement de format ; c'était le banc.
+
+C'est **le piège de « l'état de partie égal » sous une forme neuve** : un banc
+doit montrer ce que le joueur voit, pas ce que la classe sait faire toute
+seule. `_fill_result()` reprend donc la forme des appels du jeu — une
+récompense, deux à trois statistiques, un bouton principal et deux secondaires.
+
+**Confirmé au passage** : le popup de bâtiment verrouillé porte bien une
+**bordure sourde** là où la maquette le cercle d'or (tâche 10).
+
+---
+
 ## Le plan d'attaque, en six temps
 
 ### 1. Les instruments d'abord
