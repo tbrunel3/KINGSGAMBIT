@@ -26,6 +26,7 @@ func _ready() -> void:
 	await _test_modal_entry()
 	await _test_shop_entry()
 	await _test_result_entries()
+	await _test_mission_claim()
 
 	print("")
 	if _failures == 0:
@@ -197,6 +198,53 @@ func _test_result_entries() -> void:
 	await _frames(2)
 	_check(screen._entry_key == "win", "la victoire prend la sienne (%s)" % screen._entry_key)
 	screen.queue_free()
+	await _frames(2)
+
+
+## LE POPUP DE MISSIONS PORTE DEUX ANIMATIONS, pas une.
+##
+## La maquette les met dans une seule timeline parce que Figma ne sait pas dire
+## "au clic". Les porter ensemble ferait voler les pieces a l'OUVERTURE, sans
+## que le joueur ait rien reclame - et c'est exactement l'erreur que ce test
+## empeche.
+func _test_mission_claim() -> void:
+	print("\n[11] Missions : l'ouverture et la reclamation sont deux animations")
+
+	Game.reset_progress()
+	var village: Node = load("res://scenes/village/village.tscn").instantiate()
+	add_child(village)
+	await _frames(3)
+
+	village._on_missions_pressed()
+	await _frames(3)
+	var popup: Node = village._popup
+	_check(is_instance_valid(popup), "le popup de missions s'ouvre")
+	if not is_instance_valid(popup):
+		village.queue_free()
+		return
+
+	_check(popup.purse != null, "il a recu la bourse du village")
+
+	# A l'ouverture, RIEN de la reclamation ne doit avoir demarre.
+	await _skip_animations()
+	await _frames(2)
+	_check(get_tree().root.find_child("CoinFlight", true, false) == null,
+		"aucune piece ne vole tant que rien n'est reclame")
+
+	# Les barres, elles, ont fait leur compte - chacune jusqu'a SA valeur.
+	#
+	# ⚠️ Sur une sauvegarde neuve la seule mission visible est a 0/1 : sa cible
+	# EST zero. Verifier "la barre est remplie" ferait echouer un code juste -
+	# c'est ce que la premiere version de ce test faisait.
+	var wrong := 0
+	for entry in popup._fills:
+		var fill: Control = entry["node"]
+		if is_instance_valid(fill) and absf(fill.anchor_right - float(entry["target"])) > 0.01:
+			wrong += 1
+	_check(wrong == 0, "les %d barres ont atteint leur cible (%d en ecart)"
+		% [popup._fills.size(), wrong])
+
+	village.queue_free()
 	await _frames(2)
 
 

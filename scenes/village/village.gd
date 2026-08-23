@@ -519,6 +519,9 @@ func _on_missions_pressed() -> void:
 	if is_instance_valid(_popup):
 		return
 	_popup = MissionPopupScene.instantiate()
+	# La bourse d'or lui est DONNEE : les pieces d'une mission reclamee y
+	# volent, et elle vit dans cet ecran-ci, pas dans le popup.
+	_popup.purse = _gold_pill
 	add_child(_popup)
 
 

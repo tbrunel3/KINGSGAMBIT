@@ -38,6 +38,10 @@ const DIM_SECONDS := 0.12
 
 signal closed
 
+## L entree a deja joue : plusieurs appelants rappellent open() pour se
+## reconstruire, pas pour se rouvrir.
+var _entered: bool = false
+
 @export var close_on_dim_click: bool = true
 @export var show_close_button: bool = true
 
@@ -95,6 +99,17 @@ func open(title: String = "", context: Context = Context.GOLD, header_icon: Stri
 ## piege deja paye une fois. L'opacite et l'echelle suffisent a lire le
 ## mouvement, et ce sont les deux autres proprietes que la maquette anime.
 func _animate_entry() -> void:
+	# ⚠️ UNE FOIS PAR MODALE, jamais deux.
+	#
+	# Plusieurs appelants rappellent open() pour se RECONSTRUIRE, pas pour se
+	# rouvrir : le popup de missions le fait a chaque reclamation, celui de
+	# batiment a chaque recrutement. Sans ce garde-fou, la modale rejouerait
+	# son entree dans le dos du joueur au moment precis ou il vient d'agir -
+	# son geste effacerait l'ecran puis le ferait revenir.
+	if _entered:
+		return
+	_entered = true
+
 	# La taille ne se lit qu'une fois la mise en page faite : relevee a
 	# l'ouverture, elle vaut encore zero, et le pivot tomberait dans le coin.
 	await get_tree().process_frame
