@@ -886,6 +886,30 @@ func mark_series_warning_seen() -> void:
 	save()
 
 
+## LES POPUPS D'ACCOMPAGNEMENT (chantier E) partagent un seul drapeau par
+## sujet, sous une cle commune.
+##
+## Un drapeau par popup plutot qu'un compteur global : chacun se declenche a un
+## moment different de la partie, et un joueur peut tres bien voir l'aura de la
+## Dame des la bataille 3 sans jamais avoir fait un pat.
+##
+## `.get(..., false)` et non un acces direct : une sauvegarde ecrite avant ce
+## chantier n'a pas la cle, et doit se charger sans broncher - meme doctrine
+## que has_seen_series_warning.
+func has_seen_guide(key: String) -> bool:
+	var seen: Dictionary = _state.get("seen_guides", {})
+	return bool(seen.get(key, false))
+
+
+func mark_guide_seen(key: String) -> void:
+	if has_seen_guide(key):
+		return
+	var seen: Dictionary = _state.get("seen_guides", {})
+	seen[key] = true
+	_state["seen_guides"] = seen
+	save()
+
+
 func has_seen_intro() -> bool:
 	return bool(_state.get("seen_intro", false))
 

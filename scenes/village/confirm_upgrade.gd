@@ -176,6 +176,10 @@ func _buttons() -> HBoxContainer:
 	row.add_child(_button("CONFIRMER", UiTheme.GOLD, Color("331f00"),
 		func():
 			confirmed.emit()
+			# Un joueur qui croit devoir laisser le jeu ouvert quatre heures ne
+			# le laisse pas ouvert : il arrete de jouer. Une seule fois, a la
+			# premiere amelioration lancee.
+			GuidePopup.show_once.call_deferred(get_tree().root, GuidePopup.REALTIME)
 			_modal.close()))
 	return row
 

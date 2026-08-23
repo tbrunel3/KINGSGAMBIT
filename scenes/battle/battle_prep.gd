@@ -109,6 +109,11 @@ func _ready() -> void:
 	_build_cta()
 	_refresh()
 	_animate_entry.call_deferred()
+	# La distinction reserve / armee, une seule fois, a la premiere ouverture
+	# de l'ecran qui l'introduit. Pas au deuxieme combat d'une serie : l'ecran
+	# y est en lecture seule, il n'y a plus rien a composer.
+	if _composing:
+		GuidePopup.show_once.call_deferred(self, GuidePopup.LINEUP)
 
 
 ## Recupere la serie en cours, ou en monte une PROVISOIRE.

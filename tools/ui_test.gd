@@ -27,6 +27,7 @@ func _ready() -> void:
 	await _test_shop_entry()
 	await _test_result_entries()
 	await _test_mission_claim()
+	await _test_guide_popups()
 
 	print("")
 	if _failures == 0:
@@ -245,6 +246,51 @@ func _test_mission_claim() -> void:
 		% [popup._fills.size(), wrong])
 
 	village.queue_free()
+	await _frames(2)
+
+
+## LES POPUPS D'ACCOMPAGNEMENT - chantier E.
+##
+## Ce test garde les deux regles de forme, qui sont tout ce qui les rend
+## supportables : chacun se montre UNE FOIS, et aucun n'ecrit ses chiffres en
+## dur.
+func _test_guide_popups() -> void:
+	print("
+[12] Accompagnement : chaque popup se montre une fois")
+
+	Game.reset_progress()
+	var host := Control.new()
+	add_child(host)
+	await _frames(2)
+
+	for key in [GuidePopup.STALEMATE, GuidePopup.LINEUP,
+			GuidePopup.DAME_AURA, GuidePopup.REALTIME]:
+		_check(not Game.has_seen_guide(key), "%s : jamais vu au depart" % key)
+		_check(GuidePopup.show_once(host, key), "%s : s'ouvre la premiere fois" % key)
+		await _frames(2)
+		_check(not GuidePopup.show_once(host, key), "%s : ne se rouvre PAS" % key)
+
+	# Et les chiffres viennent bien de Balance, pas du texte.
+	var popup: Node = null
+	for child in host.get_children():
+		if child is GuidePopup:
+			popup = child
+			break
+	_check(popup != null, "les popups vivent bien dans l'arbre")
+
+	# ⚠️ AUCUN CHIFFRE ECRIT DANS LE TEXTE : la charge et le pourcentage de
+	# l'aura sont relus dans Balance a l'affichage. Un popup qui les
+	# transcrirait se mettrait a mentir des qu'on regle le jeu - c'est
+	# exactement ce qui avait produit le codex faux.
+	var source := FileAccess.get_file_as_string("res://scenes/ui/guide_popup.gd")
+	_check(source.contains("Game.deploy_capacity()"),
+		"la charge est relue, pas transcrite")
+	_check(source.contains("Balance.DAME_GOLD_BONUS"),
+		"l'aura est relue, pas transcrite")
+	_check(source.contains("Balance.deploy_weight"),
+		"les poids sont relus, pas transcrits")
+
+	host.queue_free()
 	await _frames(2)
 
 

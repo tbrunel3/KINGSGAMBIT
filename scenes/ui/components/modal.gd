@@ -80,10 +80,32 @@ func _sync_content_size() -> void:
 ## (nom reconnu par Icon, ex. "crown") ajoute un glyphe centre au-dessus du
 ## titre, comme sur les modales Victoire/Defaite/Chateau des captures Figma ;
 ## laisser vide pour l'omettre (cas des popups de batiment, cf. building_popup.gd).
+## ⚠️ LE TITRE NE DOIT PAS POUVOIR ELARGIR LA MODALE.
+##
+## Le panneau prend la taille de son contenu, et un titre est une seule ligne
+## qui ne se replie pas : "RECRUTER N'EST PAS COMPOSER" poussait le panneau
+## bien au-dela des 361 points utiles, et l'ecran le coupait des deux cotes.
+## Mesure : trois des quatre popups d'accompagnement debordaient.
+##
+## On borne donc le titre et on le laisse se replier. 316 points, c'est 361
+## moins les marges de la modale.
+const TITLE_MAX_WIDTH := 316.0
+
+
 func open(title: String = "", context: Context = Context.GOLD, header_icon: String = "") -> void:
 	set_context(context)
 	_title.visible = not title.is_empty()
 	_title.text = title
+	_title.custom_minimum_size.x = 0.0
+	_title.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	# La largeur MAXIMALE se pose en bornant la taille du label : un Label sans
+	# borne remonte la largeur de sa plus longue ligne comme taille minimale, et
+	# c'est elle qui elargissait le panneau.
+	_title.size_flags_horizontal = Control.SIZE_FILL
+	_title.custom_minimum_size.x = minf(TITLE_MAX_WIDTH,
+		_title.get_theme_font("font").get_string_size(title,
+			HORIZONTAL_ALIGNMENT_LEFT, -1,
+			_title.get_theme_font_size("font_size")).x)
 	_header_icon_wrap.visible = not header_icon.is_empty()
 	if not header_icon.is_empty():
 		_header_icon.set_icon(header_icon, _header_icon.color)

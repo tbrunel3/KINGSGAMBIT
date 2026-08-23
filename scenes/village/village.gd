@@ -196,6 +196,14 @@ func _ready() -> void:
 	Game.progress_changed.connect(_refresh)
 	Game.missions_changed.connect(_refresh)
 
+	# L'AURA DE LA DAME, a la premiere Dame ramenee vivante.
+	#
+	# Au village et non au combat : c'est ici que le choix se pose - la laisser
+	# tenir la cour, ou la deployer. Et c'est ici qu'on revient juste apres
+	# l'avoir ramenee.
+	if Game.dames_owned() > 0:
+		GuidePopup.show_once.call_deferred(self, GuidePopup.DAME_AURA)
+
 	Game.check_upgrades()
 	var ticker := Timer.new()
 	ticker.wait_time = 1.0

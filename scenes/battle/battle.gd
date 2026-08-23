@@ -1573,6 +1573,12 @@ func _show_fight_drawn(losses: Dictionary) -> void:
 	# combat intermediaire garde sa plaque ecrite, comme pour la victoire.
 	screen.open_draw("" if last else "COMBAT %d SUR %d — NUL" % [done, fights])
 
+	# ⚠️ SEULEMENT POUR UN VRAI PAT, pas pour les deux autres facons de finir
+	# nul. La position morte et l'enlisement ont leurs propres raisons, et le
+	# texte du popup parlerait d'un camp sans coup legal alors qu'il en avait.
+	if _end_reason == "plus aucun coup possible":
+		GuidePopup.show_once(self, GuidePopup.STALEMATE)
+
 	if consolation > 0:
 		screen.add_reward_row("Consolation", consolation)
 	elif not last:

@@ -20,6 +20,7 @@ extends Node
 const Driver := preload("res://tools/battle_driver.gd")
 ## BattleResult n'a pas de .tscn : c'est un script monte a la main.
 const BattleResultScript := preload("res://scenes/battle/battle_result.gd")
+const GuidePopupScript := preload("res://scenes/ui/guide_popup.gd")
 
 const OUTPUT_DIR := "res://tools/screenshots/echelle"
 
@@ -93,6 +94,13 @@ const SCREENS := [
 	# etend Control, monte a la main par battle.gd (BattleResult.new(), trois
 	# appels). On le construit donc pareil ici - sans quoi ce banc
 	# photographierait un montage qui n'existe nulle part dans le jeu.
+	# LES QUATRE POPUPS D'ACCOMPAGNEMENT (chantier E). Comme BattleResult, ils
+	# n'ont pas de scene : GuidePopup se monte a la main.
+	{"guide": "stalemate", "name": "guide-pat", "battle": 1},
+	{"guide": "lineup", "name": "guide-composition", "battle": 1},
+	{"guide": "dame_aura", "name": "guide-aura", "battle": 1},
+	{"guide": "realtime", "name": "guide-temps-reel", "battle": 1},
+
 	{"result": "win", "name": "victoire", "battle": 3},
 	{"result": "loss", "name": "defaite", "battle": 3},
 	{"result": "draw", "name": "nulle", "battle": 3},
@@ -177,11 +185,19 @@ func _ready() -> void:
 			Router.current_battle_id = int(screen["battle"])
 
 			var instance: Node
-			if screen.has("result"):
+			if screen.has("guide"):
+				# Le drapeau "deja vu" est remis a zero : le banc doit pouvoir
+				# les photographier a chaque passage.
+				Game.reset_progress()
+				instance = GuidePopupScript.new()
+				add_child(instance)
+				instance._build(String(screen["guide"]))
+			elif screen.has("result"):
 				instance = BattleResultScript.new()
 			else:
 				instance = load(String(screen["scene"])).instantiate()
-			add_child(instance)
+			if not screen.has("guide"):
+				add_child(instance)
 
 			# Un popup de batiment ne montre rien tant qu'on ne lui a pas dit
 			# QUEL batiment : sans ca les huit captures sont vides.
