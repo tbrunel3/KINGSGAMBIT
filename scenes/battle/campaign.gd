@@ -83,6 +83,39 @@ var _transitioning: bool = false
 var _map_scale: float = 1.0
 
 
+# ------------------------- LE GESTE, PRIS A LA MAIN --------------------------
+#
+#  ⚠️ LE DEFILEMENT TACTILE DE GODOT NE SUIT PAS LE DOIGT. Le joueur, apres
+#  test : "ca defile mais ca devrait suivre le doigt, la ca va tres vite".
+#
+#  Deux causes, et aucune ne se regle par un reglage :
+#
+#    - le ScrollContainer ajoute une INERTIE au relachement (fling), donc la
+#      carte continue toute seule apres que le doigt s'est leve ;
+#    - sur le Web, un glissement tactile arrive DEUX FOIS. Godot emule la
+#      souris a partir du tactile (emulate_mouse_from_touch, actif par
+#      defaut) tout en delivrant l'evenement d'origine : le geste peut etre
+#      compte deux fois, et la carte va deux fois trop vite.
+#
+#  On prend donc le geste nous-memes : un attrapeur plein ecran pose AU-DESSUS
+#  du ScrollContainer fixe `scroll_vertical` a la difference exacte parcourue
+#  par le doigt. Un pixel de doigt = un pixel de carte, sans inertie.
+#
+#  Il est au-dessus, donc les cachets ne recoivent plus rien : c'est lui qui
+#  decide si le geste etait un APPUI, et qui trouve alors le cachet vise. Leur
+#  propre _gui_input reste en place - il est teste par ui_test [12] et sert de
+#  filet si l'attrapeur venait a disparaitre.
+
+## Au-dela de ce deplacement, c'est un geste et non un appui. Meme valeur que
+## CampaignSeal.TAP_SLOP : un pouce ne se pose pas au pixel.
+const DRAG_TAP_SLOP := 12.0
+
+var _drag_catcher: Control
+var _drag_from: Vector2 = Vector2.INF
+var _drag_scroll: int = 0
+var _drag_travel: float = 0.0
+
+
 func _ready() -> void:
 	_content.resized.connect(_layout_map)
 	# Le SCROLL aussi : c'est lui qui suit la fenetre, et c'est sa largeur que
@@ -91,6 +124,9 @@ func _ready() -> void:
 	_layout_map()
 
 	_build_seals()
+	# APRES les cachets, AVANT le bouton du village : l'attrapeur doit couvrir
+	# la carte sans recouvrir le bandeau du bas.
+	_build_drag_catcher()
 	_build_village_button()
 	_refresh()
 
@@ -179,6 +215,72 @@ func _scroll_to_battle(id: int) -> void:
 	_scroll.scroll_vertical = int(clampf(
 		target, 0.0, maxf(0.0, _scrolled_height() - _scroll.size.y)))
 	_last_scroll_y = _scroll.scroll_vertical
+
+
+# ------------------------- LE GESTE, PRIS A LA MAIN --------------------------
+
+func _build_drag_catcher() -> void:
+	_drag_catcher = Control.new()
+	_drag_catcher.name = "DragCatcher"
+	_drag_catcher.set_anchors_preset(Control.PRESET_FULL_RECT)
+	_drag_catcher.mouse_filter = Control.MOUSE_FILTER_STOP
+	# Signal explicite plutot que la methode virtuelle : c'est la seule forme
+	# que ui_test._press() sait declencher (cf. CLAUDE.md, le piege du banc).
+	_drag_catcher.gui_input.connect(_on_drag_input)
+	add_child(_drag_catcher)
+	# Juste au-dessus du ScrollContainer, et donc SOUS le bandeau du bas et le
+	# bouton du village, qui viennent apres lui dans la scene.
+	move_child(_drag_catcher, _scroll.get_index() + 1)
+
+
+func _on_drag_input(event: InputEvent) -> void:
+	if _transitioning:
+		return
+
+	var click := event as InputEventMouseButton
+	if click != null:
+		if click.button_index != MOUSE_BUTTON_LEFT:
+			return
+		if click.pressed:
+			_drag_from = click.position
+			_drag_scroll = _scroll.scroll_vertical
+			_drag_travel = 0.0
+		elif _drag_from != Vector2.INF:
+			var point := click.position
+			var travelled := _drag_travel
+			_drag_from = Vector2.INF
+			if travelled <= DRAG_TAP_SLOP:
+				_tap_at(point)
+		return
+
+	var motion := event as InputEventMouseMotion
+	if motion == null or _drag_from == Vector2.INF:
+		return
+	_drag_travel = maxf(_drag_travel, motion.position.distance_to(_drag_from))
+	# La carte suit le doigt a l'unite pres. Le ScrollContainer borne lui-meme
+	# la valeur a sa plage, inutile de la clamper ici.
+	_scroll.scroll_vertical = _drag_scroll - int(motion.position.y - _drag_from.y)
+
+
+## Quel cachet se trouve sous ce point de l'ecran ? Rien si le doigt est tombe
+## a cote.
+##
+## L'attrapeur est plein ecran, donc le point est en unites d'ECRAN : il faut
+## le ramener dans le repere de la carte, qui defile et qui est mise a
+## l'echelle de la largeur disponible.
+func _tap_at(point: Vector2) -> void:
+	var in_content := point + Vector2(0.0, float(_scroll.scroll_vertical)) - _map.position
+	if is_zero_approx(_map_scale):
+		return
+	var in_map := in_content / _map_scale
+
+	for key in _nodes.keys():
+		var seal: CampaignSeal = _nodes[key]
+		if not is_instance_valid(seal):
+			continue
+		if in_map.distance_to(_seal_center(int(key))) <= seal.radius():
+			_on_node_pressed(int(key))
+			return
 
 
 # ------------------------------- CACHETS -------------------------------------

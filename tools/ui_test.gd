@@ -1081,7 +1081,48 @@ func _test_campaign_drag() -> void:
 	_check(not screen._transitioning,
 		"glisser depuis un cachet ne lance pas la bataille")
 
-	# 3. Appuyer puis relever AU MEME ENDROIT : la, c'est un appui.
+	# 3. LE DOIGT ET LA CARTE VONT A LA MEME VITESSE.
+	#
+	# ⚠️ Le defilement tactile de Godot ne suit PAS le doigt : il ajoute une
+	# inertie au relachement, et sur le Web le geste peut etre compte deux fois
+	# (le tactile emule aussi la souris). Le joueur l'a decrit apres test :
+	# "ca defile mais ca devrait suivre le doigt, la ca va tres vite".
+	#
+	# L'attrapeur fixe scroll_vertical a la difference exacte parcourue. Ce
+	# test est ce qui garantit le "exacte" - un pixel de doigt, un pixel de
+	# carte, sans inertie ni double comptage.
+	var catcher: Control = screen._drag_catcher
+	_check(catcher != null, "l'attrapeur de geste existe")
+	if catcher != null:
+		screen._scroll.scroll_vertical = 200
+		await _frames(1)
+		var before: int = screen._scroll.scroll_vertical
+
+		var press := InputEventMouseButton.new()
+		press.button_index = MOUSE_BUTTON_LEFT
+		press.pressed = true
+		press.position = Vector2(180, 400)
+		catcher.gui_input.emit(press)
+
+		var slide := InputEventMouseMotion.new()
+		slide.position = Vector2(180, 300)
+		catcher.gui_input.emit(slide)
+		await _frames(1)
+
+		var moved: int = screen._scroll.scroll_vertical - before
+		_check(moved == 100,
+			"100 points de doigt deplacent la carte de 100 (%d)" % moved)
+
+		var lift := InputEventMouseButton.new()
+		lift.button_index = MOUSE_BUTTON_LEFT
+		lift.pressed = false
+		lift.position = Vector2(180, 300)
+		catcher.gui_input.emit(lift)
+		await _frames(1)
+		_check(screen._scroll.scroll_vertical - before == 100,
+			"la carte s'arrete net au relachement, sans inertie")
+
+	# 4. Appuyer puis relever AU MEME ENDROIT : la, c'est un appui.
 	seal._gui_input(down)
 	var up := InputEventMouseButton.new()
 	up.button_index = MOUSE_BUTTON_LEFT
@@ -1113,6 +1154,7 @@ func _test_campaign_drag() -> void:
 			% ("rien" if blockers.is_empty() else ", ".join(blockers)))
 	_check(seal.mouse_filter == Control.MOUSE_FILTER_PASS,
 		"le cachet laisse le geste remonter a la carte (PASS, pas STOP)")
+
 
 	screen.queue_free()
 	await _frames(1)
