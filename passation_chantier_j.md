@@ -6,10 +6,20 @@ pendant les allers-retours avec le joueur.
 
 Lire [`CLAUDE.md`](CLAUDE.md) en premier. Ce document ne le répète pas.
 
-**Le carnet de suivi est un artefact web**, tenu à jour au fil du travail :
-`https://claude.ai/code/artifact/47c96d8b-a61a-4222-932d-04430c13692f`. Il porte
-les états (à vérifier / validé / à faire / fermé) et, pour chaque ligne,
-**comment le joueur vérifie**. C'est lui qui fait foi sur l'avancement.
+**Le carnet de suivi est un artefact web INTERACTIF**, et c'est LUI qui fait foi :
+`https://claude.ai/code/artifact/47c96d8b-a61a-4222-932d-04430c13692f`. **Le joueur y coche lui-même** « Ça marche » ou « Toujours cassé », et y dépose
+ses notes de bug. Chaque ligne porte un **journal daté**, signé *Claude* ou
+*Toi*, pour qu'il puisse commenter derrière chaque modification. Les lignes
+validées se replient.
+
+⚠️ **Il se publie sous l'identité du joueur quand il clique.** Republier
+dessus depuis une session peut donc rendre un `conflict` : dans ce cas
+**relire l'artefact (`WebFetch` sur son URL), fusionner ses changements dans
+les siens, et republier** — `force` seulement après avoir vraiment fusionné.
+C'est arrivé une fois : il avait validé A1, rouvert A3 et signalé deux
+nouveaux défauts pendant que je réécrivais la page.
+
+Le modèle est **réutilisable** pour d'autres chantiers, et c'est voulu.
 
 ---
 
@@ -211,3 +221,73 @@ Godot n'est pas dans le `PATH` :
 « Identifier not found: Game » sur du code parfaitement valide. Ce n'est pas un
 contrôle fiable pour un script qui touche `Game`, `Balance` ou `Router` —
 lancer un banc à la place.
+
+
+---
+
+## Ce que la nuit du 24/08 a ajouté
+
+### Trois règles de jeu ont changé, toutes décidées par le joueur
+
+| Règle | Ce qu'elle dit | Le garde-fou |
+|---|---|---|
+| **Le nul rejoue le combat** | un nul ne consomme plus le combat : on le rejoue avec ses survivants | **plafond de 3 nuls** (`Balance.RUN_DRAWS_ALLOWED`) — sans lui on ne peut plus jamais perdre une série par nul, et le pat est fréquent (6 des 19 parties du banc) |
+| **Le pion promu reste la série** | un promu non-Dame reste en ligne jusqu'au dernier combat, puis redevient pion | **un promu qui tombe coûte le PION qu'il était** — sans ça il supprimerait un vrai Cavalier de l'armée du joueur |
+| **Quitter au royaume abandonne** | repartir au village en pleine série la perd | **un avertissement obligatoire** — perdre une série par mégarde serait pire que ce que la règle empêche |
+
+⚠️ **La troisième ne bouche pas l'exploit que le joueur croyait.** Celui-là
+n'existe pas : `roster` est un instantané pris à l'ouverture, et la
+préparation est en lecture seule mi-série. Je le lui ai dit, il a maintenu la
+règle — c'est une décision de jeu, pas un correctif. **La vraie fuite, elle,
+n'est pas bouchée : `deploy_capacity()` est relue à chaud, donc améliorer le
+Château en pleine série augmente la charge.**
+
+Deux choix d'interprétation que je me suis permis, et qu'il peut corriger :
+« partir au royaume » = **aller au village**, pas fermer le jeu ; et abandonner
+applique les pertes et garde les Dames, mais ne verse ni or ni consolation.
+
+### Le socle des transitions
+
+- **`Balance.MOTION`** — les durées d'animation, enfin toutes au même endroit,
+  avec un `scale` qui les ralentit toutes. La règle 1 le demandait depuis le
+  début et n'était pas tenue : vingt-deux constantes dans huit fichiers.
+- **`ScreenVeil`** — un autoload, donc **le seul calque qui survit à un
+  changement de scène**. `Router._change` passe par lui, ce qui couvre tous les
+  écrans d'un coup. Il prend une couleur (la carte s'ouvre au **blanc**), et
+  `hold()` / `release()` laissent un écran dire « attends-moi » sans ralentir
+  les autres.
+
+### ⚠️ Le piège le plus cher de la session
+
+**Nommer une classe d'interface dans un autoload empêche le JEU ENTIER de
+démarrer.** Ajouter `ConfirmLeave.ask(...)` dans `Router.goto_village()` a
+suffi : un autoload résout ses noms de classe à l'**analyse**, donc le
+chargement des autoloads s'est mis à tirer `Modal`, `UiTheme` et leurs scènes.
+
+**Le symptôme est trompeur** — ce n'est pas une erreur, c'est un blocage. Les
+bancs n'affichaient plus leur première ligne, et la sortie ne montrait que du
+bruit de fermeture. Chercher dans le test était une impasse. Correctif :
+`load()` au moment de l'appel. Documenté dans `CLAUDE.md`.
+
+### Ce que le joueur a validé, et ce qu'il a rouvert
+
+**Validé :** la ligne de l'intro, le château, le rythme des transitions, le zoom
+des bâtiments, le fondu au noir, le clignotement des écrans de résultat, et
+**la carte qui suit le doigt** (mesuré : 100 points de doigt = 100 de carte).
+
+**Rouvert, et c'est le prochain gros morceau :** *« ce n'est pas vraiment une
+popup, c'est une transition vers un nouvel écran »*. Les écrans de bâtiment
+sont dans Figma au node **`517-2`** — pas `420-7`, que j'avais noté à tort.
+Zoom, fondu sortant, fondu entrant, **et un fond différent par bâtiment**.
+
+### Ce qui reste, dans l'ordre convenu
+
+1. **Les écrans de bâtiment** (`517-2`) — englobe A3 et F1.
+2. **C** — le glisser-déposer : caserne → déploiement, inventaire → plateau,
+   plus le bouton COMBATTEZ qui ne suit pas la maquette.
+3. **D** — le retour à l'appui sur **tous** les boutons (dans les composants
+   partagés, pas écran par écran), le codex, l'or qui monte.
+4. **E** — la barre du haut (or + gemmes), l'alignement, les polices, l'UI des
+   missions.
+5. **Les deux écrans de lettre du Roi**, entre l'intro et le village.
+6. **Les popups d'information** de Figma, jamais intégrés.
