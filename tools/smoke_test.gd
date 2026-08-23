@@ -1210,6 +1210,27 @@ func _check_scenes() -> void:
 		await get_tree().process_frame
 
 	await _check_last_formation_button()
+	# LES POLICES SE CHARGENT-ELLES VRAIMENT ?
+	#
+	# UiTheme retombe silencieusement sur Inter gras quand un fichier manque ou
+	# ne s'importe pas - et RIEN ne le dit a l'ecran. Un ecran en Inter la ou
+	# la maquette veut Poppins se lit "l'integration n'a pas ete faite", alors
+	# que le code, lui, la demande bien.
+	var fonts := {
+		"font_display": ["Poppins", UiTheme.font_display()],
+		"font_display_medium": ["Poppins", UiTheme.font_display_medium()],
+		"font_bold": ["Inter", UiTheme.font_bold()],
+		"font_dialogue": ["Comic Relief", UiTheme.font_dialogue()],
+	}
+	for name in fonts.keys():
+		var expected: String = fonts[name][0]
+		var font: Font = fonts[name][1]
+		var got := font.get_font_name()
+		if not got.begins_with(expected):
+			_fail("UiTheme.%s() rend %s au lieu de %s - repli silencieux sur la police de secours"
+				% [name, got, expected])
+	print("  polices chargees : enseignes en Poppins, corps en Inter")
+
 	_done("ecrans")
 
 

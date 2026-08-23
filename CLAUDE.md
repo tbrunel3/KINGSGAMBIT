@@ -16,6 +16,13 @@ documents complètent celui-ci et ne le répètent pas :
   popups d'accompagnement restent. Il porte aussi les décisions déjà prises par
   le joueur — à lire avant d'y toucher, la moitié de ce qu'il demande existe
   déjà, et le rebâtir créerait des règles concurrentes.
+- [`passation_g_f.md`](passation_g_f.md) — **le chantier suivant** : l'assemblage
+  graphique et le format d'écran, menés ensemble. Il porte la décision qui les
+  ouvre (`expand` contre `keep`), l'inventaire des animations, celui des écrans,
+  et la mesure de l'incohérence des boutons de coin — six tailles pour la même
+  chose.
+- [`chantier_h_boutique.md`](chantier_h_boutique.md) — la boutique : règles,
+  mesures et décisions. Terminé.
 - [`figma_contexte_projet.md`](figma_contexte_projet.md) — pour le designer :
   l'état du jeu vu de la maquette, et les règles de collaboration.
 

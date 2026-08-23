@@ -473,6 +473,13 @@ dans le texte** — tout est interpolé depuis `Balance`, sans quoi le popup se 
 
 # G + F — l'assemblage Figma et le responsive, menés ensemble
 
+> ⚠️ **CE CHANTIER A SA PROPRE PASSATION DEPUIS :
+> [`passation_g_f.md`](passation_g_f.md).** Elle est à jour, mesurée, et
+> contient ce que la section ci-dessous n'a pas : l'inventaire des animations
+> (dont quatre timelines découvertes depuis), la table des boutons de coin
+> incohérents, et la liste de ce qui reste écran par écran. **Ouvrir celle-là
+> en premier** ; ce qui suit est le découpage d'origine, gardé pour la trace.
+
 **Décidé par le joueur, à faire après E.** « L'assemblage de tout le projet
 Figma, adaptation des popups, des images, respect graphique absolu, et le F
 avec du coup pour les formats d'écran responsive. »
