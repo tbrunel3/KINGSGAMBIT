@@ -25,6 +25,7 @@ func _ready() -> void:
 	await _test_shop()
 	await _test_modal_entry()
 	await _test_shop_entry()
+	await _test_result_entries()
 
 	print("")
 	if _failures == 0:
@@ -154,6 +155,48 @@ func _test_shop_entry() -> void:
 	_check(replayed == 0, "elle ne se rejoue pas a l'achat (%d relancees)" % replayed)
 
 	shop.queue_free()
+	await _frames(2)
+
+
+## LES TROIS ECRANS DE RESULTAT ONT TROIS ENTREES, et le jeu n'en jouait
+## qu'une - celle du match nul, sur les trois peaux.
+##
+## Ce test ne juge pas l'esthetique : il verifie que les trois timelines sont
+## bel et bien DIFFERENTES, et dans le bon sens. Une regression les aplatirait
+## sans qu'aucune capture ne le montre, puisqu'une capture attend la fin des
+## tweens.
+func _test_result_entries() -> void:
+	print("\n[10] Resultats : trois ecrans, trois entrees")
+
+	var script := load("res://scenes/battle/battle_result.gd")
+	_check(script.ENTRY.size() == 3, "trois timelines declarees (%d)" % script.ENTRY.size())
+
+	var win: Dictionary = script.ENTRY["win"]
+	var loss: Dictionary = script.ENTRY["loss"]
+	var draw: Dictionary = script.ENTRY["draw"]
+
+	_check(float(win["title_scale"]) < 1.0,
+		"la victoire jaillit du petit (%.2f)" % float(win["title_scale"]))
+	_check(float(win["title_rise"]) > 0.0,
+		"et elle monte (%.0f)" % float(win["title_rise"]))
+	_check(float(loss["title_rise"]) < 0.0,
+		"la defaite tombe d'en haut (%.0f)" % float(loss["title_rise"]))
+	_check(int(loss["title_trans"]) != Tween.TRANS_BACK,
+		"et elle ne rebondit pas")
+	_check(float(draw["title_scale"]) > 1.0,
+		"le nul s'abat du grand (%.2f)" % float(draw["title_scale"]))
+	_check(is_zero_approx(float(draw["title_rise"])), "et il ne bouge pas")
+	_check(float(loss["buttons_delay"]) > float(win["buttons_delay"]),
+		"la defaite est plus lente que la victoire (%.1f contre %.1f)"
+			% [float(loss["buttons_delay"]), float(win["buttons_delay"])])
+
+	# Et la peau choisit bien SA timeline.
+	var screen: Node = script.new()
+	add_child(screen)
+	screen.open(true, "")
+	await _frames(2)
+	_check(screen._entry_key == "win", "la victoire prend la sienne (%s)" % screen._entry_key)
+	screen.queue_free()
 	await _frames(2)
 
 
