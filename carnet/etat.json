@@ -11,10 +11,6 @@
         "groupe": "auto",
         "ordre": [
           {
-            "ref": "T",
-            "titre": "Le combat au doigt"
-          },
-          {
             "ref": "E",
             "titre": "L'habillage : barre du haut, alignements, polices"
           },
@@ -49,9 +45,9 @@
         ]
       },
       "build": {
-        "enLigne": "24/08, 14h31",
-        "commit": "c21d0ac",
-        "quoi": "la fiche D — le retour à l'appui, l'or qui monte, le codex qui s'ouvre",
+        "enLigne": "24/08, 14h50",
+        "commit": "9ebb63b",
+        "quoi": "la fiche T — un second doigt ne tue plus le geste en cours",
         "note": "Recharge en forçant : le service worker de Godot sert volontiers l'ancien build."
       },
       "sections": [
@@ -330,7 +326,7 @@
               "ref": "T",
               "titre": "Le combat au doigt",
               "detail": "Tu le trouves mauvais, et je n'ai <strong>rien trouvé de prouvable</strong> en lisant : la sélection se fait à l'appui, donc un doigt tremblé sélectionne quand même, et le seuil de glissement (8 pt) est exactement le <em>touch slop</em> standard d'Android. La seule faiblesse réelle : <strong>il n'y a pas un seul événement tactile dans tout le jeu</strong> — tout repose sur l'émulation souris de Godot, et un second doigt produit un second appui émulé qui tue le geste en cours.",
-              "statut": "encours",
+              "statut": "attente",
               "journal": [
                 {
                   "quand": "24/08",
@@ -346,11 +342,46 @@
                   "quand": "24/08",
                   "qui": "Toi",
                   "texte": "AU TRAVAIL : première de l’ordre de marche."
+                },
+                {
+                  "quand": "24/08",
+                  "qui": "Claude",
+                  "texte": "La moitié prouvable est faite. Le défaut : il n'y a pas UN seul événement tactile dans le dépôt — le jeu écoute la souris, et au doigt c'est Godot qui la fabrique. Un second contact produisait un second appui émulé qui repassait par _reset_press et effaçait le glissement en cours."
+                },
+                {
+                  "quand": "24/08",
+                  "qui": "Claude",
+                  "texte": "Paume posée, pouce qui traîne, doigt de l'autre main : le coup était perdu sans que rien ne l'explique. C'est corrigé par une garde qui refuse le second appui tant que le premier n'est pas relâché."
+                },
+                {
+                  "quand": "24/08",
+                  "qui": "Claude",
+                  "texte": "⚠️ La garde ne peut pas rendre la grille sourde : si le doigt quitte la grille et se lève dehors, elle se désarme d'elle-même. Le remède aurait été pire que le mal."
+                },
+                {
+                  "quand": "24/08",
+                  "qui": "Claude",
+                  "texte": "emulate_mouse_from_touch passe explicitement dans project.godot. Tout le tactile reposait sur une valeur laissée à son défaut, que personne n'avait choisie et qui n'était écrite nulle part."
+                },
+                {
+                  "quand": "24/08",
+                  "qui": "Claude",
+                  "texte": "Le banc PROUVE qu'il mesure : relancé après avoir réintroduit le défaut, il rend 2 échecs. ui_test 212 OK / 0 échec / 0 erreur (203 avant), smoke_test 10/10, format_test les huit formats."
+                },
+                {
+                  "quand": "24/08",
+                  "qui": "Claude",
+                  "texte": "CE QUI RESTE, et que je ne peux pas trancher seul : le seuil de glissement (8 pt, exactement le touch slop d'Android) et la sélection à l'appui. Rien à la lecture ne les incrimine, et le manuel interdit d'y toucher sur une intuition. Il faut ton téléphone."
                 }
               ],
               "priorite": "haute",
               "theme": "Tactile",
-              "avancement": 10
+              "avancement": 60,
+              "livre": {
+                "commit": "9ebb63b",
+                "quand": "24/08 à 14h50"
+              },
+              "resume": "À vérifier au doigt : joue un coup en gardant la paume ou un second doigt posé sur l'écran. Le glissement ne doit plus mourir. Si le combat reste mauvais pour une AUTRE raison, dis-la — il faudra un relevé sur ton téléphone, je ne peux pas la deviner."
             }
           ]
         },
@@ -516,10 +547,10 @@
     }
   ],
   "credit": {
-    "restant": 14928000,
+    "restant": 14976000,
     "total": 15000000,
-    "releve": "24/08 à 14h48",
+    "releve": "24/08 à 14h55",
     "seuil": 12
   },
-  "serie": 53
+  "serie": 55
 }
