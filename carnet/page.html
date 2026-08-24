@@ -612,6 +612,27 @@ __ETAT__
       localStorage.setItem(CLE, JSON.stringify({quand:Date.now(), etat:state}));
     }catch(e){ /* mode privé, quota : le miroir est un filet, pas une dépendance */ }
   }
+  /* Ce que la restauration CHANGERAIT, ligne par ligne. Sans ça, « restaurer »
+     est un pari : on ne sait pas ce qu'on perd. */
+  function differences(local, servi){
+    function fiches(e){
+      var m = {};
+      (e.journees || []).forEach(function(j){
+        (j.sections || []).forEach(function(s){
+          (s.items || []).forEach(function(it){ m[it.ref] = it; });
+        });
+      });
+      return m;
+    }
+    var a = fiches(local), b = fiches(servi), out = [];
+    Object.keys(a).forEach(function(ref){
+      if (b[ref] && a[ref].statut !== b[ref].statut){
+        out.push({ref: ref, titre: a[ref].titre, mien: a[ref].statut, servi: b[ref].statut});
+      }
+    });
+    return out;
+  }
+
   function miroirLu(){
     try{
       var brut = localStorage.getItem(CLE);
@@ -889,12 +910,35 @@ __ETAT__
         + 'font-size:12px;text-decoration:none">OUVRIR LE CARNET QUI ME COMMANDE →</a></div>';
     }
     if (plusFrais){
+      /* ⚠️ NE JAMAIS PROPOSER UN RETOUR A L'AVEUGLE.
+         La v5 disait seulement "ton navigateur a une version plus récente" et
+         offrait RESTAURER en bouton principal. Le joueur a restauré son état
+         d'avant ma livraison : la fiche D, livrée et publiée, réapparaissait
+         "en cours" chez lui. Un filet de sécurité qui annule le travail qu'il
+         devait protéger.
+         Maintenant la page DIT ce qui changerait, ligne par ligne, et le choix
+         par défaut est de garder ce qui est en ligne. */
+      var ecarts = differences(plusFrais.etat, state);
       h += '<div class="lecture-seule" style="border-color:var(--ambre);color:var(--ambre);'
-        + 'background:rgba(245,158,11,.08)"><b>Ton navigateur a une version plus récente</b> '
-        + 'que celle servie ici — sans doute des coches faites avant que la page ne soit '
-        + 'republiée. <button class="bouton-cyan" data-restaurer="1" style="margin-top:8px">'
-        + 'RESTAURER MA VERSION</button> <button class="bouton-cyan sourd" data-oublier="1" '
-        + 'style="margin-top:8px">Ignorer</button></div>';
+        + 'background:rgba(245,158,11,.08)">'
+        + '<b>Ce navigateur garde une version plus ancienne du carnet.</b><br>';
+      if (ecarts.length){
+        h += 'La restaurer changerait ' + ecarts.length + ' ligne'
+          + (ecarts.length > 1 ? 's' : '') + ' :<ul style="margin:8px 0 0;padding-left:20px">';
+        ecarts.slice(0, 6).forEach(function(d){
+          h += '<li><code>' + esc(d.ref) + '</code> ' + esc(d.titre)
+            + ' — <b>' + esc(LABEL[d.servi] || d.servi) + '</b> redeviendrait <b>'
+            + esc(LABEL[d.mien] || d.mien) + '</b></li>';
+        });
+        if (ecarts.length > 6) h += '<li>… et ' + (ecarts.length - 6) + ' autre(s)</li>';
+        h += '</ul>';
+      } else {
+        h += 'Aucun verdict ne diffère — il n’y a rien à récupérer.';
+      }
+      h += '<div style="margin-top:10px;display:flex;gap:8px;flex-wrap:wrap">'
+        + '<button class="bouton-cyan" data-oublier="1">GARDER LA VERSION EN LIGNE</button>'
+        + '<button class="bouton-cyan sourd" data-restaurer="1">Restaurer quand même l’ancienne</button>'
+        + '</div></div>';
     }
     h += '<div class="espace"><div class="colonne">' + ongletsHtml(j);
 

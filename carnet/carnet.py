@@ -113,6 +113,19 @@ def build():
     if MARQUE not in page:
         raise SystemExit("page.html n'a plus son trou %s" % MARQUE)
     etat = json.loads(_lire(ETAT))
+    # ⚠️ LE COMPTEUR D'ECRITURE MONTE A CHAQUE BUILD, ET C'EST VITAL.
+    #
+    # La page garde un miroir dans le navigateur du joueur et compare `serie`
+    # a l'ouverture : si le miroir est plus haut, elle propose de restaurer.
+    # Sans cette ligne, le depot publiait TOUJOURS `serie` inchange - donc le
+    # navigateur du joueur se croyait plus recent en permanence, et lui
+    # proposait de revenir a son etat d'avant ma livraison. Le filet de
+    # securite pouvait ANNULER le travail qu'il devait proteger.
+    #
+    # Paye le 24/08 : la fiche D livree et publiee s'affichait "en cours" chez
+    # lui, parce que son navigateur restaurait le 14h24 par-dessus.
+    etat["serie"] = int(etat.get("serie", 0)) + 1
+    _ecrire(ETAT, json.dumps(etat, ensure_ascii=False, indent=2) + "\n")
     # `<` echappe : l'etat porte du HTML (<strong>, <code>) dans ses details, et
     # un `</script>` litteral y fermerait la balise qui le contient.
     texte = json.dumps(etat, ensure_ascii=False, indent=1).replace("<", "\\u003c")
