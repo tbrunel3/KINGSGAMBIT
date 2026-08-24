@@ -1,330 +1,416 @@
 {
-  "maj": "24/08/2026",
-  "build": {
-    "enLigne": "24/08, 02h30",
-    "commit": "7dcf766",
-    "quoi": "les écrans de bâtiment, la garde d'abandon déplacée, le socle des transitions",
-    "note": "Exporté et poussé sur gh-pages. Vide le cache de ton navigateur ou recharge en forçant : le service worker de Godot sert volontiers l'ancienne version."
-  },
-  "sections": [
+  "active": 0,
+  "journees": [
     {
-      "id": "verdict",
-      "titre": "En attente de ton verdict",
-      "chapo": "Fait et mesuré ici. À toi de dire, une fois le build en ligne.",
-      "items": [
+      "nom": "24/08 — Bâtiments & carnet",
+      "maj": "24/08/2026",
+      "tri": "priorite",
+      "marche": {
+        "lance": "24/08 à 02h42",
+        "ordre": [
+          {
+            "ref": "C",
+            "titre": "Le glisser-déposer"
+          },
+          {
+            "ref": "D",
+            "titre": "Les animations qui manquent"
+          },
+          {
+            "ref": "E",
+            "titre": "L'habillage : barre du haut, alignements, polices"
+          },
+          {
+            "ref": "n1",
+            "titre": "l'intro"
+          },
+          {
+            "ref": "5",
+            "titre": "Les deux lettres du Roi, entre l'intro et le village"
+          },
+          {
+            "ref": "6",
+            "titre": "Les popups d'accompagnement de Figma"
+          },
+          {
+            "ref": "T",
+            "titre": "Le combat au doigt"
+          },
+          {
+            "ref": "d1",
+            "titre": "Améliorer le Château en pleine série augmente la charge"
+          },
+          {
+            "ref": "d2",
+            "titre": "L'audit du banc d'interface n'a jamais été fait"
+          },
+          {
+            "ref": "d3",
+            "titre": "Quatre zones défilantes jamais auditées"
+          }
+        ]
+      },
+      "build": {
+        "enLigne": "24/08, 02h30",
+        "commit": "7dcf766",
+        "quoi": "les écrans de bâtiment, la garde d'abandon déplacée, le socle des transitions",
+        "note": "Exporté et poussé sur gh-pages. Vide le cache de ton navigateur ou recharge en forçant : le service worker de Godot sert volontiers l'ancienne version."
+      },
+      "sections": [
         {
-          "ref": "1",
-          "titre": "Les casernes sont des écrans, plus des popups",
-          "detail": "« Zoom, fade in, fade out, ce n'est pas vraiment une pop up, c'est une transition vers un nouvel écran » — chaque caserne a désormais son écran plein et <strong>son propre décor</strong> (Figma 517:2). Le panneau lui-même n'a pas été réécrit : il tenait déjà les quatre états et lisait ses chiffres dans <code>Balance</code>. Englobe A3 et F1.",
-          "statut": "attente",
-          "journal": [
+          "id": "verdict",
+          "titre": "En attente de ton verdict",
+          "chapo": "Fait et mesuré ici. À toi de dire, une fois le build en ligne.",
+          "items": [
             {
-              "quand": "24/08",
-              "qui": "Claude",
-              "texte": "Écran monté, quatre fonds posés, le village route au lieu d'instancier. Bancs : ui_test 162 OK / 0 échec, format_test 8 formats, smoke_test 10/10."
+              "ref": "1",
+              "titre": "Les casernes sont des écrans, plus des popups",
+              "detail": "« Zoom, fade in, fade out, ce n'est pas vraiment une pop up, c'est une transition vers un nouvel écran » — chaque caserne a désormais son écran plein et <strong>son propre décor</strong> (Figma 517:2). Le panneau lui-même n'a pas été réécrit : il tenait déjà les quatre états et lisait ses chiffres dans <code>Balance</code>. Englobe A3 et F1.",
+              "statut": "ok",
+              "journal": [
+                {
+                  "quand": "24/08",
+                  "qui": "Claude",
+                  "texte": "Écran monté, quatre fonds posés, le village route au lieu d'instancier. Bancs : ui_test 162 OK / 0 échec, format_test 8 formats, smoke_test 10/10."
+                },
+                {
+                  "quand": "24/08",
+                  "qui": "Claude",
+                  "texte": "Deux défauts d'instrument corrigés au passage, tous deux silencieux : ui_test [8] appelait find_child sur un nœud disparu — l'erreur tuait la coroutine sans compter un seul échec, le banc annonçait « tout répond » en ayant sauté quatre assertions. Et [1] libérait le village avant de lui reparler : segfault, une fois sur deux."
+                },
+                {
+                  "quand": "24/08",
+                  "qui": "Toi",
+                  "texte": "Toujours cassé."
+                },
+                {
+                  "quand": "24/08",
+                  "qui": "Toi",
+                  "texte": "toujours uniquement un popup qui flick"
+                },
+                {
+                  "quand": "24/08",
+                  "qui": "Claude",
+                  "texte": "Tu as testé la version d'AVANT : le travail est commité mais pas ré-exporté sur gh-pages, et le bandeau en haut de ce carnet le dit. Ce que tu décris — un popup qui clignote — est exactement l'ancien comportement. Je ne rouvre donc rien sur cette base : la ligne repasse en attente le temps que j'exporte."
+                },
+                {
+                  "quand": "24/08",
+                  "qui": "Claude",
+                  "texte": "C'est en ligne maintenant. Si tu revois un popup qui clignote, c'est un vrai défaut et je le prends — mais recharge en forçant d'abord, le service worker garde l'ancien build."
+                },
+                {
+                  "quand": "24/08",
+                  "qui": "Toi",
+                  "texte": "alors ne met pas a jour avant le commit que je peux tester"
+                },
+                {
+                  "quand": "24/08",
+                  "qui": "Toi",
+                  "texte": "tu me met une notif a droit genre ecran tout vert avec ecrit COMMIT ET TEST POSSIBLE"
+                },
+                {
+                  "quand": "24/08",
+                  "qui": "Claude",
+                  "texte": "D'accord, et c'est fait : le bandeau du haut est vert et dit COMMIT ET TEST POSSIBLE, ou reste orange tant que le travail n'est pas exporté. Règle prise : je ne pousse plus une ligne dans le carnet avant que le build correspondant soit en ligne."
+                },
+                {
+                  "quand": "24/08",
+                  "qui": "Toi",
+                  "texte": "Ça marche."
+                }
+              ],
+              "priorite": "haute",
+              "theme": "Village"
             },
             {
-              "quand": "24/08",
-              "qui": "Claude",
-              "texte": "Deux défauts d'instrument corrigés au passage, tous deux silencieux : ui_test [8] appelait find_child sur un nœud disparu — l'erreur tuait la coroutine sans compter un seul échec, le banc annonçait « tout répond » en ayant sauté quatre assertions. Et [1] libérait le village avant de lui reparler : segfault, une fois sur deux."
-            },
-            {
-              "quand": "24/08",
-              "qui": "Toi",
-              "texte": "Toujours cassé."
-            },
-            {
-              "quand": "24/08",
-              "qui": "Toi",
-              "texte": "toujours uniquement un popup qui flick"
-            },
-            {
-              "quand": "24/08",
-              "qui": "Claude",
-              "texte": "Tu as testé la version d'AVANT : le travail est commité mais pas ré-exporté sur gh-pages, et le bandeau en haut de ce carnet le dit. Ce que tu décris — un popup qui clignote — est exactement l'ancien comportement. Je ne rouvre donc rien sur cette base : la ligne repasse en attente le temps que j'exporte."
-            },
-            {
-              "quand": "24/08",
-              "qui": "Claude",
-              "texte": "C'est en ligne maintenant. Si tu revois un popup qui clignote, c'est un vrai défaut et je le prends — mais recharge en forçant d'abord, le service worker garde l'ancien build."
-            },
-            {
-              "quand": "24/08",
-              "qui": "Toi",
-              "texte": "alors ne met pas a jour avant le commit que je peux tester"
-            },
-            {
-              "quand": "24/08",
-              "qui": "Toi",
-              "texte": "tu me met une notif a droit genre ecran tout vert avec ecrit COMMIT ET TEST POSSIBLE"
-            },
-            {
-              "quand": "24/08",
-              "qui": "Claude",
-              "texte": "D'accord, et c'est fait : le bandeau du haut est vert et dit COMMIT ET TEST POSSIBLE, ou reste orange tant que le travail n'est pas exporté. Règle prise : je ne pousse plus une ligne dans le carnet avant que le build correspondant soit en ligne."
-            }
-          ],
-          "priorite": "haute"
-        },
-        {
-          "ref": "2",
-          "titre": "Repartir au royaume n'abandonne plus la série par erreur",
-          "detail": "La garde d'abandon avait été posée sur <code>goto_village()</code>, « la porte unique vers le village ». C'était vrai, et c'était le problème : le château, le codex et la boutique en reviennent par là. <strong>Fermer le codex en pleine série l'aurait perdue.</strong> Elle ne vit plus que sur le chemin qui sort vraiment du combat.",
-          "statut": "attente",
-          "journal": [
-            {
-              "quand": "24/08",
-              "qui": "Claude",
-              "texte": "Trouvé en rebranchant les casernes : le défaut n'était pas visible avant, aucun écran ne repassait par cette porte."
-            }
-          ],
-          "priorite": "moyenne"
-        }
-      ]
-    },
-    {
-      "id": "ordre",
-      "titre": "Le chantier, dans l'ordre convenu",
-      "chapo": "L'ordre est le tien. Je ne le change pas sans te le demander.",
-      "items": [
-        {
-          "ref": "C",
-          "titre": "Le glisser-déposer",
-          "detail": "Caserne → déploiement, et inventaire → plateau. Plus le bouton <strong>COMBATTEZ</strong> qui ne suit pas la maquette. <strong>Le paquet le plus lourd.</strong>",
-          "statut": "todo",
-          "journal": [
-            {
-              "quand": "24/08",
-              "qui": "Claude",
-              "texte": "Prochain sur la liste après les écrans de bâtiment."
-            }
-          ],
-          "priorite": "haute"
-        },
-        {
-          "ref": "D",
-          "titre": "Les animations qui manquent",
-          "detail": "Le retour à l'appui sur <strong>tous</strong> les boutons — à poser dans les composants partagés, jamais écran par écran, sinon la moitié en aura et l'autre pas. Le codex. L'or qui monte au lieu de sauter.",
-          "statut": "encours",
-          "journal": [
-            {
-              "quand": "24/08",
-              "qui": "Claude",
-              "texte": "D3 est à moitié fait : le fondu au blanc est là, le dézoom d'élévation non."
-            },
-            {
-              "quand": "24/08",
-              "qui": "Claude",
-              "texte": "Le socle existe : Balance.MOTION rassemble les vingt-deux durées qui vivaient dans huit fichiers, et MOTION.scale ralentit tout le jeu d'un seul bouton."
-            }
-          ],
-          "priorite": "moyenne"
-        },
-        {
-          "ref": "E",
-          "titre": "L'habillage : barre du haut, alignements, polices",
-          "detail": "La barre du haut (or + gemmes), l'alignement Boutique / BATAILLE, les polices, et l'interface des missions — que tu as jugée <strong>« très modeste »</strong>.",
-          "statut": "todo",
-          "journal": [],
-          "priorite": "moyenne"
-        },
-        {
-          "ref": "5",
-          "titre": "Les deux lettres du Roi, entre l'intro et le village",
-          "detail": "Les écrans sont faits par le graphiste. Le reste est déjà spécifié dans <code>chantier_i_missives.md</code> : mesures des illustrations, quatre textes, déclencheurs. <strong>Une seule pièce manque au jeu : il n'a aucun compteur de défaite.</strong>",
-          "statut": "todo",
-          "journal": [],
-          "priorite": "basse"
-        },
-        {
-          "ref": "6",
-          "titre": "Les popups d'accompagnement de Figma",
-          "detail": "Quatre maquettes posées (pat, composition, aura de la Dame, temps réel), jamais intégrées telles quelles. Le code les affiche déjà une fois chacune — c'est leur habillage qui reste.",
-          "statut": "todo",
-          "journal": [],
-          "priorite": "basse"
-        },
-        {
-          "ref": "n1",
-          "titre": "l'intro",
-          "detail": "je vois seulement la deuxieme image de l'ecran figma, il faut que au depart le bouton soit cet ecran : https://www.figma.com/design/rqEdH4O2R21TuUFv7OUlF7/KING-sGAMBIT?node-id=410-35&amp;t=ttUec04lRmnYwEXC-4\napres le click ça passe à ça :https://www.figma.com/design/rqEdH4O2R21TuUFv7OUlF7/KING-sGAMBIT?node-id=525-2&amp;t=ttUec04lRmnYwEXC-4 . L'ecran a ete retravaillé par le graphiste tu peux t'y fier aussi a l'animation avec le zoom",
-          "statut": "todo",
-          "priorite": "moyenne",
-          "journal": [
-            {
-              "quand": "24/08",
-              "qui": "Toi",
-              "texte": "Ajoutée au carnet."
+              "ref": "2",
+              "titre": "Repartir au royaume n'abandonne plus la série par erreur",
+              "detail": "La garde d'abandon avait été posée sur <code>goto_village()</code>, « la porte unique vers le village ». C'était vrai, et c'était le problème : le château, le codex et la boutique en reviennent par là. <strong>Fermer le codex en pleine série l'aurait perdue.</strong> Elle ne vit plus que sur le chemin qui sort vraiment du combat.",
+              "statut": "ok",
+              "journal": [
+                {
+                  "quand": "24/08",
+                  "qui": "Claude",
+                  "texte": "Trouvé en rebranchant les casernes : le défaut n'était pas visible avant, aucun écran ne repassait par cette porte."
+                },
+                {
+                  "quand": "24/08",
+                  "qui": "Toi",
+                  "texte": "Ça marche."
+                }
+              ],
+              "priorite": "moyenne",
+              "theme": "Navigation"
             }
           ]
-        }
-      ]
-    },
-    {
-      "id": "appareil",
-      "titre": "Ce que le code seul ne peut pas trancher",
-      "chapo": "Il me faut ton téléphone, ou un banc que je n'ai pas encore écrit.",
-      "items": [
+        },
         {
-          "ref": "T",
-          "titre": "Le combat au doigt",
-          "detail": "Tu le trouves mauvais, et je n'ai <strong>rien trouvé de prouvable</strong> en lisant : la sélection se fait à l'appui, donc un doigt tremblé sélectionne quand même, et le seuil de glissement (8 pt) est exactement le <em>touch slop</em> standard d'Android. La seule faiblesse réelle : <strong>il n'y a pas un seul événement tactile dans tout le jeu</strong> — tout repose sur l'émulation souris de Godot, et un second doigt produit un second appui émulé qui tue le geste en cours.",
-          "statut": "todo",
-          "journal": [
+          "id": "ordre",
+          "titre": "Le chantier, dans l'ordre convenu",
+          "chapo": "L'ordre est le tien. Je ne le change pas sans te le demander.",
+          "items": [
             {
-              "quand": "24/08",
-              "qui": "Claude",
-              "texte": "Décision prise : ne pas toucher au seuil sur une intuition. S'il faut y aller, ce sera sur un relevé d'appareil."
+              "ref": "C",
+              "titre": "Le glisser-déposer",
+              "detail": "Caserne → déploiement, et inventaire → plateau. Plus le bouton <strong>COMBATTEZ</strong> qui ne suit pas la maquette. <strong>Le paquet le plus lourd.</strong>",
+              "statut": "encours",
+              "journal": [
+                {
+                  "quand": "24/08",
+                  "qui": "Claude",
+                  "texte": "Prochain sur la liste après les écrans de bâtiment."
+                },
+                {
+                  "quand": "24/08",
+                  "qui": "Toi",
+                  "texte": "AU TRAVAIL : première de l’ordre de marche."
+                }
+              ],
+              "priorite": "haute",
+              "theme": "Placement"
             },
             {
-              "quand": "24/08",
-              "qui": "Claude",
-              "texte": "Aucun banc ne joue un geste DANS le combat. Le cas [12] ne couvre que la carte de campagne."
+              "ref": "D",
+              "titre": "Les animations qui manquent",
+              "detail": "Le retour à l'appui sur <strong>tous</strong> les boutons — à poser dans les composants partagés, jamais écran par écran, sinon la moitié en aura et l'autre pas. Le codex. L'or qui monte au lieu de sauter.",
+              "statut": "encours",
+              "journal": [
+                {
+                  "quand": "24/08",
+                  "qui": "Claude",
+                  "texte": "D3 est à moitié fait : le fondu au blanc est là, le dézoom d'élévation non."
+                },
+                {
+                  "quand": "24/08",
+                  "qui": "Claude",
+                  "texte": "Le socle existe : Balance.MOTION rassemble les vingt-deux durées qui vivaient dans huit fichiers, et MOTION.scale ralentit tout le jeu d'un seul bouton."
+                }
+              ],
+              "priorite": "moyenne",
+              "theme": "Animations"
+            },
+            {
+              "ref": "E",
+              "titre": "L'habillage : barre du haut, alignements, polices",
+              "detail": "La barre du haut (or + gemmes), l'alignement Boutique / BATAILLE, les polices, et l'interface des missions — que tu as jugée <strong>« très modeste »</strong>.",
+              "statut": "todo",
+              "journal": [],
+              "priorite": "moyenne",
+              "theme": "Interface"
+            },
+            {
+              "ref": "5",
+              "titre": "Les deux lettres du Roi, entre l'intro et le village",
+              "detail": "Les écrans sont faits par le graphiste. Le reste est déjà spécifié dans <code>chantier_i_missives.md</code> : mesures des illustrations, quatre textes, déclencheurs. <strong>Une seule pièce manque au jeu : il n'a aucun compteur de défaite.</strong>",
+              "statut": "todo",
+              "journal": [],
+              "priorite": "basse",
+              "theme": "Récit"
+            },
+            {
+              "ref": "6",
+              "titre": "Les popups d'accompagnement de Figma",
+              "detail": "Quatre maquettes posées (pat, composition, aura de la Dame, temps réel), jamais intégrées telles quelles. Le code les affiche déjà une fois chacune — c'est leur habillage qui reste.",
+              "statut": "todo",
+              "journal": [],
+              "priorite": "basse",
+              "theme": "Interface"
+            },
+            {
+              "ref": "n1",
+              "titre": "l'intro",
+              "detail": "je vois seulement la deuxieme image de l'ecran figma, il faut que au depart le bouton soit cet ecran : https://www.figma.com/design/rqEdH4O2R21TuUFv7OUlF7/KING-sGAMBIT?node-id=410-35&amp;t=ttUec04lRmnYwEXC-4\napres le click ça passe à ça :https://www.figma.com/design/rqEdH4O2R21TuUFv7OUlF7/KING-sGAMBIT?node-id=525-2&amp;t=ttUec04lRmnYwEXC-4 . L'ecran a ete retravaillé par le graphiste tu peux t'y fier aussi a l'animation avec le zoom",
+              "statut": "todo",
+              "priorite": "moyenne",
+              "journal": [
+                {
+                  "quand": "24/08",
+                  "qui": "Toi",
+                  "texte": "Ajoutée au carnet."
+                }
+              ],
+              "theme": "Intro"
             }
-          ],
-          "priorite": "haute"
-        }
-      ]
-    },
-    {
-      "id": "dettes",
-      "titre": "Les dettes connues",
-      "chapo": "Rien de tout ça ne t'a encore gêné. Je les écris pour qu'elles ne se redécouvrent pas trois fois.",
-      "items": [
-        {
-          "ref": "d1",
-          "titre": "Améliorer le Château en pleine série augmente la charge",
-          "detail": "La vraie fuite, et elle n'est pas bouchée : <code>deploy_capacity()</code> est relue à chaud. L'exploit que tu craignais, lui, n'existe pas — le roster est un instantané pris à l'ouverture.",
-          "statut": "todo",
-          "journal": [],
-          "priorite": "basse"
+          ]
         },
         {
-          "ref": "d2",
-          "titre": "L'audit du banc d'interface n'a jamais été fait",
-          "detail": "<code>ui_test._press()</code> n'appuie sur rien pour les contrôles qui utilisent la méthode virtuelle plutôt que le signal. D'autres assertions passent peut-être à vide. <strong>Deux cas viennent d'être trouvés par hasard</strong>, ce qui rend l'audit moins théorique qu'hier.",
-          "statut": "todo",
-          "journal": [
+          "id": "appareil",
+          "titre": "Ce que le code seul ne peut pas trancher",
+          "chapo": "Il me faut ton téléphone, ou un banc que je n'ai pas encore écrit.",
+          "items": [
             {
-              "quand": "24/08",
-              "qui": "Claude",
-              "texte": "Les deux trouvés aujourd'hui étaient dans le même fichier et personne ne les voyait : le banc se déclarait vert."
+              "ref": "T",
+              "titre": "Le combat au doigt",
+              "detail": "Tu le trouves mauvais, et je n'ai <strong>rien trouvé de prouvable</strong> en lisant : la sélection se fait à l'appui, donc un doigt tremblé sélectionne quand même, et le seuil de glissement (8 pt) est exactement le <em>touch slop</em> standard d'Android. La seule faiblesse réelle : <strong>il n'y a pas un seul événement tactile dans tout le jeu</strong> — tout repose sur l'émulation souris de Godot, et un second doigt produit un second appui émulé qui tue le geste en cours.",
+              "statut": "todo",
+              "journal": [
+                {
+                  "quand": "24/08",
+                  "qui": "Claude",
+                  "texte": "Décision prise : ne pas toucher au seuil sur une intuition. S'il faut y aller, ce sera sur un relevé d'appareil."
+                },
+                {
+                  "quand": "24/08",
+                  "qui": "Claude",
+                  "texte": "Aucun banc ne joue un geste DANS le combat. Le cas [12] ne couvre que la carte de campagne."
+                }
+              ],
+              "priorite": "haute",
+              "theme": "Tactile"
             }
-          ],
-          "priorite": "basse"
+          ]
         },
         {
-          "ref": "d3",
-          "titre": "Quatre zones défilantes jamais auditées",
-          "detail": "Préparation, codex, boutique, showcase. C'est le même conflit que celui qui empêchait la carte de défiler, et il peut s'y cacher dès qu'un enfant cliquable est en <code>MOUSE_FILTER_STOP</code>.",
-          "statut": "todo",
-          "journal": [],
-          "priorite": "basse"
-        }
-      ]
-    },
-    {
-      "id": "valide",
-      "titre": "Déjà validé par toi",
-      "chapo": "Replié. Rouvre une ligne si elle se remet à casser.",
-      "items": [
-        {
-          "ref": "A1",
-          "titre": "La carte suit le doigt",
-          "detail": "Mesuré : 100 points de doigt déplacent la carte de 100. Deux bugs, pas un — le cachet partait à l'appui, et le geste n'atteignait jamais la zone défilante.",
-          "statut": "ok",
-          "journal": [
+          "id": "dettes",
+          "titre": "Les dettes connues",
+          "chapo": "Rien de tout ça ne t'a encore gêné. Je les écris pour qu'elles ne se redécouvrent pas trois fois.",
+          "items": [
             {
-              "quand": "24/08",
-              "qui": "Toi",
-              "texte": "Validé."
+              "ref": "d1",
+              "titre": "Améliorer le Château en pleine série augmente la charge",
+              "detail": "La vraie fuite, et elle n'est pas bouchée : <code>deploy_capacity()</code> est relue à chaud. L'exploit que tu craignais, lui, n'existe pas — le roster est un instantané pris à l'ouverture.",
+              "statut": "todo",
+              "journal": [],
+              "priorite": "basse",
+              "theme": "Règles"
+            },
+            {
+              "ref": "d2",
+              "titre": "L'audit du banc d'interface n'a jamais été fait",
+              "detail": "<code>ui_test._press()</code> n'appuie sur rien pour les contrôles qui utilisent la méthode virtuelle plutôt que le signal. D'autres assertions passent peut-être à vide. <strong>Deux cas viennent d'être trouvés par hasard</strong>, ce qui rend l'audit moins théorique qu'hier.",
+              "statut": "todo",
+              "journal": [
+                {
+                  "quand": "24/08",
+                  "qui": "Claude",
+                  "texte": "Les deux trouvés aujourd'hui étaient dans le même fichier et personne ne les voyait : le banc se déclarait vert."
+                }
+              ],
+              "priorite": "basse",
+              "theme": "Bancs"
+            },
+            {
+              "ref": "d3",
+              "titre": "Quatre zones défilantes jamais auditées",
+              "detail": "Préparation, codex, boutique, showcase. C'est le même conflit que celui qui empêchait la carte de défiler, et il peut s'y cacher dès qu'un enfant cliquable est en <code>MOUSE_FILTER_STOP</code>.",
+              "statut": "todo",
+              "journal": [],
+              "priorite": "basse",
+              "theme": "Bancs"
             }
-          ],
-          "priorite": "moyenne"
+          ]
         },
         {
-          "ref": "A2",
-          "titre": "La ligne nette au bord droit de l'intro",
-          "detail": "Deux vignettes posées en absolu, larges de 393 en dur. Mesuré en réintroduisant la régression : 85,34 pt de bande nue sur le web, 101,71 sur écran court. Zéro après correction.",
-          "statut": "ok",
-          "journal": [
+          "id": "valide",
+          "titre": "Déjà validé par toi",
+          "chapo": "Replié. Rouvre une ligne si elle se remet à casser.",
+          "items": [
             {
-              "quand": "24/08",
-              "qui": "Toi",
-              "texte": "Validé."
-            }
-          ],
-          "priorite": "moyenne"
-        },
-        {
-          "ref": "B1",
-          "titre": "Le rythme des transitions",
-          "detail": "",
-          "statut": "ok",
-          "journal": [
+              "ref": "A1",
+              "titre": "La carte suit le doigt",
+              "detail": "Mesuré : 100 points de doigt déplacent la carte de 100. Deux bugs, pas un — le cachet partait à l'appui, et le geste n'atteignait jamais la zone défilante.",
+              "statut": "ok",
+              "journal": [
+                {
+                  "quand": "24/08",
+                  "qui": "Toi",
+                  "texte": "Validé."
+                }
+              ],
+              "priorite": "moyenne",
+              "theme": "Tactile"
+            },
             {
-              "quand": "24/08",
-              "qui": "Toi",
-              "texte": "Validé."
-            }
-          ],
-          "priorite": "moyenne"
-        },
-        {
-          "ref": "B2",
-          "titre": "Le zoom des bâtiments et le fondu au noir",
-          "detail": "",
-          "statut": "ok",
-          "journal": [
+              "ref": "A2",
+              "titre": "La ligne nette au bord droit de l'intro",
+              "detail": "Deux vignettes posées en absolu, larges de 393 en dur. Mesuré en réintroduisant la régression : 85,34 pt de bande nue sur le web, 101,71 sur écran court. Zéro après correction.",
+              "statut": "ok",
+              "journal": [
+                {
+                  "quand": "24/08",
+                  "qui": "Toi",
+                  "texte": "Validé."
+                }
+              ],
+              "priorite": "moyenne",
+              "theme": "Format"
+            },
             {
-              "quand": "24/08",
-              "qui": "Toi",
-              "texte": "Validé."
-            }
-          ],
-          "priorite": "moyenne"
-        },
-        {
-          "ref": "B3",
-          "titre": "Le clignotement des écrans de résultat",
-          "detail": "Ils naissaient à pleine opacité puis étaient remis à zéro par l'animation différée. Ils naissent invisibles.",
-          "statut": "ok",
-          "journal": [
+              "ref": "B1",
+              "titre": "Le rythme des transitions",
+              "detail": "",
+              "statut": "ok",
+              "journal": [
+                {
+                  "quand": "24/08",
+                  "qui": "Toi",
+                  "texte": "Validé."
+                }
+              ],
+              "priorite": "moyenne",
+              "theme": "Animations"
+            },
             {
-              "quand": "24/08",
-              "qui": "Toi",
-              "texte": "Validé."
-            }
-          ],
-          "priorite": "moyenne"
-        },
-        {
-          "ref": "B4",
-          "titre": "Le château",
-          "detail": "",
-          "statut": "ok",
-          "journal": [
+              "ref": "B2",
+              "titre": "Le zoom des bâtiments et le fondu au noir",
+              "detail": "",
+              "statut": "ok",
+              "journal": [
+                {
+                  "quand": "24/08",
+                  "qui": "Toi",
+                  "texte": "Validé."
+                }
+              ],
+              "priorite": "moyenne",
+              "theme": "Animations"
+            },
             {
-              "quand": "24/08",
-              "qui": "Toi",
-              "texte": "Validé."
-            }
-          ],
-          "priorite": "moyenne"
-        },
-        {
-          "ref": "M1",
-          "titre": "Les missions",
-          "detail": "Fermé après vérification : ce n'était pas un bug.",
-          "statut": "ok",
-          "journal": [
+              "ref": "B3",
+              "titre": "Le clignotement des écrans de résultat",
+              "detail": "Ils naissaient à pleine opacité puis étaient remis à zéro par l'animation différée. Ils naissent invisibles.",
+              "statut": "ok",
+              "journal": [
+                {
+                  "quand": "24/08",
+                  "qui": "Toi",
+                  "texte": "Validé."
+                }
+              ],
+              "priorite": "moyenne",
+              "theme": "Animations"
+            },
             {
-              "quand": "23/08",
-              "qui": "Toi",
-              "texte": "Pas un bug."
+              "ref": "B4",
+              "titre": "Le château",
+              "detail": "",
+              "statut": "ok",
+              "journal": [
+                {
+                  "quand": "24/08",
+                  "qui": "Toi",
+                  "texte": "Validé."
+                }
+              ],
+              "priorite": "moyenne",
+              "theme": "Village"
+            },
+            {
+              "ref": "M1",
+              "titre": "Les missions",
+              "detail": "Fermé après vérification : ce n'était pas un bug.",
+              "statut": "ok",
+              "journal": [
+                {
+                  "quand": "23/08",
+                  "qui": "Toi",
+                  "texte": "Pas un bug."
+                }
+              ],
+              "priorite": "moyenne",
+              "theme": "Interface"
             }
-          ],
-          "priorite": "moyenne"
+          ]
         }
       ]
     }

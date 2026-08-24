@@ -40,6 +40,17 @@ def _ecrire(chemin, contenu):
     io.open(chemin, "w", encoding="utf-8", newline="\n").write(contenu)
 
 
+def _journees(etat):
+    """Le carnet est fait de JOURNEES depuis le 24/08 - un onglet par seance.
+
+    Les carnets d'avant n'avaient qu'un seul niveau ; on les enveloppe plutot
+    que de les convertir, pour qu'un vieil etat reste lisible.
+    """
+    if "journees" in etat:
+        return etat["journees"]
+    return [{"nom": "Journée 1", "sections": etat.get("sections", [])}]
+
+
 def build():
     page = _lire(PAGE)
     if MARQUE not in page:
@@ -49,10 +60,12 @@ def build():
     # un `</script>` litteral y fermerait la balise qui le contient.
     texte = json.dumps(etat, ensure_ascii=False, indent=1).replace("<", "\\u003c")
     _ecrire(SORTIE, page.replace(MARQUE, texte))
-    ouvertes = sum(1 for sec in etat["sections"]
-                   for it in sec["items"] if it["statut"] != "ok")
-    print("build/carnet.html ecrit - %d fiches, %d ouvertes" % (
-        sum(len(sec["items"]) for sec in etat["sections"]), ouvertes))
+    for j in _journees(etat):
+        ouvertes = sum(1 for sec in j["sections"]
+                       for it in sec["items"] if it["statut"] != "ok")
+        print("  %-32s %2d fiches, %2d ouvertes" % (
+            j.get("nom", "?"), sum(len(sec["items"]) for sec in j["sections"]), ouvertes))
+    print("build/carnet.html ecrit")
     print("A publier avec l'outil Artifact, en passant l'URL du carnet existant")
     print("(sinon un SECOND carnet est cree et le joueur coche le mauvais).")
 
@@ -70,8 +83,9 @@ def recupere(chemin):
         raise SystemExit("aucun etat trouve dans %s" % chemin)
     etat = json.loads(m.group(1).replace("\\u003c", "<"))
     _ecrire(ETAT, json.dumps(etat, ensure_ascii=False, indent=2) + "\n")
-    coches = [(it["ref"], it["statut"]) for sec in etat["sections"]
-              for it in sec["items"] if it["statut"] in ("ok", "ko")]
+    coches = [(it["ref"], it["statut"]) for j in _journees(etat)
+              for sec in j["sections"] for it in sec["items"]
+              if it["statut"] in ("ok", "ko")]
     print("etat.json remis a jour - %d fiches tranchees :" % len(coches))
     for ref, statut in coches:
         print("  %-4s %s" % (ref, statut))

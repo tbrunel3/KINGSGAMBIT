@@ -31,22 +31,48 @@ body{
 .page{max-width:780px;margin:0 auto}
 
 /* ---- en-tete ---- */
-header.tete{padding:56px 0 8px}
+header.tete{padding:48px 0 8px}
 .eyebrow{
   font-size:11px;letter-spacing:.18em;text-transform:uppercase;
   color:var(--or);font-weight:600;margin:0 0 12px
 }
 h1{
-  font-family:var(--serif);font-weight:700;font-size:clamp(30px,6vw,44px);
-  line-height:1.1;margin:0 0 14px;text-wrap:balance;
+  font-family:var(--serif);font-weight:700;font-size:clamp(28px,5.6vw,42px);
+  line-height:1.1;margin:0 0 12px;text-wrap:balance;
   color:var(--or-pale);
 }
-.chapo{color:var(--attenue);margin:0;max-width:62ch}
+.chapo{color:var(--attenue);margin:0;max-width:62ch;font-size:14.5px}
 .chapo strong{color:var(--texte);font-weight:600}
+
+/* ---- onglets : une journee de travail par onglet ---- */
+.onglets{
+  margin:26px 0 0;display:flex;gap:4px;align-items:flex-end;
+  overflow-x:auto;border-bottom:1px solid var(--filet);padding-bottom:0
+}
+.onglets button{
+  font-family:var(--serif);font-size:13.5px;font-weight:600;white-space:nowrap;
+  background:transparent;border:1px solid transparent;border-bottom:0;
+  border-radius:8px 8px 0 0;padding:9px 15px;color:var(--attenue);
+  margin-bottom:-1px
+}
+.onglets button:hover{color:var(--texte);background:rgba(28,36,57,.6)}
+.onglets button.actif{
+  color:var(--or-pale);background:var(--plaque);
+  border-color:var(--filet);border-bottom:1px solid var(--plaque)
+}
+.onglets button.neuve{color:var(--or);font-weight:600}
+.nouvelle-journee{
+  margin:14px 0 0;display:flex;gap:8px;flex-wrap:wrap;align-items:center
+}
+.nouvelle-journee input{
+  flex:1 1 240px;font-family:var(--corps);font-size:14px;color:var(--texte);
+  background:#0e1424;border:1px solid var(--filet);border-radius:7px;padding:9px 12px
+}
+.nouvelle-journee input:focus{outline:none;border-color:var(--or)}
 
 /* ---- bandeau du build ---- */
 .build{
-  margin:28px 0 0;padding:16px 18px;border-radius:10px;
+  margin:22px 0 0;padding:16px 18px;border-radius:10px;
   border:1px solid var(--filet);background:var(--plaque);
   display:flex;gap:14px;align-items:flex-start;
 }
@@ -76,8 +102,35 @@ h1{
   padding:1px 6px;border-radius:5px
 }
 
+/* ---- AU TRAVAIL ---- */
+.travail{margin:18px 0 0}
+.travail .lancer{
+  width:100%;font-family:var(--serif);font-size:clamp(16px,4.2vw,20px);
+  font-weight:700;letter-spacing:.08em;padding:16px 18px;
+  color:#0b0e18;background:linear-gradient(180deg,var(--or),#e0ab00);
+  border:1px solid #ffe580;border-radius:10px
+}
+.travail .lancer:hover{background:linear-gradient(180deg,var(--or-pale),var(--or));border-color:#fff}
+.travail .lancer[disabled]{opacity:.4}
+.marche{
+  margin:0;padding:16px 18px;border-radius:10px;
+  border:2px solid var(--or);background:linear-gradient(180deg,rgba(255,209,26,.12),rgba(20,26,43,.9))
+}
+.marche h2{
+  font-family:var(--serif);font-size:clamp(15px,4vw,19px);font-weight:700;
+  letter-spacing:.06em;color:var(--or);margin:0 0 4px
+}
+.marche .quand-lance{color:var(--attenue);font-size:13px;margin:0 0 12px}
+.marche ol{margin:0;padding:0 0 0 22px;display:grid;gap:5px}
+.marche li{font-size:14px}
+.marche li .ref-mini{
+  font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:12px;
+  color:var(--or-pale);margin-right:7px
+}
+.marche .bas{margin:14px 0 0;display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+
 /* ---- sections ---- */
-section{margin:52px 0 0}
+section{margin:46px 0 0}
 .section-tete{display:flex;align-items:baseline;gap:12px;flex-wrap:wrap;margin:0 0 6px}
 h2.titre{font-family:var(--serif);font-size:20px;font-weight:600;margin:0;color:var(--texte)}
 .compte{
@@ -86,6 +139,14 @@ h2.titre{font-family:var(--serif);font-size:20px;font-weight:600;margin:0;color:
 }
 .section-chapo{color:var(--attenue);font-size:14px;margin:0 0 20px;max-width:64ch}
 
+/* ---- reglage du classement ---- */
+.classement{
+  margin:22px 0 0;display:flex;gap:8px;align-items:center;flex-wrap:wrap;
+  font-size:12.5px;color:var(--attenue)
+}
+.classement button{font-size:12.5px;padding:6px 12px;font-weight:500}
+.classement button.actif{border-color:var(--or);color:var(--or);font-weight:600}
+
 /* ---- fiches ---- */
 .fiche{
   border:1px solid var(--filet);border-left:3px solid var(--filet);
@@ -93,10 +154,8 @@ h2.titre{font-family:var(--serif);font-size:20px;font-weight:600;margin:0;color:
 }
 .fiche.attente{border-left-color:var(--or)}
 .fiche.ko{border-left-color:var(--danger)}
-.fiche.encours{border-left-color:var(--bleu)}
-.fiche.ok{
-  border-left-color:var(--succes);background:transparent;padding:12px 16px;
-}
+.fiche.encours{border-left-color:var(--bleu);box-shadow:0 0 0 1px rgba(38,140,217,.35)}
+.fiche.ok{border-left-color:var(--succes);background:transparent;padding:12px 16px}
 .fiche-tete{display:flex;gap:12px;align-items:baseline;flex-wrap:wrap}
 .ref{
   font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:12px;
@@ -115,7 +174,7 @@ h3{font-family:var(--serif);font-size:16px;font-weight:600;margin:0;flex:1 1 220
 .pastille.ko{color:var(--danger);border-color:#7a3535;background:rgba(198,95,95,.1)}
 .prio{
   font-size:10.5px;letter-spacing:.1em;text-transform:uppercase;font-weight:600;
-  white-space:nowrap;display:inline-flex;align-items:center;gap:5px
+  white-space:nowrap;display:inline-flex;align-items:center;gap:5px;margin:8px 0 0
 }
 .prio::before{content:"";width:7px;height:7px;border-radius:2px;transform:rotate(45deg)}
 .prio.haute{color:var(--danger)}
@@ -130,12 +189,25 @@ h3{font-family:var(--serif);font-size:16px;font-weight:600;margin:0;flex:1 1 220
   border-radius:7px;padding:7px 10px
 }
 .choix-prio:focus{outline:2px solid var(--or);outline-offset:2px}
-.detail{margin:10px 0 0;color:var(--attenue);font-size:14px}
+.theme{
+  font-size:10.5px;letter-spacing:.09em;text-transform:uppercase;font-weight:600;
+  color:var(--bleu);border:1px solid #1d5c8e;background:rgba(38,140,217,.08);
+  padding:3px 9px;border-radius:99px;white-space:nowrap
+}
+.filtres{
+  margin:14px 0 0;display:flex;gap:6px;align-items:center;flex-wrap:wrap;
+  font-size:12.5px;color:var(--attenue)
+}
+.filtres button{font-size:12px;padding:5px 11px;font-weight:500;border-radius:99px}
+.filtres button.actif{border-color:var(--bleu);color:var(--bleu);font-weight:600}
+.detail{margin:10px 0 0;color:var(--attenue);font-size:14px;white-space:pre-line;overflow-wrap:anywhere}
 .detail strong{color:var(--texte);font-weight:600}
 .detail code{
   font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:12.5px;
   color:var(--or-pale);background:#0e1424;padding:1px 5px;border-radius:4px
 }
+.bouger{display:inline-flex;gap:4px;margin-left:auto}
+.bouger button{padding:4px 10px;font-size:13px;line-height:1;font-weight:700}
 
 /* ---- journal ---- */
 .journal{margin:16px 0 0;padding:0;list-style:none;border-top:1px solid var(--filet)}
@@ -151,7 +223,7 @@ h3{font-family:var(--serif);font-size:16px;font-weight:600;margin:0;flex:1 1 220
 .qui{font-weight:600}
 .qui.toi{color:var(--or)}
 .qui.claude{color:var(--bleu)}
-.journal p{margin:0;color:var(--texte)}
+.journal p{margin:0;color:var(--texte);overflow-wrap:anywhere}
 
 /* ---- verdict ---- */
 .verdict{margin:16px 0 0;display:flex;gap:8px;flex-wrap:wrap;align-items:center}
@@ -162,8 +234,8 @@ button{
 }
 button:hover{border-color:var(--attenue)}
 button:focus-visible{outline:2px solid var(--or);outline-offset:2px}
-button.marche{border-color:#2f6b45;color:var(--succes)}
-button.marche:hover{background:rgba(95,179,122,.12)}
+button.marche-btn{border-color:#2f6b45;color:var(--succes)}
+button.marche-btn:hover{background:rgba(95,179,122,.12)}
 button.casse{border-color:#7a3535;color:var(--danger)}
 button.casse:hover{background:rgba(198,95,95,.12)}
 button.rouvrir{font-weight:500;color:var(--attenue);padding:5px 10px;font-size:12px}
@@ -178,12 +250,7 @@ button[disabled]{opacity:.45;cursor:progress}
 .etat{font-size:12.5px;color:var(--attenue)}
 .etat.erreur{color:var(--danger)}
 
-/* ---- pied ---- */
-footer{
-  margin:64px 0 0;padding:22px 0 0;border-top:1px solid var(--filet);
-  color:var(--attenue);font-size:13px
-}
-footer p{margin:0 0 8px;max-width:64ch}
+/* ---- ajouter une tache ---- */
 .ajout{
   margin:20px 0 0;border:1px dashed var(--filet);border-radius:10px;
   background:rgba(20,26,43,.5)
@@ -210,6 +277,13 @@ footer p{margin:0 0 8px;max-width:64ch}
 .ajout .duo{display:grid;grid-template-columns:1fr 1fr;gap:10px}
 .ajout .bas{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
 @media (max-width:520px){.ajout .duo{grid-template-columns:1fr}}
+
+/* ---- pied ---- */
+footer{
+  margin:60px 0 0;padding:22px 0 0;border-top:1px solid var(--filet);
+  color:var(--attenue);font-size:13px
+}
+footer p{margin:0 0 8px;max-width:64ch}
 .export{margin:18px 0 0;display:flex;gap:10px;align-items:center;flex-wrap:wrap}
 .export .etat{flex:1 1 100%}
 .export textarea{
@@ -226,6 +300,7 @@ footer p{margin:0 0 8px;max-width:64ch}
 @media (max-width:520px){
   .journal li{grid-template-columns:1fr;gap:2px}
   .quand{padding-top:0}
+  .bouger{margin-left:0}
 }
 </style>
 
@@ -238,13 +313,38 @@ __ETAT__
 <script id="app">
 (function(){
   var LABEL = {attente:"à vérifier", todo:"à faire", encours:"en cours", ok:"validé", ko:"toujours cassé"};
+  var RANG = {haute:0, moyenne:1, basse:2};
+
   var state = JSON.parse(document.getElementById("state").textContent);
   var root = document.getElementById("root");
   var lectureSeule = false;
-  // Le repli du formulaire survit au re-rendu ; il ne survit pas a la
-  // republication, qui recharge la vue - c'est voulu, la tache est posee.
   var ajoutOuvert = false;
   var ajoutSection = 1;
+  var nommeOuvert = false;
+  // Le filtre par theme ne vit QUE dans la vue : deux personnes qui lisent le
+  // carnet ne filtrent pas pareil, et un filtre enregistre cacherait des fiches
+  // a l'autre sans qu'il sache pourquoi.
+  var filtreTheme = null;
+
+  // ⚠️ LE CARNET EST FAIT DE JOURNEES. Une journee = un onglet = une seance de
+  // travail : son propre build, ses propres fiches, son propre ordre de marche.
+  // Les anciens carnets n'avaient qu'un seul niveau ; on les enveloppe plutot
+  // que de les convertir a la main, pour qu'une page publiee avant ce jour
+  // continue de s'ouvrir.
+  if (!state.journees){
+    state = {
+      active: 0,
+      journees: [{
+        nom: state.nom || "Journée 1",
+        maj: state.maj || "",
+        tri: "priorite",
+        marche: null,
+        build: state.build || {enLigne:false, commit:"", quoi:"", note:""},
+        sections: state.sections || []
+      }]
+    };
+  }
+  function J(){ return state.journees[state.active]; }
 
   function esc(s){
     return String(s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;");
@@ -253,33 +353,81 @@ __ETAT__
     var d = new Date();
     return String(d.getDate()).padStart(2,"0") + "/" + String(d.getMonth()+1).padStart(2,"0");
   }
-  // La priorite classe, elle ne renumerote pas : le tri est STABLE, donc
-  // l'ordre convenu avec le joueur survit entre deux fiches de meme priorite.
-  var RANG = {haute:0, moyenne:1, basse:2};
+  function maintenant(){
+    var d = new Date();
+    return aujourdhui() + " à " + String(d.getHours()).padStart(2,"0") + "h" + String(d.getMinutes()).padStart(2,"0");
+  }
   function prio(it){ return it.priorite || "moyenne"; }
+  function theme(it){ return it.theme || ""; }
+  function themes(){
+    var vus = [];
+    J().sections.forEach(function(sec){
+      sec.items.forEach(function(it){
+        if (theme(it) && vus.indexOf(theme(it)) < 0) vus.push(theme(it));
+      });
+    });
+    return vus.sort();
+  }
+  function retenue(it){ return !filtreTheme || theme(it) === filtreTheme; }
+  function ouverte(it){ return it.statut !== "ok"; }
+
+  // Le classement a DEUX modes, parce que le joueur a demande les deux : la
+  // priorite, et la main. En mode priorite le tri est STABLE, donc l'ordre du
+  // fichier - le sien - departage les egalites ; en mode manuel il n'y a plus
+  // que le sien.
   function classees(items){
-    return items.map(function(it, i){ return [it, i]; }).sort(function(a, b){
+    var paires = items.map(function(it, i){ return [it, i]; });
+    if (J().tri === "manuel"){
+      return paires.sort(function(a, b){
+        var pa = a[0].statut === "ok" ? 1 : 0, pb = b[0].statut === "ok" ? 1 : 0;
+        return pa !== pb ? pa - pb : a[1] - b[1];
+      });
+    }
+    return paires.sort(function(a, b){
       var pa = (a[0].statut === "ok" ? 9 : RANG[prio(a[0])]);
       var pb = (b[0].statut === "ok" ? 9 : RANG[prio(b[0])]);
       return pa !== pb ? pa - pb : a[1] - b[1];
     });
   }
 
-  function compte(items){
-    var reste = items.filter(function(i){ return i.statut !== "ok"; }).length;
-    return reste === 0 ? items.length + " / " + items.length : reste + " ouvert" + (reste>1?"s":"") + " sur " + items.length;
+  // L'ORDRE DE MARCHE : ce que "AU TRAVAIL !" fige. Toutes les fiches ouvertes
+  // de la journee, dans l'ordre ou elles s'affichent.
+  function ordreDeMarche(){
+    var liste = [];
+    J().sections.forEach(function(sec){
+      classees(sec.items).forEach(function(paire){
+        // Le filtre commande AUSSI l'ordre de marche : filtrer sur un theme et
+        // lancer les travaux, c'est demander cette pile-la et rien d'autre.
+        if (ouverte(paire[0]) && retenue(paire[0])) liste.push(paire[0]);
+      });
+    });
+    return liste;
   }
 
-  function ficheHtml(it, si, ii){
+  function compte(items){
+    var reste = items.filter(ouverte).length;
+    return reste === 0 ? items.length + " / " + items.length
+                       : reste + " ouvert" + (reste>1?"s":"") + " sur " + items.length;
+  }
+
+  function ficheHtml(it, si, ii, rang){
     var repli = it.statut === "ok";
     var h = '<article class="fiche ' + it.statut + '" data-s="' + si + '" data-i="' + ii + '">';
     h += '<div class="fiche-tete"><span class="ref">' + esc(it.ref) + '</span><h3>' + esc(it.titre) + '</h3>';
-    h += '<span class="pastille ' + it.statut + '">' + LABEL[it.statut] + '</span></div>';
-    if (!repli) h += '<p class="prio ' + prio(it) + '">priorité ' + prio(it) + '</p>';
+    if (theme(it)) h += '<button class="theme" data-filtre="' + esc(theme(it)) + '">' + esc(theme(it)) + '</button>';
+    h += '<span class="pastille ' + it.statut + '">' + LABEL[it.statut] + '</span>';
+    if (!repli && J().tri === "manuel"){
+      h += '<span class="bouger"><button data-bouge="-1" title="Monter">↑</button>';
+      h += '<button data-bouge="1" title="Descendre">↓</button></span>';
+    }
+    h += '</div>';
     if (repli){
       h += '<div class="verdict"><button class="rouvrir" data-act="rouvrir">Ça s’est remis à casser</button></div></article>';
       return h;
     }
+    h += '<p class="prio ' + prio(it) + '">priorité ' + prio(it);
+    if (rang) h += ' · ' + rang + '<sup>' + (rang === 1 ? 'er' : 'e') + '</sup> dans l’ordre de marche';
+    h += '</p>';
     if (it.detail) h += '<p class="detail">' + it.detail + '</p>';
     if (it.journal && it.journal.length){
       h += '<ul class="journal">';
@@ -291,7 +439,7 @@ __ETAT__
     }
     h += '<div class="verdict">';
     h += '<textarea class="note" rows="1" placeholder="Ce que tu vois, si tu veux le noter…"></textarea>';
-    h += '<button class="marche" data-act="ok">Ça marche</button>';
+    h += '<button class="marche-btn" data-act="ok">Ça marche</button>';
     h += '<button class="casse" data-act="ko">Toujours cassé</button>';
     h += '<button data-act="note">Juste une note</button>';
     h += '<select class="choix-prio" data-prio>';
@@ -304,62 +452,128 @@ __ETAT__
   }
 
   function render(){
+    var j = J();
     var h = '<div class="page"><header class="tete">';
     h += '<p class="eyebrow">King’s Gambit · suivi de test</p>';
     h += '<h1>Carnet des travaux</h1>';
-    h += '<p class="chapo">Une ligne par défaut que tu as signalé. <strong>C’est toi qui coches</strong> — je ne ferme rien à ta place. Chaque ligne garde son journal, daté et signé, pour que la discussion reste sous le défaut dont elle parle.</p>';
+    h += '<p class="chapo">Une ligne par défaut que tu as signalé. <strong>C’est toi qui coches</strong> — je ne ferme rien à ta place. Chaque journée a son onglet, ses fiches et son propre ordre de marche.</p>';
     h += '</header>';
 
-    var b = state.build;
+    // Les onglets.
+    h += '<nav class="onglets">';
+    state.journees.forEach(function(sj, i){
+      var reste = 0;
+      sj.sections.forEach(function(sec){ reste += sec.items.filter(ouverte).length; });
+      h += '<button data-journee="' + i + '"' + (i === state.active ? ' class="actif"' : '') + '>'
+         + esc(sj.nom) + ' <span class="compte">' + reste + '</span></button>';
+    });
+    h += '<button class="neuve" data-nouvelle="1">+ Nouvelle journée</button></nav>';
+    if (nommeOuvert){
+      h += '<form class="nouvelle-journee" data-nommer="1">';
+      h += '<input name="nom" required placeholder="Le nom de la journée — « 25/08, le glisser-déposer »">';
+      h += '<button type="submit">Créer</button>';
+      h += '<button type="button" data-annuler="1">Annuler</button></form>';
+    }
+
+    var b = j.build || {};
     // ⚠️ LE BANDEAU EST UNE CONSIGNE DU JOUEUR, pas une decoration : "ne mets
     // pas a jour avant le commit que je peux tester" et "une notif genre ecran
-    // tout vert avec ecrit COMMIT ET TEST POSSIBLE". Il a teste une version
-    // d'avant parce que rien ne le lui disait assez fort.
+    // tout vert avec ecrit COMMIT ET TEST POSSIBLE".
     h += '<div class="build' + (b.enLigne ? ' en-ligne' : ' hors-ligne') + '"><span class="voyant"></span><div>';
     h += '<h2>' + (b.enLigne ? 'COMMIT ET TEST POSSIBLE — en ligne depuis ' + esc(b.enLigne)
                              : 'Pas encore en ligne — ne teste pas tout de suite') + '</h2>';
-    h += '<p>Dernier commit <code>' + esc(b.commit) + '</code> — ' + esc(b.quoi) + '. ' + esc(b.note) + '</p>';
+    h += '<p>' + (b.commit ? 'Dernier commit <code>' + esc(b.commit) + '</code> — ' : '')
+       + esc(b.quoi || "") + (b.quoi ? '. ' : '') + esc(b.note || "") + '</p>';
     h += '</div></div>';
 
     if (lectureSeule){
       h += '<div class="lecture-seule">Cette vue est en lecture seule : tes coches ne seront pas enregistrées. Ouvre le carnet depuis ton propre compte pour y répondre.</div>';
     }
 
-    // AJOUTER UNE TACHE. Demande du joueur : le carnet ne servait qu'a repondre,
-    // pas a signaler. Un defaut qu'on ne peut pas ecrire la ou vivent les
-    // autres finit dans un message, puis nulle part.
+    // AU TRAVAIL : le bouton fige l'ordre dans l'etat de la page, et l'etat de
+    // la page est ce que je relis. C'est donc une vraie commande, pas un
+    // affichage - mais elle ne me reveille pas : dis-le moi une fois lancee.
+    var liste = ordreDeMarche();
+    h += '<div class="travail">';
+    if (j.marche){
+      h += '<div class="marche"><h2>AU TRAVAIL — l’ordre est donné</h2>';
+      h += '<p class="quand-lance">Lancé le ' + esc(j.marche.lance) + '. Dis-moi « au travail » en discussion : je relis le carnet et je pars sur cette liste, dans cet ordre.</p>';
+      h += '<ol>';
+      j.marche.ordre.forEach(function(o){
+        h += '<li><span class="ref-mini">' + esc(o.ref) + '</span>' + esc(o.titre) + '</li>';
+      });
+      h += '</ol><div class="bas"><button data-copier="1">Copier l’ordre</button>';
+      h += '<button data-arreter="1">Annuler l’ordre</button>';
+      h += '<span class="etat" id="etat-marche"></span></div></div>';
+    } else {
+      h += '<button class="lancer" data-travail="1"' + (liste.length ? '' : ' disabled') + '>';
+      h += liste.length ? 'AU TRAVAIL ! — ' + liste.length + ' chantier' + (liste.length>1?'s':'') + ' dans l’ordre'
+                        : 'AU TRAVAIL ! — rien d’ouvert';
+      h += '</button><span class="etat" id="etat-marche"></span>';
+    }
+    h += '</div>';
+
+    // Le reglage du classement, demande apres la priorite : "il faut pouvoir
+    // remanier les projets a la main aussi".
+    h += '<div class="classement"><span>Classer :</span>';
+    h += '<button data-tri="priorite"' + (j.tri !== "manuel" ? ' class="actif"' : '') + '>par priorité</button>';
+    h += '<button data-tri="manuel"' + (j.tri === "manuel" ? ' class="actif"' : '') + '>à la main</button>';
+    h += (j.tri === "manuel" ? '<span>— les flèches ↑↓ déplacent les fiches.</span>'
+                             : '<span>— à priorité égale, ton ordre est gardé.</span>');
+    h += '</div>';
+
+    // Les themes : "avec des themes par exemple, pour trier les projets".
+    var lesThemes = themes();
+    if (lesThemes.length){
+      h += '<div class="filtres"><span>Thème :</span>';
+      h += '<button data-filtre=""' + (filtreTheme ? '' : ' class="actif"') + '>tous</button>';
+      lesThemes.forEach(function(t){
+        h += '<button data-filtre="' + esc(t) + '"' + (filtreTheme === t ? ' class="actif"' : '') + '>' + esc(t) + '</button>';
+      });
+      h += '</div>';
+    }
+
+    // Ajouter une tache.
     h += '<details class="ajout"' + (ajoutOuvert ? ' open' : '') + '>';
     h += '<summary>+ Ajouter une tâche</summary><form data-ajout="1">';
     h += '<label>Ce que tu veux voir corrigé ou fait<input name="titre" required placeholder="Le bouton COMBATTEZ ne suit pas la maquette"></label>';
     h += '<label>Le détail, si tu en as<textarea name="detail" placeholder="Où tu l’as vu, ce que tu attendais…"></textarea></label>';
     h += '<div class="duo"><label>Dans quelle partie<select name="section">';
-    state.sections.forEach(function(sec, i){
-      var choisi = (i === ajoutSection) ? ' selected' : '';
-      h += '<option value="' + i + '"' + choisi + '>' + esc(sec.titre) + '</option>';
+    j.sections.forEach(function(sec, i){
+      h += '<option value="' + i + '"' + (i === ajoutSection ? ' selected' : '') + '>' + esc(sec.titre) + '</option>';
     });
-    h += '</select></label><label>Priorité<select name="priorite">';
-    h += '<option value="haute">haute</option>';
-    h += '<option value="moyenne" selected>moyenne</option>';
-    h += '<option value="basse">basse</option>';
+    h += '</select></label><label>Thème<input name="theme" list="les-themes" placeholder="Interface, Combat, Intro…" value="' + esc(filtreTheme || "") + '"></label></div>';
+    h += '<datalist id="les-themes">';
+    themes().forEach(function(t){ h += '<option value="' + esc(t) + '"></option>'; });
+    h += '</datalist>';
+    h += '<div class="duo"><label>Priorité<select name="priorite">';
+    h += '<option value="haute">haute</option><option value="moyenne" selected>moyenne</option><option value="basse">basse</option>';
     h += '</select></label></div>';
     h += '<label>État<select name="statut">';
-    h += '<option value="todo">à faire</option>';
-    h += '<option value="ko">toujours cassé</option>';
-    h += '<option value="attente">à vérifier</option>';
+    h += '<option value="todo">à faire</option><option value="ko">toujours cassé</option><option value="attente">à vérifier</option>';
     h += '</select></label>';
     h += '<div class="bas"><button type="submit">Ajouter au carnet</button>';
     h += '<span class="etat" id="etat-ajout"></span></div></form></details>';
 
-    state.sections.forEach(function(sec, si){
+    // Le rang dans l'ordre de marche, pour retrouver une fiche depuis la liste.
+    var rangs = {};
+    liste.forEach(function(it, i){ rangs[it.ref] = i + 1; });
+
+    j.sections.forEach(function(sec, si){
+      var visibles = sec.items.filter(retenue);
+      if (!visibles.length) return;
       h += '<section><div class="section-tete"><h2 class="titre">' + esc(sec.titre) + '</h2>';
-      h += '<span class="compte">' + compte(sec.items) + '</span></div>';
+      h += '<span class="compte">' + compte(visibles) + '</span></div>';
       if (sec.chapo) h += '<p class="section-chapo">' + esc(sec.chapo) + '</p>';
-      classees(sec.items).forEach(function(paire){ h += ficheHtml(paire[0], si, paire[1]); });
+      classees(sec.items).forEach(function(paire){
+        if (!retenue(paire[0])) return;
+        h += ficheHtml(paire[0], si, paire[1], rangs[paire[0].ref]);
+      });
       h += '</section>';
     });
 
-    h += '<footer><p>Reconstruit le 24/08/2026 : le carnet précédent a été supprimé, et la liste détaillée des vingt-deux retours ne vivait que là. Ce qui suit est ce que la passation en a gardé.</p>';
-    h += '<p>Dernière mise à jour : ' + esc(state.maj) + '.</p>';
+    h += '<footer><p>La source de ce carnet vit dans le dépôt, sous <code>carnet/</code> : la page, l’état, et de quoi le rebâtir. Ce qui est tranché ici redescend là-bas.</p>';
+    h += '<p>Dernière mise à jour : ' + esc(j.maj || "—") + '.</p>';
     h += '<div class="export"><button data-export="1">Exporter l’état pour le dépôt</button>';
     h += '<span class="etat" id="etat-export"></span></div></footer></div>';
     root.innerHTML = h;
@@ -381,6 +595,7 @@ __ETAT__
   }
 
   function enregistrer(etat){
+    etat = etat || document.createElement("span");
     etat.textContent = "Enregistrement…";
     etat.classList.remove("erreur");
     root.querySelectorAll("button").forEach(function(b){ b.disabled = true; });
@@ -407,62 +622,170 @@ __ETAT__
     });
   }
 
-  // L'EXPORT, ET POURQUOI IL EXISTE.
-  //
-  // Le depot porte la source du carnet ; cette page-ci porte les verdicts du
-  // joueur, et elle se republie sous SON identite quand il coche. Une session
-  // qui republierait sans relire ecraserait ses reponses - et rien ne permet
-  // de les relire : le navigateur d'agent n'est pas connecte a son compte, il
-  // ne voit qu'une page introuvable. C'est donc la page qui rend son etat.
-  root.addEventListener("toggle", function(ev){
-    if (ev.target.classList && ev.target.classList.contains("ajout")) ajoutOuvert = ev.target.open;
-  }, true);
+  function etatDe(fiche){
+    return root.querySelector('.fiche[data-s="' + fiche.dataset.s + '"][data-i="' + fiche.dataset.i + '"] .etat');
+  }
+  function touche(){ J().maj = aujourdhui() + "/2026"; }
 
+  // ---- créer une journée, en changer ----
   root.addEventListener("submit", function(ev){
+    var nommer = ev.target.closest("form[data-nommer]");
+    if (nommer){
+      ev.preventDefault();
+      var nom = nommer.nom.value.trim();
+      if (!nom){ nommer.nom.focus(); return; }
+      state.journees.push({
+        nom: nom,
+        maj: aujourdhui() + "/2026",
+        tri: "priorite",
+        marche: null,
+        build: {enLigne:false, commit:"", quoi:"", note:"Rien n’est encore en ligne pour cette journée."},
+        sections: [
+          {id:"verdict", titre:"En attente de ton verdict",
+           chapo:"Fait et mesuré. À toi de dire, une fois le build en ligne.", items:[]},
+          {id:"chantier", titre:"Le chantier",
+           chapo:"Ce qui reste à faire, dans l’ordre que tu fixes.", items:[]},
+          {id:"valide", titre:"Déjà validé par toi",
+           chapo:"Replié. Rouvre une ligne si elle se remet à casser.", items:[]}
+        ]
+      });
+      state.active = state.journees.length - 1;
+      nommeOuvert = false;
+      ajoutSection = 1;
+      render();
+      enregistrer(document.getElementById("etat-marche"));
+      return;
+    }
+
     var form = ev.target.closest("form[data-ajout]");
     if (!form) return;
     ev.preventDefault();
     var titre = form.titre.value.trim();
     if (!titre){ form.titre.focus(); return; }
     var si = +form.section.value;
-    var items = state.sections[si].items;
-    // Une reference lisible et unique : n1, n2... (n comme nouveau).
+    // Une reference lisible et unique dans la journee : n1, n2... (n = nouveau).
     var n = 1;
-    state.sections.forEach(function(sec){
+    J().sections.forEach(function(sec){
       sec.items.forEach(function(it){
         var m = /^n(\d+)$/.exec(it.ref);
         if (m && +m[1] >= n) n = +m[1] + 1;
       });
     });
-    items.push({
+    J().sections[si].items.push({
       ref: "n" + n,
       titre: titre,
       detail: esc(form.detail.value.trim()),
       statut: form.statut.value,
       priorite: form.priorite.value,
+      theme: form.theme.value.trim(),
       journal: [{quand: aujourdhui(), qui: "Toi", texte: "Ajoutée au carnet."}]
     });
-    state.maj = aujourdhui() + "/2026";
+    touche();
     ajoutOuvert = false;
     ajoutSection = si;
     render();
-    enregistrer(document.getElementById("etat-ajout") || document.createElement("span"));
+    enregistrer(document.getElementById("etat-ajout"));
   });
 
+  // ---- la priorité d'une fiche ----
   root.addEventListener("change", function(ev){
     var sel = ev.target.closest("select[data-prio]");
     if (!sel) return;
     var fiche = sel.closest(".fiche");
-    var it = state.sections[+fiche.dataset.s].items[+fiche.dataset.i];
+    var it = J().sections[+fiche.dataset.s].items[+fiche.dataset.i];
     if (prio(it) === sel.value) return;
     it.priorite = sel.value;
-    state.maj = aujourdhui() + "/2026";
+    touche();
     render();
-    enregistrer(root.querySelector('.fiche[data-s="' + fiche.dataset.s + '"][data-i="' + fiche.dataset.i + '"] .etat')
-      || document.createElement("span"));
+    enregistrer(etatDe(fiche));
   });
 
+  root.addEventListener("toggle", function(ev){
+    if (ev.target.classList && ev.target.classList.contains("ajout")) ajoutOuvert = ev.target.open;
+  }, true);
+
   root.addEventListener("click", function(ev){
+    // Changer d'onglet : pas de publication, c'est un geste de lecture.
+    var ong = ev.target.closest("button[data-journee]");
+    if (ong){ state.active = +ong.dataset.journee; ajoutSection = 0; render(); return; }
+    if (ev.target.closest("button[data-nouvelle]")){ nommeOuvert = true; render(); return; }
+    if (ev.target.closest("button[data-annuler]")){ nommeOuvert = false; render(); return; }
+
+    // Filtrer par theme : geste de lecture, rien n'est publie.
+    var filt = ev.target.closest("button[data-filtre]");
+    if (filt){
+      var t = filt.dataset.filtre;
+      filtreTheme = (!t || filtreTheme === t) ? null : t;
+      render();
+      return;
+    }
+
+    // Le classement.
+    var tri = ev.target.closest("button[data-tri]");
+    if (tri){
+      if (J().tri === tri.dataset.tri) return;
+      J().tri = tri.dataset.tri;
+      touche();
+      render();
+      enregistrer(document.getElementById("etat-marche"));
+      return;
+    }
+
+    // Remanier à la main.
+    var bouge = ev.target.closest("button[data-bouge]");
+    if (bouge){
+      var f = bouge.closest(".fiche");
+      var items = J().sections[+f.dataset.s].items;
+      var de = +f.dataset.i, vers = de + (+bouge.dataset.bouge);
+      if (vers < 0 || vers >= items.length) return;
+      var tmp = items[de]; items[de] = items[vers]; items[vers] = tmp;
+      touche();
+      render();
+      enregistrer(document.getElementById("etat-marche"));
+      return;
+    }
+
+    // AU TRAVAIL.
+    if (ev.target.closest("button[data-travail]")){
+      var liste = ordreDeMarche();
+      if (!liste.length) return;
+      J().marche = {
+        lance: maintenant(),
+        ordre: liste.map(function(it){ return {ref: it.ref, titre: it.titre}; })
+      };
+      if (liste[0].statut === "todo" || liste[0].statut === "attente"){
+        liste[0].statut = "encours";
+        liste[0].journal.push({quand: aujourdhui(), qui: "Toi", texte: "AU TRAVAIL : première de l’ordre de marche."});
+      }
+      touche();
+      render();
+      enregistrer(document.getElementById("etat-marche"));
+      return;
+    }
+    if (ev.target.closest("button[data-arreter]")){
+      J().marche = null;
+      touche();
+      render();
+      enregistrer(document.getElementById("etat-marche"));
+      return;
+    }
+    var cop = ev.target.closest("button[data-copier]");
+    if (cop){
+      var texteOrdre = "AU TRAVAIL — " + J().nom + "\n" + J().marche.ordre.map(function(o, i){
+        return (i+1) + ". " + o.ref + " — " + o.titre;
+      }).join("\n");
+      var dit0 = document.getElementById("etat-marche");
+      if (navigator.clipboard && navigator.clipboard.writeText){
+        navigator.clipboard.writeText(texteOrdre).then(function(){
+          dit0.textContent = "Copié — colle-le en discussion.";
+        }).catch(function(){ dit0.textContent = "Copie refusée par le navigateur."; });
+      } else {
+        dit0.textContent = "Copie indisponible ici.";
+      }
+      return;
+    }
+
+    // L'export de l'etat vers le depot.
     var expo = ev.target.closest("button[data-export]");
     if (expo){
       var json = JSON.stringify(state, null, 2) + "\n";
@@ -474,7 +797,6 @@ __ETAT__
       }).then(function(){
         dit.textContent = "Enregistré. Le déposer dans carnet/etat.json.";
       }).catch(function(){
-        // Repli : la page montre le texte, a copier a la main.
         var zone = document.createElement("textarea");
         zone.value = json;
         zone.readOnly = true;
@@ -486,10 +808,11 @@ __ETAT__
       return;
     }
 
+    // Les verdicts.
     var bouton = ev.target.closest("button[data-act]");
     if (!bouton) return;
     var fiche = bouton.closest(".fiche");
-    var it = state.sections[+fiche.dataset.s].items[+fiche.dataset.i];
+    var it = J().sections[+fiche.dataset.s].items[+fiche.dataset.i];
     var act = bouton.dataset.act;
     var champ = fiche.querySelector(".note");
     var texte = champ ? champ.value.trim() : "";
@@ -504,13 +827,12 @@ __ETAT__
       it.statut = "ko";
       it.journal.push({quand: aujourdhui(), qui: "Toi", texte: texte || "Toujours cassé."});
     } else if (act === "note"){
-      if (!texte) { champ.focus(); return; }
+      if (!texte){ champ.focus(); return; }
       it.journal.push({quand: aujourdhui(), qui: "Toi", texte: texte});
     }
-    state.maj = aujourdhui() + "/2026";
+    touche();
     render();
-    var maj = root.querySelector('.fiche[data-s="' + fiche.dataset.s + '"][data-i="' + fiche.dataset.i + '"] .etat');
-    enregistrer(maj || document.createElement("span"));
+    enregistrer(etatDe(fiche));
   });
 
   render();
