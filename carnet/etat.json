@@ -5,25 +5,7 @@
       "nom": "24/08 — Bâtiments & carnet",
       "maj": "24/08/2026",
       "tri": "priorite",
-      "marche": {
-        "nom": "reprise, demandee en discussion",
-        "lance": "24/08 à 18h05",
-        "groupe": "tout",
-        "ordre": [
-          {
-            "ref": "n1",
-            "titre": "l'intro — bloquée : Figma non autorisé"
-          },
-          {
-            "ref": "n2",
-            "titre": "Le bouton COMBATTEZ — bloqué : Figma non autorisé"
-          },
-          {
-            "ref": "6",
-            "titre": "Les popups d'accompagnement — bloqués : Figma non autorisé"
-          }
-        ]
-      },
+      "marche": null,
       "build": {
         "enLigne": "24/08, 18h10",
         "commit": "3182084",
@@ -347,6 +329,11 @@
                   "quand": "24/08",
                   "qui": "Claude",
                   "texte": "⚠️ Les quatre maquettes (499:2, 500:2, 500:55, 500:108) ne sont pas lisibles sans Figma."
+                },
+                {
+                  "quand": "24/08",
+                  "qui": "Claude",
+                  "texte": "Figma autorisé mais en siège VIEW : le serveur refuse la lecture des designs. Bloquée tant que le compte n'a pas les droits d'édition."
                 }
               ],
               "priorite": "basse",
@@ -355,7 +342,7 @@
             {
               "ref": "n1",
               "titre": "l'intro",
-              "detail": "je vois seulement la deuxieme image de l'ecran figma, il faut que au depart le bouton soit cet ecran : https://www.figma.com/design/rqEdH4O2R21TuUFv7OUlF7/KING-sGAMBIT?node-id=410-35&amp;t=ttUec04lRmnYwEXC-4\napres le click ça passe à ça :https://www.figma.com/design/rqEdH4O2R21TuUFv7OUlF7/KING-sGAMBIT?node-id=525-2&amp;t=ttUec04lRmnYwEXC-4 . L'ecran a ete retravaillé par le graphiste tu peux t'y fier aussi a l'animation avec le zoom",
+              "detail": "« je vois seulement la deuxième image de l'écran figma ». <strong>Diagnostic fait, et la cause n'est pas dans le code</strong> : l'écran a bien ses deux temps (l'approche, puis le dialogue au premier contact, avec le zoom). Mais <code>assets/intro/</code> ne contient <strong>qu'une seule illustration</strong>, <code>king_throne_background.png</code>, et les deux frames Figma en demandent deux. Le jeu affiche donc la même image aux deux temps — d'où l'impression de n'en voir qu'une. <strong>Il me faut l'illustration de <code>410:35</code> et celle de <code>525:2</code></strong>, et le reste est déjà en place.",
               "statut": "encours",
               "priorite": "moyenne",
               "journal": [
@@ -373,6 +360,11 @@
                   "quand": "24/08",
                   "qui": "Claude",
                   "texte": "⚠️ Bloquée ici : la connexion Figma demande une autorisation que cette session ne peut pas faire. Je ne peux pas lire l'écran 525:2 que le graphiste a retravaillé."
+                },
+                {
+                  "quand": "24/08",
+                  "qui": "Claude",
+                  "texte": "Figma est autorisé, mais le compte connecté (timotheebrunelstake@gmail.com) n'a qu'un siège VIEW : le serveur refuse toute lecture, « you don't have edit access to this file » — sur les deux fichiers, donc c'est le compte, pas le fichier. Il faut soit reconnecter avec le compte au siège Full, soit donner les droits d'édition à celui-là. Sinon : exporte les deux illustrations en PNG dans assets/intro/ et je fais le reste sans Figma."
                 }
               ],
               "theme": "Intro"
@@ -394,6 +386,11 @@
                   "quand": "24/08",
                   "qui": "Claude",
                   "texte": "⚠️ Bloquée pour la même raison : elle ne demande qu'un relevé Figma, et Figma n'est pas autorisé dans cette session."
+                },
+                {
+                  "quand": "24/08",
+                  "qui": "Claude",
+                  "texte": "Figma autorisé mais en siège VIEW : le serveur refuse la lecture des designs. Bloquée tant que le compte n'a pas les droits d'édition."
                 }
               ]
             }
@@ -682,5 +679,5 @@
       }
     }
   ],
-  "serie": 74
+  "serie": 76
 }
