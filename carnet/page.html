@@ -51,6 +51,18 @@ h1{
   display:flex;gap:14px;align-items:flex-start;
 }
 .build.hors-ligne{border-color:#7a5a18;background:linear-gradient(180deg,#1d1a12,#141a2b)}
+.build.en-ligne{
+  border-color:var(--succes);border-width:2px;
+  background:linear-gradient(180deg,rgba(95,179,122,.18),rgba(20,26,43,.9))
+}
+.build.en-ligne h2{
+  font-size:clamp(17px,4.4vw,23px);font-weight:700;letter-spacing:.06em;
+  color:var(--succes);line-height:1.15;margin:0 0 6px
+}
+.build.en-ligne .voyant{
+  width:12px;height:12px;margin-top:7px;
+  box-shadow:0 0 0 5px rgba(95,179,122,.22)
+}
 .build .voyant{
   width:9px;height:9px;border-radius:50%;margin-top:8px;flex:none;
   background:var(--succes);box-shadow:0 0 0 4px rgba(95,179,122,.15)
@@ -101,6 +113,23 @@ h3{font-family:var(--serif);font-size:16px;font-weight:600;margin:0;flex:1 1 220
 .pastille.encours{color:var(--bleu);border-color:#1d5c8e;background:rgba(38,140,217,.08)}
 .pastille.ok{color:var(--succes);border-color:#2f6b45;background:rgba(95,179,122,.08)}
 .pastille.ko{color:var(--danger);border-color:#7a3535;background:rgba(198,95,95,.1)}
+.prio{
+  font-size:10.5px;letter-spacing:.1em;text-transform:uppercase;font-weight:600;
+  white-space:nowrap;display:inline-flex;align-items:center;gap:5px
+}
+.prio::before{content:"";width:7px;height:7px;border-radius:2px;transform:rotate(45deg)}
+.prio.haute{color:var(--danger)}
+.prio.haute::before{background:var(--danger)}
+.prio.moyenne{color:var(--attenue)}
+.prio.moyenne::before{background:var(--attenue)}
+.prio.basse{color:#5d6b83}
+.prio.basse::before{background:#5d6b83}
+.choix-prio{
+  font-family:var(--corps);font-size:12.5px;color:var(--attenue);
+  background:var(--plaque-haute);border:1px solid var(--filet);
+  border-radius:7px;padding:7px 10px
+}
+.choix-prio:focus{outline:2px solid var(--or);outline-offset:2px}
 .detail{margin:10px 0 0;color:var(--attenue);font-size:14px}
 .detail strong{color:var(--texte);font-weight:600}
 .detail code{
@@ -155,6 +184,32 @@ footer{
   color:var(--attenue);font-size:13px
 }
 footer p{margin:0 0 8px;max-width:64ch}
+.ajout{
+  margin:20px 0 0;border:1px dashed var(--filet);border-radius:10px;
+  background:rgba(20,26,43,.5)
+}
+.ajout summary{
+  cursor:pointer;padding:13px 18px;font-weight:600;font-size:13.5px;
+  color:var(--or);list-style:none
+}
+.ajout summary::-webkit-details-marker{display:none}
+.ajout summary:hover{color:var(--or-pale)}
+.ajout[open]{border-style:solid;background:var(--plaque)}
+.ajout form{padding:0 18px 18px;display:grid;gap:10px}
+.ajout label{
+  font-size:11px;letter-spacing:.1em;text-transform:uppercase;
+  color:var(--attenue);font-weight:600;display:grid;gap:5px
+}
+.ajout input, .ajout textarea, .ajout select{
+  font-family:var(--corps);font-size:14px;font-weight:400;letter-spacing:normal;
+  text-transform:none;color:var(--texte);background:#0e1424;
+  border:1px solid var(--filet);border-radius:7px;padding:9px 12px;width:100%
+}
+.ajout textarea{min-height:64px;resize:vertical;line-height:1.5}
+.ajout input:focus, .ajout textarea:focus, .ajout select:focus{outline:none;border-color:var(--or)}
+.ajout .duo{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.ajout .bas{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+@media (max-width:520px){.ajout .duo{grid-template-columns:1fr}}
 .export{margin:18px 0 0;display:flex;gap:10px;align-items:center;flex-wrap:wrap}
 .export .etat{flex:1 1 100%}
 .export textarea{
@@ -186,6 +241,10 @@ __ETAT__
   var state = JSON.parse(document.getElementById("state").textContent);
   var root = document.getElementById("root");
   var lectureSeule = false;
+  // Le repli du formulaire survit au re-rendu ; il ne survit pas a la
+  // republication, qui recharge la vue - c'est voulu, la tache est posee.
+  var ajoutOuvert = false;
+  var ajoutSection = 1;
 
   function esc(s){
     return String(s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;");
@@ -194,6 +253,18 @@ __ETAT__
     var d = new Date();
     return String(d.getDate()).padStart(2,"0") + "/" + String(d.getMonth()+1).padStart(2,"0");
   }
+  // La priorite classe, elle ne renumerote pas : le tri est STABLE, donc
+  // l'ordre convenu avec le joueur survit entre deux fiches de meme priorite.
+  var RANG = {haute:0, moyenne:1, basse:2};
+  function prio(it){ return it.priorite || "moyenne"; }
+  function classees(items){
+    return items.map(function(it, i){ return [it, i]; }).sort(function(a, b){
+      var pa = (a[0].statut === "ok" ? 9 : RANG[prio(a[0])]);
+      var pb = (b[0].statut === "ok" ? 9 : RANG[prio(b[0])]);
+      return pa !== pb ? pa - pb : a[1] - b[1];
+    });
+  }
+
   function compte(items){
     var reste = items.filter(function(i){ return i.statut !== "ok"; }).length;
     return reste === 0 ? items.length + " / " + items.length : reste + " ouvert" + (reste>1?"s":"") + " sur " + items.length;
@@ -204,6 +275,7 @@ __ETAT__
     var h = '<article class="fiche ' + it.statut + '" data-s="' + si + '" data-i="' + ii + '">';
     h += '<div class="fiche-tete"><span class="ref">' + esc(it.ref) + '</span><h3>' + esc(it.titre) + '</h3>';
     h += '<span class="pastille ' + it.statut + '">' + LABEL[it.statut] + '</span></div>';
+    if (!repli) h += '<p class="prio ' + prio(it) + '">priorité ' + prio(it) + '</p>';
     if (repli){
       h += '<div class="verdict"><button class="rouvrir" data-act="rouvrir">Ça s’est remis à casser</button></div></article>';
       return h;
@@ -222,6 +294,11 @@ __ETAT__
     h += '<button class="marche" data-act="ok">Ça marche</button>';
     h += '<button class="casse" data-act="ko">Toujours cassé</button>';
     h += '<button data-act="note">Juste une note</button>';
+    h += '<select class="choix-prio" data-prio>';
+    ["haute","moyenne","basse"].forEach(function(v){
+      h += '<option value="' + v + '"' + (prio(it) === v ? ' selected' : '') + '>priorité ' + v + '</option>';
+    });
+    h += '</select>';
     h += '<span class="etat"></span></div></article>';
     return h;
   }
@@ -234,8 +311,13 @@ __ETAT__
     h += '</header>';
 
     var b = state.build;
-    h += '<div class="build' + (b.enLigne ? '' : ' hors-ligne') + '"><span class="voyant"></span><div>';
-    h += '<h2>' + (b.enLigne ? 'En ligne depuis le ' + esc(b.enLigne) : 'Pas encore en ligne') + '</h2>';
+    // ⚠️ LE BANDEAU EST UNE CONSIGNE DU JOUEUR, pas une decoration : "ne mets
+    // pas a jour avant le commit que je peux tester" et "une notif genre ecran
+    // tout vert avec ecrit COMMIT ET TEST POSSIBLE". Il a teste une version
+    // d'avant parce que rien ne le lui disait assez fort.
+    h += '<div class="build' + (b.enLigne ? ' en-ligne' : ' hors-ligne') + '"><span class="voyant"></span><div>';
+    h += '<h2>' + (b.enLigne ? 'COMMIT ET TEST POSSIBLE — en ligne depuis ' + esc(b.enLigne)
+                             : 'Pas encore en ligne — ne teste pas tout de suite') + '</h2>';
     h += '<p>Dernier commit <code>' + esc(b.commit) + '</code> — ' + esc(b.quoi) + '. ' + esc(b.note) + '</p>';
     h += '</div></div>';
 
@@ -243,11 +325,36 @@ __ETAT__
       h += '<div class="lecture-seule">Cette vue est en lecture seule : tes coches ne seront pas enregistrées. Ouvre le carnet depuis ton propre compte pour y répondre.</div>';
     }
 
+    // AJOUTER UNE TACHE. Demande du joueur : le carnet ne servait qu'a repondre,
+    // pas a signaler. Un defaut qu'on ne peut pas ecrire la ou vivent les
+    // autres finit dans un message, puis nulle part.
+    h += '<details class="ajout"' + (ajoutOuvert ? ' open' : '') + '>';
+    h += '<summary>+ Ajouter une tâche</summary><form data-ajout="1">';
+    h += '<label>Ce que tu veux voir corrigé ou fait<input name="titre" required placeholder="Le bouton COMBATTEZ ne suit pas la maquette"></label>';
+    h += '<label>Le détail, si tu en as<textarea name="detail" placeholder="Où tu l’as vu, ce que tu attendais…"></textarea></label>';
+    h += '<div class="duo"><label>Dans quelle partie<select name="section">';
+    state.sections.forEach(function(sec, i){
+      var choisi = (i === ajoutSection) ? ' selected' : '';
+      h += '<option value="' + i + '"' + choisi + '>' + esc(sec.titre) + '</option>';
+    });
+    h += '</select></label><label>Priorité<select name="priorite">';
+    h += '<option value="haute">haute</option>';
+    h += '<option value="moyenne" selected>moyenne</option>';
+    h += '<option value="basse">basse</option>';
+    h += '</select></label></div>';
+    h += '<label>État<select name="statut">';
+    h += '<option value="todo">à faire</option>';
+    h += '<option value="ko">toujours cassé</option>';
+    h += '<option value="attente">à vérifier</option>';
+    h += '</select></label>';
+    h += '<div class="bas"><button type="submit">Ajouter au carnet</button>';
+    h += '<span class="etat" id="etat-ajout"></span></div></form></details>';
+
     state.sections.forEach(function(sec, si){
       h += '<section><div class="section-tete"><h2 class="titre">' + esc(sec.titre) + '</h2>';
       h += '<span class="compte">' + compte(sec.items) + '</span></div>';
       if (sec.chapo) h += '<p class="section-chapo">' + esc(sec.chapo) + '</p>';
-      sec.items.forEach(function(it, ii){ h += ficheHtml(it, si, ii); });
+      classees(sec.items).forEach(function(paire){ h += ficheHtml(paire[0], si, paire[1]); });
       h += '</section>';
     });
 
@@ -307,6 +414,54 @@ __ETAT__
   // qui republierait sans relire ecraserait ses reponses - et rien ne permet
   // de les relire : le navigateur d'agent n'est pas connecte a son compte, il
   // ne voit qu'une page introuvable. C'est donc la page qui rend son etat.
+  root.addEventListener("toggle", function(ev){
+    if (ev.target.classList && ev.target.classList.contains("ajout")) ajoutOuvert = ev.target.open;
+  }, true);
+
+  root.addEventListener("submit", function(ev){
+    var form = ev.target.closest("form[data-ajout]");
+    if (!form) return;
+    ev.preventDefault();
+    var titre = form.titre.value.trim();
+    if (!titre){ form.titre.focus(); return; }
+    var si = +form.section.value;
+    var items = state.sections[si].items;
+    // Une reference lisible et unique : n1, n2... (n comme nouveau).
+    var n = 1;
+    state.sections.forEach(function(sec){
+      sec.items.forEach(function(it){
+        var m = /^n(\d+)$/.exec(it.ref);
+        if (m && +m[1] >= n) n = +m[1] + 1;
+      });
+    });
+    items.push({
+      ref: "n" + n,
+      titre: titre,
+      detail: esc(form.detail.value.trim()),
+      statut: form.statut.value,
+      priorite: form.priorite.value,
+      journal: [{quand: aujourdhui(), qui: "Toi", texte: "Ajoutée au carnet."}]
+    });
+    state.maj = aujourdhui() + "/2026";
+    ajoutOuvert = false;
+    ajoutSection = si;
+    render();
+    enregistrer(document.getElementById("etat-ajout") || document.createElement("span"));
+  });
+
+  root.addEventListener("change", function(ev){
+    var sel = ev.target.closest("select[data-prio]");
+    if (!sel) return;
+    var fiche = sel.closest(".fiche");
+    var it = state.sections[+fiche.dataset.s].items[+fiche.dataset.i];
+    if (prio(it) === sel.value) return;
+    it.priorite = sel.value;
+    state.maj = aujourdhui() + "/2026";
+    render();
+    enregistrer(root.querySelector('.fiche[data-s="' + fiche.dataset.s + '"][data-i="' + fiche.dataset.i + '"] .etat')
+      || document.createElement("span"));
+  });
+
   root.addEventListener("click", function(ev){
     var expo = ev.target.closest("button[data-export]");
     if (expo){

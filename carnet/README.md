@@ -91,9 +91,18 @@ Une fiche :
 - `detail` accepte du HTML (`<strong>`, `<code>`, `<em>`). Le reste est échappé.
 - `statut` : `attente` (à vérifier), `todo`, `encours`, `ok`, `ko`.
 - `qui` : `Claude` ou `Toi`. C'est ce qui colore la signature.
-- `build.enLigne` : `false` tant que le travail n'est **pas exporté sur
-  `gh-pages`**. Le bandeau devient alors « pas encore en ligne », et le joueur
-  ne teste pas une version qui ne contient pas le travail — piège déjà payé.
+- `priorite` : `haute`, `moyenne`, `basse`. Le tri est **stable** : deux fiches
+  de même priorité gardent l'ordre du fichier, donc l'ordre convenu avec le
+  joueur survit. Le joueur peut changer la priorité depuis la page.
+- `build.enLigne` : **la consigne la plus importante du carnet.** `false` tant
+  que le travail n'est pas exporté sur `gh-pages` — bandeau orange, « ne teste
+  pas tout de suite ». Une date la fait passer au **grand bandeau vert
+  « COMMIT ET TEST POSSIBLE »**, demandé mot pour mot par le joueur après avoir
+  testé une version d'avant.
+
+  ⚠️ **Règle qu'il a posée : ne pas mettre le carnet à jour avant que le build
+  correspondant soit en ligne.** Publier une ligne « fait » sur un build qu'il
+  ne peut pas encore lancer lui fait perdre un test — c'est arrivé le 24/08.
 
 ## Un carnet pour un autre chantier
 

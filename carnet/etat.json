@@ -1,10 +1,10 @@
 {
   "maj": "24/08/2026",
   "build": {
-    "enLigne": false,
-    "commit": "62b48d8",
-    "quoi": "Les casernes deviennent des écrans, avec leur propre décor",
-    "note": "Commité, bancs verts — mais PAS encore exporté sur gh-pages. Rien de ce qui suit n'est testable sur ton téléphone tant que je n'ai pas ré-exporté. Un travail qui n'est pas dans le build n'existe pas pour toi."
+    "enLigne": "24/08, 02h30",
+    "commit": "7dcf766",
+    "quoi": "les écrans de bâtiment, la garde d'abandon déplacée, le socle des transitions",
+    "note": "Exporté et poussé sur gh-pages. Vide le cache de ton navigateur ou recharge en forçant : le service worker de Godot sert volontiers l'ancienne version."
   },
   "sections": [
     {
@@ -16,7 +16,7 @@
           "ref": "1",
           "titre": "Les casernes sont des écrans, plus des popups",
           "detail": "« Zoom, fade in, fade out, ce n'est pas vraiment une pop up, c'est une transition vers un nouvel écran » — chaque caserne a désormais son écran plein et <strong>son propre décor</strong> (Figma 517:2). Le panneau lui-même n'a pas été réécrit : il tenait déjà les quatre états et lisait ses chiffres dans <code>Balance</code>. Englobe A3 et F1.",
-          "statut": "ko",
+          "statut": "attente",
           "journal": [
             {
               "quand": "24/08",
@@ -42,8 +42,29 @@
               "quand": "24/08",
               "qui": "Claude",
               "texte": "Tu as testé la version d'AVANT : le travail est commité mais pas ré-exporté sur gh-pages, et le bandeau en haut de ce carnet le dit. Ce que tu décris — un popup qui clignote — est exactement l'ancien comportement. Je ne rouvre donc rien sur cette base : la ligne repasse en attente le temps que j'exporte."
+            },
+            {
+              "quand": "24/08",
+              "qui": "Claude",
+              "texte": "C'est en ligne maintenant. Si tu revois un popup qui clignote, c'est un vrai défaut et je le prends — mais recharge en forçant d'abord, le service worker garde l'ancien build."
+            },
+            {
+              "quand": "24/08",
+              "qui": "Toi",
+              "texte": "alors ne met pas a jour avant le commit que je peux tester"
+            },
+            {
+              "quand": "24/08",
+              "qui": "Toi",
+              "texte": "tu me met une notif a droit genre ecran tout vert avec ecrit COMMIT ET TEST POSSIBLE"
+            },
+            {
+              "quand": "24/08",
+              "qui": "Claude",
+              "texte": "D'accord, et c'est fait : le bandeau du haut est vert et dit COMMIT ET TEST POSSIBLE, ou reste orange tant que le travail n'est pas exporté. Règle prise : je ne pousse plus une ligne dans le carnet avant que le build correspondant soit en ligne."
             }
-          ]
+          ],
+          "priorite": "haute"
         },
         {
           "ref": "2",
@@ -56,7 +77,8 @@
               "qui": "Claude",
               "texte": "Trouvé en rebranchant les casernes : le défaut n'était pas visible avant, aucun écran ne repassait par cette porte."
             }
-          ]
+          ],
+          "priorite": "moyenne"
         }
       ]
     },
@@ -76,7 +98,8 @@
               "qui": "Claude",
               "texte": "Prochain sur la liste après les écrans de bâtiment."
             }
-          ]
+          ],
+          "priorite": "haute"
         },
         {
           "ref": "D",
@@ -94,28 +117,32 @@
               "qui": "Claude",
               "texte": "Le socle existe : Balance.MOTION rassemble les vingt-deux durées qui vivaient dans huit fichiers, et MOTION.scale ralentit tout le jeu d'un seul bouton."
             }
-          ]
+          ],
+          "priorite": "moyenne"
         },
         {
           "ref": "E",
           "titre": "L'habillage : barre du haut, alignements, polices",
           "detail": "La barre du haut (or + gemmes), l'alignement Boutique / BATAILLE, les polices, et l'interface des missions — que tu as jugée <strong>« très modeste »</strong>.",
           "statut": "todo",
-          "journal": []
+          "journal": [],
+          "priorite": "moyenne"
         },
         {
           "ref": "5",
           "titre": "Les deux lettres du Roi, entre l'intro et le village",
           "detail": "Les écrans sont faits par le graphiste. Le reste est déjà spécifié dans <code>chantier_i_missives.md</code> : mesures des illustrations, quatre textes, déclencheurs. <strong>Une seule pièce manque au jeu : il n'a aucun compteur de défaite.</strong>",
           "statut": "todo",
-          "journal": []
+          "journal": [],
+          "priorite": "basse"
         },
         {
           "ref": "6",
           "titre": "Les popups d'accompagnement de Figma",
           "detail": "Quatre maquettes posées (pat, composition, aura de la Dame, temps réel), jamais intégrées telles quelles. Le code les affiche déjà une fois chacune — c'est leur habillage qui reste.",
           "statut": "todo",
-          "journal": []
+          "journal": [],
+          "priorite": "basse"
         }
       ]
     },
@@ -140,7 +167,8 @@
               "qui": "Claude",
               "texte": "Aucun banc ne joue un geste DANS le combat. Le cas [12] ne couvre que la carte de campagne."
             }
-          ]
+          ],
+          "priorite": "haute"
         }
       ]
     },
@@ -154,7 +182,8 @@
           "titre": "Améliorer le Château en pleine série augmente la charge",
           "detail": "La vraie fuite, et elle n'est pas bouchée : <code>deploy_capacity()</code> est relue à chaud. L'exploit que tu craignais, lui, n'existe pas — le roster est un instantané pris à l'ouverture.",
           "statut": "todo",
-          "journal": []
+          "journal": [],
+          "priorite": "basse"
         },
         {
           "ref": "d2",
@@ -167,14 +196,16 @@
               "qui": "Claude",
               "texte": "Les deux trouvés aujourd'hui étaient dans le même fichier et personne ne les voyait : le banc se déclarait vert."
             }
-          ]
+          ],
+          "priorite": "basse"
         },
         {
           "ref": "d3",
           "titre": "Quatre zones défilantes jamais auditées",
           "detail": "Préparation, codex, boutique, showcase. C'est le même conflit que celui qui empêchait la carte de défiler, et il peut s'y cacher dès qu'un enfant cliquable est en <code>MOUSE_FILTER_STOP</code>.",
           "statut": "todo",
-          "journal": []
+          "journal": [],
+          "priorite": "basse"
         }
       ]
     },
@@ -194,7 +225,8 @@
               "qui": "Toi",
               "texte": "Validé."
             }
-          ]
+          ],
+          "priorite": "moyenne"
         },
         {
           "ref": "A2",
@@ -207,7 +239,8 @@
               "qui": "Toi",
               "texte": "Validé."
             }
-          ]
+          ],
+          "priorite": "moyenne"
         },
         {
           "ref": "B1",
@@ -220,7 +253,8 @@
               "qui": "Toi",
               "texte": "Validé."
             }
-          ]
+          ],
+          "priorite": "moyenne"
         },
         {
           "ref": "B2",
@@ -233,7 +267,8 @@
               "qui": "Toi",
               "texte": "Validé."
             }
-          ]
+          ],
+          "priorite": "moyenne"
         },
         {
           "ref": "B3",
@@ -246,7 +281,8 @@
               "qui": "Toi",
               "texte": "Validé."
             }
-          ]
+          ],
+          "priorite": "moyenne"
         },
         {
           "ref": "B4",
@@ -259,7 +295,8 @@
               "qui": "Toi",
               "texte": "Validé."
             }
-          ]
+          ],
+          "priorite": "moyenne"
         },
         {
           "ref": "M1",
@@ -272,7 +309,8 @@
               "qui": "Toi",
               "texte": "Pas un bug."
             }
-          ]
+          ],
+          "priorite": "moyenne"
         }
       ]
     }
