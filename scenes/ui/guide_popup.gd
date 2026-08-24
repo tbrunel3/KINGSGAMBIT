@@ -107,7 +107,7 @@ func _build_stalemate() -> void:
 
 	body.add_child(_rule("C'est une ressource, pas un défaut",
 		"Acculé à ton tour, tu peux t'en servir : un camp qui n'a plus de coup "
-		+ "à jouer sauve la partie au lieu de la perdre."))
+		+ "à jouer sauve la partie au lieu de la perdre.", RULE_GREEN))
 
 	body.add_child(_rule("Le pat est fréquent ici",
 		"Sur un plateau étroit, les pions se bloquent nez à nez — et un pion ne "
@@ -115,7 +115,7 @@ func _build_stalemate() -> void:
 
 	body.add_child(_rule("Ta série n'est pas rompue",
 		"Un nul ne rapporte rien, mais il ne fait pas tomber la série : c'est un "
-		+ "tour d'usure payé pour rien, pas une déroute."))
+		+ "tour d'usure payé pour rien, pas une déroute.", RULE_RED))
 
 
 ## RESERVE OU ARMEE. C'est le malentendu que le joueur a eu lui-meme :
@@ -139,7 +139,7 @@ func _build_lineup() -> void:
 
 	body.add_child(_rule("La charge se dépense ici, une fois",
 		"Le placement ne fait plus que poser ce que tu viens de choisir. Ta "
-		+ "composition survit à la série et se réduit de tes pertes."))
+		+ "composition survit à la série et se réduit de tes pertes.", RULE_RED))
 
 
 ## L'AURA. Un vrai choix - deployer la Dame ou encaisser sa part - et il est
@@ -158,10 +158,11 @@ func _build_dame_aura() -> void:
 
 	body.add_child(_rule("Ou elle se bat",
 		"Déployée, c'est la pièce la plus puissante du plateau — et elle peut "
-		+ "tomber. Une Dame perdue ne revient pas."))
+		+ "tomber. Une Dame perdue ne revient pas.", RULE_RED))
 
 	body.add_child(_rule("Le choix se repose à chaque bataille",
-		"Rien n'est définitif : tu décides au placement, une bataille à la fois."))
+		"Rien n'est définitif : tu décides au placement, une bataille à la fois.",
+		RULE_GREEN))
 
 
 ## LE TEMPS REEL. Le plus mineur des quatre, mais un joueur qui croit devoir
@@ -177,7 +178,8 @@ func _build_realtime() -> void:
 	body.add_child(DividerScene.instantiate())
 
 	body.add_child(_rule("Tu peux fermer le jeu",
-		"Le compte à rebours ne s'arrête pas. Reviens quand il est terminé."))
+		"Le compte à rebours ne s'arrête pas. Reviens quand il est terminé.",
+		RULE_GREEN))
 
 	body.add_child(_rule("Ou l'abréger",
 		"Un coffre de la boutique donne du temps d'amélioration — le Légendaire "
@@ -206,11 +208,25 @@ func _paragraph(text: String) -> Label:
 	return label
 
 
-func _rule(title_text: String, body_text: String) -> VBoxContainer:
+## ⚠️ LES TROIS TITRES N'ONT PAS LA MEME COULEUR, ET C'EST LA MAQUETTE (fiche 6).
+##
+## Ils etaient tous en or. Les quatre frames du designer (499:2, 500:2, 500:55,
+## 500:108) leur donnent une teinte chacun, et ce n'est pas decoratif : elle dit
+## de quel genre est la regle. La rassurante est verte, le fait est or, et celle
+## qui parle de ce qu'on peut perdre est rouge. Trois lignes d'or les rendaient
+## interchangeables, alors qu'on ne les lit pas pour la meme raison.
+const RULE_GOLD := Color("ffd11a")
+const RULE_GREEN := Color("5fd08a")
+const RULE_RED := Color("ff7a5c")
+
+
+func _rule(title_text: String, body_text: String,
+		teinte: Color = RULE_GOLD) -> VBoxContainer:
 	var column := VBoxContainer.new()
 	column.add_theme_constant_override("separation", 3)
 
-	var title := UiTheme.gold_label(title_text, 13)
+	var title := UiTheme.make_label(title_text, 13, teinte)
+	title.add_theme_font_override("font", UiTheme.font_bold())
 	title.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	column.add_child(title)
 

@@ -422,8 +422,18 @@ func _build_top_bar() -> void:
 	# "Boutons grossis", demande du joueur : 34 -> 40. Et leur marge haute se
 	# calcule pour que leur CENTRE tombe sur la meme ligne que les pastilles.
 	var marge_bouton := _top_bar_center() - TOP_BAR_BUTTON * 0.5
+	# ⚠️ L'ENGRENAGE N'OUVRAIT RIEN - il portait litteralement `func(): pass`.
+	#
+	# Retour du joueur : « reglages n'affiche rien, pour l'instant sers-t'en
+	# pour le dev mode ». Il ouvre donc le panneau de developpement, qui
+	# n'etait joignable que par un appui long d'une seconde dans le coin haut
+	# gauche - un geste que rien n'annonce et que personne ne devine.
+	#
+	# Le geste long RESTE : il ne coute rien, et il sert quand la barre du haut
+	# n'est pas la (ecran de bataille, par exemple).
 	var settings: Control = CornerButton.floating(
-		"gear", func(): pass, CornerButton.Tone.NIGHT, TOP_BAR_BUTTON)
+		"gear", _on_dev_pressed, CornerButton.Tone.NIGHT, TOP_BAR_BUTTON)
+	settings.name = "BoutonReglages"
 	_ui.add_child(settings)
 	settings.row_top_right(0, Vector2(12, marge_bouton))
 

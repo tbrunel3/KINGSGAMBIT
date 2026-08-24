@@ -856,24 +856,37 @@ FORMATION", Color(1, 1, 1, 0.08), 10)
 			break
 
 
-## Le bouton COMBATTRE de la maquette n'est pas un bouton or ordinaire : il
-## est SERTI - un liseré d'or brun autour de l'or vif, un coin plus rond que
-## les autres boutons, et une ombre portee qui le decolle du panneau.
+## Le bouton COMBATTRE : un aplat d'or vif, pose sur le panneau du bas.
+##
+## ⚠️ IL ETAIT SERTI D'UN LISERE BRUN, ET LA MAQUETTE N'EN A PAS (fiche n2).
+## Releve sur `04_Bataille_Placement` (410:667) : le bouton y est un aplat
+## franc, sans bordure, du meme or que BATAILLE au village et que CONTINUER sur
+## la missive - #ffd700. Le lisere `#b8860b` et l'or `#ffd11a` venaient d'une
+## lecture d'une version precedente ; a l'ecran, ils l'assombrissaient et le
+## faisaient reculer derriere REINITIALISER, qui est pourtant l'action
+## secondaire.
+##
+## ⚠️ ET IL N'Y A RIEN DE PLUS A MESURER SUR CETTE FRAME. Elle est APLATIE dans
+## Figma : `get_metadata` ne lui rend aucun enfant, donc le bouton n'a pas de
+## node-id a interroger - ni taille, ni rayon, ni graisse. Ce qui est repris
+## l'est du rendu, pas de valeurs. Si le designer la degroupe un jour, il y aura
+## de quoi affiner.
+const FIGHT_GOLD := Color("ffd700")
+
+
 func _style_fight_button() -> void:
 	for state in ["normal", "hover", "pressed", "focus", "disabled"]:
-		var tint := UiTheme.GOLD
+		var tint := FIGHT_GOLD
 		match state:
 			"hover":
-				tint = UiTheme.GOLD.lightened(0.12)
+				tint = FIGHT_GOLD.lightened(0.12)
 			"pressed":
-				tint = UiTheme.GOLD.darkened(0.18)
+				tint = FIGHT_GOLD.darkened(0.18)
 			"disabled":
-				tint = UiTheme.GOLD.darkened(0.45)
+				tint = FIGHT_GOLD.darkened(0.45)
 		var box := StyleBoxFlat.new()
 		box.bg_color = tint
 		box.set_corner_radius_all(12)
-		box.border_color = Color("b8860b")
-		box.set_border_width_all(2)
 		box.content_margin_left = 14
 		box.content_margin_right = 14
 		box.content_margin_top = 10

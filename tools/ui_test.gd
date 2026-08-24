@@ -609,6 +609,17 @@ func _test_guide_popups() -> void:
 	# l'aura sont relus dans Balance a l'affichage. Un popup qui les
 	# transcrirait se mettrait a mentir des qu'on regle le jeu - c'est
 	# exactement ce qui avait produit le codex faux.
+	# ---- LES TITRES DE REGLE ONT CHACUN LEUR TEINTE (fiche 6) ----
+	#
+	#  ⚠️ Les quatre frames du designer (499:2, 500:2, 500:55, 500:108) donnent
+	#  une couleur a chaque titre, et ce n'est pas decoratif : elle dit de quel
+	#  genre est la regle. Trois lignes d'or les rendaient interchangeables.
+	var guide := FileAccess.get_file_as_string("res://scenes/ui/guide_popup.gd")
+	_check(guide.contains("RULE_GREEN") and guide.contains("RULE_RED"),
+		"les titres de regle ont trois teintes, pas une")
+	_check(not guide.contains("UiTheme.gold_label(title_text"),
+		"et plus un seul titre force en or")
+
 	var source := FileAccess.get_file_as_string("res://scenes/ui/guide_popup.gd")
 	_check(source.contains("Game.deploy_capacity()"),
 		"la charge est relue, pas transcrite")
@@ -1803,6 +1814,38 @@ func _test_press_feedback() -> void:
 	await _skip_animations()
 	_check(village._battle_button.has_meta("_press_feedback"),
 		"BATAILLE l'a maintenant")
+
+	# ---- COMBATTRE EST UN APLAT, PLUS UN BOUTON SERTI (fiche n2) ----
+	#
+	#  ⚠️ On verifie l'or ET l'absence de lisere : c'est le lisere brun qui le
+	#  faisait reculer derriere REINITIALISER, alors qu'il est l'action
+	#  principale. Meme or que BATAILLE au village et que CONTINUER sur la
+	#  missive - un seul or pour les actions principales, ou aucune ne se
+	#  distingue.
+	var source_combat := FileAccess.get_file_as_string("res://scenes/battle/battle.gd")
+	_check(source_combat.contains('FIGHT_GOLD := Color("ffd700")'),
+		"COMBATTRE prend l'or des actions principales")
+	_check(not source_combat.contains('Color("b8860b")'),
+		"et il n'a plus son lisere brun")
+
+	# ---- L'ENGRENAGE OUVRE ENFIN QUELQUE CHOSE (fiche E) ----
+	#
+	#  ⚠️ Il portait `func(): pass` - un bouton qui ne fait rien, dans la barre
+	#  du haut, depuis le debut. « Réglages n'affiche rien, pour l'instant
+	#  sers-t'en pour le dev mode ».
+	var reglages: Control = village.find_child("BoutonReglages", true, false)
+	_check(reglages != null, "le bouton de reglages existe dans la barre du haut")
+	if reglages != null:
+		_check(not is_instance_valid(village._popup),
+			"aucun panneau ouvert au depart")
+		_press(reglages)
+		await _frames(3)
+		await _skip_animations()
+		_check(is_instance_valid(village._popup),
+			"l'engrenage ouvre le panneau de developpement")
+		if is_instance_valid(village._popup):
+			village._popup.queue_free()
+			await _frames(2)
 	# Les ecrans qui montaient leur propre panneau cliquable : on verifie qu'ils
 	# passent tous par le meme composant plutot que de le reecrire.
 	var sans: Array[String] = []
