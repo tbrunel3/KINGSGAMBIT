@@ -5,51 +5,7 @@
       "nom": "24/08 — Bâtiments & carnet",
       "maj": "24/08/2026",
       "tri": "priorite",
-      "marche": {
-        "lance": "24/08 à 02h42",
-        "ordre": [
-          {
-            "ref": "C",
-            "titre": "Le glisser-déposer"
-          },
-          {
-            "ref": "D",
-            "titre": "Les animations qui manquent"
-          },
-          {
-            "ref": "E",
-            "titre": "L'habillage : barre du haut, alignements, polices"
-          },
-          {
-            "ref": "n1",
-            "titre": "l'intro"
-          },
-          {
-            "ref": "5",
-            "titre": "Les deux lettres du Roi, entre l'intro et le village"
-          },
-          {
-            "ref": "6",
-            "titre": "Les popups d'accompagnement de Figma"
-          },
-          {
-            "ref": "T",
-            "titre": "Le combat au doigt"
-          },
-          {
-            "ref": "d1",
-            "titre": "Améliorer le Château en pleine série augmente la charge"
-          },
-          {
-            "ref": "d2",
-            "titre": "L'audit du banc d'interface n'a jamais été fait"
-          },
-          {
-            "ref": "d3",
-            "titre": "Quatre zones défilantes jamais auditées"
-          }
-        ]
-      },
+      "marche": null,
       "build": {
         "enLigne": "24/08, 03h05",
         "commit": "940d5ea",
@@ -161,7 +117,7 @@
               "ref": "C",
               "titre": "Le glisser-déposer",
               "detail": "Caserne → déploiement, et inventaire → plateau. Plus le bouton <strong>COMBATTEZ</strong> qui ne suit pas la maquette. <strong>Le paquet le plus lourd.</strong>",
-              "statut": "attente",
+              "statut": "ok",
               "journal": [
                 {
                   "quand": "24/08",
@@ -197,6 +153,11 @@
                   "quand": "24/08",
                   "qui": "Claude",
                   "texte": "Le bouton COMBATTEZ sort de cette fiche : il ne demande pas du code mais la maquette, et le mélanger ici t'obligerait à valider deux choses d'un coup. Il a sa propre ligne."
+                },
+                {
+                  "quand": "24/08",
+                  "qui": "Toi",
+                  "texte": "Ça marche."
                 }
               ],
               "priorite": "haute",
