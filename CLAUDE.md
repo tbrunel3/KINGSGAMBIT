@@ -513,6 +513,18 @@ représentatif**, et confondre les deux a coûté cher :
 | `tools/screenshot.tscn` | à quoi ressemblent les écrans ? (PNG dans `tools/screenshots/`) — ⚠️ **NE MARCHE PAS EN `--headless`**, voir ci-dessous | ~1 min |
 | `tools/resolutions.tscn` | qu'est-ce qui déborde sur les autres téléphones ? — ⚠️ **NE MARCHE PAS EN `--headless` NON PLUS**, et c'est pire que `screenshot` : il ne sort pas, il **reste bloqué sans écrire une ligne** | court, avec fenêtre |
 
+✅ **`xvfb-run` débloque les deux outils de capture.** Trouvé le 24/08 : ils ne
+demandent pas un écran, ils demandent une **fenêtre** — un serveur X virtuel
+suffit, et ils tournent alors sans rien afficher.
+
+```bash
+xvfb-run -a --server-args="-screen 0 800x1200x24" godot --path . tools/screenshot.tscn
+```
+
+Mesuré : **35 captures écrites**, toutes en 393 × 852. C'est ce qui alimente la
+galerie d'écrans du carnet (`carnet.py`, `_vignettes`) — et donc ce qui permet
+au joueur d'ouvrir un travail *sur un écran* plutôt que de le décrire.
+
 ⚠️ **`screenshot.tscn` en `--headless` n'écrit AUCUN fichier, et ne le dit pas.**
 Il démarre, ne rend pas une ligne, sort avec le code 0, et les PNG de
 `tools/screenshots/` gardent leur date de la veille. Payé le 24/08 : j'ai lu

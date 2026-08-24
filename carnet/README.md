@@ -8,9 +8,57 @@ Depuis le 24/08/2026, c'est une **console en trois colonnes** — maquette Figma
 
 | Colonne | Ce qu'elle porte |
 |---|---|
-| **Le rail** | les registres (une journée de travail chacun) avec leur avancement, et la métrique moteur — le nettoyage |
-| **Le centre** | quatre onglets : *tâches actives*, *à vérifier*, *ordre de marche*, *nettoyage*. Les fiches en cartes |
-| **L'inspecteur** | la fiche choisie : ses métriques, ses deux gros boutons de verdict, son journal, le résumé des registres |
+| **Le rail** | les registres (une journée de travail chacun) avec leur avancement |
+| **Le centre** | la **galerie des écrans**, puis les fiches en cartes |
+| **L'inspecteur** | la fiche choisie : ses métriques, ses deux boutons de verdict, son journal, le résumé des registres |
+
+## ⚠️ Une seule vue depuis le 24/08 : ce qui COMMANDE est parti
+
+Décision du joueur : *« tout ce que tu ne peux pas te servir pour le projet sans
+que j'aie à te le dire doit disparaître »*.
+
+Rien dans cette page ne réveille l'agent. Mais tout ne se vaut pas devant ce
+silence, et c'est la distinction qui a servi de règle :
+
+- **un ORDRE ne vaut rien en retard.** Quand l'agent le lit, le moment est
+  passé — c'est ce qui a laissé le joueur deux heures à le regarder ne rien
+  faire, après avoir pressé METTRE EN LIGNE puis ARRÊTER.
+- **un COMMENTAIRE se lit très bien en retard.** C'est de l'information sur du
+  travail déjà fait, et elle est relue à chaque passage.
+
+Sont donc retirés : l'onglet *ordre de marche* et son bouton **AU TRAVAIL**, le
+frein **ARRÊTER**, l'onglet *nettoyage* et sa métrique moteur, l'onglet *à
+vérifier*, et **METTRE EN LIGNE** avec son bandeau de demande. Les verdicts,
+eux, restent — sur la fiche elle-même.
+
+Le travail se lance donc **en discussion**, et c'est le seul canal qui n'ait
+jamais échoué.
+
+## La galerie des écrans
+
+Les **vraies captures du jeu** — pas la maquette : ce qui tourne, donc ce sur
+quoi il y a quelque chose à dire. Rangées en dix chapitres, de l'intro aux
+composants.
+
+**Toucher un écran ouvre un travail rattaché à cet écran-là.** La fiche porte
+alors une clé `ecran`, et sa vignette s'affiche sur sa carte et dans
+l'inspecteur : plus besoin de deviner de quelle fenêtre on parle.
+
+Le pipeline est automatique :
+
+```bash
+xvfb-run -a --server-args="-screen 0 800x1200x24" godot --path . tools/screenshot.tscn
+python carnet/carnet.py build
+```
+
+`_vignettes()` réduit chaque capture à 96 px de large en WebP et l'embarque en
+data-URI. Mesuré : **35 écrans pour 102 Ko**, page complète à 218 Ko.
+
+⚠️ **La galerie vit dans son propre `<script id="vignettes">`, et
+`construireDoc()` la republie explicitement.** Sans cette ligne elle
+disparaîtrait à la première coche du joueur — c'est le piège déjà écrit plus
+bas (« tout ce qu'on pose ailleurs disparaît à la première republication »),
+et il coûtait ici les 102 Ko.
 
 **Deux adresses, et c'est voulu :**
 

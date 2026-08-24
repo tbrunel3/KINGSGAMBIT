@@ -368,6 +368,46 @@ button[disabled]{opacity:.45;cursor:progress}
    Le chapo de l'onglet disait « Livres et en ligne » pour tout le monde : il
    mentait des qu'une fiche etait livree sans reexport web, et le joueur allait
    tester sur son telephone une correction que le build ne portait pas. */
+/* ── LA GALERIE DES ECRANS ──────────────────────────────────────────────────
+   Demande du joueur : « des petites vignettes des ecrans, bien rangees,
+   chapitrees, pour bien comprendre sur quelle fenetre du projet on parle ».
+   Elle sert aux DEUX : lui montre ou il en est, et me dit sans ambiguite de
+   quel ecran il parle quand il ouvre un travail dessus. */
+.galerie{
+  background:var(--panneau);border:1px solid var(--filet);border-radius:6px;
+  padding:14px;margin-bottom:14px;
+}
+.galerie>.haut{
+  display:flex;align-items:center;justify-content:space-between;gap:10px;
+  font-family:var(--mono);font-size:11px;letter-spacing:.08em;color:var(--attenue);
+}
+.galerie .replier{font-family:var(--mono);font-size:11px;color:var(--cyan)}
+.galerie .chapitre{
+  margin:14px 0 8px;font-family:var(--mono);font-size:10.5px;letter-spacing:.08em;
+  color:var(--texte);display:flex;align-items:center;gap:8px;
+}
+.galerie .chapitre:after{content:"";flex:1;height:1px;background:var(--filet)}
+.galerie .rangee{display:flex;gap:10px;flex-wrap:wrap}
+.galerie figure{margin:0;width:96px;cursor:pointer;position:relative}
+.galerie img{
+  display:block;width:96px;border-radius:4px;border:1px solid var(--filet);
+  background:#000;
+}
+.galerie figure:hover img,.galerie figure:focus-visible img{border-color:var(--cyan)}
+.galerie figcaption{
+  font-family:var(--mono);font-size:9px;color:var(--attenue);margin-top:4px;
+  line-height:1.3;word-break:break-word;
+}
+.galerie .compte-fiches{
+  position:absolute;top:4px;right:4px;background:var(--cyan);color:var(--fond);
+  font-family:var(--mono);font-size:9px;font-weight:700;border-radius:8px;
+  padding:1px 5px;
+}
+/* La vignette portee par une fiche : plus petite, posee a cote du titre. */
+.ecran-fiche{
+  width:44px;border-radius:3px;border:1px solid var(--filet);display:block;flex:none;
+}
+
 .pastille-livr{
   font-family:var(--mono);font-size:9.5px;font-weight:700;letter-spacing:.06em;
   padding:2px 7px;border-radius:3px;border:1px solid;white-space:nowrap;
@@ -583,6 +623,13 @@ button[disabled]{opacity:.45;cursor:progress}
 <script id="state" type="application/json">
 __ETAT__
 </script>
+<!-- LA GALERIE DES ECRANS. Les vraies captures du jeu, reduites et embarquees
+     par carnet.py (cf. _vignettes). Hors de #sheet et de #app a dessein : elle
+     ne se republie PAS avec l'etat - `construireDoc()` la reprend telle quelle
+     depuis la page servie, et une coche du joueur ne peut donc pas la perdre. -->
+<script id="vignettes" type="application/json">
+__GALERIE__
+</script>
 <script id="app">
 (function(){
   "use strict";
@@ -595,6 +642,23 @@ __ETAT__
      échange : dix entrées dans un inspecteur de 440 px, et on ne voit plus la
      fiche. */
   var RECENT = 3;
+
+  /* LA GALERIE DES ECRANS. Les vraies captures du jeu, embarquees par
+     carnet.py. Si le bloc n'a pas ete rempli (build sans Pillow, ou sans
+     captures), on retombe sur une galerie vide plutot que de casser la page :
+     le carnet doit s'ouvrir meme quand son decor manque. */
+  var GALERIE = (function(){
+    var noeud = document.getElementById("vignettes");
+    if (!noeud) return [];
+    try {
+      var lu = JSON.parse(noeud.textContent);
+      return Array.isArray(lu) ? lu : [];
+    } catch(e){ return []; }
+  })();
+  /* L'ecran depuis lequel le joueur ouvre un travail. C'est TOUT le point de
+     la galerie : « pour que tu puisses toi aussi mieux cibler la demande ». */
+  var ecranVise = null;
+  var galerieOuverte = false;
 
   var state = JSON.parse(document.getElementById("state").textContent);
   var root = document.getElementById("root");
@@ -946,7 +1010,7 @@ __ETAT__
 
        D'ou la regle : ce qui COMMANDE est retire, ce qui INFORME reste. */
     h += '<div class="espace"><div class="colonne">';
-    h += reglagesHtml(j) + listeHtml(j) + ajoutHtml(j);
+    h += galerieHtml() + reglagesHtml(j) + listeHtml(j) + ajoutHtml(j);
 
     h += piedHtml(j) + '</div>' + inspecteurHtml(j) + '</div>';
     h += barreBasseHtml(j) + '</div>';
@@ -1052,6 +1116,12 @@ __ETAT__
       return h;
     }
     h += '<span class="tete"><span class="gauche">';
+    /* L'ECRAN, quand la fiche en porte un. Une vignette de 44 px dit en un coup
+       d'oeil de quelle fenetre on parle - c'est tout ce que la galerie cherche
+       a faire, et ca vaut sur la carte autant que dans le formulaire. */
+    var vue = it.ecran ? vignette(it.ecran) : null;
+    if (vue) h += '<img class="ecran-fiche" src="' + vue.image + '" alt="'
+      + esc(nomEcran(vue.cle)) + '">';
     h += '<span class="pastille-ronde" style="background:var(--'
       + (it.statut==="ko"?"rouge":it.statut==="attente"?"ambre":it.statut==="encours"?"cyan":"attenue")+')"></span>';
     h += '<span class="ref">'+esc(it.ref)+'</span>';
@@ -1066,9 +1136,10 @@ __ETAT__
   }
 
   function listeHtml(j){
-    var liste = ordreDeMarche();
+    /* Plus de rang : l'ordre de marche est parti avec les boutons qui
+       commandaient, et le numero qu'il posait sur chaque carte n'avait plus
+       rien a numeroter. */
     var rangs = {};
-    liste.forEach(function(it,i){ rangs[it.ref] = i+1; });
     var h = '', vide = true;
     paquets().forEach(function(p){
       if (!p.entrees.length) return;
@@ -1085,9 +1156,65 @@ __ETAT__
     return h;
   }
 
+  /* La vignette d'un ecran, par sa cle. `null` si la galerie ne l'a pas. */
+  function vignette(cle){
+    for (var i = 0; i < GALERIE.length; i++)
+      if (GALERIE[i].cle === cle) return GALERIE[i];
+    return null;
+  }
+
+  /* Un nom lisible tire du nom de fichier : "1e_popup_caserne" -> "popup
+     caserne". Les captures sont numerotees pour s'ordonner sur le disque, et ce
+     prefixe n'apprend rien au joueur. */
+  function nomEcran(cle){
+    return cle.replace(/^[0-9]+[a-z]?[0-9]*_/, "").replace(/_/g, " ");
+  }
+
+  /* Combien de travaux ouverts portent sur cet ecran. C'est ce chiffre qui fait
+     de la galerie un tableau de bord et pas une planche de contact. */
+  function fichesDeLEcran(cle){
+    return toutes().filter(function(e){
+      return e[0].ecran === cle && ouverte(e[0]);
+    }).length;
+  }
+
+  function galerieHtml(){
+    if (!GALERIE.length) return "";
+    var h = '<section class="galerie"><div class="haut"><span>LES ÉCRANS DU JEU — '
+      + GALERIE.length + '</span>'
+      + '<button class="replier" data-galerie="1">'
+      + (galerieOuverte ? "▾ REPLIER" : "▸ OUVRIR — touche un écran pour y ouvrir un travail")
+      + '</button></div>';
+    if (!galerieOuverte) return h + '</section>';
+
+    var chapitre = null;
+    GALERIE.forEach(function(v){
+      if (v.chapitre !== chapitre){
+        if (chapitre !== null) h += '</div>';
+        chapitre = v.chapitre;
+        h += '<div class="chapitre">' + esc(chapitre) + '</div><div class="rangee">';
+      }
+      var n = fichesDeLEcran(v.cle);
+      h += '<figure tabindex="0" data-ecran="' + esc(v.cle) + '">'
+        +  '<img src="' + v.image + '" alt="' + esc(nomEcran(v.cle)) + '" loading="lazy">'
+        +  (n ? '<span class="compte-fiches">' + n + '</span>' : '')
+        +  '<figcaption>' + esc(nomEcran(v.cle)) + '</figcaption></figure>';
+    });
+    return h + '</div></section>';
+  }
+
   function ajoutHtml(j){
     if (!ajoutOuvert) return "";
-    var h = '<form class="ajout" data-ajout="1"><h2>+ AJOUTER UN TRAVAIL</h2>';
+    var vue = ecranVise ? vignette(ecranVise) : null;
+    var h = '<form class="ajout" data-ajout="1"><h2>+ AJOUTER UN TRAVAIL'
+      + (vue ? ' — ' + esc(nomEcran(vue.cle)).toUpperCase() : '') + '</h2>';
+    if (vue){
+      h += '<div style="display:flex;gap:12px;align-items:flex-start;margin-bottom:10px">'
+        +  '<img class="ecran-fiche" style="width:72px" src="' + vue.image + '" alt="">'
+        +  '<span style="font-size:12px;color:var(--attenue)">Ce travail sera rattaché à '
+        +  'cet écran : je saurai de quelle fenêtre tu parles sans avoir à demander.</span>'
+        +  '</div>';
+    }
     h += '<label>CE QUE TU VEUX VOIR CORRIGÉ OU FAIT<input name="titre" required placeholder="Le bouton COMBATTEZ ne suit pas la maquette"></label>';
     h += '<label>LE DÉTAIL, SI TU EN AS<textarea name="detail" placeholder="Où tu l’as vu, ce que tu attendais…"></textarea></label>';
     h += '<div class="duo"><label>DANS QUELLE PARTIE<select name="section">';
@@ -1121,6 +1248,14 @@ __ETAT__
     h += '<div data-s="'+visee.s+'" data-i="'+visee.i+'" style="display:contents">';
     h += '<div class="insp-tete"><span class="mot">INSPECTEUR CONSOLE // FICHE '+esc(it.ref)+'</span>';
     h += '<span class="badge '+it.statut+'">'+LABEL[it.statut]+'</span></div>';
+    var vueEcran = it.ecran ? vignette(it.ecran) : null;
+    if (vueEcran){
+      h += '<div style="display:flex;gap:10px;align-items:flex-start;margin:8px 0">'
+        +  '<img class="ecran-fiche" style="width:64px" src="' + vueEcran.image + '" alt="">'
+        +  '<span style="font-family:var(--mono);font-size:10px;color:var(--attenue);'
+        +  'letter-spacing:.06em">ÉCRAN CONCERNÉ<br><span style="color:var(--cyan)">'
+        +  esc(nomEcran(vueEcran.cle)).toUpperCase() + '</span></span></div>';
+    }
     h += '<h2 class="sujet">'+esc(it.titre)+'</h2><hr class="trait">';
 
     h += '<div class="meta">';
@@ -1238,6 +1373,12 @@ __ETAT__
     var app = document.getElementById("app").textContent;
     var json = JSON.stringify(state, null, 1).replace(/</g, "\\u003c");
     var fin = "<\/script>";
+    /* ⚠️ LA GALERIE SE REPUBLIE AVEC LE RESTE. Sans cette ligne elle
+       disparaitrait a la premiere coche : construireDoc ne reconstruit la page
+       qu'a partir de #sheet, #app et l'etat - c'est le piege deja ecrit dans le
+       README du carnet, et il coutait ici 102 Ko de vignettes. */
+    var vignettes = document.getElementById("vignettes");
+    var galerie = vignettes ? vignettes.textContent : "[]";
     return '<!doctype html>\n<html lang="fr">\n<head>\n<meta charset="utf-8">\n'
       + '<meta name="viewport" content="width=device-width, initial-scale=1">\n'
       + '<title>Carnet des travaux — King’s Gambit</title>\n'
@@ -1245,6 +1386,7 @@ __ETAT__
       + '<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Geist+Mono:wght@400;700;800&family=Inter:wght@400;600;700;800&display=swap">\n'
       + '<style id="sheet">' + css + '</style>\n</head>\n<body>\n<div id="root"></div>\n'
       + '<script id="state" type="application/json">\n' + json + '\n' + fin + '\n'
+      + '<script id="vignettes" type="application/json">\n' + galerie + '\n' + fin + '\n'
       + '<script id="app">' + app + fin + '\n</body>\n</html>';
   }
 
@@ -1295,7 +1437,11 @@ __ETAT__
   /* ═══════════════════════════════ LES GESTES ═════════════════════════════ */
 
   root.addEventListener("submit", function(ev){
-    f = ev.target.closest("form[data-nommer]");
+    /* `var` ici : la declaration vivait sur le formulaire de lancement, parti
+       avec l'ordre de marche. En mode strict, une affectation sans declaration
+       leve une ReferenceError - et elle ne se voyait qu'a l'envoi du
+       formulaire, donc pas a l'ouverture de la page. */
+    var f = ev.target.closest("form[data-nommer]");
     if (f){
       ev.preventDefault();
       var nom = f.nom.value.trim();
@@ -1331,12 +1477,17 @@ __ETAT__
         if (m && +m[1] >= n) n = +m[1] + 1;
       });
     });
-    J().sections[si].items.push({
+    var fiche = {
       ref:"n"+n, titre:titre, detail:esc(f.detail.value.trim()),
       statut:f.statut.value, priorite:f.priorite.value, theme:f.theme.value.trim(),
       journal:[{quand:aujourdhui(), qui:"Toi", texte:"Ajoutée au carnet."}]
-    });
-    touche(); ajoutOuvert = false; render();
+    };
+    /* L'ECRAN, s'il a ouvert le travail depuis la galerie. C'est la seule
+       chose que la galerie ajoute a l'etat, et c'est celle qui compte : je sais
+       de quelle fenetre il parle sans avoir a le lui demander. */
+    if (ecranVise) fiche.ecran = ecranVise;
+    J().sections[si].items.push(fiche);
+    touche(); ajoutOuvert = false; ecranVise = null; render();
     enregistrer(document.getElementById("etat-ajout"));
   });
 
@@ -1378,8 +1529,11 @@ __ETAT__
       filtreTheme = (!v || filtreTheme === v) ? null : v;
       render(); return;
     }
-    if (t.closest("button[data-ouvrir-ajout]")){ ajoutOuvert=true; render(); return; }
-    if (t.closest("button[data-fermer-ajout]")){ ajoutOuvert=false; render(); return; }
+    if (t.closest("button[data-galerie]")){ galerieOuverte = !galerieOuverte; render(); return; }
+    var ecr = t.closest("figure[data-ecran]");
+    if (ecr){ ecranVise = ecr.dataset.ecran; ajoutOuvert = true; render(); return; }
+    if (t.closest("button[data-ouvrir-ajout]")){ ecranVise=null; ajoutOuvert=true; render(); return; }
+    if (t.closest("button[data-fermer-ajout]")){ ajoutOuvert=false; ecranVise=null; render(); return; }
     if (t.closest("button[data-nouvelle]")){ nommeOuvert=true; render(); return; }
     if (t.closest("button[data-annuler]")){ nommeOuvert=false; render(); return; }
     if (t.closest("button[data-fermer-insp]")){ inspOuvert=false; render(); return; }

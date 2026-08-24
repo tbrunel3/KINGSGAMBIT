@@ -59,6 +59,8 @@ ADRESSE = "https://claude.ai/code/artifact/47c96d8b-a61a-4222-932d-04430c13692f"
 
 # Le trou de la page, a l'endroit exact ou l'etat s'insere.
 MARQUE = "__ETAT__"
+## Le second trou : la galerie des ecrans, injectee de la meme facon.
+MARQUE_GALERIE = "__GALERIE__"
 
 
 def _lire(chemin):
@@ -152,6 +154,86 @@ def _marque_livraisons(etat):
                     "merge-base", "--is-ancestor", commit, build_ref).returncode == 0
 
 
+# LA GALERIE DES ECRANS.
+#
+#  Demande du joueur : « fais des petites vignettes des ecrans, bien rangees,
+#  chapitrees, pour bien comprendre de quelle fenetre du projet on parle ».
+#
+#  ⚠️ CE SONT LES VRAIS ECRANS DU JEU, PAS LA MAQUETTE. Une vignette tiree de
+#  Figma montrerait ce qui etait prevu ; celles-ci montrent ce qui tourne, donc
+#  ce sur quoi il y a quelque chose a dire. Elles sortent de
+#  `tools/screenshot.tscn`, qui a besoin d'une FENETRE - sous `xvfb-run`, il
+#  tourne tres bien sans ecran (cf. CLAUDE.md).
+#
+#  Le pipeline entier est automatique : relancer le banc de capture puis
+#  `build` suffit a rafraichir la galerie. Rien a decouper a la main.
+CAPTURES = os.path.join(DEPOT, "tools", "screenshots")
+
+## Les chapitres, dans l'ordre ou le joueur traverse le jeu. Une capture qui
+## n'est nommee nulle part tombe dans "Autres" plutot que de disparaitre : une
+## galerie qui perd un ecran en silence ne se voit pas.
+CHAPITRES = [
+    ("Intro", ["8_splash", "9a_intro_approche", "9_intro_typing", "9_intro_ready"]),
+    ("Village", ["1_village", "1_village_avance", "1d_missions", "1e_popup_caserne",
+                 "1f_popup_verrouille", "1g_confirmer_amelioration",
+                 "1h_popup_amelioration"]),
+    ("Château Royal", ["1a_chateau_qui_brille", "1b_chateau_avec_dame",
+                       "1b2_chateau_sans_dame"]),
+    ("Campagne", ["2_campagne"]),
+    ("Préparation", ["3_preparation", "3b_preparation_dame",
+                     "3c_preparation_composee"]),
+    ("Placement", ["4_placement", "5_placement", "5b_aide_placement",
+                   "1c_dame_au_placement"]),
+    ("Combat", ["6_coups_possibles", "6a_aide_combat", "6b_combat",
+                "4b_serie_combat2", "4c_serie_bandeau", "1j_serie_avertissement"]),
+    ("Résultats", ["7_resultat", "7b_defaite", "7c_nul", "7d_nul_serie"]),
+    ("Codex & Boutique", ["1i_codex", "1k_boutique"]),
+    ("Composants", ["0_ui_kit"]),
+]
+
+## Largeur de la vignette. Mesuree : a 96 px, les 35 ecrans pesent 102 Ko de
+## base64 - le carnet reste sous le demi-mega, et il se lit sur un telephone.
+VIGNETTE = 96
+
+
+def _vignettes():
+    """Les captures du jeu, reduites et embarquees, rangees par chapitre."""
+    import base64
+    import glob
+    try:
+        from PIL import Image
+    except ImportError:
+        print("⚠️  Pillow absent : galerie non regeneree (pip install Pillow)")
+        return None
+    if not os.path.isdir(CAPTURES):
+        return None
+
+    connues = {}
+    for titre, cles in CHAPITRES:
+        for cle in cles:
+            connues[cle] = titre
+
+    galerie = []
+    for chemin in sorted(glob.glob(os.path.join(CAPTURES, "*.png"))):
+        cle = os.path.basename(chemin)[:-4]
+        image = Image.open(chemin).convert("RGB")
+        image.thumbnail((VIGNETTE, 400))
+        tampon = io.BytesIO()
+        image.save(tampon, "WEBP", quality=58, method=6)
+        galerie.append({
+            "cle": cle,
+            "chapitre": connues.get(cle, "Autres"),
+            "large": image.size[0],
+            "haut": image.size[1],
+            "image": "data:image/webp;base64,"
+                     + base64.b64encode(tampon.getvalue()).decode("ascii"),
+        })
+    ordre = [titre for titre, _ in CHAPITRES] + ["Autres"]
+    galerie.sort(key=lambda v: (ordre.index(v["chapitre"]) if v["chapitre"] in ordre
+                                else len(ordre), v["cle"]))
+    return galerie
+
+
 def build():
     page = _lire(PAGE)
     if MARQUE not in page:
@@ -175,6 +257,11 @@ def build():
     # un `</script>` litteral y fermerait la balise qui le contient.
     texte = json.dumps(etat, ensure_ascii=False, indent=1).replace("<", "\\u003c")
     doc = page.replace(MARQUE, texte)
+    galerie = _vignettes()
+    if galerie is not None:
+        doc = doc.replace(MARQUE_GALERIE,
+                          json.dumps(galerie, ensure_ascii=False).replace("<", "\\u003c"))
+        print("galerie : %d ecrans embarques" % len(galerie))
     _ecrire(SORTIE, doc)
     # La copie horodatee. build/ est ignore par git : c'est un filet LOCAL, pas
     # une sauvegarde. La vraie source reste etat.json, lui versionne.
