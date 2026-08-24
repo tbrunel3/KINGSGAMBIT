@@ -25,9 +25,9 @@
         ]
       },
       "build": {
-        "enLigne": "24/08, 17h56",
-        "commit": "70c353b",
-        "quoi": "d1 (la charge gelée), d2 (le banc qui n'appuyait sur rien), d3 (les quatre zones défilantes) et la part code de la fiche 5 — le compteur de défaites",
+        "enLigne": "24/08, 18h10",
+        "commit": "3182084",
+        "quoi": "la fiche 5 — les quatre missives du Roi, l'écran de dépli et la pile de courrier — en plus de d1, d2 et d3",
         "note": "Recharge en forçant : le service worker de Godot sert volontiers l'ancien build."
       },
       "sections": [
@@ -334,7 +334,7 @@
                 "commit": "533a02e",
                 "quand": "24/08 à 18h30",
                 "pousse": true,
-                "enLigne": false
+                "enLigne": true
               }
             },
             {
@@ -682,5 +682,5 @@
       }
     }
   ],
-  "serie": 73
+  "serie": 74
 }
