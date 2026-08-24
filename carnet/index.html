@@ -779,7 +779,6 @@ button[disabled]{opacity:.45;cursor:progress}
         "commit": "940d5ea",
         "quand": "24/08 à 03h05"
        },
-       "avancement": 90,
        "resume": "À vérifier : glisse une carte de la caserne dans le déploiement, et une pièce de l'inventaire directement sur sa case. Le tap doit marcher exactement comme avant, partout."
       },
       {
@@ -826,7 +825,6 @@ button[disabled]{opacity:.45;cursor:progress}
        ],
        "priorite": "moyenne",
        "theme": "Animations",
-       "avancement": 90,
        "livre": {
         "commit": "c21d0ac",
         "quand": "24/08 à 14h31"
@@ -951,7 +949,6 @@ button[disabled]{opacity:.45;cursor:progress}
        ],
        "priorite": "haute",
        "theme": "Tactile",
-       "avancement": 60,
        "livre": {
         "commit": "9ebb63b",
         "quand": "24/08 à 14h50"
@@ -1118,16 +1115,11 @@ button[disabled]{opacity:.45;cursor:progress}
     "demande": "24/08 à 03h30",
     "fait": "24/08 à 03h52",
     "quoi": "Quatre duplications supprimées : le chargement d'une silhouette de pièce vivait en quatre exemplaires, l'aperçu de glissement en deux, les deux zones de lâcher étaient copiées l'une sur l'autre, et une closure gardée sur un nœud est devenue une simple texture. Bancs identiques : 181 OK, aucun échec."
-   }
+   },
+   "exportWeb": null
   }
  ],
- "credit": {
-  "restant": 14976000,
-  "total": 15000000,
-  "releve": "24/08 à 14h55",
-  "seuil": 12
- },
- "serie": 56
+ "serie": 58
 }
 </script>
 <script id="app">
@@ -1284,10 +1276,6 @@ button[disabled]{opacity:.45;cursor:progress}
   function aFaire(it){ return it.statut==="todo" || it.statut==="ko" || it.statut==="encours"; }
   function attendVerdict(it){ return it.statut === "attente"; }
   function retenue(it){ return !filtreTheme || theme(it) === filtreTheme; }
-  function avance(it){
-    if (typeof it.avancement === "number") return Math.max(0, Math.min(100, it.avancement));
-    return PAR_ETAT[it.statut] !== undefined ? PAR_ETAT[it.statut] : 0;
-  }
   function toutes(j){
     var liste = [];
     (j || J()).sections.forEach(function(sec, si){
@@ -1295,15 +1283,18 @@ button[disabled]{opacity:.45;cursor:progress}
     });
     return liste;
   }
-  /* L'avancement GLOBAL est la MOYENNE des fiches, pas la part de validées :
-     sinon une journée de dix chantiers reste à 0 % jusqu'à la première coche,
-     alors que le travail a bel et bien avancé. */
-  function avanceGlobale(j){
-    var tout = toutes(j).filter(function(e){ return j ? true : retenue(e[0]); });
+  /* ⚠️ IL N'Y A PLUS D'AVANCEMENT EN POURCENTAGE, ET C'EST VOULU.
+     Le joueur : "les barres d'avancement sont buggées". Elles l'étaient par
+     construction — un pourcentage DÉDUIT d'un statut (todo 0, encours 50,
+     attente 90) n'est pas une mesure, c'est une invention présentée comme un
+     chiffre : une fiche à peine ouverte affichait 50 %.
+     Ce qui reste est COMPTABLE et ne peut pas mentir : combien de fiches sont
+     validées sur combien. */
+  function partValidees(j){
+    var tout = toutes(j);
     if (!tout.length) return 0;
-    var somme = 0;
-    tout.forEach(function(e){ somme += avance(e[0]); });
-    return Math.round(somme / tout.length);
+    var ok = tout.filter(function(e){ return e[0].statut === "ok"; }).length;
+    return Math.round(ok * 100 / tout.length);
   }
   function themes(){
     var vus = [];
@@ -1444,12 +1435,13 @@ button[disabled]{opacity:.45;cursor:progress}
       + '<span><b>STUDIO BNL</b><span>CARNET v5</span></span></div>';
     h += '<nav class="registres"><p class="etiquette">REGISTRES ACTIFS</p>';
     state.journees.forEach(function(sj, i){
-      var pc = avanceGlobale(sj);
-      var reste = toutes(sj).filter(function(e){ return ouverte(e[0]); }).length;
+      var total = toutes(sj).length;
+      var faites = toutes(sj).filter(function(e){ return e[0].statut === "ok"; }).length;
+      var reste = total - faites;
       h += '<button class="registre'+(i===state.active?' actif':'')+(reste===0?' finie':'')
          + '" data-journee="'+i+'"><span class="pastille-ronde"></span>'
          + '<span class="nom">'+esc(sj.nom)+'</span>'
-         + '<span class="part">'+(reste===0 ? "100%" : pc+"%")+'</span></button>';
+         + '<span class="part">'+faites+'/'+total+'</span></button>';
     });
     h += '</nav>' + moteurHtml(j) + '</aside>';
 
@@ -1538,7 +1530,7 @@ button[disabled]{opacity:.45;cursor:progress}
 
   function barreHauteHtml(j){
     var tout = toutes(j), val = tout.filter(function(e){ return e[0].statut==="ok"; }).length;
-    var pc = avanceGlobale(j), b = j.build || {};
+    var pc = partValidees(j), b = j.build || {};
     var h = '<div class="barre-haute"><div class="titre-journee">';
     h += '<button class="fleche" data-glisse="-1"'+(state.active<=0?' disabled':'')
       +' title="Registre précédent"><svg width="22" height="22" viewBox="0 0 22 22" fill="none">'
@@ -1566,16 +1558,40 @@ button[disabled]{opacity:.45;cursor:progress}
     return h;
   }
 
+  /* ⚠️ L'EXPORT SE DEMANDE, IL NE SE FAIT PLUS APRÈS CHAQUE FICHE.
+     Le joueur : « crée un bouton pour que je puisse demander la mise dans le
+     git pour tester les slots à vérifier, sinon tu perds trop de temps ».
+     Il a raison : exporter le jeu coûte une minute de build web plus le
+     déploiement, et le faire après chaque livraison mange la séance pour un
+     test qu'il ne fera peut-être pas tout de suite. C'est LUI qui décide quand
+     il veut tester — le carnet ne fait que porter la demande. */
   function bandeauHtml(j){
     var b = j.build || {};
-    var h = '<div class="bandeau '+(b.enLigne?'en-ligne':'hors-ligne')+'"><span class="feu"></span><div>';
-    h += '<h2>'+(b.enLigne ? 'COMMIT ET TEST POSSIBLE' : 'PAS ENCORE EN LIGNE — NE TESTE PAS TOUT DE SUITE')+'</h2>';
-    h += '<p>';
-    if (b.enLigne) h += 'En ligne depuis '+esc(b.enLigne)+'. ';
-    if (b.commit)  h += 'Commit <code>'+esc(b.commit)+'</code>'+(b.quoi?' — '+esc(b.quoi):'')+'. ';
-    else if (b.quoi) h += esc(b.quoi)+'. ';
-    h += esc(b.note||"")+'</p></div></div>';
-    return h;
+    var x = j.exportWeb || null;
+    var demande = x && x.demande && !x.fait;
+    var classe = demande ? 'hors-ligne' : (b.enLigne ? 'en-ligne' : 'hors-ligne');
+
+    var h = '<div class="bandeau '+classe+'"><span class="feu"></span>';
+    h += '<div style="flex:1;min-width:0">';
+    if (demande){
+      h += '<h2>MISE EN LIGNE DEMANDÉE</h2><p>Demandée le '+esc(x.demande)
+        +  '. J’exporte le jeu et je pousse sur gh-pages dès que la fiche en cours est finie.</p>';
+    } else {
+      h += '<h2>'+(b.enLigne ? 'COMMIT ET TEST POSSIBLE'
+                             : 'PAS ENCORE EN LIGNE — NE TESTE PAS TOUT DE SUITE')+'</h2><p>';
+      if (b.enLigne) h += 'En ligne depuis '+esc(b.enLigne)+'. ';
+      if (b.commit)  h += 'Commit <code>'+esc(b.commit)+'</code>'+(b.quoi?' — '+esc(b.quoi):'')+'. ';
+      else if (b.quoi) h += esc(b.quoi)+'. ';
+      h += esc(b.note||"")+'</p>';
+    }
+    h += '</div>';
+    if (!lectureSeule){
+      h += demande
+        ? '<button class="bouton-cyan sourd" data-export-annule="1" style="flex:none">ANNULER</button>'
+        : '<button class="bouton-cyan" data-export-demande="1" style="flex:none">'
+          + '⬆ METTRE EN LIGNE POUR TESTER</button>';
+    }
+    return h + '</div>';
   }
 
   function ongletsHtml(j){
@@ -1629,8 +1645,9 @@ button[disabled]{opacity:.45;cursor:progress}
     if (rang) h += '<span class="puce-focus">'+rang+'<sup>'+(rang===1?"re":"e")+'</sup> DE L’ORDRE</span>';
     h += '</span><span class="badge '+it.statut+'">'+LABEL[it.statut]+'</span></span>';
     h += '<h3>'+esc(it.titre)+'</h3>';
-    h += '<span class="avance"><span class="prio prio-'+prio(it)+'">'+prio(it).toUpperCase()+'</span>'
-      +  jauge(avance(it)) + '<span>'+avance(it)+'%</span></span>';
+    h += '<span class="avance"><span class="prio prio-'+prio(it)+'">'
+      +  prio(it).toUpperCase()+'</span>'
+      +  (theme(it) ? '' : '') + '</span>';
     return h + '</button>';
   }
 
@@ -1828,8 +1845,6 @@ button[disabled]{opacity:.45;cursor:progress}
     h += ligneMeta("MODULE CONTEXTE", theme(it) ? esc(theme(it)).toUpperCase() : "—", "");
     h += ligneMeta("PRIORITÉ", prio(it).toUpperCase(),
                    prio(it)==="haute"?"rouge":prio(it)==="basse"?"":"");
-    h += '<div class="ligne"><span class="cle">AVANCEMENT</span>'
-      +  '<span class="val cyan">'+avance(it)+'%</span></div>' + jauge(avance(it));
     h += '</div>';
 
     if (it.detail) h += '<p class="insp-detail">'+it.detail+'</p>';
@@ -1903,29 +1918,14 @@ button[disabled]{opacity:.45;cursor:progress}
      qu'au début d'un tour. Le relevé est daté pour que ça se voie, et il est
      écrit par MOI dans etat.json, à chaque fois que je touche au carnet. */
   function barreBasseHtml(j){
-    var c = state.credit || null;
-    var h = "";
-    if (c && c.restant && c.total){
-      var pc = Math.max(0, Math.min(100, Math.round(c.restant / c.total * 100)));
-      var seuil = c.seuil || 12;
-      var classe = pc <= Math.round(seuil/2) ? "critique" : (pc <= seuil ? "bas" : "ok");
-      if (classe === "critique"){
-        h += '<div class="passation">⚠ PASSATION REQUISE — crédit sous '
-          +  Math.round(seuil/2)+' %. Je m’arrête, je commite, j’écris la passation.</div>';
-      }
-    }
-    h += '<div class="barre-basse"><span>CARNET_V5 // REGISTRE: '+esc(j.nom).toUpperCase()+'</span>';
+    var tout = toutes(j);
+    var att = tout.filter(function(e){ return e[0].statut === "attente"; }).length;
+    var ouv = tout.filter(function(e){ return ouverte(e[0]); }).length;
+    var h = '<div class="barre-basse">';
+    h += '<span>CARNET_V5 // REGISTRE: '+esc(j.nom).toUpperCase()+'</span>';
     h += '<span class="droite"><span>MAJ: '+esc(j.maj||"—")+'</span>';
-    if (c && c.restant && c.total){
-      var p = Math.max(0, Math.min(100, Math.round(c.restant/c.total*100)));
-      var s = c.seuil || 12;
-      var cl = p <= Math.round(s/2) ? "critique" : (p <= s ? "bas" : "ok");
-      h += '<span class="credit '+cl+'">CRÉDIT: '+(c.restant/1e6).toFixed(1)+'M / '
-        +  (c.total/1e6).toFixed(1)+'M'+jauge(p)+p+'%</span>';
-      h += '<span>RELEVÉ: '+esc(c.releve||"—")+'</span>';
-    } else {
-      h += '<span>CRÉDIT: NON RELEVÉ</span>';
-    }
+    h += '<span>' + att + ' EN ATTENTE DE TOI</span>';
+    h += '<span>' + ouv + ' OUVERTE' + (ouv > 1 ? 'S' : '') + '</span>';
     return h + '</span></div>';
   }
 
@@ -2148,6 +2148,20 @@ button[disabled]{opacity:.45;cursor:progress}
       visee = {s:visee.s, i:vers};
       touche(); render();
       enregistrer(root.querySelector(".inspecteur .etat")); return;
+    }
+
+    /* — la mise en ligne, demandée par lui — */
+    if (t.closest("button[data-export-demande]")){
+      J().exportWeb = {demande: maintenant()};
+      touche(); render();
+      enregistrer(document.getElementById("etat-marche"));
+      return;
+    }
+    if (t.closest("button[data-export-annule]")){
+      J().exportWeb = null;
+      touche(); render();
+      enregistrer(document.getElementById("etat-marche"));
+      return;
     }
 
     /* — le nettoyage — */
