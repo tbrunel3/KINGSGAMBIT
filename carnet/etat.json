@@ -51,10 +51,10 @@
         ]
       },
       "build": {
-        "enLigne": "24/08, 02h30",
-        "commit": "7dcf766",
-        "quoi": "les écrans de bâtiment, la garde d'abandon déplacée, le socle des transitions",
-        "note": "Exporté et poussé sur gh-pages. Vide le cache de ton navigateur ou recharge en forçant : le service worker de Godot sert volontiers l'ancienne version."
+        "enLigne": "24/08, 03h05",
+        "commit": "940d5ea",
+        "quoi": "le glisser-déposer du chantier C",
+        "note": "Recharge en forçant : le service worker de Godot sert volontiers l'ancien build."
       },
       "sections": [
         {
@@ -153,7 +153,7 @@
               "ref": "C",
               "titre": "Le glisser-déposer",
               "detail": "Caserne → déploiement, et inventaire → plateau. Plus le bouton <strong>COMBATTEZ</strong> qui ne suit pas la maquette. <strong>Le paquet le plus lourd.</strong>",
-              "statut": "encours",
+              "statut": "attente",
               "journal": [
                 {
                   "quand": "24/08",
@@ -164,6 +164,31 @@
                   "quand": "24/08",
                   "qui": "Toi",
                   "texte": "AU TRAVAIL : première de l’ordre de marche."
+                },
+                {
+                  "quand": "24/08",
+                  "qui": "Claude",
+                  "texte": "Fait, les deux moitiés. À la préparation : on saisit une carte de caserne et on la lâche dans le déploiement, et une case posée se glisse vers la caserne pour renvoyer la pièce en réserve. Au placement : on prend la pièce dans l'inventaire et on la dépose directement sur sa case."
+                },
+                {
+                  "quand": "24/08",
+                  "qui": "Claude",
+                  "texte": "Le tap n'est remplacé nulle part — Godot ne démarre un glissement qu'après un déplacement, donc l'appui immobile passe toujours par l'ancien chemin. Le glissement s'ajoute."
+                },
+                {
+                  "quand": "24/08",
+                  "qui": "Claude",
+                  "texte": "Une zone refuse AVANT le lâcher ce qu'elle aurait refusé après : plus de réserve, charge pleine, case occupée, hors zone bleue. Une zone qui accepte puis ne fait rien est pire qu'une zone qui refuse."
+                },
+                {
+                  "quand": "24/08",
+                  "qui": "Claude",
+                  "texte": "Bancs : ui_test 181 OK / 0 échec / 0 erreur (dix assertions neuves sur le glisser-déposer), smoke_test 10/10, format_test sur les huit formats. Le banc appelle les virtuelles directement : headless, il ne joue pas de geste souris."
+                },
+                {
+                  "quand": "24/08",
+                  "qui": "Claude",
+                  "texte": "Le bouton COMBATTEZ sort de cette fiche : il ne demande pas du code mais la maquette, et le mélanger ici t'obligerait à valider deux choses d'un coup. Il a sa propre ligne."
                 }
               ],
               "priorite": "haute",
@@ -230,6 +255,21 @@
                 }
               ],
               "theme": "Intro"
+            },
+            {
+              "ref": "n2",
+              "titre": "Le bouton COMBATTEZ ne suit pas la maquette",
+              "detail": "Détaché de <strong>C</strong> : c'est le seul morceau du paquet qui ne demande pas du code mais un relevé Figma. Dis-moi le node-id, ou je le cherche dans <code>MAINPROJECT</code>.",
+              "statut": "todo",
+              "priorite": "moyenne",
+              "theme": "Interface",
+              "journal": [
+                {
+                  "quand": "24/08",
+                  "qui": "Claude",
+                  "texte": "Sorti de la fiche C pour que tu puisses valider le glisser-déposer sans attendre celui-là."
+                }
+              ]
             }
           ]
         },
