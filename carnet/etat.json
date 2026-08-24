@@ -11,10 +11,6 @@
         "groupe": "auto",
         "ordre": [
           {
-            "ref": "E",
-            "titre": "L'habillage : barre du haut, alignements, polices"
-          },
-          {
             "ref": "n1",
             "titre": "l'intro"
           },
@@ -260,10 +256,56 @@
               "ref": "E",
               "titre": "L'habillage : barre du haut, alignements, polices",
               "detail": "La barre du haut (or + gemmes), l'alignement Boutique / BATAILLE, les polices, et l'interface des missions — que tu as jugée <strong>« très modeste »</strong>.",
-              "statut": "todo",
-              "journal": [],
+              "statut": "attente",
+              "journal": [
+                {
+                  "quand": "24/08",
+                  "qui": "Claude",
+                  "texte": "Rien n'était aligné, et c'est de l'arithmétique : pastilles (26 de haut) et boutons (34) posés au MÊME y=44, donc des centres à 57 et 61. Poser deux hauteurs différentes au même Y ne les aligne pas. Tout se centre maintenant sur une seule ligne — pire écart mesuré : 0,0 pt."
+                },
+                {
+                  "quand": "24/08",
+                  "qui": "Claude",
+                  "texte": "Elle n'était pas collée en haut : les 44 points étaient une allocation d'encoche écrite à la main, alors que la couche d'interface n'est PAS dans une zone sûre. Sur le Web — là où tu testes — c'étaient 44 points de vide. La marge vient du système maintenant."
+                },
+                {
+                  "quand": "24/08",
+                  "qui": "Claude",
+                  "texte": "Boutons grossis : 34 → 40. Le 34 reste le défaut partout ailleurs, pour que le composant tienne la promesse qui l'a fait naître (une taille au lieu des six d'avant)."
+                },
+                {
+                  "quand": "24/08",
+                  "qui": "Claude",
+                  "texte": "La Boutique était à 11 POINTS de BATAILLE, mesuré. Deux Rect2 écrits à la main à deux moments ne peuvent que dériver ; celui de la Boutique se calcule maintenant depuis celui de BATAILLE. Écart : 0,0 pt."
+                },
+                {
+                  "quand": "24/08",
+                  "qui": "Claude",
+                  "texte": "E3 était déjà correct — le code écrit CHÂTEAU ROYAL, sans e. Un test l'assure contre un retour de la faute."
+                },
+                {
+                  "quand": "24/08",
+                  "qui": "Claude",
+                  "texte": "Effet de bord rattrapé : la zone du panneau dev volait les taps des deux boutons une fois la barre remontée. Et l'assertion qui la gardait mesurait un PROXY (« au-dessus de la barre ») au lieu de la vraie règle (« sur aucun bouton »)."
+                },
+                {
+                  "quand": "24/08",
+                  "qui": "Claude",
+                  "texte": "Bancs : ui_test 218 OK / 0 échec / 0 erreur (212 avant), smoke_test 10/10, format_test les huit formats."
+                },
+                {
+                  "quand": "24/08",
+                  "qui": "Claude",
+                  "texte": "⚠️ E4 RESTE, et la fiche dit elle-même « à préciser quand on y arrivera ». Je ne vais pas inventer une refonte des missions que tu n'as pas décrite : dis-moi ce qui te paraît modeste — la liste ? les récompenses ? l'écran entier ?"
+                }
+              ],
               "priorite": "moyenne",
-              "theme": "Interface"
+              "theme": "Interface",
+              "livre": {
+                "commit": "49d4f3b",
+                "quand": "24/08 à 15h50"
+              },
+              "resume": "À vérifier au village : la barre du haut est collée en haut, or / gemmes / Missions / infos / réglages sont sur UNE ligne, les boutons de droite sont plus gros, et la Boutique est enfin alignée sur BATAILLE. ⚠️ E4 (les missions « très modestes ») n'est PAS fait : dis-moi ce que tu veux y voir."
             },
             {
               "ref": "5",
@@ -544,5 +586,5 @@
       "exportWeb": null
     }
   ],
-  "serie": 57
+  "serie": 59
 }

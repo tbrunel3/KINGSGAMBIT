@@ -503,8 +503,22 @@ représentatif**, et confondre les deux a coûté cher :
 | `tools/economy_probe.tscn` | la campagne verse-t-elle de quoi se traverser ? | **plusieurs heures** |
 | `tools/promo_probe.tscn` | combien de Dames une campagne produit-elle ? | ~3 min |
 | `tools/debug_battle.tscn` | pourquoi cette bataille tourne mal ? (trace coup par coup) | court |
-| `tools/screenshot.tscn` | à quoi ressemblent les écrans ? (PNG dans `tools/screenshots/`) | ~1 min |
+| `tools/screenshot.tscn` | à quoi ressemblent les écrans ? (PNG dans `tools/screenshots/`) — ⚠️ **NE MARCHE PAS EN `--headless`**, voir ci-dessous | ~1 min |
 | `tools/resolutions.tscn` | qu'est-ce qui déborde sur les autres téléphones ? | court |
+
+⚠️ **`screenshot.tscn` en `--headless` n'écrit AUCUN fichier, et ne le dit pas.**
+Il démarre, ne rend pas une ligne, sort avec le code 0, et les PNG de
+`tools/screenshots/` gardent leur date de la veille. Payé le 24/08 : j'ai lu
+une capture vieille d'un jour en la croyant fraîche, et j'ai conclu sur elle.
+Il lui faut une **fenêtre** — donc sans `--headless` :
+
+```bash
+godot --path . tools/screenshot.tscn
+```
+
+**Vérifier l'horodatage des PNG avant de conclure sur une capture.** C'est le
+même piège que le banc vert qui a sauté ses questions, en pire : ici l'outil ne
+prétend même pas avoir travaillé.
 
 ⚠️ **`ui_test._press()` n'appuyait sur rien, sur la moitié des contrôles du jeu.**
 `gui_input` est un **signal** ; `_gui_input()` est une **méthode virtuelle**, et
