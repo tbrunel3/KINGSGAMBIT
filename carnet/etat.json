@@ -5,41 +5,7 @@
       "nom": "24/08 — Bâtiments & carnet",
       "maj": "24/08/2026",
       "tri": "priorite",
-      "marche": {
-        "nom": "l’ordre est donné",
-        "lance": "24/08 à 14h24",
-        "groupe": "auto",
-        "ordre": [
-          {
-            "ref": "n1",
-            "titre": "l'intro"
-          },
-          {
-            "ref": "n2",
-            "titre": "Le bouton COMBATTEZ ne suit pas la maquette"
-          },
-          {
-            "ref": "5",
-            "titre": "Les deux lettres du Roi, entre l'intro et le village"
-          },
-          {
-            "ref": "6",
-            "titre": "Les popups d'accompagnement de Figma"
-          },
-          {
-            "ref": "d1",
-            "titre": "Améliorer le Château en pleine série augmente la charge"
-          },
-          {
-            "ref": "d2",
-            "titre": "L'audit du banc d'interface n'a jamais été fait"
-          },
-          {
-            "ref": "d3",
-            "titre": "Quatre zones défilantes jamais auditées"
-          }
-        ]
-      },
+      "marche": null,
       "build": {
         "enLigne": "24/08, 14h50",
         "commit": "9ebb63b",
@@ -297,6 +263,11 @@
                   "quand": "24/08",
                   "qui": "Claude",
                   "texte": "⚠️ E4 RESTE, et la fiche dit elle-même « à préciser quand on y arrivera ». Je ne vais pas inventer une refonte des missions que tu n'as pas décrite : dis-moi ce qui te paraît modeste — la liste ? les récompenses ? l'écran entier ?"
+                },
+                {
+                  "quand": "24/08",
+                  "qui": "Claude",
+                  "texte": "Livrée pendant que tu regardais le carnet — c'est pour ça qu'elle était encore « à faire » chez toi. Tu as ensuite arrêté le travail : je ne prends plus rien, et l'ordre de marche reste vide."
                 }
               ],
               "priorite": "moyenne",
@@ -586,5 +557,5 @@
       "exportWeb": null
     }
   ],
-  "serie": 59
+  "serie": 60
 }
