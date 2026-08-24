@@ -139,10 +139,15 @@ h1{
 .attente-bloc > p{color:var(--attenue);font-size:13px;margin:0 0 12px}
 .attente-bloc ul{margin:0;padding:0;list-style:none;display:grid;gap:10px}
 .attente-bloc li{
-  display:grid;gap:2px;padding:10px 12px;border-radius:8px;
+  display:grid;gap:6px;padding:13px 14px;border-radius:8px;
   border:1px solid var(--filet);background:rgba(14,20,36,.55)
 }
-.attente-bloc .quoi{font-size:14px;font-weight:600}
+.attente-bloc .quoi{font-size:14.5px;font-weight:600}
+.attente-bloc .resume{margin:0;font-size:13px;color:var(--attenue);overflow-wrap:anywhere}
+.attente-bloc .verdict{margin:2px 0 0}
+.attente-bloc .note{min-height:34px;font-size:13px}
+.attente-bloc button{font-size:12.5px;padding:7px 12px}
+.voir-fiche{font-weight:500;color:var(--attenue)}
 .livraison{
   font-size:12px;color:var(--succes);font-variant-numeric:tabular-nums;
   display:flex;gap:7px;flex-wrap:wrap;align-items:baseline
@@ -511,14 +516,24 @@ __ETAT__
       + pourcent + '%"></span></div>';
   }
 
+  // Rend des triplets [fiche, section, index] : le bloc du haut porte
+  // desormais les boutons de verdict, et il lui faut donc de quoi designer la
+  // fiche exactement comme la fiche elle-meme le fait.
   function enAttente(){
-    var liste = [];
-    J().sections.forEach(function(sec){
-      classees(sec.items).forEach(function(paire){
-        if (attendVerdict(paire[0]) && retenue(paire[0])) liste.push(paire[0]);
-      });
+    return toutes().filter(function(e){
+      return attendVerdict(e[0]) && retenue(e[0]);
     });
-    return liste;
+  }
+
+  // A DEFAUT DE RESUME ECRIT, la derniere chose que j'ai dite sur la fiche.
+  // C'est presque toujours la note de livraison - donc exactement ce qu'il y a
+  // a verifier - et ca evite un champ de plus a tenir a jour.
+  function dernierMot(it){
+    if (!it.journal) return "";
+    for (var i = it.journal.length - 1; i >= 0; i--){
+      if (it.journal[i].qui !== "Toi") return it.journal[i].texte;
+    }
+    return "";
   }
 
   // Le classement a DEUX modes, parce que le joueur a demande les deux : la
@@ -562,7 +577,8 @@ __ETAT__
 
   function ficheHtml(it, si, ii, rang){
     var repli = it.statut === "ok";
-    var h = '<article class="fiche ' + it.statut + '" data-s="' + si + '" data-i="' + ii + '">';
+    var h = '<article class="fiche ' + it.statut + '" id="fiche-' + esc(it.ref)
+      + '" data-s="' + si + '" data-i="' + ii + '">';
     h += '<div class="fiche-tete"><span class="ref">' + esc(it.ref) + '</span><h3>' + esc(it.titre) + '</h3>';
     if (theme(it)) h += '<button class="theme" data-filtre="' + esc(theme(it)) + '">' + esc(theme(it)) + '</button>';
     h += '<span class="pastille ' + it.statut + '">' + LABEL[it.statut] + '</span>';
@@ -737,16 +753,30 @@ __ETAT__
       h += '<div class="attente-bloc"><h2>' + attendus.length + ' chantier'
          + (attendus.length > 1 ? 's attendent' : ' attend') + ' ta validation</h2>';
       h += '<p>Livrés et en ligne. Je n’y retouche pas tant que tu n’as pas tranché : « ça marche » les replie, « toujours cassé » me les remet dans l’ordre de marche.</p><ul>';
-      attendus.forEach(function(it){
+      attendus.forEach(function(e){
+        var it = e[0];
         var liv = livraison(it);
-        h += '<li><span class="quoi"><span class="ref-mini">' + esc(it.ref) + '</span>'
+        // ⚠️ LES MEMES `data-s` / `data-i` QUE LA FICHE. C'est ce qui permet
+        // aux boutons de verdict de vivre ici aussi : le geste ne cherche plus
+        // une `.fiche`, il cherche le premier hote qui porte ces deux indices.
+        // Sans ca il fallait descendre jusqu'a la fiche pour trancher - le
+        // joueur a demande l'inverse : valider depuis le haut.
+        h += '<li data-s="' + e[1] + '" data-i="' + e[2] + '">';
+        h += '<span class="quoi"><span class="ref-mini">' + esc(it.ref) + '</span>'
            + esc(it.titre) + '</span>';
         if (liv){
           h += '<span class="livraison">Livré le ' + esc(liv.quand || "?");
           if (liv.commit) h += ' · commit <code>' + esc(liv.commit) + '</code>';
           h += '</span>';
         }
-        h += '</li>';
+        var resume = it.resume || dernierMot(it);
+        if (resume) h += '<p class="resume">' + esc(resume) + '</p>';
+        h += '<div class="verdict">';
+        h += '<textarea class="note" rows="1" placeholder="Ce que tu vois, si ça ne va pas…"></textarea>';
+        h += '<button class="marche-btn" data-act="ok">Ça marche</button>';
+        h += '<button class="casse" data-act="ko">Toujours cassé</button>';
+        h += '<button class="voir-fiche" data-voir="' + esc(it.ref) + '">Voir la fiche</button>';
+        h += '<span class="etat"></span></div></li>';
       });
       h += '</ul></div>';
     }
@@ -927,8 +957,11 @@ __ETAT__
     });
   }
 
-  function etatDe(fiche){
-    return root.querySelector('.fiche[data-s="' + fiche.dataset.s + '"][data-i="' + fiche.dataset.i + '"] .etat');
+  // Apres un rendu, les noeuds d'avant sont morts : on retrouve la ligne
+  // d'etat par les indices, dans le bloc du haut comme dans la fiche.
+  function etatDe(hote){
+    var sel = '[data-s="' + hote.dataset.s + '"][data-i="' + hote.dataset.i + '"] .etat';
+    return root.querySelector(sel);
   }
   function touche(){ J().maj = aujourdhui() + "/2026"; }
 
@@ -998,7 +1031,7 @@ __ETAT__
   root.addEventListener("change", function(ev){
     var sel = ev.target.closest("select[data-prio]");
     if (!sel) return;
-    var fiche = sel.closest(".fiche");
+    var fiche = sel.closest("[data-s]");
     var it = J().sections[+fiche.dataset.s].items[+fiche.dataset.i];
     if (prio(it) === sel.value) return;
     it.priorite = sel.value;
@@ -1053,7 +1086,7 @@ __ETAT__
     // Remanier à la main.
     var bouge = ev.target.closest("button[data-bouge]");
     if (bouge){
-      var f = bouge.closest(".fiche");
+      var f = bouge.closest("[data-s]");
       var items = J().sections[+f.dataset.s].items;
       var de = +f.dataset.i, vers = de + (+bouge.dataset.bouge);
       if (vers < 0 || vers >= items.length) return;
@@ -1142,9 +1175,19 @@ __ETAT__
     }
 
     // Les verdicts.
+    // Aller voir la fiche depuis le bloc du haut.
+    var voir = ev.target.closest("button[data-voir]");
+    if (voir){
+      var cible = root.querySelector('#fiche-' + CSS.escape(voir.dataset.voir));
+      if (cible) cible.scrollIntoView({behavior: "smooth", block: "center"});
+      return;
+    }
+
     var bouton = ev.target.closest("button[data-act]");
     if (!bouton) return;
-    var fiche = bouton.closest(".fiche");
+    // L'hote est la FICHE ou la ligne du bloc d'attente : les deux portent les
+    // memes indices, et les deux savent donc trancher.
+    var fiche = bouton.closest("[data-s]");
     var it = J().sections[+fiche.dataset.s].items[+fiche.dataset.i];
     var act = bouton.dataset.act;
     var champ = fiche.querySelector(".note");

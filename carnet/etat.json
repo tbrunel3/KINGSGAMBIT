@@ -205,7 +205,8 @@
                 "commit": "940d5ea",
                 "quand": "24/08 à 03h05"
               },
-              "avancement": 90
+              "avancement": 90,
+              "resume": "À vérifier : glisse une carte de la caserne dans le déploiement, et une pièce de l'inventaire directement sur sa case. Le tap doit marcher exactement comme avant, partout."
             },
             {
               "ref": "D",
