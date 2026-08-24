@@ -33,14 +33,40 @@ documents complètent celui-ci et ne le répètent pas :
   prouvée. Le carnet de suivi vit dans un artefact web, dont l'adresse est dans
   la passation.
 - [`carnet/`](carnet/README.md) — **le carnet de travaux**, l'instrument de
-  suivi des retours de test : une ligne par défaut, son journal daté, et un
-  verdict que le joueur coche lui-même sur une page web. Le carnet vivant est
-  à `https://claude.ai/code/artifact/857ffdc3-e16a-485b-8651-853b31916069` ;
-  **sa source est dans le dépôt** (`carnet/etat.json`) depuis que le premier a
+  suivi des retours de test, et **la console qui commande le travail**. Depuis
+  le 24/08 c'est une console en trois colonnes (Figma `13:373`, fichier
+  `YTypQjzEG1JG4w9QZUClVk`) : le rail des registres, les fiches, l'inspecteur.
+
+  **⚠️ LA RÈGLE PRINCIPALE DU PROJET Y VIT, et elle prime sur l'envie d'avancer.**
+  Elle a deux moitiés, et l'une sans l'autre est fausse :
+  1. **Je ne travaille pas si le joueur n'a pas lancé le travail** — le bouton
+     **AU TRAVAIL !** de l'onglet *ordre de marche*. Sans lui, je ne prends
+     aucun chantier du carnet de ma propre initiative.
+  2. **Une fois lancé, je ne m'arrête plus** : je passe sur tous les chantiers
+     en boucle, sans attendre les verdicts, **jusqu'à ce qu'il ne lui reste que
+     des vérifs et des retouches**. Une fiche livrée passe en `attente`, sort de
+     l'ordre de marche, et l'attend.
+
+  Deux freins : le bouton **ARRÊTER LE TRAVAIL**, et le **crédit** relevé dans
+  `etat.json` — sous le seuil, la console dit *PASSATION REQUISE*. ⚠️ Le crédit
+  ne se relève pas tout seul : je ne vois mes tokens qu'au début d'un tour, donc
+  je l'écris après chaque livraison, et jamais pendant un chantier.
+
+  **Deux adresses, et c'est voulu.** L'artefact
+  `https://claude.ai/code/artifact/47c96d8b-a61a-4222-932d-04430c13692f`
+  (il se republie tout seul à chaque coche), et le dépôt
+  `https://tbrunel3.github.io/KINGSGAMBIT/carnet/` via `carnet.py enligne` —
+  celui-là ne publie rien, mais **personne ne peut le supprimer**.
+
+  **Sa source est dans le dépôt** (`carnet/etat.json`) depuis que le premier a
   été supprimé avec la seule liste des vingt-deux retours qui existait.
+  ⚠️ **Il a été supprimé une SECONDE fois le 24/08** — `etat.json` a tenu, rien
+  n'a été perdu. **Vérifier que l'adresse répond avant de republier.**
   ⚠️ **Il se republie sous l'identité du joueur quand il coche** : relire la
   page publiée et la reverser (`carnet.py recupere`) AVANT de republier, sinon
-  on écrase ses réponses.
+  on écrase ses réponses. La page garde en plus un **miroir dans son
+  navigateur**, écrit avant chaque publication — c'est lui qui ferme le vrai
+  trou, la fenêtre entre sa coche et ma relecture.
 - [`chantier_i_missives.md`](chantier_i_missives.md) — **le chantier suivant,
   spec écrite le 23/08, pas encore commencé** : les quatre lettres scellées du
   Roi, qui portent le *pourquoi* du jeu là où `GuidePopup` porte le *comment*.

@@ -436,5 +436,12 @@
         "quoi": "Quatre duplications supprimées : le chargement d'une silhouette de pièce vivait en quatre exemplaires, l'aperçu de glissement en deux, les deux zones de lâcher étaient copiées l'une sur l'autre, et une closure gardée sur un nœud est devenue une simple texture. Bancs identiques : 181 OK, aucun échec."
       }
     }
-  ]
+  ],
+  "credit": {
+    "restant": 14946000,
+    "total": 15000000,
+    "releve": "24/08 à 05h58",
+    "seuil": 12
+  },
+  "serie": 0
 }

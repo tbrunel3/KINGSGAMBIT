@@ -17,7 +17,7 @@ c'est exactement ce qu'on lui demande d'apporter.
 Le carnet est **l'outil de travail entre le joueur et moi**. Il n'est pas dans
 le jeu : c'est la page où il dit ce qui va, ce qui casse, et dans quel ordre je
 dois travailler. Il vit à
-`https://claude.ai/code/artifact/857ffdc3-e16a-485b-8651-853b31916069`, sa
+`https://claude.ai/code/artifact/47c96d8b-a61a-4222-932d-04430c13692f`, sa
 source est dans `carnet/`, et il a été construit d'un trait pendant une nuit —
 donc **son ergonomie est celle d'un outil qui a poussé, pas d'un outil dessiné**.
 

@@ -6,17 +6,23 @@ pendant les allers-retours avec le joueur.
 
 Lire [`CLAUDE.md`](CLAUDE.md) en premier. Ce document ne le répète pas.
 
-**Le carnet de suivi est un artefact web INTERACTIF**, et c'est LUI qui fait foi :
-`https://claude.ai/code/artifact/857ffdc3-e16a-485b-8651-853b31916069`.
+**Le carnet de suivi est un artefact web INTERACTIF**, et il vit à
+`https://claude.ai/code/artifact/47c96d8b-a61a-4222-932d-04430c13692f`.
+**Mais ce n'est plus lui qui fait foi : c'est `carnet/etat.json`, dans le dépôt.**
+L'adresse est aussi dans `carnet/carnet.py` (`ADRESSE`).
 
-⚠️ **Ce n'est plus le carnet d'origine.** Le premier
-(`47c96d8b-a61a-4222-932d-04430c13692f`) a été supprimé, et **la liste
-détaillée des vingt-deux retours ne vivait que là** — le dépôt n'en gardait
-rien. Le carnet du 24/08 est une reconstruction depuis ce document : les
-paquets, les décisions prises, les dettes connues. Les coches du joueur, elles,
-sont perdues. *La leçon a un coût nul à retenir et un coût élevé à réapprendre :
-**une liste qui n'existe que dans un artefact n'existe qu'à moitié.** Ce qui est
-tranché redescend ici.* **Le joueur y coche lui-même** « Ça marche » ou « Toujours cassé », et y dépose
+⚠️ **L'artefact a été supprimé DEUX fois, et l'adresse a fait l'aller-retour.**
+La première fois, la liste détaillée des vingt-deux retours ne vivait que là —
+le dépôt n'en gardait rien, et **les coches du joueur sont perdues**. Le carnet
+du 24/08 a dû être reconstruit depuis ce document : les paquets, les décisions
+prises, les dettes connues. La seconde fois (24/08, l'artefact `857ffdc3…` de
+cette reconstruction), **`carnet/etat.json` a tenu** — rien n'a été perdu, et le
+carnet s'est rebâti tel quel, republié par-dessus l'adresse ci-dessus.
+
+*La leçon a un coût nul à retenir et un coût élevé à réapprendre : **une liste
+qui n'existe que dans un artefact n'existe qu'à moitié.** Ce qui est tranché
+redescend dans `etat.json`, et on vérifie que l'adresse répond AVANT de
+republier.* **Le joueur y coche lui-même** « Ça marche » ou « Toujours cassé », et y dépose
 ses notes de bug. Chaque ligne porte un **journal daté**, signé *Claude* ou
 *Toi*, pour qu'il puisse commenter derrière chaque modification. Les lignes
 validées se replient.
