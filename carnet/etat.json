@@ -25,18 +25,6 @@
           {
             "ref": "6",
             "titre": "Les popups d'accompagnement de Figma"
-          },
-          {
-            "ref": "d1",
-            "titre": "Améliorer le Château en pleine série augmente la charge"
-          },
-          {
-            "ref": "d2",
-            "titre": "L'audit du banc d'interface n'a jamais été fait"
-          },
-          {
-            "ref": "d3",
-            "titre": "Quatre zones défilantes jamais auditées"
           }
         ]
       },
@@ -326,7 +314,13 @@
               "titre": "Les popups d'accompagnement de Figma",
               "detail": "Quatre maquettes posées (pat, composition, aura de la Dame, temps réel), jamais intégrées telles quelles. Le code les affiche déjà une fois chacune — c'est leur habillage qui reste.",
               "statut": "todo",
-              "journal": [],
+              "journal": [
+                {
+                  "quand": "24/08",
+                  "qui": "Claude",
+                  "texte": "⚠️ Les quatre maquettes (499:2, 500:2, 500:55, 500:108) ne sont pas lisibles sans Figma."
+                }
+              ],
               "priorite": "basse",
               "theme": "Interface"
             },
@@ -346,6 +340,11 @@
                   "quand": "24/08",
                   "qui": "Toi",
                   "texte": "« continue les taches du carnet » — reprise demandee en discussion apres l'arret."
+                },
+                {
+                  "quand": "24/08",
+                  "qui": "Claude",
+                  "texte": "⚠️ Bloquée ici : la connexion Figma demande une autorisation que cette session ne peut pas faire. Je ne peux pas lire l'écran 525:2 que le graphiste a retravaillé."
                 }
               ],
               "theme": "Intro"
@@ -362,6 +361,11 @@
                   "quand": "24/08",
                   "qui": "Claude",
                   "texte": "Sorti de la fiche C pour que tu puisses valider le glisser-déposer sans attendre celui-là."
+                },
+                {
+                  "quand": "24/08",
+                  "qui": "Claude",
+                  "texte": "⚠️ Bloquée pour la même raison : elle ne demande qu'un relevé Figma, et Figma n'est pas autorisé dans cette session."
                 }
               ]
             }
@@ -441,36 +445,65 @@
           "items": [
             {
               "ref": "d1",
-              "titre": "Améliorer le Château en pleine série augmente la charge",
-              "detail": "La vraie fuite, et elle n'est pas bouchée : <code>deploy_capacity()</code> est relue à chaud. L'exploit que tu craignais, lui, n'existe pas — le roster est un instantané pris à l'ouverture.",
-              "statut": "todo",
-              "journal": [],
+              "titre": "Améliorer le Château en pleine série n'agrandit plus la charge",
+              "detail": "La charge devient une donnée de la <strong>série</strong>, gelée à son ouverture comme le roster l'est déjà — <code>deploy_capacity()</code> était relue à chaud à six endroits. Trois effets, tous silencieux : le placement acceptait plus de poids que la composition n'en avait engagé, les renforts se relevaient au-delà de ce que la série avait coûté, et le bandeau de charge changeait de plafond sans rien dire. Mesuré : smoke_test échoue à <strong>19 au lieu de 16</strong> quand on retire le gel.",
+              "statut": "attente",
+              "journal": [
+                {
+                  "quand": "24/08",
+                  "qui": "Claude",
+                  "texte": "Livrée. Bancs verts sur cette machine : smoke_test 10/10 batailles, format_test 8 formats, ui_test. ⚠️ Le build web n'est PAS encore réexporté — ne teste pas sur ton téléphone tout de suite."
+                }
+              ],
               "priorite": "basse",
-              "theme": "Règles"
+              "theme": "Règles",
+              "livre": {
+                "commit": "d3e0e12",
+                "quand": "24/08 à 17h30"
+              }
             },
             {
               "ref": "d2",
-              "titre": "L'audit du banc d'interface n'a jamais été fait",
-              "detail": "<code>ui_test._press()</code> n'appuie sur rien pour les contrôles qui utilisent la méthode virtuelle plutôt que le signal. D'autres assertions passent peut-être à vide. <strong>Deux cas viennent d'être trouvés par hasard</strong>, ce qui rend l'audit moins théorique qu'hier.",
-              "statut": "todo",
+              "titre": "Le banc d'interface n'appuyait sur rien, et ne le disait pas",
+              "detail": "Deux trous : <code>_press()</code> n'envoyait qu'un enfoncé (donc plus rien depuis que les contrôles décident au relâchement), et émettre <code>gui_input</code> n'appelle pas la virtuelle <code>_gui_input()</code>. Plus la garde qui manquait : une <code>SCRIPT ERROR</code> tue la coroutine d'un cas sans compter un échec — les dix-huit cas posent maintenant leur marque, et l'absence d'une seule fait échouer le banc.",
+              "statut": "attente",
               "journal": [
                 {
                   "quand": "24/08",
                   "qui": "Claude",
                   "texte": "Les deux trouvés aujourd'hui étaient dans le même fichier et personne ne les voyait : le banc se déclarait vert."
+                },
+                {
+                  "quand": "24/08",
+                  "qui": "Claude",
+                  "texte": "Livrée. Bancs verts sur cette machine : smoke_test 10/10 batailles, format_test 8 formats, ui_test. ⚠️ Le build web n'est PAS encore réexporté — ne teste pas sur ton téléphone tout de suite."
                 }
               ],
               "priorite": "basse",
-              "theme": "Bancs"
+              "theme": "Bancs",
+              "livre": {
+                "commit": "de9e5a1",
+                "quand": "24/08 à 17h30"
+              }
             },
             {
               "ref": "d3",
-              "titre": "Quatre zones défilantes jamais auditées",
-              "detail": "Préparation, codex, boutique, showcase. C'est le même conflit que celui qui empêchait la carte de défiler, et il peut s'y cacher dès qu'un enfant cliquable est en <code>MOUSE_FILTER_STOP</code>.",
-              "statut": "todo",
-              "journal": [],
+              "titre": "Les quatre zones défilantes, auditées et débouchées",
+              "detail": "Aucune ne défilait complètement. Relevé avant correction : <strong>21 blocages dans le codex</strong> (les filets ornementaux), 5 dans la préparation (trois entretoises pleine largeur), 1 dans le showcase. Pire : trois contrôles agissaient sur l'<em>appui</em> — la puce de filtre du codex changeait le filtre dès qu'on la touchait pour faire glisser la rangée, et dans la boutique la plaque de prix <strong>achetait</strong>. <code>UiTheme.on_tap</code> porte la règle une seule fois.",
+              "statut": "attente",
+              "journal": [
+                {
+                  "quand": "24/08",
+                  "qui": "Claude",
+                  "texte": "Livrée. Bancs verts sur cette machine : smoke_test 10/10 batailles, format_test 8 formats, ui_test. ⚠️ Le build web n'est PAS encore réexporté — ne teste pas sur ton téléphone tout de suite."
+                }
+              ],
               "priorite": "basse",
-              "theme": "Bancs"
+              "theme": "Bancs",
+              "livre": {
+                "commit": "c369b46",
+                "quand": "24/08 à 17h30"
+              }
             }
           ]
         },
@@ -596,5 +629,5 @@
       "exportWeb": null
     }
   ],
-  "serie": 62
+  "serie": 63
 }

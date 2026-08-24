@@ -1368,6 +1368,7 @@ func _test_shop() -> void:
 	_check(is_instance_valid(village._shop_button), "le village porte une entree vers la boutique")
 	village.queue_free()
 	await _frames(2)
+	_done("shop")
 
 
 # ------------------------------- LA CARTE AU DOIGT ---------------------------
@@ -1375,7 +1376,6 @@ func _test_shop() -> void:
 const CampaignScene := preload("res://scenes/battle/campaign.tscn")
 const CornerButtonScript := preload("res://scenes/ui/components/corner_button.gd")
 const SelectionChipScene := preload("res://scenes/ui/components/selection_chip.tscn")
-	_done("shop")
 
 ## Faire glisser la carte en partant d'un CACHET doit la faire defiler, pas
 ## lancer la bataille.
