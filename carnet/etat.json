@@ -143,6 +143,20 @@
           "statut": "todo",
           "journal": [],
           "priorite": "basse"
+        },
+        {
+          "ref": "n1",
+          "titre": "l'intro",
+          "detail": "je vois seulement la deuxieme image de l'ecran figma, il faut que au depart le bouton soit cet ecran : https://www.figma.com/design/rqEdH4O2R21TuUFv7OUlF7/KING-sGAMBIT?node-id=410-35&amp;t=ttUec04lRmnYwEXC-4\napres le click ça passe à ça :https://www.figma.com/design/rqEdH4O2R21TuUFv7OUlF7/KING-sGAMBIT?node-id=525-2&amp;t=ttUec04lRmnYwEXC-4 . L'ecran a ete retravaillé par le graphiste tu peux t'y fier aussi a l'animation avec le zoom",
+          "statut": "todo",
+          "priorite": "moyenne",
+          "journal": [
+            {
+              "quand": "24/08",
+              "qui": "Toi",
+              "texte": "Ajoutée au carnet."
+            }
+          ]
         }
       ]
     },
