@@ -582,6 +582,35 @@ le 24/08/2026, dans `ui_test`, en rebranchant les casernes :
 godot --headless --path . tools/smoke_test.tscn
 ```
 
+⚠️ **En session cloud, Godot n'est PAS installé — et rien ne le dit.** `which
+godot` ne rend rien, et il n'y a aucun banc à lancer tant qu'on ne l'a pas posé.
+Le conteneur autorise `github.com` en sortie, donc ça se règle en une commande
+(75 Mo, ~30 s) :
+
+```bash
+curl -sSL -o /tmp/godot.zip \
+  https://github.com/godotengine/godot-builds/releases/download/4.7-stable/Godot_v4.7-stable_linux.x86_64.zip
+unzip -q /tmp/godot.zip -d /tmp && chmod +x /tmp/Godot_v4.7-stable_linux.x86_64
+```
+
+**Prendre 4.7, pas 4.4 ni 4.6** — `project.godot` déclare `config/features` en
+`4.7`, et un moteur plus vieux mesurerait autre chose que le jeu.
+
+⚠️ **Le proxy de sortie est une LISTE D'AUTORISATION, et `figma.com` n'y est
+pas.** Mesuré le 24/08 : 403 au CONNECT sur `www.figma.com`, `api.figma.com` et
+`s3-alpha-sig.figma.com`, pendant que `github.com` répond. Le serveur MCP Figma,
+lui, marche très bien — il ne sort pas par ce proxy. La conséquence est précise
+et elle piège : **on peut LIRE la maquette (`get_metadata`, `get_screenshot`,
+`get_design_context`) et pas RAPATRIER un fichier** — les URLs que rend
+`download_assets` sont sur `figma.com`. Tout asset à poser dans le dépôt demande
+donc un export fait à la main hors de cette session.
+
+**Ne pas confondre ce blocage avec un défaut de droits Figma.** Une session
+d'avant a conclu « le compte est en siège VIEW » et l'a écrit dans le carnet ;
+c'était vrai à ce moment-là et ça ne l'est plus — `whoami` rend aujourd'hui
+`tbrunel3@gmail.com`, siège **Full**. Les deux échouent en donnant un 403 :
+vérifier `whoami` AVANT d'accuser le siège.
+
 **Godot ne réimporte pas un asset remplacé** quand on lance le jeu en ligne de
 commande. Après avoir écrasé un PNG ou un TTF :
 

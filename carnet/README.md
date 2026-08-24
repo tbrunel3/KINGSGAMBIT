@@ -177,6 +177,29 @@ mais le lien marche. Et dans les deux cas, un dernier recours qui ne peut pas
 
 ---
 
+## ⚠️ Bâtir depuis un clone frais ampute la galerie, en silence
+
+Payé le 24/08 dans une session cloud. Deux manques indépendants, et aucun des
+deux n'arrête `build` :
+
+1. **`tools/screenshots/` est ignoré par git** (`.gitignore:27`). Un conteneur
+   qui vient de cloner n'a **aucune capture** — il faut les refaire.
+2. **Pillow n'est pas forcément là.** Sans lui, `build` écrit une ligne
+   `⚠️ Pillow absent : galerie non regeneree` au milieu de sa sortie normale,
+   puis **continue** et rend une page valide.
+
+La page fait alors **124 Ko au lieu de 232**, et republier efface les 35 écrans
+de la galerie. Le chiffre est le seul témoin : `build` annonce
+`galerie : 35 ecrans embarques` quand tout va bien, et rien du tout sinon.
+
+**Le bon ordre, depuis un clone frais :**
+
+```bash
+pip install Pillow
+xvfb-run -a --server-args="-screen 0 800x1200x24" godot --path . tools/screenshot.tscn
+python carnet/carnet.py build   # doit dire : galerie : 35 ecrans embarques
+```
+
 ## Le cycle normal
 
 ```bash
