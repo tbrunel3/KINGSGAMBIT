@@ -6,9 +6,9 @@
       "maj": "24/08/2026",
       "tri": "priorite",
       "marche": {
-        "nom": "tout ce qui est ouvert",
-        "lance": "24/08 à 06h35",
-        "groupe": "tout",
+        "nom": "l’ordre est donné",
+        "lance": "24/08 à 14h24",
+        "groupe": "auto",
         "ordre": [
           {
             "ref": "T",
@@ -330,7 +330,7 @@
               "ref": "T",
               "titre": "Le combat au doigt",
               "detail": "Tu le trouves mauvais, et je n'ai <strong>rien trouvé de prouvable</strong> en lisant : la sélection se fait à l'appui, donc un doigt tremblé sélectionne quand même, et le seuil de glissement (8 pt) est exactement le <em>touch slop</em> standard d'Android. La seule faiblesse réelle : <strong>il n'y a pas un seul événement tactile dans tout le jeu</strong> — tout repose sur l'émulation souris de Godot, et un second doigt produit un second appui émulé qui tue le geste en cours.",
-              "statut": "todo",
+              "statut": "encours",
               "journal": [
                 {
                   "quand": "24/08",
@@ -341,10 +341,16 @@
                   "quand": "24/08",
                   "qui": "Claude",
                   "texte": "Aucun banc ne joue un geste DANS le combat. Le cas [12] ne couvre que la carte de campagne."
+                },
+                {
+                  "quand": "24/08",
+                  "qui": "Toi",
+                  "texte": "AU TRAVAIL : première de l’ordre de marche."
                 }
               ],
               "priorite": "haute",
-              "theme": "Tactile"
+              "theme": "Tactile",
+              "avancement": 10
             }
           ]
         },
@@ -510,9 +516,9 @@
     }
   ],
   "credit": {
-    "restant": 14959000,
+    "restant": 14928000,
     "total": 15000000,
-    "releve": "24/08 à 14h35",
+    "releve": "24/08 à 14h48",
     "seuil": 12
   },
   "serie": 0
