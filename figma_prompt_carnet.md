@@ -4,6 +4,12 @@
 [« Le prompt »](#le-prompt) ; ce qui précède est le contexte dont le designer a
 besoin et que le prompt ne répète pas.
 
+⚠️ **Ce brief ne donne AUCUNE direction graphique** — c'est délibéré. Pas de
+palette, pas de police, pas de mise en page imposée, pas de liste de choses à ne
+pas faire. Il décrit ce que l'outil doit permettre, ce qu'il doit montrer, et
+dans quelles conditions il est utilisé. **Le reste appartient au designer**, et
+c'est exactement ce qu'on lui demande d'apporter.
+
 ---
 
 ## Ce qu'est le carnet, et pourquoi il mérite une maquette
@@ -24,44 +30,35 @@ du jeu.** Elle vient d'ouvrir la version en ligne, elle a vu quelque chose, et
 elle a trente secondes avant de repartir jouer. Elle n'a pas de souris, pas de
 survol, et une main.
 
-### Les trois questions, dans cet ordre
+### Les trois questions
 
-La page répond à trois questions, et **l'ordre n'est pas un goût, c'est une
-décision** :
+La page répond à trois questions. **Leur importance relative est une décision,
+pas un goût** — comment elle se traduit à l'écran est au designer :
 
-1. **Où en est la journée ?** — une jauge, un pourcentage, des compteurs.
+1. **Où en est la journée ?**
 2. **Qu'est-ce qui attend MA validation ?** — c'est la seule chose que la page
-   lui demande, tout le reste lui rend compte. *Il doit pouvoir trancher sans
-   descendre.*
-3. **Qu'est-ce que je lance maintenant ?** — les trois commandes.
+   lui demande ; tout le reste lui rend compte.
+3. **Qu'est-ce que je lance maintenant ?**
 
 ### Les trois commandes, à égalité
 
 **Ce sont elles la page.** Le joueur l'a dit mot pour mot : *« ajouter un
 travail est la fonctionnalité principale, avec lancer le travail et nettoyage
-code »*. Elles doivent se voir ensemble, en haut, et se ressembler assez pour
-qu'on comprenne qu'elles sont du même rang :
+code »*. Elles sont du même rang, et ça doit se comprendre sans les chercher :
 
-- **AJOUTER UN TRAVAIL** — il déplie un formulaire. C'était un lien discret en
-  bas de page, sous les filtres : c'est-à-dire là où on ne le voyait pas.
-- **LANCER LE TRAVAIL** — on le **nomme** (« les animations », « l'intro »),
-  et une case à cocher **groupe automatiquement** les chantiers dont le thème,
-  le titre ou le détail correspondent au nom. Si rien ne correspond, la pile
-  prend tout ce qui est ouvert plutôt que de ne rien lancer.
-- **NETTOYER LE CODE** — une passe de simplification après un gros chantier.
-  Le joueur peut **annuler** sa demande tant qu'elle est en cours ; c'est moi
-  qui la **date** à la fin, et elle s'affiche alors en vert. *Il n'a pas à
-  déclarer fini un travail qu'il ne peut pas voir.*
-
-Le reste — les fiches, les réglages — vient après.
+- **ajouter un travail** — c'était un lien discret en bas de page, sous les
+  filtres : c'est-à-dire là où on ne le voyait pas ;
+- **lancer le travail** — on le **nomme**, et une option **groupe
+  automatiquement** les chantiers qui correspondent au nom ;
+- **nettoyer le code** — une passe de simplification après un gros chantier.
 
 ### La boucle de travail, qui explique les états
 
 - une fiche **à faire / rouverte / en cours** entre dans l'ordre de marche ;
 - une fiche **à vérifier** en SORT : elle est livrée, elle attend le joueur, et
   la reprendre serait refaire un travail que personne n'a jugé ;
-- quand il ne reste plus rien à faire, la page dit **EN ATTENTE DE TOI** au
-  lieu de proposer un chantier ;
+- quand il ne reste plus rien à faire, la page dit qu'elle **attend le joueur**
+  au lieu de proposer un chantier ;
 - une fiche **validée** se replie.
 
 ---
@@ -69,106 +66,70 @@ Le reste — les fiches, les réglages — vient après.
 ## Le prompt
 
 > Tu dessines **BNL Project**, l'écran unique d'un carnet de suivi de
-> développement. Un seul utilisateur, sur téléphone en portrait, la nuit, trente
-> secondes à la fois. **Studio BNL** est le studio : son logo (`LOGO_STUDIOBNL`,
-> nœud `116:573` du fichier `rqEdH4O2R21TuUFv7OUlF7`) se place en tête, discret,
-> jamais en héros géant.
+> développement. **La direction graphique est la tienne** : ce brief ne dit que
+> ce que la page doit permettre et montrer.
 >
-> ### L'ordre de l'écran, de haut en bas — à ne pas changer
+> **Studio BNL** est le studio ; son logo est le nœud `LOGO_STUDIOBNL`
+> (`116:573`) du fichier `rqEdH4O2R21TuUFv7OUlF7`.
 >
-> 1. **Identité** — logo Studio BNL + « BNL Project », sur une ligne. Puis les
->    **onglets de journée** (une journée de travail = un onglet), défilables
->    horizontalement, chacun avec son compteur d'ouverts, plus un onglet
->    « + Nouvelle journée ».
-> 2. **L'aperçu** — le pourcentage d'avancement en gros, une **jauge globale**,
->    et des compteurs par état (en cours / à vérifier / cassé / à faire /
->    validé). C'est la première chose qu'on lit.
-> 3. **« N chantiers attendent ta validation »** — le bloc le plus important de
->    la page. Une carte par chantier, et **chaque carte se tranche sur place** :
->    - la référence et le titre,
->    - un **résumé d'une ou deux lignes** : ce qu'il faut regarder,
->    - **la date et l'heure de la livraison + le hash du commit**, pour dire
->      depuis quand et sur quelle version ça attend,
->    - un champ de note court,
->    - deux boutons : **« Ça marche »** (vert) et **« Toujours cassé »** (rouge),
->    - un lien discret « Voir la fiche ».
-> 4. **LES TROIS COMMANDES**, groupées et de rang égal — c'est le cœur de la
->    page :
->    - **lancer le travail** : un champ de texte pour le **nommer**, une case
->      « grouper automatiquement les chantiers qui correspondent au nom », puis
->      un grand bouton or **« AU TRAVAIL ! — N chantiers ouverts »**. Une fois
->      lancé, il laisse place à la liste numérotée de l'ordre de marche, coiffée
->      du **nom donné au travail** et de l'heure ;
->    - **« + AJOUTER UN TRAVAIL »**, qui déplie le formulaire sur place ;
->    - **« 🧹 NETTOYER LE CODE »**, et ses deux suites : *demandé* (avec un
->      bouton **Annuler la demande**) ou ***✓ fait*, en vert, daté** ;
->    - quand il n'y a plus rien à prendre, un état de repos **EN ATTENTE DE
->      TOI** / **JOURNÉE FINIE** à la place du bouton.
-> 5. **Le bandeau de build** — deux états, et ils doivent être impossibles à
->    confondre : **vert vif « COMMIT ET TEST POSSIBLE — en ligne depuis … »**, ou
->    **ambre « Pas encore en ligne — ne teste pas tout de suite »**. Ce bandeau
->    a été demandé après que le joueur a testé une version qui ne contenait pas
->    le travail : il doit crier.
-> 6. **Les réglages** — trois rangées de puces : classer (par priorité / à la
->    main), grouper (par état / par section / par thème), filtrer par thème.
-> 7. **Les fiches**, groupées par état, avec leur en-tête de groupe.
+> ### Qui s'en sert
 >
-> ### Les composants à livrer, avec leurs états
+> Une seule personne, sur téléphone en portrait, la nuit, trente secondes à la
+> fois — entre deux tests d'un jeu qu'elle développe. Pas de souris, pas de
+> survol, une main. Elle ouvre la page pour savoir où en est le travail, dire ce
+> qui marche, et lancer la suite.
 >
-> - **Onglet de journée** : actif / inactif / « + nouvelle ».
-> - **Jauge** : deux tailles (globale, et fine sous chaque fiche), de 0 à 100.
-> - **Carte d'attente de validation** (le composant le plus soigné de la page).
-> - **Fiche** : cinq états — *à faire*, *en cours*, *à vérifier*, *toujours
->   cassé*, *validé*. La validée est **repliée** : une ligne, plus rien d'autre
->   qu'un bouton « Ça s'est remis à casser ».
-> - **Pastille de priorité** : haute / moyenne / basse.
-> - **Puce de thème**, cliquable, qui sert de filtre.
-> - **Bouton primaire** (AU TRAVAIL), **secondaire** (nettoyage), **verdict
->   vert**, **verdict rouge**, **bouton discret**.
-> - **Formulaire d'ajout de tâche** replié / déplié : titre, détail, section,
->   thème, priorité, état.
-> - **Champ de lancement** : le texte, la case de groupage automatique, le
->   grand bouton or — les trois lisibles comme un seul geste.
-> - **Bloc de nettoyage** : *demandé* (bleu, annulable) et *fait* (vert, daté).
+> ### Ce que la page doit permettre
 >
-> ### Les contraintes, qui ne se négocient pas
+> - **Voir l'avancement** de la journée en cours, et celui de chaque chantier.
+> - **Trancher** ce qui attend son verdict, **sans avoir à descendre** : pour
+>   chaque chantier livré, il lui faut sous les yeux un résumé de ce qu'il doit
+>   regarder, depuis quand et sur quelle version ça l'attend, de quoi écrire une
+>   note, et deux réponses — *ça marche* / *toujours cassé*.
+> - **Ajouter un travail** : ce qu'il veut voir corrigé, un détail facultatif,
+>   où le ranger, son thème, sa priorité, son état.
+> - **Lancer le travail** en le nommant, avec l'option de grouper
+>   automatiquement les chantiers qui correspondent à ce nom. Une fois lancé, la
+>   liste ordonnée s'affiche, avec le nom donné et l'heure.
+> - **Demander un nettoyage du code**, l'annuler tant qu'il est en cours, et
+>   voir qu'il est terminé — daté. *Il n'a pas à déclarer fini un travail qu'il
+>   ne peut pas voir : c'est le carnet qui l'annonce.*
+> - **Savoir si la version en ligne contient le travail dont on parle.** Deux
+>   situations, et les confondre coûte un test pour rien : *testable maintenant*
+>   ou *pas encore en ligne*. Ce signal existe parce que le joueur a déjà testé
+>   une version qui ne contenait pas le travail.
+> - **Passer d'une journée de travail à l'autre**, et en ouvrir une nouvelle.
+> - **Ranger** : classer par priorité ou à la main, grouper par état, par
+>   section ou par thème, filtrer par thème.
 >
-> - **Une seule colonne**, 780 points de large au maximum sur grand écran, et
->   qui tient à **393 points** en portrait sans rien couper.
-> - **Toute cible tactile fait au moins 44 points de haut.** Pas de survol :
->   ce qui n'est pas visible n'existe pas.
-> - **Palette nuit et or**, celle du jeu — fond `#0b0e18`, plaque `#141a2b`,
->   filet `#2f3d5c`, texte `#e6ecf5`, atténué `#8fa0b8`, or `#ffd11a` et
->   `#ffe580`, bleu `#268cd9`, danger `#c65f5f`, succès `#5fb37a`.
-> - **Poppins** (600/700) pour les titres, **Inter** pour le corps, chiffres en
->   `tabular-nums` partout où ils s'alignent.
-> - **Aucune image externe, aucune icône propriétaire** : la page se rend sans
->   réseau. Emoji ou SVG simple uniquement.
-> - Contraste lisible **la nuit, luminosité basse**.
+> ### Ce que la page contient
 >
-> ### Ce qu'il ne faut surtout pas faire
+> - Une **journée de travail** porte un nom, un avancement, l'état de sa version
+>   en ligne, un ordre de marche et des chantiers. Plusieurs journées coexistent.
+> - Un **chantier** porte une référence courte, un titre, un détail, un thème,
+>   une priorité (trois niveaux), un avancement, un état, un journal daté et
+>   signé — par le joueur ou par moi — et, une fois livré, l'heure et
+>   l'identifiant du commit.
+> - Les **cinq états** d'un chantier : *à faire*, *en cours*, *à vérifier*,
+>   *toujours cassé*, *validé*. Ils doivent se distinguer d'un coup d'œil, et un
+>   chantier validé doit prendre le moins de place possible tout en restant
+>   réouvrable.
 >
-> - Cacher une action derrière un menu ou un survol.
-> - Mettre la validation en bas de page. C'est le geste principal.
-> - Un carrousel, un accordéon pour l'essentiel, une modale pour trancher.
-> - Des cartes toutes égales : la page doit hiérarchiser à l'œil nu ce qui
->   attend le joueur et ce qui l'informe.
-> - Un héros plein écran : cette page est un poste de travail, pas une page
->   d'accueil.
+> ### Les contraintes du support
 >
-> ### Le mouvement, si tu en mets
->
-> Quatre moments, et pas un de plus : la **jauge qui se remplit** à l'ouverture,
-> la **carte validée qui se replie** dans le groupe *Validé*, le **bandeau vert**
-> qui s'allume quand un build passe en ligne, et le **nettoyage qui passe du
-> bleu au vert** quand il est daté. Rien d'autre ne bouge.
+> - **Portrait, 393 points de large**, sans rien couper ; la page doit aussi
+>   tenir sur un écran large.
+> - **Toute cible tactile est atteignable au pouce**, et **rien ne dépend d'un
+>   survol** : ce qui n'est pas visible n'existe pas.
+> - **Aucune ressource externe** : la page se rend sans réseau.
+> - Elle est lue **la nuit, luminosité basse**.
 >
 > ### Livrables
 >
 > - une frame **mobile 393 × hauteur libre**, l'écran complet ;
-> - une frame **desktop 1280**, la même hiérarchie en plus large ;
-> - une planche de **composants** avec tous les états listés plus haut ;
-> - les **cinq états de fiche** côte à côte.
+> - une frame **large**, la même page pour un écran de bureau ;
+> - une planche de **composants** avec leurs états ;
+> - les **cinq états de chantier** côte à côte.
 
 ---
 
