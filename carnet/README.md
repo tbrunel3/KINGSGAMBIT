@@ -171,10 +171,18 @@ Une fiche :
 - `livre` : `{"commit": "940d5ea", "quand": "24/08 à 03h05"}` — **à remplir en
   même temps qu'on passe une fiche en `attente`.** L'inspecteur en tire le
   *temps d'attente* : depuis combien de temps la ligne l'attend.
-- `avancement` : un entier de 0 à 100. Absent, il se déduit de l'état (todo 0,
-  ko 10, encours 50, attente 90, ok 100). L'avancement global est la **moyenne**
-  des fiches, pas la part de validées : sinon une journée de dix chantiers reste
-  à 0 % jusqu'à la première coche.
+- ~~`avancement`~~ — **retiré le 24/08**, à la demande du joueur : « les barres
+  d'avancement sont buggées ». Elles l'étaient par construction. Un pourcentage
+  **déduit** d'un statut (todo 0, encours 50, attente 90) n'est pas une mesure,
+  c'est une invention présentée comme un chiffre : une fiche à peine ouverte
+  affichait 50 %. Ce qui reste est **comptable** et ne peut pas mentir —
+  combien de fiches validées sur combien.
+- `exportWeb` : `{"demande": "24/08 à 15h17"}` — **la demande de mise en ligne,
+  et c'est LUI qui la fait.** Exporter le jeu coûte une minute de build web plus
+  le déploiement ; le faire après chaque livraison mange la séance pour un test
+  qu'il ne fera peut-être pas tout de suite. Le bouton
+  **⬆ METTRE EN LIGNE POUR TESTER** vit dans le bandeau de build. Quand
+  l'export est fait, remplir `fait` et mettre `build` à jour.
 - `theme` : un mot, cliquable, qui sert de filtre. C'est le *module contexte* de
   l'inspecteur.
 - `priorite` : `haute`, `moyenne`, `basse`. Le tri est **stable** : deux fiches
@@ -190,24 +198,19 @@ Une fiche :
   ligne.** Publier une ligne « fait » sur un build qu'il ne peut pas lancer lui
   fait perdre un test — c'est arrivé le 24/08.
 
-### Le crédit, en bas de la console
+### ~~Le crédit, en bas de la console~~ — retiré
 
-```json
-"credit": {"restant": 14946000, "total": 15000000,
-           "releve": "24/08 à 05h58", "seuil": 12}
-```
+Le joueur : « les données en bas avec le temps de session sont erronées ». Il a
+raison, et le défaut était dans la nature de la chose : je ne vois mes tokens
+qu'au **début d'un tour**, jamais pendant. Le relevé était donc périmé dès
+qu'il l'affichait, et une jauge périmée qui a l'air vivante ment.
 
-Sous `seuil` %, la barre passe en ambre ; sous sa moitié, la console affiche
-**PASSATION REQUISE** — je m'arrête, je commite, j'écris la passation.
+**La règle, elle, reste** : sous le seuil, je m'arrête, je commite, j'écris la
+passation. Elle n'a simplement plus d'affichage — je la tiens, je ne la mesure
+pas à l'écran.
 
-⚠️ **Il ne se met PAS à jour tout seul.** Je ne vois mes tokens qu'au début d'un
-tour, jamais pendant : je ne peux pas m'interrompre au milieu d'un chantier. Le
-relevé est daté pour que ça se voie, et je le réécris à chaque fois que je
-touche au carnet — c'est-à-dire après chaque livraison. **Ne jamais laisser
-croire que la jauge vit toute seule.**
-
-La maquette mettait là `PING: 14MS // TEMPS_IMAGE: 8.3MS` : de la télémétrie
-décorative. On y a mis la seule vraie.
+La barre du bas porte désormais ce qui est comptable : combien de fiches
+attendent son verdict, combien sont encore ouvertes.
 
 ---
 

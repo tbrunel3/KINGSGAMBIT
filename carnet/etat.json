@@ -204,7 +204,6 @@
                 "commit": "940d5ea",
                 "quand": "24/08 à 03h05"
               },
-              "avancement": 90,
               "resume": "À vérifier : glisse une carte de la caserne dans le déploiement, et une pièce de l'inventaire directement sur sa case. Le tap doit marcher exactement comme avant, partout."
             },
             {
@@ -251,7 +250,6 @@
               ],
               "priorite": "moyenne",
               "theme": "Animations",
-              "avancement": 90,
               "livre": {
                 "commit": "c21d0ac",
                 "quand": "24/08 à 14h31"
@@ -376,7 +374,6 @@
               ],
               "priorite": "haute",
               "theme": "Tactile",
-              "avancement": 60,
               "livre": {
                 "commit": "9ebb63b",
                 "quand": "24/08 à 14h50"
@@ -543,14 +540,9 @@
         "demande": "24/08 à 03h30",
         "fait": "24/08 à 03h52",
         "quoi": "Quatre duplications supprimées : le chargement d'une silhouette de pièce vivait en quatre exemplaires, l'aperçu de glissement en deux, les deux zones de lâcher étaient copiées l'une sur l'autre, et une closure gardée sur un nœud est devenue une simple texture. Bancs identiques : 181 OK, aucun échec."
-      }
+      },
+      "exportWeb": null
     }
   ],
-  "credit": {
-    "restant": 14976000,
-    "total": 15000000,
-    "releve": "24/08 à 14h55",
-    "seuil": 12
-  },
-  "serie": 55
+  "serie": 57
 }
