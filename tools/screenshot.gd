@@ -405,7 +405,19 @@ func _capture_intro() -> void:
 	add_child(intro)
 
 	# Premier temps : le Roi seul, et l'invite a s'approcher.
-	await get_tree().create_timer(0.6).timeout
+	#
+	# ⚠️ L'ATTENTE SE CALCULE, ELLE NE SE DEVINE PAS. A 0.6 s cette capture
+	# photographiait un ecran SANS son invite : elle n'arrive qu'apres
+	# HINT_DELAY (1 s), puis met 0.8 s a monter a 0.7. La capture etait donc
+	# prise pendant que l'invite valait exactement 0, et elle montrait un
+	# ecran qui n'existe a aucun moment pour le joueur.
+	#
+	# _finish_animations ne peut pas servir ici : la respiration de l'invite
+	# est une boucle INFINIE, et la pousser de dix secondes la laisse a un
+	# point arbitraire de son cycle. On attend donc le vrai temps, lu sur la
+	# constante de l'ecran pour qu'un reglage de la mise en scene n'ait pas a
+	# etre reporte ici a la main.
+	await get_tree().create_timer(intro.HINT_DELAY + 0.9).timeout
 	_save(intro, "9a_intro_approche.png")
 
 	# Puis le dialogue, declenche comme le ferait un doigt sur l'ecran.
