@@ -77,6 +77,11 @@ func _ready() -> void:
 	# ScrollContainer qui fait defiler la carte. Voir _gui_input.
 	mouse_filter = Control.MOUSE_FILTER_PASS
 	pivot_offset = size / 2.0
+	# Le cachet est la cible tactile principale de la carte : c'est le premier
+	# endroit ou l'absence de retour a l'appui se voyait. Le retour n'engage
+	# rien - c'est toujours le RELACHEMENT qui lance la bataille (cf. _gui_input
+	# et TAP_SLOP), et un doigt qui part en defilement rend le cachet a plat.
+	UiTheme.press_feedback(self)
 	_build_glyphs()
 	_refresh_glyphs()
 

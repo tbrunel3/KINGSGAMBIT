@@ -29,6 +29,7 @@ var _count_value: int = 0
 
 func _ready() -> void:
 	gui_input.connect(_on_gui_input)
+	UiTheme.press_feedback(self)
 	UiTheme.ignore_mouse_recursive($Column)
 	_restyle()
 

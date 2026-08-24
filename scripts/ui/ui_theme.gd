@@ -178,6 +178,97 @@ static func style_button(button: Button, color: Color = PANEL_LIGHT) -> void:
 	button.add_theme_color_override("font_hover_color", font_color)
 	button.add_theme_color_override("font_pressed_color", font_color)
 	button.add_theme_color_override("font_disabled_color", TEXT_DIM)
+	# TOUT bouton du theme repond au doigt, sans que l'ecran ait a le demander.
+	press_feedback(button)
+
+
+## LE RETOUR A L'APPUI, EN UN SEUL ENDROIT.
+##
+## Retour du joueur : "aucun bouton ne reagit a l'appui". La fiche disait aussi
+## comment le corriger, et c'est ce qui decide si ca prend une heure ou trois
+## jours : ca se pose dans les COMPOSANTS PARTAGES, jamais ecran par ecran -
+## sinon la moitie des boutons en a et l'autre pas, et le defaut revient sous
+## une autre forme.
+##
+## Ici : `style_button` l'appelle pour tout Button du theme, et les trois
+## cliquables maison (bouton de coin, chip, cachet) l'appellent aussi. Un ecran
+## n'a donc rien a faire.
+##
+## ⚠️ ON ANIME L'ECHELLE, JAMAIS LA POSITION. Un enfant de conteneur voit sa
+## position reecrite par la mise en page a chaque trame : un tween dessus se
+## bat avec le conteneur - c'est ce qui avait colle le bandeau de serie en haut
+## de l'ecran (cf. CLAUDE.md, pieges de portage). L'echelle est une transformee
+## de rendu, le conteneur ne la touche pas.
+##
+## ⚠️ ET LE PIVOT SE POSE AU MOMENT DE L'APPUI, pas a la construction. A la
+## construction un Control n'a pas encore sa taille : le pivot tomberait a
+## (0,0) et le bouton se retracterait vers son coin haut-gauche.
+static func press_feedback(control: Control) -> void:
+	if control == null or control.has_meta("_press_feedback"):
+		return
+	control.set_meta("_press_feedback", true)
+	if control is BaseButton:
+		# Les signaux de BaseButton savent deja distinguer appui, relachement et
+		# sortie du doigt hors du bouton. On ne redecoupe pas ce qu'il fait.
+		var bouton := control as BaseButton
+		bouton.button_down.connect(func() -> void: _press_scale(control, true))
+		bouton.button_up.connect(func() -> void: _press_scale(control, false))
+	else:
+		# ⚠️ ON ECOUTE LE SIGNAL, ET C'EST VOLONTAIRE. Plusieurs de ces controles
+		# (cachet, chip, grille) implementent la VIRTUELLE `_gui_input`. Godot
+		# fait les deux : il appelle la virtuelle ET emet le signal. On peut
+		# donc se brancher sans toucher a leur logique. C'est l'inverse du piege
+		# de `ui_test._press()`, ou emettre le signal n'appelait pas la
+		# virtuelle - le sens qui marche, c'est celui-ci.
+		control.gui_input.connect(func(event: InputEvent) -> void:
+			if event is InputEventMouseButton \
+					and (event as InputEventMouseButton).button_index == MOUSE_BUTTON_LEFT:
+				_press_scale(control, (event as InputEventMouseButton).pressed)
+			elif event is InputEventMouseMotion \
+					and ((event as InputEventMouseMotion).button_mask \
+						& MOUSE_BUTTON_MASK_LEFT) == 0:
+				# ⚠️ LE RATTRAPAGE QUI EVITE UN CONTROLE ENFONCE POUR TOUJOURS.
+				# Un geste qui PART d'un cachet et fait defiler la carte se
+				# relache ailleurs : le `released` n'arrive jamais ici. Des que
+				# le doigt repasse sans appuyer, on remet a plat.
+				_press_scale(control, false))
+		# Meme raison, l'autre moitie : le doigt sort du controle en glissant.
+		#
+		# ⚠️ SEULEMENT POUR CES CONTROLES-LA. Un BaseButton garde son etat
+		# enfonce quand le doigt sort sans relacher - c'est le comportement de
+		# Godot, et il est juste : on peut revenir sur le bouton et valider.
+		# Brancher `mouse_exited` dessus le remettrait a plat alors qu'il est
+		# toujours tenu, et le retour ne reviendrait jamais faute d'un nouveau
+		# `button_down`.
+		control.mouse_exited.connect(func() -> void: _press_scale(control, false))
+
+
+static func _press_scale(control: Control, enfonce: bool) -> void:
+	if control == null or not control.is_inside_tree():
+		return
+	if control.size == Vector2.ZERO:
+		return
+	var cible := Balance.PRESS_SCALE if enfonce else 1.0
+	# ⚠️ TUER LE TWEEN PRECEDENT, ET NE PAS CROIRE QUE `create_tween` LE FAIT.
+	# Il n'en remplace aucun : deux appuis rapproches laissaient deux tweens
+	# tirer la MEME propriete en sens contraire, et le controle se figeait a une
+	# echelle quelconque - d'autant plus visible que l'aller dure 0,06 s et le
+	# retour 0,13.
+	var ancien := control.get_meta("_press_tween", null) as Tween
+	if ancien != null and ancien.is_valid():
+		ancien.kill()
+	if is_equal_approx(control.scale.x, cible):
+		control.scale = Vector2(cible, cible)
+		return
+	control.pivot_offset = control.size * 0.5
+	var tween := control.create_tween()
+	tween.set_trans(Tween.TRANS_QUAD)
+	tween.set_ease(Tween.EASE_OUT)
+	# ⚠️ Les durees d'appui ne passent PAS par Balance.motion() : elles ne
+	# suivent pas `scale`. Voir le commentaire de MOTION.
+	var duree := float(Balance.MOTION["press_in" if enfonce else "press_out"])
+	tween.tween_property(control, "scale", Vector2(cible, cible), duree)
+	control.set_meta("_press_tween", tween)
 
 
 static func style_panel(panel: PanelContainer, color: Color = PANEL) -> void:

@@ -715,7 +715,24 @@ const MOTION := {
 	"panel_entry": 0.42,
 	"card_entry": 0.34,
 	"card_stagger": 0.07,
+
+	# --- LE RETOUR A L'APPUI. Le joueur : "aucun bouton ne reagit quand on
+	# appuie dessus". Ce n'est pas une transition entre ecrans, c'est la reponse
+	# du doigt - et c'est le seul endroit du jeu ou la duree doit rester COURTE
+	# quoi qu'il arrive : un bouton qui met un tiers de seconde a s'enfoncer ne
+	# se lit plus comme un bouton, il se lit comme une lenteur.
+	#
+	# ⚠️ ELLES NE SUIVENT PAS `scale`, exprès. `scale` sert a ralentir la
+	# navigation ; l'applique ici et un `scale` de 1.4 rendrait chaque appui
+	# mou. Voir UiTheme.press_feedback, qui les lit en direct.
+	"press_in": 0.06,
+	"press_out": 0.13,
 }
+
+## De combien un controle rapetisse sous le doigt. 4 %, mesure a l'oeil sur un
+## bouton de 48 points : en dessous ca ne se voit pas, au-dessus le libelle
+## commence a "sauter" a chaque appui.
+const PRESS_SCALE := 0.96
 
 
 ## Duree d'animation `key`, mise a l'echelle par MOTION.scale.

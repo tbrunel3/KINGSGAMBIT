@@ -112,6 +112,7 @@ static func _make(glyph_name: String, texture_path: String, on_press: Callable,
 
 	UiTheme.ignore_mouse_recursive(skin)
 	button.gui_input.connect(button._on_gui_input)
+	UiTheme.press_feedback(button)
 	return button
 
 
