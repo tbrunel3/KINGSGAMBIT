@@ -251,6 +251,18 @@ func _refresh() -> void:
 			"Aura, par victoire", "+%d %% d'or" % int(Balance.DAME_GOLD_BONUS * 100.0 * dames),
 			Color("e5b8e0")))
 
+	# ---- LE COURRIER DU ROI ----
+	#
+	# ⚠️ AU CHATEAU, ET PAS AU VILLAGE. Le village porte deja Boutique, Codex,
+	# Missions, la pastille de gemmes, le Chateau Royal, quatre casernes et
+	# BATAILLE : une cinquieme entree de coin irait contre le nettoyage qui
+	# vient d'etre fait (six tailles mesurees pour la meme chose). Le trone est
+	# l'endroit du Roi, et cet ecran est bien moins charge.
+	var courrier := _letters_section()
+	if courrier != null:
+		_panel_body.add_child(_divider())
+		_panel_body.add_child(courrier)
+
 	if Game.is_max_level(Balance.CASTLE):
 		_panel_body.add_child(_divider())
 		var maxed := UiTheme.make_label("Niveau maximum atteint.", 14, CAPTION)
@@ -277,6 +289,64 @@ func _refresh() -> void:
 	_panel_body.add_child(costs)
 
 	_panel_body.add_child(_upgrade_button(cost))
+
+
+## La pile de courrier : une ligne par lettre recue, la non lue en clair et en
+## gras. `null` tant qu'il n'y en a aucune - une section vide serait un trou
+## dans un panneau qui n'en a pas.
+func _letters_section() -> Control:
+	var recues: Array[String] = []
+	for key in Letters.ORDER:
+		if Game.letter_received(key):
+			recues.append(key)
+	if recues.is_empty():
+		return null
+
+	var column := VBoxContainer.new()
+	column.add_theme_constant_override("separation", 6)
+	var unread := Game.unread_letters()
+	var titre := "COURRIER DU ROI" if unread <= 0 else "COURRIER DU ROI — %d NON LUE%s" % [
+		unread, "S" if unread > 1 else ""]
+	var caption := UiTheme.make_label(titre, 11, GOLD if unread > 0 else CAPTION)
+	caption.add_theme_font_override("font", UiTheme.font_bold())
+	column.add_child(caption)
+
+	for key in recues:
+		var lue := Game.letter_read(key)
+		var row := PanelContainer.new()
+		var box := StyleBoxFlat.new()
+		box.bg_color = Color(1, 1, 1, 0.04)
+		box.set_corner_radius_all(6)
+		box.set_content_margin_all(8)
+		if not lue:
+			box.border_color = GOLD
+			box.set_border_width_all(1)
+		row.add_theme_stylebox_override("panel", box)
+
+		var line := HBoxContainer.new()
+		line.add_theme_constant_override("separation", 8)
+		var seal := Icon.new()
+		seal.icon_name = "crown" if lue else "star"
+		seal.color = CAPTION if lue else GOLD
+		seal.custom_minimum_size = Vector2(14, 14)
+		seal.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+		line.add_child(seal)
+
+		var label := UiTheme.make_label(Letters.title(key), 13,
+			CAPTION if lue else Color.WHITE)
+		if not lue:
+			label.add_theme_font_override("font", UiTheme.font_bold())
+		line.add_child(label)
+		row.add_child(line)
+
+		# Relire une lettre est toujours possible : c'est une archive, pas une
+		# notification. On decide au relachement, comme partout ailleurs.
+		var cle := String(key)
+		UiTheme.on_tap(row, func() -> void:
+			Router.goto_letter(cle, Router.RETURN_CASTLE))
+		column.add_child(row)
+
+	return column
 
 
 ## Deux colonnes de statistique cote a cote, comme la grille de la maquette.

@@ -43,6 +43,7 @@ func _ready() -> void:
 	_test_cover_fit()
 	_test_village_anchoring()
 	await _test_intro_overlays()
+	await _test_letter_folds()
 
 	print("")
 	if _failures == 0:
@@ -226,3 +227,69 @@ func _test_intro_overlays() -> void:
 				% [String(entry["name"]), worst, size.x])
 
 	host.queue_free()
+
+
+# ------------------------------- LA MISSIVE ----------------------------------
+
+const RoyalLetter := preload("res://scenes/story/royal_letter.tscn")
+
+## Le parchemin doit se DECOUPER au meme endroit sur les huit formats.
+##
+## ⚠️ CE N'EST PAS UN TEST DE PLUS : c'est le seul qui protege le pli. Les deux
+## plissures sont PEINTES dans l'illustration, a 39,5 % et 65,4 % de sa hauteur.
+## Si la decoupe derive d'un format a l'autre - parce qu'une hauteur est calee
+## en dur, ou que le parchemin est etire au lieu d'etre borne -, les ombres de
+## pli tombent en plein milieu des lignes de texte, et ca ne se voit sur aucune
+## capture prise au format de reference.
+##
+## On mesure aussi que la lettre RESTE DANS L'ECRAN : c'est un parchemin de
+## rapport 0,733, et sur un ecran court (court-360x620 rend 852 de haut pour
+## 495 de large) c'est la hauteur qui commande.
+func _test_letter_folds() -> void:
+	print("\n[4] La missive : le pli tombe au meme endroit partout")
+
+	Game.reset_progress()
+	Game.mark_intro_seen()
+	Router.current_letter = Letters.HERITAGE
+
+	var host := Control.new()
+	add_child(host)
+	var screen: Control = RoyalLetter.instantiate()
+	host.add_child(screen)
+	await get_tree().process_frame
+	await get_tree().process_frame
+
+	_check(screen._panels.size() == 3,
+		"le parchemin est en trois tranches (%d)" % screen._panels.size())
+
+	for entry in VIEWPORTS:
+		var size: Vector2 = entry["size"]
+		host.size = size
+		screen.size = size
+		await get_tree().process_frame
+		screen._place()
+
+		var total := 0.0
+		for panel in screen._panels:
+			total += panel.size.y
+		if total <= 0.0:
+			_check(false, "%s : le parchemin a une hauteur" % String(entry["name"]))
+			continue
+
+		var first: float = screen._panels[0].size.y / total
+		var second: float = (screen._panels[0].size.y + screen._panels[1].size.y) / total
+		var derive := maxf(absf(first - 0.395), absf(second - 0.654)) * 100.0
+
+		# Il doit aussi tenir dans l'ecran, en haut comme en bas.
+		var haut: float = screen._panels[0].position.y
+		var bas: float = screen._panels[2].position.y + screen._panels[2].size.y
+		var deborde: float = maxf(-haut, bas - screen.get_node("Safe/Root/Stage").size.y)
+
+		_check(derive < 0.5 and deborde < 1.0,
+			"%s : plis a %.1f %% / %.1f %% (derive %.2f pt), debordement %.2f pt"
+				% [String(entry["name"]), first * 100.0, second * 100.0, derive,
+				   maxf(0.0, deborde)])
+
+	host.queue_free()
+	await get_tree().process_frame
+	Game.reset_progress()

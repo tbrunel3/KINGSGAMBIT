@@ -140,3 +140,21 @@ static func _milestone_reached(key: String) -> bool:
 ## Celle-ci s'impose au joueur ; les autres l'attendent au Chateau Royal.
 static func is_forced(key: String) -> bool:
 	return FORCED.has(key)
+
+
+## Fait entrer le courrier du a cet instant, et rend la cle de celle qui doit
+## S'IMPOSER - "" si rien ne s'impose.
+##
+## ⚠️ UN SEUL APPELANT, A L'ENTREE DU VILLAGE. Aucun appel a disseminer dans
+## battle_result, campaign_run ou castle_screen : c'est ce qui garantit qu'une
+## lettre ne peut pas arriver au mauvais moment - par-dessus un ecran de
+## defaite, ou en pleine serie.
+##
+## Une seule lettre par passage, meme si deux jalons sont tombes ensemble : deux
+## enveloppes d'affilee, c'est un mur, pas une voix.
+static func deliver_pending() -> String:
+	var key := due()
+	if key == "":
+		return ""
+	Game.receive_letter(key)
+	return key if is_forced(key) else ""

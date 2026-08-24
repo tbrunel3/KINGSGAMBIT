@@ -17,6 +17,7 @@ const CASTLE_SCENE := "res://scenes/village/castle_screen.tscn"
 const CODEX_SCENE := "res://scenes/village/codex_popup.tscn"
 const SHOP_SCENE := "res://scenes/village/shop.tscn"
 const BUILDING_SCENE := "res://scenes/village/building_screen.tscn"
+const LETTER_SCENE := "res://scenes/story/royal_letter.tscn"
 
 ## Bataille en cours de preparation ou de combat.
 var current_battle_id: int = 1
@@ -24,6 +25,14 @@ var current_battle_id: int = 1
 ## Batiment dont l'ecran s'ouvre. Meme raison que current_battle_id : Godot ne
 ## sait pas passer d'argument a un changement de scene.
 var current_building: String = ""
+
+## Missive en cours de lecture, et l'ecran ou elle rend la main. La premiere
+## arrive depuis le village, les trois autres depuis le Chateau Royal - elle
+## doit donc savoir d'ou on vient (cf. chantier_i_missives.md).
+const RETURN_VILLAGE := "village"
+const RETURN_CASTLE := "castle"
+var current_letter: String = ""
+var letter_return: String = RETURN_VILLAGE
 
 
 func goto_intro() -> void:
@@ -98,6 +107,23 @@ func goto_building(type: String) -> void:
 ## Codex du royaume. En plein ecran defilant et non en modale : il enumere
 ## les dix niveaux de cinq pieces, les batiments et les regles - une modale
 ## qui ne defile pas en montrerait le dixieme.
+## Une missive du Roi, en ecran plein.
+##
+## ⚠️ PAS UNE MODALE, et pour une autre raison que le codex. Le codex n'y tient
+## pas parce qu'il defile ; ici le texte ne defile pas non plus, donc cet
+## argument tombe - ce qui tranche, c'est le DEPLI. Une enveloppe qui s'ouvre
+## dans une boite de 300 points de large ne se voit pas.
+##
+## ⚠️ ON NE NOMME PAS LA CLASSE DE L'ECRAN ICI. Un autoload qui reference une
+## classe d'interface tire TOUT le graphe des ecrans au demarrage et le jeu ne
+## se lance plus - paye le 24/08 avec ConfirmLeave. Le chemin de scene est une
+## chaine, il ne resout rien a l'analyse.
+func goto_letter(key: String, return_to: String = RETURN_VILLAGE) -> void:
+	current_letter = key
+	letter_return = return_to
+	_change(LETTER_SCENE)
+
+
 func goto_codex() -> void:
 	_change(CODEX_SCENE)
 

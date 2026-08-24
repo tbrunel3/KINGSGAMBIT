@@ -220,6 +220,16 @@ func _ready() -> void:
 	Game.progress_changed.connect(_refresh)
 	Game.missions_changed.connect(_refresh)
 
+	# LE COURRIER DU ROI. Un seul endroit lit les quatre jalons (cf.
+	# Letters.deliver_pending) : c'est ce qui garantit qu'une lettre n'arrive
+	# jamais par-dessus un ecran de defaite ni en pleine serie.
+	#
+	# `call_deferred` comme le popup d'aura : changer de scene depuis le _ready
+	# de la scene courante la detruit pendant qu'elle se construit.
+	var imposee := Letters.deliver_pending()
+	if imposee != "":
+		Router.goto_letter.call_deferred(imposee, Router.RETURN_VILLAGE)
+
 	# L'AURA DE LA DAME, a la premiere Dame ramenee vivante.
 	#
 	# Au village et non au combat : c'est ici que le choix se pose - la laisser

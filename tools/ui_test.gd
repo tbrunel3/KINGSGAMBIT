@@ -23,7 +23,7 @@ var _cas_finis: Array[String] = []
 const CAS := ["village", "codex", "battle", "composition", "series_chaining",
 	"shop", "modal_entry", "shop_entry", "result_entries", "mission_claim",
 	"guide_popups", "campaign_drag", "press_feedback", "gold_count",
-	"codex_entry", "second_finger", "village_bars", "scroll_zones"]
+	"codex_entry", "second_finger", "village_bars", "scroll_zones", "missive"]
 
 
 func _ready() -> void:
@@ -55,6 +55,7 @@ func _ready() -> void:
 	await _test_second_finger()
 	await _test_village_bars()
 	await _test_scroll_zones()
+	await _test_royal_letter()
 
 	# ⚠️ UN BANC VERT PEUT AVOIR SAUTE LA MOITIE DE SES QUESTIONS (fiche d2).
 	#
@@ -80,6 +81,131 @@ func _ready() -> void:
 	else:
 		print("RESULTAT : %d probleme(s) detecte(s)." % _failures)
 	get_tree().quit(0 if _failures == 0 else 1)
+
+
+# ------------------------------- LA MISSIVE DU ROI ---------------------------
+
+## L'ECRAN DE DEPLI (fiche 5, chantier I).
+##
+## Ce qu'on mesure ici, ce sont les DEUX choses que les images ne portent pas :
+## la decoupe sur les plissures peintes, et l'enchainement cachet -> depli ->
+## sortie. Les deux PNG du graphiste peuvent manquer - l'ecran se replie alors
+## sur un papier dessine, de meme geometrie, et c'est ce qui rend cette mesure
+## possible avant qu'ils arrivent.
+func _test_royal_letter() -> void:
+	print("\n[19] La missive du Roi : le sceau, le depli, la sortie")
+
+	# ---- LA LIVRAISON : la premiere S'IMPOSE, les trois autres attendent ----
+	#
+	#  Regle hybride tranchee par le joueur. Et une seule lettre par passage au
+	#  village, meme si deux jalons sont tombes ensemble : deux enveloppes
+	#  d'affilee, c'est un mur, pas une voix.
+	Game.reset_progress()
+	_check(Letters.deliver_pending() == "", "intro non vue : rien n'est livre")
+	Game.mark_intro_seen()
+	_check(Letters.deliver_pending() == Letters.HERITAGE,
+		"l'intro vue impose la premiere lettre")
+	_check(Letters.deliver_pending() == "", "elle ne s'impose qu'UNE fois")
+	_check(Game.letter_received(Letters.HERITAGE), "et elle est bien arrivee")
+
+	Game.grant_dames(1)
+	_check(Letters.deliver_pending() == "",
+		"la lettre de la premiere Dame ne s'impose PAS")
+	_check(Game.letter_received(Letters.PREMIERE_DAME),
+		"elle attend quand meme au Chateau Royal")
+	_check(Game.unread_letters() == 2, "deux lettres non lues reclament l'attention (%d)"
+		% Game.unread_letters())
+
+	Game.reset_progress()
+	Game.mark_intro_seen()
+	_check(Letters.due() == Letters.HERITAGE,
+		"l'intro vue rend la premiere lettre due (%s)" % Letters.due())
+	Game.receive_letter(Letters.HERITAGE)
+
+	Router.current_letter = Letters.HERITAGE
+	Router.letter_return = Router.RETURN_VILLAGE
+	var screen: Control = load("res://scenes/story/royal_letter.tscn").instantiate()
+	add_child(screen)
+	await _frames(4)
+
+	_check(screen._panels.size() == 3, "le parchemin est en trois tranches (%d)"
+		% screen._panels.size())
+	_check(screen._labels.size() == 3, "un bloc de texte par tranche")
+
+	# ---- LA DECOUPE TOMBE SUR LES PLISSURES PEINTES ----
+	#
+	# ⚠️ C'est la seule chose que je ne peux pas rattraper apres coup : si les
+	# tranches ne sont pas coupees a 39,5 % et 65,4 %, les ombres de pli
+	# tombent en plein milieu des lignes de texte.
+	var total: float = 0.0
+	for panel in screen._panels:
+		total += panel.size.y
+	_check(total > 0.0, "les tranches ont une hauteur (%.1f)" % total)
+	if total > 0.0:
+		var first: float = screen._panels[0].size.y / total
+		var second: float = (screen._panels[0].size.y + screen._panels[1].size.y) / total
+		_check(absf(first - 0.395) < 0.005,
+			"la premiere plissure tombe a 39,5 %% (%.1f %%)" % (first * 100.0))
+		_check(absf(second - 0.654) < 0.005,
+			"la seconde tombe a 65,4 %% (%.1f %%)" % (second * 100.0))
+
+	# Les tranches se suivent sans trou ni recouvrement : le parchemin est
+	# d'un seul tenant tant qu'il est deplie.
+	var jointure := absf((screen._panels[0].position.y + screen._panels[0].size.y)
+		- screen._panels[1].position.y)
+	_check(jointure < 0.5, "pas de trou entre deux tranches (%.2f pt)" % jointure)
+
+	# Le pivot en HAUT de chaque tranche : elle se deroule depuis le creux
+	# peint au-dessus d'elle. Pose apres la mise en page, jamais avant.
+	var pivots_bons := true
+	for panel in screen._panels:
+		if not is_equal_approx(panel.pivot_offset.y, 0.0):
+			pivots_bons = false
+	_check(pivots_bons, "chaque tranche se deroule depuis son haut")
+
+	# ---- LE CACHET DECIDE AU RELACHEMENT ----
+	_check(screen._seal.mouse_filter == Control.MOUSE_FILTER_PASS,
+		"le cachet ne retient pas le geste (PASS)")
+	_check(not screen._opened, "au depart la lettre est fermee")
+	_glisse(screen._seal, Vector2(6, 6), Vector2(90, 6))
+	await _frames(1)
+	_check(not screen._opened, "glisser depuis le cachet ne brise pas le sceau")
+
+	_press(screen._seal, Vector2(6, 6))
+	await _frames(2)
+	_check(screen._opened, "le toucher, lui, brise le sceau")
+
+	await _skip_animations()
+	await _frames(2)
+	var caches := 0
+	for label in screen._labels:
+		if label.modulate.a < 0.99:
+			caches += 1
+	_check(caches == 0, "une fois deplie, aucun bloc ne reste invisible (%d)" % caches)
+	var ecrases := 0
+	for panel in screen._panels:
+		if not is_equal_approx(panel.scale.y, 1.0):
+			ecrases += 1
+	_check(ecrases == 0, "aucune tranche ne reste ecrasee (%d)" % ecrases)
+	_check(not screen._exit.disabled, "le bouton de sortie se debloque a la fin")
+
+	# ---- LIRE UNE LETTRE LA MARQUE LUE ----
+	_check(Game.letter_read(Letters.HERITAGE),
+		"ouvrir la lettre la marque lue - la pastille du chateau retombe")
+	_check(Game.unread_letters() == 0, "plus rien ne reclame l'attention")
+
+	# ---- ET LE TEXTE EST CELUI DE `Letters`, PAS UN TEXTE D'ECRAN ----
+	var attendus := Letters.blocks(Letters.HERITAGE)
+	var memes := true
+	for i in range(mini(attendus.size(), screen._labels.size())):
+		if screen._labels[i].text != String(attendus[i]):
+			memes = false
+	_check(memes, "les trois blocs viennent de letters.gd")
+
+	screen.queue_free()
+	await _frames(2)
+	Game.reset_progress()
+	_done("missive")
 
 
 # ------------------------------- ZONES DEFILANTES ----------------------------
@@ -211,11 +337,25 @@ func _frames(count: int = 2) -> void:
 ##
 ## Meme reflexe que screenshot.tscn et resolutions.tscn : on saute a la fin des
 ## tweens plutot que d'attendre - c'est instantane, et c'est exact.
+## ⚠️ UN SEUL PASSAGE NE SUFFIT PAS QUAND UNE ANIMATION EN LANCE UNE AUTRE.
+##
+## La missive enchaine : le sceau se brise, et son `tween_callback` DEMARRE le
+## depli. Pousser les tweens une fois ne faisait donc que finir le sceau - le
+## parchemin restait ecrase et le banc concluait que le depli ne marchait pas.
+## C'est aussi ce que verrait `screenshot.tscn` : une lettre a moitie ouverte.
+##
+## On repousse donc tant qu'il en nait de nouveaux, avec une borne : une
+## animation qui se relance en boucle (une lueur pulsee, par exemple) ne doit
+## pas bloquer le banc.
 func _skip_animations() -> void:
-	for tween in get_tree().get_processed_tweens():
-		if tween.is_valid():
-			tween.custom_step(10.0)
-	await get_tree().process_frame
+	for essai in range(6):
+		var tweens := get_tree().get_processed_tweens()
+		if tweens.is_empty():
+			break
+		for tween in tweens:
+			if tween.is_valid():
+				tween.custom_step(10.0)
+		await get_tree().process_frame
 
 
 ## Tous les boutons batis par le composant partage, dans un ecran.
