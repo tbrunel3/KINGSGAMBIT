@@ -15,9 +15,6 @@ extends Control
 ##                bulle apparait, le texte s'ecrit lettre par lettre, puis le
 ##                bouton "COMMENCER" se debloque.
 ##
-## Ne se montre qu'une fois (cf. GameState.has_seen_intro, verifie par
-## splash_screen.gd) : un joueur qui revient au village ne le revoit pas.
-##
 
 signal _tapped
 
@@ -49,8 +46,9 @@ const BG_APPROACH_PATH := "res://assets/intro/king_before_dialogue.png"
 
 ## Duree du fondu d'une illustration a l'autre, au moment ou l'on s'approche.
 ## La maquette n'en donne pas : elle montre deux etats, pas la transition. On
-## reprend celle du reste de l'ecran (FADE_DURATION) plutot que d'en inventer
-## une - et le zoom qui demarre juste apres la couvre en grande partie.
+## prend l'ordre de grandeur des autres fondus de l'ecran plutot que d'en
+## inventer une - et le zoom qui demarre juste apres la couvre en grande
+## partie.
 const BG_SWAP_DURATION := 0.45
 
 const DIALOGUE_TEXT := "\"Ma Dame s'est fait enlever... Soulevez une armée et ramenez-la, et je vous couvrirai d'or.\""
@@ -77,7 +75,13 @@ const PANEL_DURATION := 0.5
 #    - la frappe lettre par lettre du dialogue n'existe pas dans Figma. C'est un
 #      ajout du jeu, et il vaut mieux que le fondu qu'il remplace.
 #    - le fondu des DEUX calques d'illustration (0-1 s puis 1,2-1,8 s) sert a
-#      Figma a empiler deux images ; le jeu n'en a qu'une.
+#      Figma a empiler deux images. Le jeu fait autrement : ses deux images
+#      sont deux MOMENTS du recit, pas deux calques, et elles se croisent
+#      quand le joueur s'approche (cf. _swap_to_speaking_king).
+#    - la POSE de l'illustration (scale 1.08 -> 1 sur 1,2 s, cubic-bezier
+#      0.25, 0, 0.35, 1). Le zoom ambiant de 14 s part deja de 1 et monte :
+#      une pose qui descend juste avant l'inverserait sous les yeux du
+#      joueur. La mesure est notee ici pour ne pas se relever deux fois.
 #
 #  Le zoom lent de 14 secondes reste : il est ambiant, la ou la maquette decrit
 #  une ENTREE. Les deux ne s'excluent pas, ils s'enchainent (cf. _start_zoom).
@@ -86,17 +90,11 @@ const PANEL_DURATION := 0.5
 const PANEL_RISE := 20.0
 const BUTTON_RISE := 15.0
 
-## Echelle de depart de l'illustration, qui se pose ensuite sur 1,2 s
-## (Figma : scale 1.08 -> 1, cubic-bezier(0.25, 0, 0.35, 1)).
-const SETTLE_SCALE := 1.08
-const SETTLE_DURATION := 1.2
-
 ## Delai avant que l'invite du premier ecran apparaisse (Figma
 ## king-intro-before-dialogue : opacite tenue a zero jusqu'a 40 % d'une boucle
 ## de 2,5 s). Le Roi doit se laisser regarder avant qu'on propose de s'approcher.
 const HINT_DELAY := 1.0
 const TYPE_CHAR_DELAY := 0.032
-const FADE_DURATION := 0.4
 
 const BUBBLE_COLOR := Color("f5efe2", 0.878)
 const BUBBLE_STROKE := Color("ffd700", 0.451)
@@ -117,7 +115,6 @@ const HINT_TEXT := "S'APPROCHER DU TRÔNE"
 @onready var _background_wrap: Control = $BackgroundWrap
 @onready var _background: TextureRect = $BackgroundWrap/Background
 @onready var _overlay: Control = $Overlay
-@onready var _fade_overlay: ColorRect = $FadeOverlay
 
 var _dialogue_label: Label
 var _commencer_button: PanelContainer
@@ -622,10 +619,12 @@ func _unlock_button() -> void:
 	montee.set_trans(Tween.TRANS_EXPO).set_ease(Tween.EASE_OUT)
 
 
-## ⚠️ LE FONDU LOCAL A ETE RETIRE. L'intro noircissait avec son propre
-## _fade_overlay, puis Router.goto_village() noircissait a nouveau avec le voile
-## global : deux noirs a la suite, et surtout AUCUN fondu entrant sur le village
-## - le joueur a demande "un petit fade in sur l'ouverture sur le village".
+## ⚠️ LE FONDU LOCAL A ETE RETIRE, ET IL NE DOIT PAS REVENIR. L'intro
+## noircissait avec un voile a elle, puis Router.goto_village() noircissait a
+## nouveau avec le voile global : deux noirs a la suite, et surtout AUCUN fondu
+## entrant sur le village - le joueur a demande "un petit fade in sur
+## l'ouverture sur le village". Le ColorRect qui le portait est parti de la
+## scene avec la derniere reference qui le tenait en vie.
 ##
 ## Le voile global le donne des qu'on lui laisse la place : il couvre, l'ecran
 ## change derriere lui, et il se leve sur un village deja peint.
