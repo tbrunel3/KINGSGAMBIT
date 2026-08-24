@@ -23,6 +23,29 @@ signal _tapped
 
 const BG_PATH := "res://assets/intro/king_throne_background.png"
 
+## ⚠️ L'ECRAN D'APPROCHE A SA PROPRE ILLUSTRATION, ET LE JEU N'EN A QU'UNE.
+##
+## Retour du joueur : « je vois seulement la deuxieme image de l'ecran figma ».
+## Il a raison, et la cause n'est pas dans le code - les deux temps sont bien
+## la, mais ils partagent la meme image. Les deux frames en veulent deux
+## differentes, et elles racontent deux choses :
+##
+##   410:35  le Roi DEBOUT a cote du trone VIDE, tete baissee, la main au
+##           visage. C'est l'image du royaume diminue - celle qui donne envie
+##           de s'approcher.
+##   410:71  le Roi ASSIS, cadre plus serre. C'est celle que le jeu possede,
+##           et c'est la bonne pour le dialogue.
+##
+## Poser le fichier suffit : sans lui, les deux temps gardent l'image unique -
+## exactement le comportement d'avant, donc rien ne casse en attendant.
+const BG_APPROACH_PATH := "res://assets/intro/king_before_dialogue.png"
+
+## Duree du fondu d'une illustration a l'autre, au moment ou l'on s'approche.
+## La maquette n'en donne pas : elle montre deux etats, pas la transition. On
+## reprend celle du reste de l'ecran (FADE_DURATION) plutot que d'en inventer
+## une - et le zoom qui demarre juste apres la couvre en grande partie.
+const BG_SWAP_DURATION := 0.45
+
 const DIALOGUE_TEXT := "\"Ma Dame s'est fait enlever... Soulevez une armée et ramenez-la, et je vous couvrirai d'or.\""
 
 const ZOOM_TARGET := 1.12
@@ -105,6 +128,7 @@ func _ready() -> void:
 	_tap_catcher = _build_tap_catcher()
 	await _tapped
 	await _dismiss_approach(hint)
+	_swap_to_seated_king()
 
 	var area := _build_dialogue_area()
 	var panel: PanelContainer = area["panel"]
@@ -125,8 +149,11 @@ func _ready() -> void:
 # ------------------------------- CONSTRUCTION --------------------------------
 
 func _build_background() -> void:
-	if ResourceLoader.exists(BG_PATH):
-		_background.texture = load(BG_PATH)
+	# L'approche montre le Roi debout si son illustration est la ; sinon on
+	# garde l'unique, et l'ecran se comporte comme avant.
+	var depart := BG_APPROACH_PATH if ResourceLoader.exists(BG_APPROACH_PATH) else BG_PATH
+	if ResourceLoader.exists(depart):
+		_background.texture = load(depart)
 	_background.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
 	_background.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_COVERED
 
@@ -324,6 +351,38 @@ func _build_tap_catcher() -> Control:
 	)
 	add_child(catcher)
 	return catcher
+
+
+## Le Roi s'assied : on fond de l'illustration d'approche vers celle du
+## dialogue. Sans la premiere, il n'y a rien a fondre et la fonction ne fait
+## rien - c'est le cas tant que le fichier n'est pas dans le depot.
+func _swap_to_seated_king() -> void:
+	if not ResourceLoader.exists(BG_APPROACH_PATH) or not ResourceLoader.exists(BG_PATH):
+		return
+	# ⚠️ ON SUPERPOSE, ON NE REMPLACE PAS. Changer la texture d'un coup ferait
+	# un saut d'image en plein milieu du geste ; et animer l'opacite du fond
+	# lui-meme le ferait passer par le noir. Un second calque qui apparait
+	# par-dessus laisse les deux images se croiser.
+	var assis := TextureRect.new()
+	assis.texture = load(BG_PATH)
+	assis.expand_mode = _background.expand_mode
+	assis.stretch_mode = _background.stretch_mode
+	assis.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	assis.modulate.a = 0.0
+	_background.add_sibling(assis)
+	_background.get_parent().move_child(assis, _background.get_index() + 1)
+	assis.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+
+	var tween := create_tween()
+	tween.tween_property(assis, "modulate:a", 1.0, BG_SWAP_DURATION) \
+		.set_trans(Tween.TRANS_SINE)
+	# Une fois le fondu fini, c'est le FOND qui porte l'image assise : le zoom
+	# de _start_zoom agit sur lui, et le calque en trop disparait.
+	tween.tween_callback(func() -> void:
+		if is_instance_valid(_background):
+			_background.texture = load(BG_PATH)
+		if is_instance_valid(assis):
+			assis.queue_free())
 
 
 func _dismiss_approach(hint: Control) -> void:
