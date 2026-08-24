@@ -430,7 +430,9 @@
         }
       ],
       "groupe": "etat",
-      "nettoyage": null
+      "nettoyage": {
+        "demande": "24/08 à 03h30"
+      }
     }
   ]
 }
