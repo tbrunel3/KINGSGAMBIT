@@ -233,20 +233,15 @@ func _test_intro_overlays() -> void:
 
 const RoyalLetter := preload("res://scenes/story/royal_letter.tscn")
 
-## Le parchemin doit se DECOUPER au meme endroit sur les huit formats.
+## La missive garde ses proportions sur les huit formats.
 ##
-## ⚠️ CE N'EST PAS UN TEST DE PLUS : c'est le seul qui protege le pli. Les deux
-## plissures sont PEINTES dans l'illustration, a 39,5 % et 65,4 % de sa hauteur.
-## Si la decoupe derive d'un format a l'autre - parce qu'une hauteur est calee
-## en dur, ou que le parchemin est etire au lieu d'etre borne -, les ombres de
-## pli tombent en plein milieu des lignes de texte, et ca ne se voit sur aucune
-## capture prise au format de reference.
-##
-## On mesure aussi que la lettre RESTE DANS L'ECRAN : c'est un parchemin de
-## rapport 0,733, et sur un ecran court (court-360x620 rend 852 de haut pour
-## 495 de large) c'est la hauteur qui commande.
+## ⚠️ TOUT EST EN PART DU CADRE DANS CET ECRAN, et c'est ce qu'on protege ici.
+## La maquette donne des points sur 393 x 852 - 240 pour l'enveloppe, 340 pour
+## le parchemin, 303 pour le bouton - et les recopier en dur casserait sur le
+## Web, ou la largeur MONTE jusqu'a 495. Le test relit donc les trois parts et
+## verifie qu'elles ne bougent pas d'un format a l'autre.
 func _test_letter_folds() -> void:
-	print("\n[4] La missive : le pli tombe au meme endroit partout")
+	print("\n[4] La missive : les proportions tiennent partout")
 
 	Game.reset_progress()
 	Game.mark_intro_seen()
@@ -259,8 +254,8 @@ func _test_letter_folds() -> void:
 	await get_tree().process_frame
 	await get_tree().process_frame
 
-	_check(screen._panels.size() == 3,
-		"le parchemin est en trois tranches (%d)" % screen._panels.size())
+	_check(screen._sheet != null and screen._envelope != null,
+		"l'ecran porte son enveloppe et son parchemin")
 
 	for entry in VIEWPORTS:
 		var size: Vector2 = entry["size"]
@@ -269,25 +264,30 @@ func _test_letter_folds() -> void:
 		await get_tree().process_frame
 		screen._place()
 
-		var total := 0.0
-		for panel in screen._panels:
-			total += panel.size.y
-		if total <= 0.0:
-			_check(false, "%s : le parchemin a une hauteur" % String(entry["name"]))
+		var stage: Control = screen.get_node("Safe/Root/Stage")
+		var space: Vector2 = stage.size
+		if space.x <= 0.0 or space.y <= 0.0:
+			_check(false, "%s : la scene a une taille" % String(entry["name"]))
 			continue
 
-		var first: float = screen._panels[0].size.y / total
-		var second: float = (screen._panels[0].size.y + screen._panels[1].size.y) / total
-		var derive := maxf(absf(first - 0.395), absf(second - 0.654)) * 100.0
+		# Les trois blocs gardent leur part du cadre, et restent centres.
+		var derive := 0.0
+		derive = maxf(derive, absf(screen._envelope.size.x / space.x - 240.0 / 393.0))
+		derive = maxf(derive, absf(screen._sheet.size.x / space.x - 340.0 / 393.0))
+		derive = maxf(derive, absf(screen._button.size.x / space.x - 303.0 / 393.0))
+		var hors_centre := 0.0
+		for noeud in [screen._envelope, screen._sheet, screen._button]:
+			var ctrl: Control = noeud
+			hors_centre = maxf(hors_centre,
+				absf(ctrl.position.x + ctrl.size.x * 0.5 - space.x * 0.5))
 
-		# Il doit aussi tenir dans l'ecran, en haut comme en bas.
-		var haut: float = screen._panels[0].position.y
-		var bas: float = screen._panels[2].position.y + screen._panels[2].size.y
-		var deborde: float = maxf(-haut, bas - screen.get_node("Safe/Root/Stage").size.y)
+		# Et rien ne sort de l'ecran, en haut comme en bas.
+		var bas: float = screen._button.position.y + screen._button.size.y
+		var deborde: float = maxf(-screen._sheet.position.y, bas - space.y)
 
-		_check(derive < 0.5 and deborde < 1.0,
-			"%s : plis a %.1f %% / %.1f %% (derive %.2f pt), debordement %.2f pt"
-				% [String(entry["name"]), first * 100.0, second * 100.0, derive,
+		_check(derive < 0.01 and hors_centre < 0.5 and deborde < 1.0,
+			"%s : proportions a %.2f %% pres, hors-centre %.2f pt, debordement %.2f pt"
+				% [String(entry["name"]), derive * 100.0, hors_centre,
 				   maxf(0.0, deborde)])
 
 	host.queue_free()

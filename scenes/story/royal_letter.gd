@@ -1,120 +1,151 @@
 extends Control
 ##
-## L'ECRAN DE LA MISSIVE - une enveloppe scellee qui se deplie en parchemin.
+## L'ECRAN DE LA MISSIVE - l'enveloppe scellee du Roi, et son parchemin.
 ##
 ## Le support est une decision du joueur (cf. chantier_i_missives.md) : le Roi
 ## n'a pas de corps dans ce jeu - il est sur son trone a l'intro et plus jamais.
 ## Une lettre dit exactement la bonne chose : il n'est pas la, mais il te suit.
 ##
-## Sequence : l'enveloppe se pose -> le doigt touche le cachet -> le sceau se
-## brise -> le parchemin se deplie en TROIS TEMPS -> le texte s'ecrit bloc par
-## bloc -> le bouton de sortie se debloque.
+## Sequence : le village s'assombrit, l'enveloppe se pose au centre avec son
+## invite -> le doigt la touche -> le parchemin arrive en grandissant -> le
+## texte se revele -> le bouton CONTINUER monte et se debloque.
 ##
-## ⚠️ POURQUOI TROIS TRANCHES ET PAS UNE IMAGE QUI GRANDIT. Le pli est deja
-## PEINT dans l'illustration : deux plissures horizontales avec leur ombre, a
-## 39,5 % et 65,4 % de la hauteur (mesurees a la pixel, pas estimees). Chaque
-## tranche se deroule depuis le creux peint au-dessus d'elle, et les ombres
-## deviennent les charnieres. Une image qui grandit d'un bloc ecraserait les
-## plis en meme temps que le texte.
+## ⚠️ L'ECRAN NE FLOTTE PAS DANS LE VIDE : LE VILLAGE RESTE DERRIERE.
+## Les deux frames du graphiste (510:2 lettre-roi-fermee, 510:7
+## lettre-roi-ouverte) posent le fond du village sous un voile noir - 60 % sur
+## l'enveloppe, 65 % sur le parchemin. C'est ce qui rattache la lettre au lieu
+## ou on la recoit ; un fond plein aurait fait un ecran de systeme.
 ##
-## ⚠️ ET LE TEXTE NE COULE PAS D'UNE TRANCHE A L'AUTRE. S'il traversait les
-## plissures, les ombres de pli tomberaient en plein milieu des lignes. D'ou
-## trois blocs - adresse, corps, signature - un par panneau (cf. Letters).
+## ⚠️ CE N'EST PLUS LE DEPLI EN TROIS TRANCHES DE LA SPEC, ET C'EST VOULU.
+## La spec decrivait un parchemin plie en trois, mesure sur deux PNG generes
+## hors Figma (plissures a 39,5 % et 65,4 %) qui ne sont jamais entres dans le
+## depot. Le graphiste a depuis dessine l'ecran : son parchemin est d'une SEULE
+## piece, et il arrive en grandissant plutot qu'en se depliant. La maquette
+## apporte l'apparence (regle 2) - le depli en trois temps est donc retire, et
+## avec lui les mesures de plissure qui n'ont plus d'objet.
 ##
-## ⚠️ LES DEUX PNG PEUVENT MANQUER, ET L'ECRAN DOIT TENIR QUAND MEME. Ils sont
-## fournis par le graphiste et n'etaient pas encore dans le depot quand cet
-## ecran a ete ecrit. Sans eux, le parchemin et l'enveloppe se DESSINENT - meme
-## geometrie, meme decoupe, meme animation. Ce n'est pas un placeholder qu'on
-## oubliera dans `assets/` : c'est un repli qui vit dans le code, et poser les
-## PNG suffit a le remplacer.
+## ⚠️ LES DEUX PNG NE SONT PAS DANS LE DEPOT, et l'ecran tient sans eux : le
+## parchemin et l'enveloppe se DESSINENT alors, aux memes dimensions et avec la
+## meme animation. Ce n'est pas un placeholder qu'on oubliera dans `assets/` -
+## c'est un repli qui vit dans le code, et poser les fichiers suffit a le
+## remplacer sans toucher une ligne.
 ##
 
 const PARCHMENT_PATH := "res://assets/story/letter_parchment.png"
 const ENVELOPE_PATH := "res://assets/story/letter_envelope.png"
+const VILLAGE_PATH := "res://assets/backgrounds/village_background.png"
 
 # ------------------------------- LES MESURES ---------------------------------
 #
-#  Toutes relevees sur les fichiers du graphiste avec PIL, pas a l'oeil (cf.
-#  chantier_i_missives.md, "Les deux assets, mesures").
+#  Relevees sur 510:2 et 510:7, cadre de reference 393 x 852.
+#
+#  ⚠️ TOUTES EN PART DU CADRE, JAMAIS EN POINTS. Un `393` ou un `852` litteral
+#  dans du code de mise en page est presque toujours un bug qui attend un
+#  navigateur : en `expand`, c'est la HAUTEUR qui varie d'un appareil a l'autre,
+#  et sur le Web la largeur MONTE jusqu'a 495 (regle 4).
 
-## Rapport largeur/hauteur de la ZONE OPAQUE du parchemin (1040 x 1418).
-const PARCHMENT_RATIO := 0.733
+const REF := Vector2(393.0, 852.0)
 
-## Les deux plissures peintes, en part de la hauteur. Ce sont elles qui
-## decoupent les trois tranches.
-const FOLD_HIGH := 0.395
-const FOLD_LOW := 0.654
+## Le voile : 60 % sur l'enveloppe, 65 % une fois la lettre ouverte.
+const VEIL_CLOSED := 0.60
+const VEIL_OPEN := 0.65
 
-## Marge laterale a l'INTERIEUR du filet d'or, en part de la largeur.
-##
-## ⚠️ NE PAS LA REMESURER SUR LE PREMIER PIXEL NON DORE. Le parchemin a un
-## lisere creme AVANT le filet d'or : un scan naif rend 3,1 % au lieu de 8,5 %,
-## et le texte irait mordre l'ornement. Le relevé se fait sur le DERNIER pixel
-## dore du premier quart de la ligne.
-const SIDE_MARGIN := 0.085
+## L'enveloppe : 240 x 240, centree, haut a 266 / 852.
+const ENVELOPE_SIZE := 240.0 / 393.0
+const ENVELOPE_TOP := 266.0 / 852.0
+## L'invite "Appuyez pour ouvrir" : Inter Bold 14, or clair, haut a 526.
+const PROMPT_TOP := 526.0 / 852.0
+const PROMPT_COLOR := Color("ffd933")
+const PROMPT_SIZE := 14
 
-## Le texte ne peut pas commencer plus haut : l'ornement a couronne occupe le
-## sommet du premier panneau.
-const TOP_ORNAMENT := 0.133
+## Le parchemin : 340 x 420, centre, haut a 160 / 852, rayon 8.
+const SHEET_W := 340.0 / 393.0
+const SHEET_H := 420.0 / 852.0
+const SHEET_TOP := 160.0 / 852.0
+const SHEET_RADIUS := 8.0
 
-## L'enveloppe est en PAYSAGE (1159 x 977 de zone opaque), et son cachet de cire
-## est centre a 53,5 % / 53,5 % - large, donc cible au pouce sans discussion.
-const ENVELOPE_RATIO := 1.19
-const SEAL_X := 0.535
-const SEAL_Y := 0.535
-const SEAL_SHARE := 0.22   ## diametre du cachet, en part de la largeur
+## Le texte : 280 de large, haut a 240, Poppins Medium 20, encre brune.
+const TEXT_W := 280.0 / 393.0
+const TEXT_TOP := 240.0 / 852.0
+const TEXT_SIZE := 20
+const TEXT_COLOR := Color("33261a")
 
-## Part de la largeur utile que prend la lettre. Elle ne colle pas les bords :
-## une lettre posee sur une table a de l'air autour.
-const WIDTH_SHARE := 0.92
+## CONTINUER : 303 x 48, haut a 640, rayon 12, or plein, encre presque noire.
+const BUTTON_W := 303.0 / 393.0
+const BUTTON_H := 48.0 / 852.0
+const BUTTON_TOP := 640.0 / 852.0
+const BUTTON_RADIUS := 12.0
+const BUTTON_FILL := Color("ffd700")
+const BUTTON_INK := Color("1a0d00")
+const BUTTON_SIZE := 16
 
 # ------------------------------- LES TEMPS -----------------------------------
+#
+#  Timeline relevee sur 510:7 (get_motion_context, 4 s). La boucle est un
+#  artefact d'apercu - Figma rejoue l'entree en rond faute de savoir qu'elle ne
+#  se joue qu'une fois. Ce qui compte, ce sont les decalages et les courbes.
 
-const SEAL_BREAK := 0.35
-const PANEL_TIME := 0.42
-const PANEL_STAGGER := 0.22
-const TEXT_TIME := 0.5
-
-const CREAM := Color("f4e8cf")
-const INK := Color("2f2113")
-const INK_SOFT := Color("6b533a")
-const GOLD := Color("c9a227")
-const WAX := Color("8e2b20")
+## Le parchemin : opacite 0 -> 1 et echelle 0,7 -> 1 sur les 20 premiers %.
+const SHEET_TIME := 0.8
+const SHEET_FROM := 0.7
+## Le texte : rien jusqu'a 15 %, puis fondu jusqu'a 62,5 %.
+const TEXT_DELAY := 0.6
+const TEXT_TIME := 1.9
+## Le bouton : rien jusqu'a 75 %, puis il monte de 20 points sur 15 %.
+const BUTTON_DELAY := 3.0
+const BUTTON_TIME := 0.6
+const BUTTON_RISE := 20.0
 
 var key: String = ""
 var _stage: Control
-var _foot: MarginContainer
+var _veil: ColorRect
 var _envelope: Control
-var _seal: Control
-var _panels: Array[Control] = []
-var _labels: Array[Label] = []
-var _exit: Button
+var _prompt: Label
+var _sheet: Control
+var _text: Label
+var _button: Control
+var _button_label: Label
 var _opened := false
 
 
 func _ready() -> void:
 	_stage = get_node("Safe/Root/Stage")
-	_foot = get_node("Safe/Root/Foot")
+	_veil = get_node("Veil")
 	key = Router.current_letter if Router.current_letter != "" else Letters.HERITAGE
 
+	_build_background()
 	_build_envelope()
-	_build_parchment()
-	_build_exit()
+	_build_sheet()
 	# ⚠️ APRES la mise en page, jamais a la construction : un pivot pose avant
-	# que le conteneur ait donne sa taille reste a (0,0), et la tranche se
-	# deroule depuis le coin de l'ecran. C'est ce qui avait colle le bandeau de
-	# serie en haut.
+	# que le conteneur ait donne sa taille reste a (0,0), et le parchemin
+	# grandirait depuis le coin de l'ecran. Piege deja paye sur le bandeau de
+	# serie.
 	await get_tree().process_frame
 	_place()
 	get_tree().get_root().size_changed.connect(_place)
 	_animate_envelope()
 
 
-# ------------------------------- L'ENVELOPPE ---------------------------------
+# ------------------------------- CONSTRUCTION --------------------------------
+
+## Le village, puis le voile. Le fond est celui du JEU, pas un export de la
+## maquette : c'est le meme lieu, et un export aurait emporte le fond de la
+## frame avec lui (piege deja paye sur `parchment_map.jpg`).
+func _build_background() -> void:
+	var village := TextureRect.new()
+	village.texture = UiTheme.texture_or_null(VILLAGE_PATH)
+	village.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+	village.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_COVERED
+	village.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	village.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	add_child(village)
+	move_child(village, 0)
+	_veil.color = Color(0, 0, 0, VEIL_CLOSED)
+
 
 func _build_envelope() -> void:
 	_envelope = Control.new()
-	_envelope.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_envelope.mouse_filter = Control.MOUSE_FILTER_PASS
 	_stage.add_child(_envelope)
 
 	var art := UiTheme.texture_or_null(ENVELOPE_PATH)
@@ -127,80 +158,76 @@ func _build_envelope() -> void:
 		rect.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 		_envelope.add_child(rect)
 	else:
-		var drawn := _Sheet.new()
+		var drawn := _Envelope.new()
 		drawn.mouse_filter = Control.MOUSE_FILTER_IGNORE
 		drawn.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 		_envelope.add_child(drawn)
 
-	# LE CACHET DE CIRE. C'est lui qu'on touche, et il decide au RELACHEMENT :
-	# l'ecran n'a rien a faire defiler, mais un doigt qui glisse hors du cachet
-	# doit pouvoir annuler (cf. UiTheme.on_tap).
-	_seal = _Seal.new()
-	_envelope.add_child(_seal)
-	UiTheme.on_tap(_seal, _open)
+	# ⚠️ ON DECIDE AU RELACHEMENT. L'ecran n'a rien a faire defiler, mais un
+	# doigt pose par erreur doit pouvoir glisser a cote pour annuler - c'est la
+	# meme regle que partout ailleurs depuis les cachets (cf. UiTheme.on_tap).
+	UiTheme.on_tap(_envelope, _open)
+
+	_prompt = UiTheme.make_label("Appuyez pour ouvrir", PROMPT_SIZE, PROMPT_COLOR)
+	_prompt.add_theme_font_override("font", UiTheme.font_bold())
+	_prompt.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	_prompt.autowrap_mode = TextServer.AUTOWRAP_OFF
+	_prompt.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_stage.add_child(_prompt)
 
 
-# ------------------------------- LE PARCHEMIN --------------------------------
+func _build_sheet() -> void:
+	_sheet = Control.new()
+	_sheet.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_sheet.visible = false
+	_stage.add_child(_sheet)
 
-## Les trois tranches, decoupees sur les plissures peintes.
-func _build_parchment() -> void:
 	var art := UiTheme.texture_or_null(PARCHMENT_PATH)
-	var cuts := [0.0, FOLD_HIGH, FOLD_LOW, 1.0]
-	var blocks := Letters.blocks(key)
+	if art != null:
+		var rect := TextureRect.new()
+		rect.texture = art
+		rect.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+		rect.stretch_mode = TextureRect.STRETCH_SCALE
+		rect.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		rect.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+		_sheet.add_child(rect)
+	else:
+		var drawn := _Sheet.new()
+		drawn.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		drawn.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+		_sheet.add_child(drawn)
 
-	for i in range(3):
-		var panel := Control.new()
-		panel.mouse_filter = Control.MOUSE_FILTER_IGNORE
-		panel.clip_contents = true
-		panel.visible = false
-		_stage.add_child(panel)
-		_panels.append(panel)
+	# Les trois blocs de `Letters` empiles : l'adresse, le corps, la signature.
+	# La maquette n'en montre qu'un - c'est le contenu d'exemple du designer -,
+	# mais les trois se lisent comme les paragraphes qu'elle separe.
+	_text = UiTheme.make_label("\n\n".join(Letters.blocks(key)), TEXT_SIZE, TEXT_COLOR)
+	_text.add_theme_font_override("font", UiTheme.font_display_medium())
+	_text.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	_text.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	_text.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_text.modulate.a = 0.0
+	_text.visible = false
+	_stage.add_child(_text)
 
-		if art != null:
-			var slice := TextureRect.new()
-			slice.texture = AtlasTexture.new()
-			var atlas: AtlasTexture = slice.texture
-			atlas.atlas = art
-			var top: float = art.get_height() * float(cuts[i])
-			var bottom: float = art.get_height() * float(cuts[i + 1])
-			atlas.region = Rect2(0, top, art.get_width(), bottom - top)
-			slice.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
-			slice.stretch_mode = TextureRect.STRETCH_SCALE
-			slice.mouse_filter = Control.MOUSE_FILTER_IGNORE
-			slice.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-			panel.add_child(slice)
-		else:
-			var drawn := _Sheet.new()
-			drawn.mouse_filter = Control.MOUSE_FILTER_IGNORE
-			drawn.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-			panel.add_child(drawn)
+	_button = _Plaque.new()
+	_button.mouse_filter = Control.MOUSE_FILTER_PASS
+	_button.modulate.a = 0.0
+	_button.visible = false
+	_stage.add_child(_button)
+	UiTheme.on_tap(_button, _close)
 
-		var label := UiTheme.make_label(
-			String(blocks[i]) if i < blocks.size() else "",
-			15 if i == 1 else 14,
-			INK if i == 1 else INK_SOFT)
-		label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-		label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER if i != 1 \
-			else HORIZONTAL_ALIGNMENT_LEFT
-		label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
-		label.mouse_filter = Control.MOUSE_FILTER_IGNORE
-		label.modulate.a = 0.0
-		panel.add_child(label)
-		_labels.append(label)
-
-
-func _build_exit() -> void:
-	_exit = UiTheme.make_button("REPLIER LA LETTRE", UiTheme.GOLD_BUTTON, 14)
-	_exit.disabled = true
-	_exit.modulate.a = 0.0
-	_exit.pressed.connect(_close)
-	_foot.add_child(_exit)
+	_button_label = UiTheme.make_label("CONTINUER", BUTTON_SIZE, BUTTON_INK)
+	_button_label.add_theme_font_override("font", UiTheme.font_bold())
+	_button_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	_button_label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	_button_label.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_button_label.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	_button.add_child(_button_label)
 
 
 # ------------------------------- LA GEOMETRIE --------------------------------
 
-## Pose l'enveloppe et les trois tranches. ANCRE, jamais en absolu : un ecran
-## cale sur 852 points se decale des que l'appareil en fait 880 (regle 4).
+## Pose tout en PART du cadre : ancrer, ne pas positionner (regle 4).
 func _place() -> void:
 	if _stage == null or not is_instance_valid(_stage):
 		return
@@ -208,45 +235,27 @@ func _place() -> void:
 	if space.x <= 0.0 or space.y <= 0.0:
 		return
 
-	# LE PARCHEMIN : aussi large que la place le permet, borne par la hauteur.
-	var width: float = space.x * WIDTH_SHARE
-	var height: float = width / PARCHMENT_RATIO
-	if height > space.y:
-		height = space.y
-		width = height * PARCHMENT_RATIO
-	var left: float = (space.x - width) * 0.5
-	var top: float = (space.y - height) * 0.5
-
-	var cuts := [0.0, FOLD_HIGH, FOLD_LOW, 1.0]
-	for i in range(_panels.size()):
-		var panel := _panels[i]
-		var y0: float = height * float(cuts[i])
-		var y1: float = height * float(cuts[i + 1])
-		panel.position = Vector2(left, top + y0)
-		panel.size = Vector2(width, y1 - y0)
-		# Le pivot en HAUT de la tranche : elle se deroule depuis le creux peint
-		# au-dessus d'elle, pas depuis son milieu.
-		panel.pivot_offset = Vector2(width * 0.5, 0.0)
-
-		var pad_x: float = width * SIDE_MARGIN
-		var pad_top: float = (height * TOP_ORNAMENT) if i == 0 else (panel.size.y * 0.12)
-		var label := _labels[i]
-		label.position = Vector2(pad_x, pad_top)
-		label.size = Vector2(width - pad_x * 2.0,
-			maxf(0.0, panel.size.y - pad_top - panel.size.y * 0.10))
-
-	# L'ENVELOPPE : en paysage, centree, un peu plus petite que le parchemin.
-	var env_w: float = minf(space.x * WIDTH_SHARE, space.y * ENVELOPE_RATIO * 0.6)
-	var env_h: float = env_w / ENVELOPE_RATIO
-	_envelope.position = Vector2((space.x - env_w) * 0.5, (space.y - env_h) * 0.5)
-	_envelope.size = Vector2(env_w, env_h)
+	var env := space.x * ENVELOPE_SIZE
+	_envelope.size = Vector2(env, env)
+	_envelope.position = Vector2((space.x - env) * 0.5, space.y * ENVELOPE_TOP)
 	_envelope.pivot_offset = _envelope.size * 0.5
 
-	var seal_size: float = env_w * SEAL_SHARE
-	_seal.size = Vector2(seal_size, seal_size)
-	_seal.position = Vector2(env_w * SEAL_X - seal_size * 0.5,
-		env_h * SEAL_Y - seal_size * 0.5)
-	_seal.pivot_offset = _seal.size * 0.5
+	_prompt.size = Vector2(space.x, 0.0)
+	_prompt.position = Vector2(0.0, space.y * PROMPT_TOP)
+
+	var sheet := Vector2(space.x * SHEET_W, space.y * SHEET_H)
+	_sheet.size = sheet
+	_sheet.position = Vector2((space.x - sheet.x) * 0.5, space.y * SHEET_TOP)
+	# Le parchemin grandit depuis son CENTRE : il arrive, il ne se deplie plus.
+	_sheet.pivot_offset = sheet * 0.5
+
+	var text_w := space.x * TEXT_W
+	_text.size = Vector2(text_w, 0.0)
+	_text.position = Vector2((space.x - text_w) * 0.5, space.y * TEXT_TOP)
+
+	var button := Vector2(space.x * BUTTON_W, space.y * BUTTON_H)
+	_button.size = button
+	_button.position = Vector2((space.x - button.x) * 0.5, space.y * BUTTON_TOP)
 
 
 # ------------------------------- LES TEMPS -----------------------------------
@@ -254,47 +263,52 @@ func _place() -> void:
 func _animate_envelope() -> void:
 	_envelope.modulate.a = 0.0
 	_envelope.scale = Vector2(0.92, 0.92)
+	_prompt.modulate.a = 0.0
 	var tween := create_tween().set_parallel(true)
 	tween.tween_property(_envelope, "modulate:a", 1.0, 0.35)
 	tween.tween_property(_envelope, "scale", Vector2.ONE, 0.45) \
 		.set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
+	tween.tween_property(_prompt, "modulate:a", 1.0, 0.4).set_delay(0.35)
 
 
-## Le sceau se brise, puis le parchemin se deroule en trois temps.
+## Le parchemin arrive, le texte se revele, le bouton monte.
 func _open() -> void:
 	if _opened:
 		return
 	_opened = true
 	Game.mark_letter_read(key)
 
-	var tween := create_tween()
-	tween.tween_property(_seal, "scale", Vector2(1.25, 1.25), SEAL_BREAK * 0.4) \
-		.set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
-	tween.parallel().tween_property(_seal, "modulate:a", 0.0, SEAL_BREAK)
-	tween.tween_property(_envelope, "modulate:a", 0.0, SEAL_BREAK * 0.6)
-	tween.tween_callback(_unfold)
+	_sheet.visible = true
+	_sheet.modulate.a = 0.0
+	_sheet.scale = Vector2(SHEET_FROM, SHEET_FROM)
+	_text.visible = true
+	_button.visible = true
+	var rest := _button.position
 
-
-func _unfold() -> void:
-	_envelope.visible = false
 	var tween := create_tween().set_parallel(true)
-	for i in range(_panels.size()):
-		var panel := _panels[i]
-		panel.visible = true
-		panel.scale = Vector2(1.0, 0.0)
-		var start: float = PANEL_STAGGER * float(i)
-		tween.tween_property(panel, "scale", Vector2.ONE, PANEL_TIME) \
-			.set_delay(start).set_trans(Tween.TRANS_CUBIC).set_ease(Tween.EASE_OUT)
-		# Le texte n'apparait qu'une fois SON panneau deroule : ecrit plus tot,
-		# il se lirait sur une tranche encore ecrasee.
-		tween.tween_property(_labels[i], "modulate:a", 1.0, TEXT_TIME) \
-			.set_delay(start + PANEL_TIME)
-	var last: float = PANEL_STAGGER * float(_panels.size() - 1) + PANEL_TIME + TEXT_TIME
-	tween.tween_property(_exit, "modulate:a", 1.0, 0.3).set_delay(last)
-	tween.chain().tween_callback(func() -> void: _exit.disabled = false)
+	tween.tween_property(_envelope, "modulate:a", 0.0, 0.25)
+	tween.tween_property(_prompt, "modulate:a", 0.0, 0.25)
+	tween.tween_property(_veil, "color:a", VEIL_OPEN, SHEET_TIME)
+
+	tween.tween_property(_sheet, "modulate:a", 1.0, SHEET_TIME).set_ease(Tween.EASE_OUT)
+	tween.tween_property(_sheet, "scale", Vector2.ONE, SHEET_TIME) \
+		.set_trans(Tween.TRANS_CUBIC).set_ease(Tween.EASE_OUT)
+
+	tween.tween_property(_text, "modulate:a", 1.0, TEXT_TIME).set_delay(TEXT_DELAY) \
+		.set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN_OUT)
+
+	# ⚠️ LE BOUTON MONTE, IL N'EST PAS DANS UN CONTENEUR. Animer la `position`
+	# d'un enfant de conteneur, c'est se battre avec la mise en page - c'est ce
+	# qui avait colle le bandeau de serie en haut de l'ecran.
+	_button.position = rest + Vector2(0.0, BUTTON_RISE)
+	tween.tween_property(_button, "modulate:a", 1.0, BUTTON_TIME).set_delay(BUTTON_DELAY)
+	tween.tween_property(_button, "position", rest, BUTTON_TIME).set_delay(BUTTON_DELAY) \
+		.set_trans(Tween.TRANS_CUBIC).set_ease(Tween.EASE_OUT)
 
 
 func _close() -> void:
+	if not _opened:
+		return
 	Game.mark_letter_read(key)
 	if Router.letter_return == Router.RETURN_CASTLE:
 		Router.goto_castle()
@@ -304,27 +318,54 @@ func _close() -> void:
 
 # ------------------------------- LE REPLI DESSINE ----------------------------
 
-## Le papier, quand le PNG n'est pas la : creme, filet d'or, coins arrondis.
-## Meme rectangle, donc meme geometrie a mesurer - c'est ce qui permet de
-## verifier le depli et les huit formats sans attendre les images.
+## Le parchemin, quand le PNG n'est pas la : creme, double filet d'or, coins
+## arrondis. Memes dimensions que l'image, donc meme geometrie a mesurer -
+## c'est ce qui permet de verifier l'ecran et les huit formats sans attendre le
+## graphiste.
 class _Sheet extends Control:
 	func _draw() -> void:
 		var box := StyleBoxFlat.new()
 		box.bg_color = Color("f4e8cf")
 		box.border_color = Color("c9a227")
-		box.set_border_width_all(2)
+		box.set_border_width_all(3)
+		box.set_corner_radius_all(8)
+		draw_style_box(box, Rect2(Vector2.ZERO, size))
+		var inset := 8.0
+		draw_rect(Rect2(Vector2(inset, inset), size - Vector2(inset, inset) * 2.0),
+			Color("c9a227"), false, 1.0)
+
+
+## Le bouton CONTINUER : une plaque d'or pleine, rayon 12, comme la maquette.
+##
+## Dessine plutot que `UiTheme.make_button` : le bouton de la maquette est un
+## aplat d'or vif sans degrade ni bordure, et il doit se laisser MONTER a
+## l'entree - un Button dans le theme du jeu apporte une peau qui n'est pas
+## celle-la.
+class _Plaque extends Control:
+	func _draw() -> void:
+		var box := StyleBoxFlat.new()
+		box.bg_color = Color("ffd700")
+		box.set_corner_radius_all(12)
 		draw_style_box(box, Rect2(Vector2.ZERO, size))
 
 
-## Le cachet de cire : un disque, son liseré, et la couronne brisee au centre.
-class _Seal extends Control:
+## L'enveloppe fermee : le rabat, et le sceau de cire au centre.
+class _Envelope extends Control:
 	func _draw() -> void:
-		var r: float = minf(size.x, size.y) * 0.5
-		var c := size * 0.5
-		draw_circle(c, r, Color("8e2b20"))
-		draw_arc(c, r * 0.86, 0.0, TAU, 48, Color("5e1a12"), 2.0)
-		# Deux traits croises : une empreinte, pas un glyphe - aucune icone du
-		# jeu ne porte de sceau, et un emoji rend en tofu a l'export Web.
-		var arm: float = r * 0.42
-		draw_line(c - Vector2(arm, 0), c + Vector2(arm, 0), Color("d8a08f"), 2.0)
-		draw_line(c - Vector2(0, arm), c + Vector2(0, arm), Color("d8a08f"), 2.0)
+		var box := StyleBoxFlat.new()
+		box.bg_color = Color("f4e8cf")
+		box.border_color = Color("c9a227")
+		box.set_border_width_all(2)
+		box.set_corner_radius_all(6)
+		# L'enveloppe de la maquette est en PAYSAGE dans son carre de 240.
+		var body := Rect2(Vector2(0.0, size.y * 0.2), Vector2(size.x, size.y * 0.6))
+		draw_style_box(box, body)
+		# Le rabat, deux traits qui descendent vers le centre.
+		var top_left := body.position
+		var top_right := body.position + Vector2(body.size.x, 0.0)
+		var middle := body.position + Vector2(body.size.x * 0.5, body.size.y * 0.55)
+		draw_line(top_left, middle, Color("c9a227"), 2.0)
+		draw_line(top_right, middle, Color("c9a227"), 2.0)
+		# Le sceau.
+		draw_circle(body.position + body.size * 0.5, minf(size.x, size.y) * 0.12,
+			Color("8e2b20"))

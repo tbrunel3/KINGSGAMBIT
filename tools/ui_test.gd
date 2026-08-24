@@ -128,66 +128,55 @@ func _test_royal_letter() -> void:
 	add_child(screen)
 	await _frames(4)
 
-	_check(screen._panels.size() == 3, "le parchemin est en trois tranches (%d)"
-		% screen._panels.size())
-	_check(screen._labels.size() == 3, "un bloc de texte par tranche")
+	# ---- L'ENVELOPPE, TELLE QUE LA MAQUETTE LA POSE (510:2) ----
+	var stage: Control = screen.get_node("Safe/Root/Stage")
+	var largeur: float = stage.size.x
+	_check(largeur > 0.0, "la scene a une largeur (%.0f)" % largeur)
+	if largeur > 0.0:
+		var cote: float = screen._envelope.size.x
+		_check(absf(cote / largeur - 240.0 / 393.0) < 0.01,
+			"l'enveloppe fait 240 sur 393 de large (%.1f %%)" % (cote / largeur * 100.0))
+		var centre: float = screen._envelope.position.x + cote * 0.5
+		_check(absf(centre - largeur * 0.5) < 0.5,
+			"elle est centree (%.1f pour un centre a %.1f)" % [centre, largeur * 0.5])
+	_check(screen._prompt.text == "Appuyez pour ouvrir",
+		"l'invite est celle de la maquette (%s)" % screen._prompt.text)
 
-	# ---- LA DECOUPE TOMBE SUR LES PLISSURES PEINTES ----
-	#
-	# ⚠️ C'est la seule chose que je ne peux pas rattraper apres coup : si les
-	# tranches ne sont pas coupees a 39,5 % et 65,4 %, les ombres de pli
-	# tombent en plein milieu des lignes de texte.
-	var total: float = 0.0
-	for panel in screen._panels:
-		total += panel.size.y
-	_check(total > 0.0, "les tranches ont une hauteur (%.1f)" % total)
-	if total > 0.0:
-		var first: float = screen._panels[0].size.y / total
-		var second: float = (screen._panels[0].size.y + screen._panels[1].size.y) / total
-		_check(absf(first - 0.395) < 0.005,
-			"la premiere plissure tombe a 39,5 %% (%.1f %%)" % (first * 100.0))
-		_check(absf(second - 0.654) < 0.005,
-			"la seconde tombe a 65,4 %% (%.1f %%)" % (second * 100.0))
+	# ⚠️ RELEVE AVANT L'OUVERTURE. `_open()` decale le bouton de 20 points vers
+	# le bas pour le faire monter : le relever apres, c'est mesurer son point de
+	# depart et croire qu'il n'est jamais arrive.
+	var repos: Vector2 = screen._button.position
 
-	# Les tranches se suivent sans trou ni recouvrement : le parchemin est
-	# d'un seul tenant tant qu'il est deplie.
-	var jointure := absf((screen._panels[0].position.y + screen._panels[0].size.y)
-		- screen._panels[1].position.y)
-	_check(jointure < 0.5, "pas de trou entre deux tranches (%.2f pt)" % jointure)
-
-	# Le pivot en HAUT de chaque tranche : elle se deroule depuis le creux
-	# peint au-dessus d'elle. Pose apres la mise en page, jamais avant.
-	var pivots_bons := true
-	for panel in screen._panels:
-		if not is_equal_approx(panel.pivot_offset.y, 0.0):
-			pivots_bons = false
-	_check(pivots_bons, "chaque tranche se deroule depuis son haut")
-
-	# ---- LE CACHET DECIDE AU RELACHEMENT ----
-	_check(screen._seal.mouse_filter == Control.MOUSE_FILTER_PASS,
-		"le cachet ne retient pas le geste (PASS)")
+	# ---- L'ENVELOPPE DECIDE AU RELACHEMENT ----
+	_check(screen._envelope.mouse_filter == Control.MOUSE_FILTER_PASS,
+		"l'enveloppe ne retient pas le geste (PASS)")
 	_check(not screen._opened, "au depart la lettre est fermee")
-	_glisse(screen._seal, Vector2(6, 6), Vector2(90, 6))
+	_glisse(screen._envelope, Vector2(6, 6), Vector2(90, 6))
 	await _frames(1)
-	_check(not screen._opened, "glisser depuis le cachet ne brise pas le sceau")
+	_check(not screen._opened, "glisser depuis l'enveloppe ne l'ouvre pas")
 
-	_press(screen._seal, Vector2(6, 6))
+	_press(screen._envelope, Vector2(6, 6))
 	await _frames(2)
-	_check(screen._opened, "le toucher, lui, brise le sceau")
+	_check(screen._opened, "la toucher, elle, l'ouvre")
 
+	# ---- LE PARCHEMIN ARRIVE, LE TEXTE SE REVELE, LE BOUTON MONTE ----
+	#
+	#  Timeline relevee sur 510:7 : le parchemin grandit de 0,7 a 1, le texte
+	#  se revele apres lui, et le bouton monte de 20 points en dernier.
 	await _skip_animations()
 	await _frames(2)
-	var caches := 0
-	for label in screen._labels:
-		if label.modulate.a < 0.99:
-			caches += 1
-	_check(caches == 0, "une fois deplie, aucun bloc ne reste invisible (%d)" % caches)
-	var ecrases := 0
-	for panel in screen._panels:
-		if not is_equal_approx(panel.scale.y, 1.0):
-			ecrases += 1
-	_check(ecrases == 0, "aucune tranche ne reste ecrasee (%d)" % ecrases)
-	_check(not screen._exit.disabled, "le bouton de sortie se debloque a la fin")
+	_check(screen._sheet.visible and is_equal_approx(screen._sheet.scale.y, 1.0),
+		"le parchemin finit a sa taille pleine (%.2f)" % screen._sheet.scale.y)
+	_check(screen._sheet.modulate.a > 0.99, "et il est opaque (%.2f)" % screen._sheet.modulate.a)
+	_check(screen._text.modulate.a > 0.99,
+		"le texte est entierement revele (%.2f)" % screen._text.modulate.a)
+	_check(screen._button.modulate.a > 0.99,
+		"le bouton CONTINUER est visible (%.2f)" % screen._button.modulate.a)
+	_check(screen._button.position.distance_to(repos) < 0.5,
+		"il a fini sa montee, a sa place de repos (%.2f pt)"
+			% screen._button.position.distance_to(repos))
+	_check(is_equal_approx(screen._veil.color.a, 0.65),
+		"le voile passe de 60 %% a 65 %% une fois ouverte (%.2f)" % screen._veil.color.a)
 
 	# ---- LIRE UNE LETTRE LA MARQUE LUE ----
 	_check(Game.letter_read(Letters.HERITAGE),
@@ -195,12 +184,11 @@ func _test_royal_letter() -> void:
 	_check(Game.unread_letters() == 0, "plus rien ne reclame l'attention")
 
 	# ---- ET LE TEXTE EST CELUI DE `Letters`, PAS UN TEXTE D'ECRAN ----
-	var attendus := Letters.blocks(Letters.HERITAGE)
 	var memes := true
-	for i in range(mini(attendus.size(), screen._labels.size())):
-		if screen._labels[i].text != String(attendus[i]):
+	for bloc in Letters.blocks(Letters.HERITAGE):
+		if not screen._text.text.contains(String(bloc)):
 			memes = false
-	_check(memes, "les trois blocs viennent de letters.gd")
+	_check(memes, "les trois blocs de letters.gd sont bien sur le parchemin")
 
 	screen.queue_free()
 	await _frames(2)
