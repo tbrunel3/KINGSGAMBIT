@@ -11,10 +11,6 @@
         "groupe": "tout",
         "ordre": [
           {
-            "ref": "5",
-            "titre": "Les deux lettres du Roi, entre l'intro et le village"
-          },
-          {
             "ref": "n1",
             "titre": "l'intro — bloquée : Figma non autorisé"
           },
@@ -313,8 +309,8 @@
             {
               "ref": "5",
               "titre": "Les deux lettres du Roi, entre l'intro et le village",
-              "detail": "Les quatre lettres du Roi, qui portent le <em>pourquoi</em> du jeu là où <code>GuidePopup</code> porte le comment. <strong>La part code est faite et mesurée</strong> (<code>2750e83</code>) : les quatre textes en trois blocs, l'état des lettres, les quatre jalons, et le <strong>compteur de défaites</strong> qui manquait au jeu — avec le piège que la spec signalait, bien réel : un <strong>nul</strong> comptait comme une défaite. <strong>Reste l'écran de dépli</strong>, et il attend tes deux images : <code>assets/story/letter_envelope.png</code> et <code>letter_parchment.png</code> ne sont pas dans le dépôt.",
-              "statut": "encours",
+              "detail": "Les quatre lettres du Roi, qui portent le <em>pourquoi</em> du jeu là où <code>GuidePopup</code> porte le comment. L'enveloppe se pose, le doigt touche le cachet, le parchemin se déroule <strong>en trois temps sur les plissures peintes</strong> (39,5 % et 65,4 %), le texte s'écrit bloc par bloc. La première s'impose une fois ; les trois autres attendent dans la <strong>pile de courrier du Château Royal</strong>. Le <strong>compteur de défaites</strong> qui manquait au jeu est là, et un nul n'en est pas une. <strong>⚠️ Tes deux PNG ne sont pas dans le dépôt</strong> — sans eux le papier se dessine (même géométrie, même dépli). Pose <code>assets/story/letter_envelope.png</code> et <code>letter_parchment.png</code> et l'illustration prend leur place sans une ligne de code.",
+              "statut": "attente",
               "journal": [
                 {
                   "quand": "24/08",
@@ -325,10 +321,21 @@
                   "quand": "24/08",
                   "qui": "Claude",
                   "texte": "Reprise demandée en discussion. Je prends l'écran de dépli : la géométrie se mesure sans les images (les plissures sont à 39,5 % et 65,4 %, relevées dans la spec), et les deux PNG ne seront plus qu'un échange de texture."
+                },
+                {
+                  "quand": "24/08",
+                  "qui": "Claude",
+                  "texte": "Écran livré. Mesures : format_test [4] rend 0,00 pt de dérive sur les huit formats, plis à 39,5 % / 65,4 % partout. ui_test [19] : glisser depuis le cachet n'ouvre rien, le toucher l'ouvre, aucune tranche ne reste écrasée. smoke_test 10/10."
                 }
               ],
               "priorite": "basse",
-              "theme": "Récit"
+              "theme": "Récit",
+              "livre": {
+                "commit": "533a02e",
+                "quand": "24/08 à 18h30",
+                "pousse": true,
+                "enLigne": false
+              }
             },
             {
               "ref": "6",
@@ -675,5 +682,5 @@
       }
     }
   ],
-  "serie": 72
+  "serie": 73
 }
