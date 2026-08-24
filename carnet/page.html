@@ -1,0 +1,363 @@
+<title>Carnet des travaux — King's Gambit</title>
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Poppins:wght@600;700&display=swap">
+<style id="sheet">
+:root{
+  --nuit:#0b0e18;
+  --plaque:#141a2b;
+  --plaque-haute:#1c2439;
+  --filet:#2f3d5c;
+  --texte:#e6ecf5;
+  --attenue:#8fa0b8;
+  --or:#ffd11a;
+  --or-pale:#ffe580;
+  --bleu:#268cd9;
+  --danger:#c65f5f;
+  --succes:#5fb37a;
+  --serif:"Poppins",system-ui,sans-serif;
+  --corps:"Inter",system-ui,-apple-system,sans-serif;
+}
+*{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%}
+body{
+  margin:0;
+  background:var(--nuit);
+  color:var(--texte);
+  font-family:var(--corps);
+  font-size:15px;
+  line-height:1.6;
+  padding:0 20px 96px;
+}
+.page{max-width:780px;margin:0 auto}
+
+/* ---- en-tete ---- */
+header.tete{padding:56px 0 8px}
+.eyebrow{
+  font-size:11px;letter-spacing:.18em;text-transform:uppercase;
+  color:var(--or);font-weight:600;margin:0 0 12px
+}
+h1{
+  font-family:var(--serif);font-weight:700;font-size:clamp(30px,6vw,44px);
+  line-height:1.1;margin:0 0 14px;text-wrap:balance;
+  color:var(--or-pale);
+}
+.chapo{color:var(--attenue);margin:0;max-width:62ch}
+.chapo strong{color:var(--texte);font-weight:600}
+
+/* ---- bandeau du build ---- */
+.build{
+  margin:28px 0 0;padding:16px 18px;border-radius:10px;
+  border:1px solid var(--filet);background:var(--plaque);
+  display:flex;gap:14px;align-items:flex-start;
+}
+.build.hors-ligne{border-color:#7a5a18;background:linear-gradient(180deg,#1d1a12,#141a2b)}
+.build .voyant{
+  width:9px;height:9px;border-radius:50%;margin-top:8px;flex:none;
+  background:var(--succes);box-shadow:0 0 0 4px rgba(95,179,122,.15)
+}
+.build.hors-ligne .voyant{background:var(--or);box-shadow:0 0 0 4px rgba(255,209,26,.14)}
+.build h2{font-family:var(--serif);font-size:14px;margin:0 0 4px;font-weight:600;letter-spacing:.01em}
+.build p{margin:0;color:var(--attenue);font-size:13.5px}
+.build code{
+  font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:12.5px;
+  color:var(--or-pale);background:#0e1424;border:1px solid var(--filet);
+  padding:1px 6px;border-radius:5px
+}
+
+/* ---- sections ---- */
+section{margin:52px 0 0}
+.section-tete{display:flex;align-items:baseline;gap:12px;flex-wrap:wrap;margin:0 0 6px}
+h2.titre{font-family:var(--serif);font-size:20px;font-weight:600;margin:0;color:var(--texte)}
+.compte{
+  font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:var(--attenue);
+  font-variant-numeric:tabular-nums
+}
+.section-chapo{color:var(--attenue);font-size:14px;margin:0 0 20px;max-width:64ch}
+
+/* ---- fiches ---- */
+.fiche{
+  border:1px solid var(--filet);border-left:3px solid var(--filet);
+  background:var(--plaque);border-radius:10px;padding:18px 20px;margin:0 0 14px;
+}
+.fiche.attente{border-left-color:var(--or)}
+.fiche.ko{border-left-color:var(--danger)}
+.fiche.encours{border-left-color:var(--bleu)}
+.fiche.ok{
+  border-left-color:var(--succes);background:transparent;padding:12px 16px;
+}
+.fiche-tete{display:flex;gap:12px;align-items:baseline;flex-wrap:wrap}
+.ref{
+  font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:12px;
+  color:var(--attenue);letter-spacing:.04em;flex:none;padding-top:2px
+}
+h3{font-family:var(--serif);font-size:16px;font-weight:600;margin:0;flex:1 1 220px;line-height:1.35}
+.fiche.ok h3{font-weight:500;font-size:15px;color:var(--attenue)}
+.pastille{
+  font-size:10.5px;letter-spacing:.1em;text-transform:uppercase;font-weight:600;
+  padding:3px 9px;border-radius:99px;border:1px solid;white-space:nowrap
+}
+.pastille.attente{color:var(--or);border-color:#6b5714;background:rgba(255,209,26,.08)}
+.pastille.todo{color:var(--attenue);border-color:var(--filet)}
+.pastille.encours{color:var(--bleu);border-color:#1d5c8e;background:rgba(38,140,217,.08)}
+.pastille.ok{color:var(--succes);border-color:#2f6b45;background:rgba(95,179,122,.08)}
+.pastille.ko{color:var(--danger);border-color:#7a3535;background:rgba(198,95,95,.1)}
+.detail{margin:10px 0 0;color:var(--attenue);font-size:14px}
+.detail strong{color:var(--texte);font-weight:600}
+.detail code{
+  font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:12.5px;
+  color:var(--or-pale);background:#0e1424;padding:1px 5px;border-radius:4px
+}
+
+/* ---- journal ---- */
+.journal{margin:16px 0 0;padding:0;list-style:none;border-top:1px solid var(--filet)}
+.journal li{
+  display:grid;grid-template-columns:78px 1fr;gap:12px;
+  padding:9px 0;border-bottom:1px solid rgba(47,61,92,.45);font-size:13.5px
+}
+.journal li:last-child{border-bottom:0;padding-bottom:0}
+.quand{
+  font-variant-numeric:tabular-nums;font-size:12px;color:var(--attenue);
+  letter-spacing:.02em;padding-top:2px
+}
+.qui{font-weight:600}
+.qui.toi{color:var(--or)}
+.qui.claude{color:var(--bleu)}
+.journal p{margin:0;color:var(--texte)}
+
+/* ---- verdict ---- */
+.verdict{margin:16px 0 0;display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+button{
+  font-family:var(--corps);font-size:13px;font-weight:600;cursor:pointer;
+  border-radius:7px;padding:8px 14px;border:1px solid var(--filet);
+  background:var(--plaque-haute);color:var(--texte);transition:border-color .15s,background .15s
+}
+button:hover{border-color:var(--attenue)}
+button:focus-visible{outline:2px solid var(--or);outline-offset:2px}
+button.marche{border-color:#2f6b45;color:var(--succes)}
+button.marche:hover{background:rgba(95,179,122,.12)}
+button.casse{border-color:#7a3535;color:var(--danger)}
+button.casse:hover{background:rgba(198,95,95,.12)}
+button.rouvrir{font-weight:500;color:var(--attenue);padding:5px 10px;font-size:12px}
+button[disabled]{opacity:.45;cursor:progress}
+.note{
+  flex:1 1 100%;font-family:var(--corps);font-size:13.5px;color:var(--texte);
+  background:#0e1424;border:1px solid var(--filet);border-radius:7px;
+  padding:9px 12px;resize:vertical;min-height:38px;line-height:1.5
+}
+.note::placeholder{color:#5d6b83}
+.note:focus{outline:none;border-color:var(--or)}
+.etat{font-size:12.5px;color:var(--attenue)}
+.etat.erreur{color:var(--danger)}
+
+/* ---- pied ---- */
+footer{
+  margin:64px 0 0;padding:22px 0 0;border-top:1px solid var(--filet);
+  color:var(--attenue);font-size:13px
+}
+footer p{margin:0 0 8px;max-width:64ch}
+.export{margin:18px 0 0;display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+.export .etat{flex:1 1 100%}
+.export textarea{
+  flex:1 1 100%;font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:11px;
+  background:#0e1424;color:var(--attenue);border:1px solid var(--filet);
+  border-radius:7px;padding:10px;min-height:120px;line-height:1.45
+}
+.lecture-seule{
+  margin:20px 0 0;padding:12px 16px;border-radius:8px;
+  border:1px solid #7a3535;background:rgba(198,95,95,.08);
+  color:var(--danger);font-size:13.5px
+}
+@media (prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
+@media (max-width:520px){
+  .journal li{grid-template-columns:1fr;gap:2px}
+  .quand{padding-top:0}
+}
+</style>
+
+<div id="root"></div>
+
+<script id="state" type="application/json">
+__ETAT__
+</script>
+
+<script id="app">
+(function(){
+  var LABEL = {attente:"à vérifier", todo:"à faire", encours:"en cours", ok:"validé", ko:"toujours cassé"};
+  var state = JSON.parse(document.getElementById("state").textContent);
+  var root = document.getElementById("root");
+  var lectureSeule = false;
+
+  function esc(s){
+    return String(s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;");
+  }
+  function aujourdhui(){
+    var d = new Date();
+    return String(d.getDate()).padStart(2,"0") + "/" + String(d.getMonth()+1).padStart(2,"0");
+  }
+  function compte(items){
+    var reste = items.filter(function(i){ return i.statut !== "ok"; }).length;
+    return reste === 0 ? items.length + " / " + items.length : reste + " ouvert" + (reste>1?"s":"") + " sur " + items.length;
+  }
+
+  function ficheHtml(it, si, ii){
+    var repli = it.statut === "ok";
+    var h = '<article class="fiche ' + it.statut + '" data-s="' + si + '" data-i="' + ii + '">';
+    h += '<div class="fiche-tete"><span class="ref">' + esc(it.ref) + '</span><h3>' + esc(it.titre) + '</h3>';
+    h += '<span class="pastille ' + it.statut + '">' + LABEL[it.statut] + '</span></div>';
+    if (repli){
+      h += '<div class="verdict"><button class="rouvrir" data-act="rouvrir">Ça s’est remis à casser</button></div></article>';
+      return h;
+    }
+    if (it.detail) h += '<p class="detail">' + it.detail + '</p>';
+    if (it.journal && it.journal.length){
+      h += '<ul class="journal">';
+      it.journal.forEach(function(e){
+        var qui = e.qui === "Toi" ? "toi" : "claude";
+        h += '<li><span class="quand">' + esc(e.quand) + ' · <span class="qui ' + qui + '">' + esc(e.qui) + '</span></span><p>' + esc(e.texte) + '</p></li>';
+      });
+      h += '</ul>';
+    }
+    h += '<div class="verdict">';
+    h += '<textarea class="note" rows="1" placeholder="Ce que tu vois, si tu veux le noter…"></textarea>';
+    h += '<button class="marche" data-act="ok">Ça marche</button>';
+    h += '<button class="casse" data-act="ko">Toujours cassé</button>';
+    h += '<button data-act="note">Juste une note</button>';
+    h += '<span class="etat"></span></div></article>';
+    return h;
+  }
+
+  function render(){
+    var h = '<div class="page"><header class="tete">';
+    h += '<p class="eyebrow">King’s Gambit · suivi de test</p>';
+    h += '<h1>Carnet des travaux</h1>';
+    h += '<p class="chapo">Une ligne par défaut que tu as signalé. <strong>C’est toi qui coches</strong> — je ne ferme rien à ta place. Chaque ligne garde son journal, daté et signé, pour que la discussion reste sous le défaut dont elle parle.</p>';
+    h += '</header>';
+
+    var b = state.build;
+    h += '<div class="build' + (b.enLigne ? '' : ' hors-ligne') + '"><span class="voyant"></span><div>';
+    h += '<h2>' + (b.enLigne ? 'En ligne depuis le ' + esc(b.enLigne) : 'Pas encore en ligne') + '</h2>';
+    h += '<p>Dernier commit <code>' + esc(b.commit) + '</code> — ' + esc(b.quoi) + '. ' + esc(b.note) + '</p>';
+    h += '</div></div>';
+
+    if (lectureSeule){
+      h += '<div class="lecture-seule">Cette vue est en lecture seule : tes coches ne seront pas enregistrées. Ouvre le carnet depuis ton propre compte pour y répondre.</div>';
+    }
+
+    state.sections.forEach(function(sec, si){
+      h += '<section><div class="section-tete"><h2 class="titre">' + esc(sec.titre) + '</h2>';
+      h += '<span class="compte">' + compte(sec.items) + '</span></div>';
+      if (sec.chapo) h += '<p class="section-chapo">' + esc(sec.chapo) + '</p>';
+      sec.items.forEach(function(it, ii){ h += ficheHtml(it, si, ii); });
+      h += '</section>';
+    });
+
+    h += '<footer><p>Reconstruit le 24/08/2026 : le carnet précédent a été supprimé, et la liste détaillée des vingt-deux retours ne vivait que là. Ce qui suit est ce que la passation en a gardé.</p>';
+    h += '<p>Dernière mise à jour : ' + esc(state.maj) + '.</p>';
+    h += '<div class="export"><button data-export="1">Exporter l’état pour le dépôt</button>';
+    h += '<span class="etat" id="etat-export"></span></div></footer></div>';
+    root.innerHTML = h;
+  }
+
+  function construireDoc(){
+    var css = document.getElementById("sheet").textContent;
+    var app = document.getElementById("app").textContent;
+    var json = JSON.stringify(state, null, 1).replace(/</g, "\\u003c");
+    var fin = "<\/script>";
+    return '<!doctype html>\n<html lang="fr">\n<head>\n<meta charset="utf-8">\n'
+      + '<meta name="viewport" content="width=device-width, initial-scale=1">\n'
+      + '<title>Carnet des travaux — King’s Gambit</title>\n'
+      + '<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>\n'
+      + '<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Poppins:wght@600;700&display=swap">\n'
+      + '<style id="sheet">' + css + '</style>\n</head>\n<body>\n<div id="root"></div>\n'
+      + '<script id="state" type="application/json">\n' + json + '\n' + fin + '\n'
+      + '<script id="app">' + app + fin + '\n</body>\n</html>';
+  }
+
+  function enregistrer(etat){
+    etat.textContent = "Enregistrement…";
+    etat.classList.remove("erreur");
+    root.querySelectorAll("button").forEach(function(b){ b.disabled = true; });
+    var pont = (window.claude && window.claude.use) ? window.claude.use("artifact") : Promise.resolve(null);
+    pont.then(function(api){
+      if (!api){ throw {code:"not_granted"}; }
+      return api.publish(construireDoc());
+    }).then(function(){
+      etat.textContent = "Enregistré.";
+    }).catch(function(err){
+      var code = err && err.code;
+      root.querySelectorAll("button").forEach(function(b){ b.disabled = false; });
+      if (code === "conflict"){
+        etat.textContent = "Quelqu’un a écrit avant — la page se recharge sur sa version.";
+        return;
+      }
+      if (code === "not_writer" || code === "not_granted" || code === "not_declared"){
+        lectureSeule = true;
+        render();
+        return;
+      }
+      etat.textContent = "Pas enregistré. Réessaie dans un instant.";
+      etat.classList.add("erreur");
+    });
+  }
+
+  // L'EXPORT, ET POURQUOI IL EXISTE.
+  //
+  // Le depot porte la source du carnet ; cette page-ci porte les verdicts du
+  // joueur, et elle se republie sous SON identite quand il coche. Une session
+  // qui republierait sans relire ecraserait ses reponses - et rien ne permet
+  // de les relire : le navigateur d'agent n'est pas connecte a son compte, il
+  // ne voit qu'une page introuvable. C'est donc la page qui rend son etat.
+  root.addEventListener("click", function(ev){
+    var expo = ev.target.closest("button[data-export]");
+    if (expo){
+      var json = JSON.stringify(state, null, 2) + "\n";
+      var dit = document.getElementById("etat-export");
+      var pont = (window.claude && window.claude.use) ? window.claude.use("downloads") : Promise.resolve(null);
+      pont.then(function(api){
+        if (!api) throw 0;
+        return api.save({filename: "etat.json", data: json});
+      }).then(function(){
+        dit.textContent = "Enregistré. Le déposer dans carnet/etat.json.";
+      }).catch(function(){
+        // Repli : la page montre le texte, a copier a la main.
+        var zone = document.createElement("textarea");
+        zone.value = json;
+        zone.readOnly = true;
+        expo.parentNode.appendChild(zone);
+        zone.focus(); zone.select();
+        dit.textContent = "À copier dans carnet/etat.json.";
+        expo.disabled = true;
+      });
+      return;
+    }
+
+    var bouton = ev.target.closest("button[data-act]");
+    if (!bouton) return;
+    var fiche = bouton.closest(".fiche");
+    var it = state.sections[+fiche.dataset.s].items[+fiche.dataset.i];
+    var act = bouton.dataset.act;
+    var champ = fiche.querySelector(".note");
+    var texte = champ ? champ.value.trim() : "";
+
+    if (act === "rouvrir"){
+      it.statut = "ko";
+      it.journal.push({quand: aujourdhui(), qui: "Toi", texte: "Rouverte : ça s’est remis à casser."});
+    } else if (act === "ok"){
+      it.statut = "ok";
+      it.journal.push({quand: aujourdhui(), qui: "Toi", texte: texte || "Ça marche."});
+    } else if (act === "ko"){
+      it.statut = "ko";
+      it.journal.push({quand: aujourdhui(), qui: "Toi", texte: texte || "Toujours cassé."});
+    } else if (act === "note"){
+      if (!texte) { champ.focus(); return; }
+      it.journal.push({quand: aujourdhui(), qui: "Toi", texte: texte});
+    }
+    state.maj = aujourdhui() + "/2026";
+    render();
+    var maj = root.querySelector('.fiche[data-s="' + fiche.dataset.s + '"][data-i="' + fiche.dataset.i + '"] .etat');
+    enregistrer(maj || document.createElement("span"));
+  });
+
+  render();
+})();
+</script>

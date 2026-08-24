@@ -32,6 +32,15 @@ documents complètent celui-ci et ne le répètent pas :
   la moitié des contrôles, et j'ai annoncé une correction avant de l'avoir
   prouvée. Le carnet de suivi vit dans un artefact web, dont l'adresse est dans
   la passation.
+- [`carnet/`](carnet/README.md) — **le carnet de travaux**, l'instrument de
+  suivi des retours de test : une ligne par défaut, son journal daté, et un
+  verdict que le joueur coche lui-même sur une page web. Le carnet vivant est
+  à `https://claude.ai/code/artifact/857ffdc3-e16a-485b-8651-853b31916069` ;
+  **sa source est dans le dépôt** (`carnet/etat.json`) depuis que le premier a
+  été supprimé avec la seule liste des vingt-deux retours qui existait.
+  ⚠️ **Il se republie sous l'identité du joueur quand il coche** : relire la
+  page publiée et la reverser (`carnet.py recupere`) AVANT de republier, sinon
+  on écrase ses réponses.
 - [`chantier_i_missives.md`](chantier_i_missives.md) — **le chantier suivant,
   spec écrite le 23/08, pas encore commencé** : les quatre lettres scellées du
   Roi, qui portent le *pourquoi* du jeu là où `GuidePopup` porte le *comment*.

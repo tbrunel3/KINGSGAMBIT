@@ -36,3 +36,6 @@ tools/screenshots/*
 # Certificat auto-signe du serveur de test local (tools/serve_local.py).
 # Contient une CLE PRIVEE : jamais dans le depot, et regenere en une commande.
 tools/*.pem
+
+# Le carnet se rebatit depuis carnet/etat.json ; sa sortie est un produit.
+carnet/build/
