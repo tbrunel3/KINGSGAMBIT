@@ -320,6 +320,7 @@ func _claim_button(id: String) -> PanelContainer:
 
 	# call_deferred : encaisser reconstruit le panneau, donc libere ce bouton
 	# alors qu'il est en train d'emettre le signal qui nous amene ici.
+	UiTheme.press_feedback(button)
 	button.gui_input.connect(func(event: InputEvent):
 		if event is InputEventMouseButton and event.pressed and event.button_index == MOUSE_BUTTON_LEFT:
 			# Les pieces partent AVANT que le panneau ne se reconstruise : le

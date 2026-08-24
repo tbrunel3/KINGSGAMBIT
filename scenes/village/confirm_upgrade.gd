@@ -204,6 +204,7 @@ func _button(text: String, bg: Color, fg: Color, on_press: Callable) -> PanelCon
 	label.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	button.add_child(label)
 
+	UiTheme.press_feedback(button)
 	button.gui_input.connect(func(event: InputEvent):
 		if event is InputEventMouseButton and event.pressed \
 				and event.button_index == MOUSE_BUTTON_LEFT:

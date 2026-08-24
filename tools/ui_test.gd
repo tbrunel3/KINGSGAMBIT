@@ -116,6 +116,41 @@ func _test_royal_letter() -> void:
 	_check(Game.unread_letters() == 2, "deux lettres non lues reclament l'attention (%d)"
 		% Game.unread_letters())
 
+	# ---- LE ROI PARLE, PUIS IL ECRIT ----
+	#
+	#  ⚠️ Retour du joueur : « la lettre arrive des le debut du jeu, il n'y a
+	#  plus l'animation du roi, alors que la lettre devrait arriver apres le
+	#  roi ». Livree a l'entree du village, elle coupait la premiere chose que
+	#  le jeu raconte. Elle s'enchaine maintenant sur COMMENCER.
+	Game.reset_progress()
+	Router.current_letter = ""
+	var intro: Control = load("res://scenes/intro/king_intro_dialogue.tscn").instantiate()
+	add_child(intro)
+	await _frames(3)
+	intro._on_commencer_pressed()
+	await _frames(2)
+	_check(Game.has_seen_intro(), "COMMENCER marque l'intro vue")
+	_check(Router.current_letter == Letters.HERITAGE,
+		"et enchaine sur la missive du Roi, pas sur le village (%s)"
+			% ("village" if Router.current_letter == "" else Router.current_letter))
+	_check(Game.letter_received(Letters.HERITAGE),
+		"la lettre est bien recue a ce moment-la")
+	intro.queue_free()
+	await _frames(2)
+
+	# Et une SECONDE partie ne la rejoue pas : l'intro passee, il n'y a plus de
+	# lettre due, donc COMMENCER rend le village.
+	Router.current_letter = ""
+	var intro2: Control = load("res://scenes/intro/king_intro_dialogue.tscn").instantiate()
+	add_child(intro2)
+	await _frames(3)
+	intro2._on_commencer_pressed()
+	await _frames(2)
+	_check(Router.current_letter == "",
+		"une lettre deja recue ne se rejoue pas a l'intro (%s)" % Router.current_letter)
+	intro2.queue_free()
+	await _frames(2)
+
 	Game.reset_progress()
 	Game.mark_intro_seen()
 	_check(Letters.due() == Letters.HERITAGE,
@@ -1745,6 +1780,44 @@ func _test_press_feedback() -> void:
 	_check(chip.has_meta("_press_feedback"), "la chip de selection l'a aussi")
 	chip.queue_free()
 	await _frames(1)
+
+	# ---- ET MAINTENANT TOUS LES AUTRES (fiche D) ----
+	#
+	#  ⚠️ Retour du joueur : « sur le bouton bataille, retour chateau non, meme
+	#  sur les popups batiment - il faut avoir l'impression d'un appui smooth ».
+	#  Trois composants l'avaient, et RIEN d'autre : ni les boutons du theme, ni
+	#  les panneaux montes a la main. C'est exactement ce que sa propre regle
+	#  interdisait - « a poser dans les composants partages, jamais ecran par
+	#  ecran, sinon la moitie en aura et l'autre pas ».
+	var bouton_theme := UiTheme.make_button("ESSAI")
+	add_child(bouton_theme)
+	await _frames(2)
+	_check(bouton_theme.has_meta("_press_feedback"),
+		"tout bouton du theme naît avec le retour a l'appui")
+	bouton_theme.queue_free()
+
+	Game.reset_progress()
+	var village: Node = load("res://scenes/village/village.tscn").instantiate()
+	add_child(village)
+	await _frames(3)
+	await _skip_animations()
+	_check(village._battle_button.has_meta("_press_feedback"),
+		"BATAILLE l'a maintenant")
+	# Les ecrans qui montaient leur propre panneau cliquable : on verifie qu'ils
+	# passent tous par le meme composant plutot que de le reecrire.
+	var sans: Array[String] = []
+	for chemin in ["res://scenes/village/building_popup.gd",
+			"res://scenes/village/confirm_upgrade.gd",
+			"res://scenes/village/mission_popup.gd",
+			"res://scenes/village/castle_screen.gd",
+			"res://scenes/battle/battle_result.gd"]:
+		if not FileAccess.get_file_as_string(chemin).contains("UiTheme.press_feedback("):
+			sans.append(String(chemin).get_file())
+	_check(sans.is_empty(),
+		"aucun ecran ne monte plus un bouton sans retour (%s)"
+			% ("rien" if sans.is_empty() else ", ".join(sans)))
+	village.queue_free()
+	await _frames(2)
 	_done("press_feedback")
 
 

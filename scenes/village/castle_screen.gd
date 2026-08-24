@@ -498,6 +498,7 @@ func _upgrade_button(cost: int) -> PanelContainer:
 	button.mouse_filter = Control.MOUSE_FILTER_STOP
 	# call_deferred : lancer l'amelioration reconstruit ce panneau, donc libere
 	# le bouton qui est en train d'emettre le signal.
+	UiTheme.press_feedback(button)
 	button.gui_input.connect(func(event: InputEvent):
 		if event is InputEventMouseButton and event.pressed and event.button_index == MOUSE_BUTTON_LEFT:
 			_ask_upgrade())

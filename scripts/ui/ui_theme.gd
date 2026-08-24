@@ -319,6 +319,12 @@ static func make_button(text: String, color: Color = PANEL_LIGHT, font_size: int
 	button.text = text
 	button.add_theme_font_size_override("font_size", font_size)
 	style_button(button, color)
+	# ⚠️ LE RETOUR A L'APPUI SE POSE ICI, PAS ECRAN PAR ECRAN.
+	# Demande du joueur, mot pour mot : « il faut avoir l'impression d'un appui
+	# smooth », et « a poser dans les composants partages, jamais ecran par
+	# ecran, sinon la moitie en aura et l'autre pas ». C'etait exactement le
+	# cas : trois composants l'avaient, tous les boutons du theme non.
+	press_feedback(button)
 	return button
 
 

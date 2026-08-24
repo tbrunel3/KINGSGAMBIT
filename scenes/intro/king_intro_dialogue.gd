@@ -566,4 +566,19 @@ func _unlock_button() -> void:
 func _on_commencer_pressed() -> void:
 	_commencer_ready = false
 	Game.mark_intro_seen()
+
+	# ⚠️ LA PREMIERE MISSIVE S'ENCHAINE ICI, PAS AU VILLAGE.
+	#
+	# Elle y arrivait, et le joueur l'a vue tomber AVANT le Roi : « la lettre
+	# arrive des le debut du jeu, il n'y a plus l'animation du roi, alors que
+	# la lettre devrait arriver apres le roi ». Il a raison sur les deux -
+	# livree a l'entree du village, elle coupait la premiere chose que le jeu
+	# raconte, et elle arrivait hors de son moment.
+	#
+	# Le Roi parle, PUIS il ecrit. Les trois autres lettres, elles, restent
+	# livrees au village : leurs jalons tombent en cours de partie, pas ici.
+	var missive := Letters.deliver_pending()
+	if missive != "":
+		Router.goto_letter(missive, Router.RETURN_VILLAGE)
+		return
 	Router.goto_village()

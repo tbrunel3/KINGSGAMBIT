@@ -789,6 +789,10 @@ func _build_building_label(type: String) -> void:
 ## classique. On reproduit juste l'interaction click.
 func _make_clickable(panel: PanelContainer, action: Callable) -> void:
 	panel.mouse_filter = Control.MOUSE_FILTER_STOP
+	# BATAILLE, BOUTIQUE, CODEX : ce sont des PanelContainer et non des Button
+	# (il fallait y glisser une Icon vectorielle), donc rien ne leur donnait le
+	# retour a l'appui. Le joueur l'a signale sur BATAILLE en premier.
+	UiTheme.press_feedback(panel)
 	panel.gui_input.connect(func(event: InputEvent):
 		if event is InputEventMouseButton and event.pressed and event.button_index == MOUSE_BUTTON_LEFT:
 			action.call())

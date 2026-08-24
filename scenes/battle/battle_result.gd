@@ -829,6 +829,7 @@ func add_action_button(text: String, icon_name: String, on_press: Callable) -> v
 
 
 func _connect_press(node: Control, on_press: Callable) -> void:
+	UiTheme.press_feedback(node)
 	node.gui_input.connect(func(event: InputEvent):
 		if event is InputEventMouseButton and event.pressed \
 				and event.button_index == MOUSE_BUTTON_LEFT:

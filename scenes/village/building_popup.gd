@@ -454,7 +454,8 @@ func _action_row(title_text: String, title_color: Color, cost_text: String, extr
 		# reconstruire le popup, donc liberer CE bouton - or il est en train
 		# d'emettre le signal qui nous amene ici. On laisse la frame se
 		# terminer avant de se supprimer soi-meme.
-		button.gui_input.connect(func(event: InputEvent):
+		UiTheme.press_feedback(button)
+	button.gui_input.connect(func(event: InputEvent):
 			if event is InputEventMouseButton and event.pressed and event.button_index == MOUSE_BUTTON_LEFT:
 				on_press.call_deferred())
 	row.add_child(button)
