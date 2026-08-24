@@ -128,6 +128,58 @@ h1{
   color:var(--or-pale);margin-right:7px
 }
 .marche .bas{margin:14px 0 0;display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+.attente-bloc{
+  margin:0 0 12px;padding:16px 18px;border-radius:10px;
+  border:2px solid var(--or);background:linear-gradient(180deg,rgba(255,209,26,.14),rgba(20,26,43,.9))
+}
+.attente-bloc h2{
+  font-family:var(--serif);font-size:clamp(15px,4vw,19px);font-weight:700;
+  letter-spacing:.06em;color:var(--or);margin:0 0 4px
+}
+.attente-bloc > p{color:var(--attenue);font-size:13px;margin:0 0 12px}
+.attente-bloc ul{margin:0;padding:0;list-style:none;display:grid;gap:10px}
+.attente-bloc li{
+  display:grid;gap:2px;padding:10px 12px;border-radius:8px;
+  border:1px solid var(--filet);background:rgba(14,20,36,.55)
+}
+.attente-bloc .quoi{font-size:14px;font-weight:600}
+.livraison{
+  font-size:12px;color:var(--succes);font-variant-numeric:tabular-nums;
+  display:flex;gap:7px;flex-wrap:wrap;align-items:baseline
+}
+.livraison code{
+  font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:11.5px;
+  color:var(--or-pale);background:#0e1424;border:1px solid var(--filet);
+  padding:0 5px;border-radius:4px
+}
+.livraison .attend{color:var(--or);font-weight:600}
+.repos{
+  padding:18px;border-radius:10px;border:1px dashed var(--filet);
+  background:rgba(20,26,43,.5);text-align:center
+}
+.repos h2{
+  font-family:var(--serif);font-size:clamp(15px,4vw,18px);font-weight:700;
+  letter-spacing:.06em;color:var(--attenue);margin:0 0 6px
+}
+.repos p{margin:0;color:var(--attenue);font-size:13px}
+.travail .bouton-rangee{display:flex;gap:10px;flex-wrap:wrap;margin:10px 0 0}
+.travail .bouton-rangee > *{flex:1 1 220px}
+.nettoyer{
+  font-family:var(--serif);font-size:14px;font-weight:700;letter-spacing:.06em;
+  color:var(--bleu);border:1px solid #1d5c8e;background:rgba(38,140,217,.1);
+  border-radius:10px;padding:13px 16px
+}
+.nettoyer:hover{background:rgba(38,140,217,.2);border-color:var(--bleu)}
+.nettoyage{
+  margin:12px 0 0;padding:14px 18px;border-radius:10px;
+  border:2px solid var(--bleu);background:linear-gradient(180deg,rgba(38,140,217,.14),rgba(20,26,43,.9))
+}
+.nettoyage h2{
+  font-family:var(--serif);font-size:15px;font-weight:700;letter-spacing:.06em;
+  color:var(--bleu);margin:0 0 4px
+}
+.nettoyage p{margin:0;color:var(--attenue);font-size:13px}
+.nettoyage .bas{margin:12px 0 0;display:flex;gap:8px;flex-wrap:wrap;align-items:center}
 
 /* ---- sections ---- */
 section{margin:46px 0 0}
@@ -139,6 +191,43 @@ h2.titre{font-family:var(--serif);font-size:20px;font-weight:600;margin:0;color:
 }
 .section-chapo{color:var(--attenue);font-size:14px;margin:0 0 20px;max-width:64ch}
 
+/* ---- l'apercu et les barres d'avancement ---- */
+.apercu{
+  margin:20px 0 0;padding:18px;border-radius:12px;
+  border:1px solid var(--filet);background:var(--plaque)
+}
+.apercu .haut{display:flex;gap:12px;align-items:baseline;flex-wrap:wrap;margin:0 0 10px}
+.apercu h2{
+  font-family:var(--serif);font-size:15px;font-weight:700;letter-spacing:.06em;
+  color:var(--or-pale);margin:0
+}
+.apercu .part{
+  margin-left:auto;font-variant-numeric:tabular-nums;font-size:22px;
+  font-family:var(--serif);font-weight:700;color:var(--or)
+}
+.jauge{height:9px;border-radius:99px;background:#0e1424;border:1px solid var(--filet);overflow:hidden}
+.jauge > span{display:block;height:100%;border-radius:99px;background:linear-gradient(90deg,#2f6b45,var(--succes))}
+.jauge.mince{height:5px}
+.compteurs{
+  margin:12px 0 0;display:flex;gap:8px;flex-wrap:wrap;
+  font-size:11px;letter-spacing:.09em;text-transform:uppercase;font-weight:600
+}
+.compteurs span{
+  padding:3px 9px;border-radius:99px;border:1px solid var(--filet);color:var(--attenue);
+  font-variant-numeric:tabular-nums
+}
+.compteurs .c-encours{color:var(--bleu);border-color:#1d5c8e}
+.compteurs .c-attente{color:var(--or);border-color:#6b5714}
+.compteurs .c-ko{color:var(--danger);border-color:#7a3535}
+.compteurs .c-ok{color:var(--succes);border-color:#2f6b45}
+.avance{margin:12px 0 0;display:grid;gap:5px}
+.avance .ligne{
+  display:flex;gap:10px;align-items:baseline;font-size:12px;color:var(--attenue);
+  font-variant-numeric:tabular-nums
+}
+.avance .ligne b{color:var(--texte);font-weight:600}
+.avance .ligne .pc{margin-left:auto}
+
 /* ---- reglage du classement ---- */
 .classement{
   margin:22px 0 0;display:flex;gap:8px;align-items:center;flex-wrap:wrap;
@@ -146,6 +235,15 @@ h2.titre{font-family:var(--serif);font-size:20px;font-weight:600;margin:0;color:
 }
 .classement button{font-size:12.5px;padding:6px 12px;font-weight:500}
 .classement button.actif{border-color:var(--or);color:var(--or);font-weight:600}
+.groupe-titre{
+  font-family:var(--serif);font-size:12px;font-weight:700;letter-spacing:.14em;
+  text-transform:uppercase;margin:0 0 6px
+}
+.groupe-titre.g-encours{color:var(--bleu)}
+.groupe-titre.g-attente{color:var(--or)}
+.groupe-titre.g-ko{color:var(--danger)}
+.groupe-titre.g-ok{color:var(--succes)}
+.groupe-titre.g-todo{color:var(--attenue)}
 
 /* ---- fiches ---- */
 .fiche{
@@ -370,6 +468,58 @@ __ETAT__
   }
   function retenue(it){ return !filtreTheme || theme(it) === filtreTheme; }
   function ouverte(it){ return it.statut !== "ok"; }
+  // ⚠️ UNE FICHE "A VERIFIER" N'EST PLUS DANS L'ORDRE DE MARCHE. Regle donnee
+  // par le joueur : "quand tu attends une verif, tu passes a la suite ; quand
+  // tu finis toutes les taches tu boucles et tu repars sur les reprises,
+  // sinon tu te mets en attente". Une fiche livree m'attend, LUI - la
+  // reprendre serait refaire un travail que personne n'a encore juge.
+  function aFaire(it){ return it.statut === "todo" || it.statut === "ko" || it.statut === "encours"; }
+  function attendVerdict(it){ return it.statut === "attente"; }
+  function livraison(it){ return it.livre || null; }
+
+  // L'AVANCEMENT. Un chiffre pose a la main quand il y en a un, sinon deduit
+  // de l'etat : une fiche n'a pas besoin d'etre suivie au pourcentage pres
+  // pour qu'une barre dise quelque chose de vrai.
+  var PAR_ETAT = {todo: 0, ko: 10, encours: 50, attente: 90, ok: 100};
+  function avance(it){
+    if (typeof it.avancement === "number")
+      return Math.max(0, Math.min(100, it.avancement));
+    return PAR_ETAT[it.statut] !== undefined ? PAR_ETAT[it.statut] : 0;
+  }
+
+  function toutes(){
+    var liste = [];
+    J().sections.forEach(function(sec, si){
+      sec.items.forEach(function(it, ii){ liste.push([it, si, ii]); });
+    });
+    return liste;
+  }
+
+  // L'avancement GLOBAL est la moyenne des fiches, pas la part de fiches
+  // validees : sans ca une journee de dix chantiers reste a 0 % jusqu'a la
+  // premiere validation, alors que le travail avance.
+  function avanceGlobale(){
+    var tout = toutes().filter(function(e){ return retenue(e[0]); });
+    if (!tout.length) return 0;
+    var somme = 0;
+    tout.forEach(function(e){ somme += avance(e[0]); });
+    return Math.round(somme / tout.length);
+  }
+
+  function jauge(pourcent, mince){
+    return '<div class="jauge' + (mince ? ' mince' : '') + '"><span style="width:'
+      + pourcent + '%"></span></div>';
+  }
+
+  function enAttente(){
+    var liste = [];
+    J().sections.forEach(function(sec){
+      classees(sec.items).forEach(function(paire){
+        if (attendVerdict(paire[0]) && retenue(paire[0])) liste.push(paire[0]);
+      });
+    });
+    return liste;
+  }
 
   // Le classement a DEUX modes, parce que le joueur a demande les deux : la
   // priorite, et la main. En mode priorite le tri est STABLE, donc l'ordre du
@@ -398,7 +548,7 @@ __ETAT__
       classees(sec.items).forEach(function(paire){
         // Le filtre commande AUSSI l'ordre de marche : filtrer sur un theme et
         // lancer les travaux, c'est demander cette pile-la et rien d'autre.
-        if (ouverte(paire[0]) && retenue(paire[0])) liste.push(paire[0]);
+        if (aFaire(paire[0]) && retenue(paire[0])) liste.push(paire[0]);
       });
     });
     return liste;
@@ -428,6 +578,21 @@ __ETAT__
     h += '<p class="prio ' + prio(it) + '">priorité ' + prio(it);
     if (rang) h += ' · ' + rang + '<sup>' + (rang === 1 ? 'er' : 'e') + '</sup> dans l’ordre de marche';
     h += '</p>';
+    // La DATE DU COMMIT sous la fiche : "pour que ce soit plus clair qu'on
+    // doit valider ton travail". Sans elle, une fiche a verifier ne dit pas
+    // depuis quand elle attend, ni sur quelle version.
+    var liv = livraison(it);
+    if (liv){
+      h += '<p class="livraison">Livré le ' + esc(liv.quand || "?");
+      if (liv.commit) h += ' · commit <code>' + esc(liv.commit) + '</code>';
+      if (attendVerdict(it)) h += ' · <span class="attend">attend ta validation</span>';
+      h += '</p>';
+    }
+    // La barre PAR TACHE, juste sous l'entete : elle dit d'un coup d'oeil ou
+    // en est la fiche, la ou le statut ne dit que dans quelle case elle est.
+    h += '<div class="avance"><div class="ligne"><span>avancement</span>'
+       + '<span class="pc">' + avance(it) + ' %</span></div>'
+       + jauge(avance(it), true) + '</div>';
     if (it.detail) h += '<p class="detail">' + it.detail + '</p>';
     if (it.journal && it.journal.length){
       h += '<ul class="journal">';
@@ -450,6 +615,64 @@ __ETAT__
     h += '<span class="etat"></span></div></article>';
     return h;
   }
+
+  // LES PAQUETS D'AFFICHAGE. Trois lectures de la meme journee : par etat
+  // (qui attend quoi), par section (le sens que le carnet leur a donne), par
+  // theme (de quelle partie du jeu on parle). Les INDICES de section et de
+  // fiche voyagent avec chaque entree : c'est eux que les gestes utilisent,
+  // et un regroupement ne doit surtout pas les renumeroter.
+  var ETATS = [
+    ["encours", "En cours", "Ce que je fais maintenant."],
+    ["ko", "Rouvert par toi", "Tu l’as remis en cause : ça repasse devant."],
+    ["todo", "À faire", "Pas encore commencé."],
+    ["attente", "En attente de ton verdict", "Livré et en ligne. Je n’y retouche pas sans toi."],
+    ["ok", "Validé", "Replié. Rouvre une ligne si elle se remet à casser."]
+  ];
+
+  function paquets(){
+    var j = J();
+    var mode = j.groupe || "etat";
+    var vues = toutes().filter(function(e){ return retenue(e[0]); });
+
+    // Le classement en vigueur decide de l'ordre DANS chaque paquet.
+    function rangees(entrees){
+      return entrees.slice().sort(function(a, b){
+        if (mode !== "etat"){
+          var pa0 = a[0].statut === "ok" ? 1 : 0, pb0 = b[0].statut === "ok" ? 1 : 0;
+          if (pa0 !== pb0) return pa0 - pb0;
+        }
+        if (j.tri === "manuel") return (a[1] - b[1]) || (a[2] - b[2]);
+        var pa = RANG[prio(a[0])], pb = RANG[prio(b[0])];
+        return pa !== pb ? pa - pb : ((a[1] - b[1]) || (a[2] - b[2]));
+      });
+    }
+
+    if (mode === "section"){
+      return j.sections.map(function(sec, si){
+        return {
+          titre: sec.titre, chapo: sec.chapo, classe: "",
+          entrees: rangees(vues.filter(function(e){ return e[1] === si; }))
+        };
+      });
+    }
+    if (mode === "theme"){
+      var noms = themes().slice();
+      if (vues.some(function(e){ return !theme(e[0]); })) noms.push("");
+      return noms.map(function(nom){
+        return {
+          titre: nom || "Sans thème", chapo: "", classe: "",
+          entrees: rangees(vues.filter(function(e){ return theme(e[0]) === nom; }))
+        };
+      });
+    }
+    return ETATS.map(function(etat){
+      return {
+        titre: etat[1], chapo: etat[2], classe: "g-" + etat[0],
+        entrees: rangees(vues.filter(function(e){ return e[0].statut === etat[0]; }))
+      };
+    });
+  }
+
 
   function render(){
     var j = J();
@@ -475,6 +698,103 @@ __ETAT__
       h += '<button type="button" data-annuler="1">Annuler</button></form>';
     }
 
+    // L'APERCU, EN HAUT. Demande du joueur : "en haut l'apercu au travail,
+    // une barre d'avancement globale et particuliere par tache". Il repond a
+    // une seule question - ou en est la journee - avant de dire quoi que ce
+    // soit d'autre.
+    var etats = {todo:0, ko:0, encours:0, attente:0, ok:0};
+    toutes().forEach(function(e){
+      if (retenue(e[0])) etats[e[0].statut] = (etats[e[0].statut] || 0) + 1;
+    });
+    var global = avanceGlobale();
+    h += '<div class="apercu"><div class="haut"><h2>OÙ EN EST LA JOURNÉE</h2>';
+    h += '<span class="part">' + global + ' %</span></div>';
+    h += jauge(global, false);
+    h += '<div class="compteurs">';
+    if (etats.encours) h += '<span class="c-encours">' + etats.encours + ' en cours</span>';
+    if (etats.attente) h += '<span class="c-attente">' + etats.attente + ' à vérifier</span>';
+    if (etats.ko) h += '<span class="c-ko">' + etats.ko + ' cassé' + (etats.ko>1?'s':'') + '</span>';
+    if (etats.todo) h += '<span>' + etats.todo + ' à faire</span>';
+    if (etats.ok) h += '<span class="c-ok">' + etats.ok + ' validé' + (etats.ok>1?'s':'') + '</span>';
+    h += '</div></div>';
+
+    if (lectureSeule){
+      h += '<div class="lecture-seule">Cette vue est en lecture seule : tes coches ne seront pas enregistrées. Ouvre le carnet depuis ton propre compte pour y répondre.</div>';
+    }
+
+    // AU TRAVAIL : le bouton fige l'ordre dans l'etat de la page, et l'etat de
+    // la page est ce que je relis. C'est donc une vraie commande, pas un
+    // affichage - mais elle ne me reveille pas : dis-le moi une fois lancee.
+    var liste = ordreDeMarche();
+    var attendus = enAttente();
+
+    h += '<div class="travail">';
+
+    // 1. CE QUI T'ATTEND, TOI. En premier, parce que c'est le seul endroit ou
+    // le carnet demande quelque chose au joueur plutot que de lui rendre
+    // compte - et parce qu'une fiche livree bloque sa propre reprise.
+    if (attendus.length){
+      h += '<div class="attente-bloc"><h2>' + attendus.length + ' chantier'
+         + (attendus.length > 1 ? 's attendent' : ' attend') + ' ta validation</h2>';
+      h += '<p>Livrés et en ligne. Je n’y retouche pas tant que tu n’as pas tranché : « ça marche » les replie, « toujours cassé » me les remet dans l’ordre de marche.</p><ul>';
+      attendus.forEach(function(it){
+        var liv = livraison(it);
+        h += '<li><span class="quoi"><span class="ref-mini">' + esc(it.ref) + '</span>'
+           + esc(it.titre) + '</span>';
+        if (liv){
+          h += '<span class="livraison">Livré le ' + esc(liv.quand || "?");
+          if (liv.commit) h += ' · commit <code>' + esc(liv.commit) + '</code>';
+          h += '</span>';
+        }
+        h += '</li>';
+      });
+      h += '</ul></div>';
+    }
+
+    // 2. LA BOUCLE. Rien a faire et quelque chose en attente : je m'arrete.
+    // Rien du tout : la journee est finie.
+    if (!liste.length && !j.marche){
+      h += '<div class="repos">';
+      if (attendus.length){
+        h += '<h2>EN ATTENTE DE TOI</h2>';
+        h += '<p>Plus rien à prendre : tout ce qui reste attend ton verdict. Tranche une ligne et l’ordre de marche repart.</p>';
+      } else {
+        h += '<h2>JOURNÉE FINIE</h2>';
+        h += '<p>Aucun chantier ouvert. Ajoute une tâche, ou ouvre une nouvelle journée.</p>';
+      }
+      h += '</div>';
+    }
+
+    if (j.marche){
+      h += '<div class="marche"><h2>AU TRAVAIL — l’ordre est donné</h2>';
+      h += '<p class="quand-lance">Lancé le ' + esc(j.marche.lance) + '. Dis-moi « au travail » en discussion : je relis le carnet et je pars sur cette liste, dans cet ordre. Une fiche livrée sort de la liste et passe au bloc du dessus — je ne l’y remets que si tu la rouvres.</p>';
+      h += '<ol>';
+      j.marche.ordre.forEach(function(o){
+        h += '<li><span class="ref-mini">' + esc(o.ref) + '</span>' + esc(o.titre) + '</li>';
+      });
+      h += '</ol><div class="bas"><button data-copier="1">Copier l’ordre</button>';
+      h += '<button data-arreter="1">Annuler l’ordre</button>';
+      h += '<span class="etat" id="etat-marche"></span></div></div>';
+    } else if (liste.length){
+      h += '<button class="lancer" data-travail="1">';
+      h += 'AU TRAVAIL ! — ' + liste.length + ' chantier' + (liste.length>1?'s':'') + ' dans l’ordre';
+      h += '</button><span class="etat" id="etat-marche"></span>';
+    }
+
+    // 3. LE NETTOYAGE, demande apres coup : "un bouton aussi pour lancer un
+    // nettoyage du code apres de gros travaux". Ce n'est pas une tache du
+    // carnet - il ne produit rien de visible a l'ecran - mais une passe sur
+    // ce que les gros chantiers ont laisse derriere eux.
+    if (j.nettoyage){
+      h += '<div class="nettoyage"><h2>NETTOYAGE DEMANDÉ</h2>';
+      h += '<p>Le ' + esc(j.nettoyage.demande) + '. Passe de simplification sur ce que les derniers chantiers ont laissé : doublons, code mort, chemins concurrents. Aucun changement de comportement — les bancs doivent rendre exactement les mêmes chiffres après qu’avant.</p>';
+      h += '<div class="bas"><button data-nettoyage-fini="1">C’est fait, retire-le</button>';
+      h += '<span class="etat" id="etat-nettoyage"></span></div></div>';
+    } else {
+      h += '<div class="bouton-rangee"><button class="nettoyer" data-nettoyage="1">🧹 NETTOYER LE CODE</button></div>';
+    }
+    h += '</div>';
+
     var b = j.build || {};
     // ⚠️ LE BANDEAU EST UNE CONSIGNE DU JOUEUR, pas une decoration : "ne mets
     // pas a jour avant le commit que je peux tester" et "une notif genre ecran
@@ -486,33 +806,6 @@ __ETAT__
        + esc(b.quoi || "") + (b.quoi ? '. ' : '') + esc(b.note || "") + '</p>';
     h += '</div></div>';
 
-    if (lectureSeule){
-      h += '<div class="lecture-seule">Cette vue est en lecture seule : tes coches ne seront pas enregistrées. Ouvre le carnet depuis ton propre compte pour y répondre.</div>';
-    }
-
-    // AU TRAVAIL : le bouton fige l'ordre dans l'etat de la page, et l'etat de
-    // la page est ce que je relis. C'est donc une vraie commande, pas un
-    // affichage - mais elle ne me reveille pas : dis-le moi une fois lancee.
-    var liste = ordreDeMarche();
-    h += '<div class="travail">';
-    if (j.marche){
-      h += '<div class="marche"><h2>AU TRAVAIL — l’ordre est donné</h2>';
-      h += '<p class="quand-lance">Lancé le ' + esc(j.marche.lance) + '. Dis-moi « au travail » en discussion : je relis le carnet et je pars sur cette liste, dans cet ordre.</p>';
-      h += '<ol>';
-      j.marche.ordre.forEach(function(o){
-        h += '<li><span class="ref-mini">' + esc(o.ref) + '</span>' + esc(o.titre) + '</li>';
-      });
-      h += '</ol><div class="bas"><button data-copier="1">Copier l’ordre</button>';
-      h += '<button data-arreter="1">Annuler l’ordre</button>';
-      h += '<span class="etat" id="etat-marche"></span></div></div>';
-    } else {
-      h += '<button class="lancer" data-travail="1"' + (liste.length ? '' : ' disabled') + '>';
-      h += liste.length ? 'AU TRAVAIL ! — ' + liste.length + ' chantier' + (liste.length>1?'s':'') + ' dans l’ordre'
-                        : 'AU TRAVAIL ! — rien d’ouvert';
-      h += '</button><span class="etat" id="etat-marche"></span>';
-    }
-    h += '</div>';
-
     // Le reglage du classement, demande apres la priorite : "il faut pouvoir
     // remanier les projets a la main aussi".
     h += '<div class="classement"><span>Classer :</span>';
@@ -520,6 +813,18 @@ __ETAT__
     h += '<button data-tri="manuel"' + (j.tri === "manuel" ? ' class="actif"' : '') + '>à la main</button>';
     h += (j.tri === "manuel" ? '<span>— les flèches ↑↓ déplacent les fiches.</span>'
                              : '<span>— à priorité égale, ton ordre est gardé.</span>');
+    h += '</div>';
+
+    // Le REGROUPEMENT, demande pour l'ergonomie : "que les travaux soient
+    // regroupes de façon plus comprehensible". Par etat en premier, parce que
+    // c'est la question qu'on se pose en ouvrant le carnet - qu'est-ce qui
+    // attend qui ? Les sections d'origine restent accessibles : elles portent
+    // un sens que l'etat ne porte pas.
+    h += '<div class="classement"><span>Grouper :</span>';
+    [["etat", "par état"], ["section", "par section"], ["theme", "par thème"]].forEach(function(o){
+      var actif = (j.groupe || "etat") === o[0];
+      h += '<button data-groupe="' + o[0] + '"' + (actif ? ' class="actif"' : '') + '>' + o[1] + '</button>';
+    });
     h += '</div>';
 
     // Les themes : "avec des themes par exemple, pour trier les projets".
@@ -559,15 +864,15 @@ __ETAT__
     var rangs = {};
     liste.forEach(function(it, i){ rangs[it.ref] = i + 1; });
 
-    j.sections.forEach(function(sec, si){
-      var visibles = sec.items.filter(retenue);
-      if (!visibles.length) return;
-      h += '<section><div class="section-tete"><h2 class="titre">' + esc(sec.titre) + '</h2>';
-      h += '<span class="compte">' + compte(visibles) + '</span></div>';
-      if (sec.chapo) h += '<p class="section-chapo">' + esc(sec.chapo) + '</p>';
-      classees(sec.items).forEach(function(paire){
-        if (!retenue(paire[0])) return;
-        h += ficheHtml(paire[0], si, paire[1], rangs[paire[0].ref]);
+    paquets().forEach(function(paquet){
+      if (!paquet.entrees.length) return;
+      h += '<section><div class="section-tete">';
+      h += '<h2 class="titre' + (paquet.classe ? '" ' : '"') + '>' + esc(paquet.titre) + '</h2>';
+      h += '<span class="compte">' + compte(paquet.entrees.map(function(e){ return e[0]; }))
+         + '</span></div>';
+      if (paquet.chapo) h += '<p class="section-chapo">' + esc(paquet.chapo) + '</p>';
+      paquet.entrees.forEach(function(e){
+        h += ficheHtml(e[0], e[1], e[2], rangs[e[0].ref]);
       });
       h += '</section>';
     });
@@ -638,7 +943,9 @@ __ETAT__
         nom: nom,
         maj: aujourdhui() + "/2026",
         tri: "priorite",
+        groupe: "etat",
         marche: null,
+        nettoyage: null,
         build: {enLigne:false, commit:"", quoi:"", note:"Rien n’est encore en ligne pour cette journée."},
         sections: [
           {id:"verdict", titre:"En attente de ton verdict",
@@ -720,6 +1027,18 @@ __ETAT__
       return;
     }
 
+    // Le regroupement : geste de lecture, mais il vaut la peine d'etre garde
+    // - c'est une facon de travailler, pas un filtre passager.
+    var grp = ev.target.closest("button[data-groupe]");
+    if (grp){
+      if ((J().groupe || "etat") === grp.dataset.groupe) return;
+      J().groupe = grp.dataset.groupe;
+      touche();
+      render();
+      enregistrer(document.getElementById("etat-marche"));
+      return;
+    }
+
     // Le classement.
     var tri = ev.target.closest("button[data-tri]");
     if (tri){
@@ -757,6 +1076,20 @@ __ETAT__
         liste[0].statut = "encours";
         liste[0].journal.push({quand: aujourdhui(), qui: "Toi", texte: "AU TRAVAIL : première de l’ordre de marche."});
       }
+      touche();
+      render();
+      enregistrer(document.getElementById("etat-marche"));
+      return;
+    }
+    if (ev.target.closest("button[data-nettoyage]")){
+      J().nettoyage = {demande: maintenant()};
+      touche();
+      render();
+      enregistrer(document.getElementById("etat-nettoyage"));
+      return;
+    }
+    if (ev.target.closest("button[data-nettoyage-fini]")){
+      J().nettoyage = null;
       touche();
       render();
       enregistrer(document.getElementById("etat-marche"));

@@ -91,6 +91,19 @@ Une fiche :
 - `detail` accepte du HTML (`<strong>`, `<code>`, `<em>`). Le reste est échappé.
 - `statut` : `attente` (à vérifier), `todo`, `encours`, `ok`, `ko`.
 - `qui` : `Claude` ou `Toi`. C'est ce qui colore la signature.
+- `statut` : **c'est lui qui pilote la boucle de travail.** `todo`, `ko` et
+  `encours` entrent dans l'ordre de marche ; **`attente` en sort** — la fiche
+  est livrée, elle attend le joueur, et la reprendre serait refaire un travail
+  que personne n'a jugé. Quand il ne reste plus rien à faire, le carnet dit
+  *EN ATTENTE DE TOI* au lieu de proposer un chantier.
+- `livre` : `{"commit": "940d5ea", "quand": "24/08 à 03h05"}` — **à remplir en
+  même temps qu'on passe une fiche en `attente`.** C'est ce qui dit au joueur
+  depuis quand et sur quelle version une ligne l'attend.
+- `avancement` : un entier de 0 à 100. Absent, il se déduit de l'état (todo 0,
+  ko 10, encours 50, attente 90, ok 100). La barre globale est la **moyenne**
+  des fiches, pas la part de fiches validées : sinon une journée de dix
+  chantiers reste à 0 % jusqu'à la première validation.
+- `theme` : un mot, cliquable, qui sert de filtre.
 - `priorite` : `haute`, `moyenne`, `basse`. Le tri est **stable** : deux fiches
   de même priorité gardent l'ordre du fichier, donc l'ordre convenu avec le
   joueur survit. Le joueur peut changer la priorité depuis la page.

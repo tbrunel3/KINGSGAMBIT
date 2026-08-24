@@ -120,7 +120,11 @@
                 }
               ],
               "priorite": "haute",
-              "theme": "Village"
+              "theme": "Village",
+              "livre": {
+                "commit": "7dcf766",
+                "quand": "24/08 à 02h30"
+              }
             },
             {
               "ref": "2",
@@ -140,7 +144,11 @@
                 }
               ],
               "priorite": "moyenne",
-              "theme": "Navigation"
+              "theme": "Navigation",
+              "livre": {
+                "commit": "7dcf766",
+                "quand": "24/08 à 02h30"
+              }
             }
           ]
         },
@@ -192,7 +200,12 @@
                 }
               ],
               "priorite": "haute",
-              "theme": "Placement"
+              "theme": "Placement",
+              "livre": {
+                "commit": "940d5ea",
+                "quand": "24/08 à 03h05"
+              },
+              "avancement": 90
             },
             {
               "ref": "D",
@@ -212,7 +225,8 @@
                 }
               ],
               "priorite": "moyenne",
-              "theme": "Animations"
+              "theme": "Animations",
+              "avancement": 35
             },
             {
               "ref": "E",
@@ -452,7 +466,9 @@
             }
           ]
         }
-      ]
+      ],
+      "groupe": "etat",
+      "nettoyage": null
     }
   ]
 }
