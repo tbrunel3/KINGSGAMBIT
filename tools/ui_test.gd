@@ -15,6 +15,16 @@ const BuildingScreenScene := preload("res://scenes/village/building_screen.tscn"
 
 var _failures: int = 0
 
+## Les cas qui sont alles JUSQU'AU BOUT (cf. _done).
+var _cas_finis: Array[String] = []
+
+## Les dix-huit cas, dans l'ordre ou _ready les joue. Un cas qui manque a
+## l'appel a ete interrompu en cours de route.
+const CAS := ["village", "codex", "battle", "composition", "series_chaining",
+	"shop", "modal_entry", "shop_entry", "result_entries", "mission_claim",
+	"guide_popups", "campaign_drag", "press_feedback", "gold_count",
+	"codex_entry", "second_finger", "village_bars", "scroll_zones"]
+
 
 func _ready() -> void:
 	# Un banc ne joue pas la mise en scene : sans ca, chaque changement
@@ -44,6 +54,25 @@ func _ready() -> void:
 	await _test_codex_entry()
 	await _test_second_finger()
 	await _test_village_bars()
+	await _test_scroll_zones()
+
+	# ⚠️ UN BANC VERT PEUT AVOIR SAUTE LA MOITIE DE SES QUESTIONS (fiche d2).
+	#
+	# Une SCRIPT ERROR tue la coroutine du cas en cours SANS incrementer un
+	# seul echec : le banc reprend au cas suivant et conclut "tout repond".
+	# Paye deux fois le 24/08 - un find_child sur un noeud disparu a fait
+	# sauter quatre assertions, et personne ne l'a vu.
+	#
+	# Rien ne compte les assertions qui n'ont pas eu lieu. Ce qu'on peut
+	# compter, ce sont les cas qui ont atteint leur DERNIERE ligne.
+	print("")
+	var manquants: Array[String] = []
+	for cas in CAS:
+		if not _cas_finis.has(cas):
+			manquants.append(cas)
+	_check(manquants.is_empty(), "les %d cas sont alles jusqu'au bout%s" % [
+		CAS.size(),
+		"" if manquants.is_empty() else " — INTERROMPUS : " + ", ".join(manquants)])
 
 	print("")
 	if _failures == 0:
@@ -51,6 +80,113 @@ func _ready() -> void:
 	else:
 		print("RESULTAT : %d probleme(s) detecte(s)." % _failures)
 	get_tree().quit(0 if _failures == 0 else 1)
+
+
+# ------------------------------- ZONES DEFILANTES ----------------------------
+
+## LES QUATRE ZONES DEFILANTES, JAMAIS AUDITEES (fiche d3).
+##
+## ⚠️ UN SEUL MAILLON EN STOP SUFFIT A TOUT BLOQUER. Godot arrete la
+## propagation des evenements de bouton sur le premier Control en
+## MOUSE_FILTER_STOP - et STOP est le DEFAUT. Une entretoise, un filet, une
+## icone decorative posee dans une zone defilante y avale donc le geste sur
+## toute la surface qu'elle couvre, et la zone ne defile plus sous elle.
+##
+## C'est le defaut qui empechait la carte de campagne de defiler, et il ne s'y
+## limitait pas : releve a l'ouverture de cette fiche, 21 blocages decoratifs
+## dans le seul codex (les filets ornementaux), 5 dans la preparation (trois
+## entretoises en EXPAND_FILL, donc pleine largeur), et les puces de filtre du
+## codex qui changeaient le filtre des qu'on posait le doigt dessus pour faire
+## glisser la rangee.
+##
+## DEUX EXCEPTIONS, et elles sont voulues :
+##   - un `Button` : il agit au relachement, c'est le comportement Godot, et il
+##     est petit ;
+##   - une POIGNEE de glisser-deposer (`_get_drag_data`) : garder le geste est
+##     precisement son travail (cf. battle_prep.Poignee).
+func _test_scroll_zones() -> void:
+	print("\n[18] Les zones defilantes : le geste passe-t-il ?")
+
+	Game.reset_progress()
+	Game.add_gold(500000)
+
+	for ecran in [["préparation", "res://scenes/battle/battle_prep.tscn"],
+			["codex", "res://scenes/village/codex_popup.tscn"],
+			["boutique", "res://scenes/village/shop.tscn"],
+			["showcase", "res://scenes/ui/ui_kit_showcase.tscn"]]:
+		var nom := String(ecran[0])
+		var screen: Node = load(String(ecran[1])).instantiate()
+		add_child(screen)
+		await _frames(3)
+		await _skip_animations()
+
+		var zones: Array[Node] = []
+		_collect_scrolls(screen, zones)
+		_check(not zones.is_empty(), "%s : la zone defilante existe" % nom)
+
+		var avaleurs: Array[String] = []
+		for zone in zones:
+			_collect_blockers(zone, zone, avaleurs)
+		_check(avaleurs.is_empty(), "%s : rien n'avale le geste hors boutons et poignees (%s)"
+			% [nom, "rien" if avaleurs.is_empty() else ", ".join(avaleurs)])
+
+		screen.queue_free()
+		await _frames(2)
+
+	# ---- ET LE GESTE, EN VRAI : la puce de filtre du codex ----
+	#
+	# La rangee de puces ne tient pas dans 361 points : elle defile. Une puce
+	# qui agit sur l'APPUI change donc le filtre des qu'on pose le doigt pour la
+	# faire glisser - exactement le bug des cachets, sur un autre ecran.
+	var codex: Node = load("res://scenes/village/codex_popup.tscn").instantiate()
+	add_child(codex)
+	await _frames(3)
+	await _skip_animations()
+
+	var puce: Control = codex._chips.get(Balance.TOUR, null)
+	_check(puce != null, "la puce de filtre TOUR existe")
+	if puce != null:
+		_check(puce.mouse_filter == Control.MOUSE_FILTER_PASS,
+			"la puce laisse le geste remonter a la rangee (PASS, pas STOP)")
+
+		var avant: String = codex._filter
+		_glisse(puce, Vector2(10, 10), Vector2(70, 10))
+		await _frames(1)
+		_check(codex._filter == avant,
+			"glisser depuis une puce ne change PAS le filtre (%s)" % codex._filter)
+
+		_press(puce, Vector2(10, 10))
+		await _frames(1)
+		_check(codex._filter == Balance.TOUR,
+			"la toucher, elle, filtre bien (%s)" % codex._filter)
+
+	codex.queue_free()
+	await _frames(2)
+	_done("scroll_zones")
+
+
+func _collect_scrolls(node: Node, out: Array[Node]) -> void:
+	if node is ScrollContainer:
+		out.append(node)
+	for child in node.get_children():
+		_collect_scrolls(child, out)
+
+
+## Les controles qui avalent le geste sous une zone defilante, hors exceptions.
+func _collect_blockers(node: Node, racine: Node, out: Array[String]) -> void:
+	var ctrl := node as Control
+	if ctrl != null and node != racine \
+			and ctrl.mouse_filter == Control.MOUSE_FILTER_STOP \
+			and not (ctrl is Button) \
+			and not ctrl.has_method("_get_drag_data"):
+		out.append("%s (%s)" % [ctrl.name, ctrl.get_class()])
+	for child in node.get_children():
+		_collect_blockers(child, racine, out)
+
+
+## Marque un cas comme alle jusqu'au bout. Derniere ligne de chaque _test_*.
+func _done(cas: String) -> void:
+	_cas_finis.append(cas)
 
 
 func _check(condition: bool, label: String) -> void:
@@ -137,6 +273,7 @@ func _test_modal_entry() -> void:
 
 	screen.queue_free()
 	await _frames(2)
+	_done("modal_entry")
 
 
 ## LA CASCADE DE LA BOUTIQUE - et surtout : elle ne se rejoue PAS a l'achat.
@@ -182,6 +319,7 @@ func _test_shop_entry() -> void:
 
 	shop.queue_free()
 	await _frames(2)
+	_done("shop_entry")
 
 
 ## LES TROIS ECRANS DE RESULTAT ONT TROIS ENTREES, et le jeu n'en jouait
@@ -224,6 +362,7 @@ func _test_result_entries() -> void:
 	_check(screen._entry_key == "win", "la victoire prend la sienne (%s)" % screen._entry_key)
 	screen.queue_free()
 	await _frames(2)
+	_done("result_entries")
 
 
 ## LE POPUP DE MISSIONS PORTE DEUX ANIMATIONS, pas une.
@@ -271,6 +410,7 @@ func _test_mission_claim() -> void:
 
 	village.queue_free()
 	await _frames(2)
+	_done("mission_claim")
 
 
 ## LES POPUPS D'ACCOMPAGNEMENT - chantier E.
@@ -316,6 +456,7 @@ func _test_guide_popups() -> void:
 
 	host.queue_free()
 	await _frames(2)
+	_done("guide_popups")
 
 
 # ------------------------------- VILLAGE -------------------------------------
@@ -527,6 +668,7 @@ func _test_village() -> void:
 
 	village.queue_free()
 	await _frames(2)
+	_done("village")
 
 
 # ------------------------------- CODEX ---------------------------------------
@@ -568,6 +710,7 @@ func _test_codex() -> void:
 
 	codex.queue_free()
 	await _frames(2)
+	_done("codex")
 
 
 ## Tout le texte affiche par un ecran, mis bout a bout.
@@ -757,6 +900,7 @@ func _test_battle() -> void:
 	battle.queue_free()
 	await _frames(2)
 	Game.reset_progress()
+	_done("battle")
 
 
 # ------------------------------- SERIE ---------------------------------------
@@ -969,6 +1113,7 @@ func _test_composition() -> void:
 
 	battle.queue_free()
 	await _frames(2)
+	_done("composition")
 
 
 func _test_series_chaining() -> void:
@@ -1042,6 +1187,7 @@ func _test_series_chaining() -> void:
 
 	battle.queue_free()
 	await _frames(2)
+	_done("series_chaining")
 
 
 # ------------------------------- OUTILS --------------------------------------
@@ -1104,14 +1250,53 @@ func _normalize(text: String) -> String:
 
 
 ## Declenche un clic sur un element trouve par _find_clickable.
-func _press(node: Control) -> void:
+## UN VRAI APPUI : on POSE et on LEVE, au meme endroit, par le chemin que le
+## controle ecoute vraiment.
+##
+## ⚠️ DEUX TROUS, ET IL FALLAIT LES DEUX (fiche d2). Chacun rendait des
+## assertions muettes sans rien faire echouer - un banc vert qui n'appuyait sur
+## rien.
+##
+##   1. `gui_input` est un SIGNAL, `_gui_input()` une METHODE VIRTUELLE.
+##      Emettre le signal n'appelle pas la virtuelle : `campaign_seal`,
+##      `grid_view` et `series_banner` ne recevaient RIEN. On envoie donc aux
+##      DEUX, comme le fait Godot lui-meme - la virtuelle de base ne fait rien
+##      quand elle n'est pas surchargee, donc rien ne part en double.
+##   2. Le banc n'envoyait qu'un ENFONCE, jamais de relachement. Il ne pouvait
+##      donc pas distinguer un appui d'un geste, et depuis que les controles des
+##      zones defilantes decident au RELACHEMENT (cf. UiTheme.on_tap), un banc
+##      qui ne leve pas le doigt n'appuie plus sur rien du tout.
+func _press(node: Control, at: Vector2 = Vector2.ZERO) -> void:
 	if node is Button:
-		node.pressed.emit()
+		(node as Button).pressed.emit()
 		return
+	_send(node, _clic(true, at))
+	_send(node, _clic(false, at))
+
+
+## Le meme geste, mais releve LOIN du point de depart : un defilement, pas un
+## appui. Ce que la moitie des controles doit maintenant refuser.
+func _glisse(node: Control, de: Vector2, vers: Vector2) -> void:
+	_send(node, _clic(true, de))
+	var motion := InputEventMouseMotion.new()
+	motion.position = vers
+	_send(node, motion)
+	_send(node, _clic(false, vers))
+
+
+func _clic(pressed: bool, at: Vector2) -> InputEventMouseButton:
 	var event := InputEventMouseButton.new()
 	event.button_index = MOUSE_BUTTON_LEFT
-	event.pressed = true
-	node.gui_input.emit(event)
+	event.pressed = pressed
+	event.position = at
+	return event
+
+
+func _send(node: Control, event: InputEvent) -> void:
+	if node.has_method("_gui_input"):
+		node._gui_input(event)
+	if node.gui_input.get_connections().size() > 0:
+		node.gui_input.emit(event)
 
 
 # ------------------------------- BOUTIQUE ------------------------------------
@@ -1190,6 +1375,7 @@ func _test_shop() -> void:
 const CampaignScene := preload("res://scenes/battle/campaign.tscn")
 const CornerButtonScript := preload("res://scenes/ui/components/corner_button.gd")
 const SelectionChipScene := preload("res://scenes/ui/components/selection_chip.tscn")
+	_done("shop")
 
 ## Faire glisser la carte en partant d'un CACHET doit la faire defiler, pas
 ## lancer la bataille.
@@ -1322,6 +1508,7 @@ func _test_campaign_drag() -> void:
 
 	screen.queue_free()
 	await _frames(1)
+	_done("campaign_drag")
 
 
 ## ═══════════════════════════════════════════════════════════════════════════
@@ -1430,6 +1617,7 @@ func _test_press_feedback() -> void:
 	_check(chip.has_meta("_press_feedback"), "la chip de selection l'a aussi")
 	chip.queue_free()
 	await _frames(1)
+	_done("press_feedback")
 
 
 ## ═══════════════════════════════════════════════════════════════════════════
@@ -1485,6 +1673,7 @@ func _test_gold_count() -> void:
 
 	village.queue_free()
 	await _frames(1)
+	_done("gold_count")
 
 
 ## ═══════════════════════════════════════════════════════════════════════════
@@ -1541,6 +1730,7 @@ func _test_codex_entry() -> void:
 
 	codex.queue_free()
 	await _frames(1)
+	_done("codex_entry")
 
 
 ## ═══════════════════════════════════════════════════════════════════════════
@@ -1635,6 +1825,7 @@ func _test_second_finger() -> void:
 
 	battle.queue_free()
 	await _frames(1)
+	_done("second_finger")
 
 
 ## ═══════════════════════════════════════════════════════════════════════════
@@ -1702,3 +1893,4 @@ func _test_village_bars() -> void:
 
 	village.queue_free()
 	await _frames(1)
+	_done("village_bars")
