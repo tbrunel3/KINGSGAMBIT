@@ -108,11 +108,56 @@ def _journees(etat):
     return [{"nom": "Journée 1", "sections": etat.get("sections", [])}]
 
 
+def _git(*args):
+    """Une commande git, ou None si git n'a rien a dire ici."""
+    import subprocess
+    try:
+        r = subprocess.run(["git"] + list(args), cwd=DEPOT, capture_output=True,
+                           text=True, encoding="utf-8", errors="replace")
+    except OSError:
+        return None
+    return r
+
+
+def _marque_livraisons(etat):
+    """Pose sur chaque fiche livree OU EN EST vraiment son commit.
+
+    ⚠️ CETTE DEDUCTION NE SE FAIT PAS A LA MAIN, ET C'EST TOUT L'INTERET.
+    L'onglet « a verifier » affirmait « Livres et en ligne » pour tout le monde.
+    Releve le 24/08 : le build en ligne etait `9ebb63b` (14h50) et la fiche E
+    avait ete livree en `49d4f3b` (15h50) - le carnet l'annoncait testable alors
+    que le jeu servi ne la portait pas. C'est le defaut que le README interdit
+    depuis le matin, et il etait revenu par la porte d'a cote.
+
+    Deux faits, tous deux lus dans git :
+      - `pousse`  : le commit existe sur un remote, donc ailleurs que chez moi ;
+      - `enLigne` : il est un ancetre du commit du build servi, donc le jeu que
+                    le joueur peut lancer le porte VRAIMENT.
+    """
+    build_ref = ""
+    for j in _journees(etat):
+        build_ref = str((j.get("build") or {}).get("commit", "")) or build_ref
+    for j in _journees(etat):
+        for sec in j["sections"]:
+            for it in sec["items"]:
+                liv = it.get("livre")
+                if not liv or not liv.get("commit"):
+                    continue
+                commit = str(liv["commit"])
+                if _git("cat-file", "-e", commit + "^{commit}").returncode != 0:
+                    continue                      # commit inconnu : on ne dit rien
+                distant = _git("branch", "-r", "--contains", commit)
+                liv["pousse"] = bool(distant.stdout.strip())
+                liv["enLigne"] = bool(build_ref) and _git(
+                    "merge-base", "--is-ancestor", commit, build_ref).returncode == 0
+
+
 def build():
     page = _lire(PAGE)
     if MARQUE not in page:
         raise SystemExit("page.html n'a plus son trou %s" % MARQUE)
     etat = json.loads(_lire(ETAT))
+    _marque_livraisons(etat)
     # ⚠️ LE COMPTEUR D'ECRITURE MONTE A CHAQUE BUILD, ET C'EST VITAL.
     #
     # La page garde un miroir dans le navigateur du joueur et compare `serie`

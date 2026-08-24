@@ -101,7 +101,9 @@
               "theme": "Village",
               "livre": {
                 "commit": "7dcf766",
-                "quand": "24/08 à 02h30"
+                "quand": "24/08 à 02h30",
+                "pousse": true,
+                "enLigne": true
               }
             },
             {
@@ -125,7 +127,9 @@
               "theme": "Navigation",
               "livre": {
                 "commit": "7dcf766",
-                "quand": "24/08 à 02h30"
+                "quand": "24/08 à 02h30",
+                "pousse": true,
+                "enLigne": true
               }
             }
           ]
@@ -186,7 +190,9 @@
               "theme": "Placement",
               "livre": {
                 "commit": "940d5ea",
-                "quand": "24/08 à 03h05"
+                "quand": "24/08 à 03h05",
+                "pousse": true,
+                "enLigne": true
               },
               "resume": "À vérifier : glisse une carte de la caserne dans le déploiement, et une pièce de l'inventaire directement sur sa case. Le tap doit marcher exactement comme avant, partout."
             },
@@ -236,7 +242,9 @@
               "theme": "Animations",
               "livre": {
                 "commit": "c21d0ac",
-                "quand": "24/08 à 14h31"
+                "quand": "24/08 à 14h31",
+                "pousse": true,
+                "enLigne": true
               },
               "resume": "À vérifier : appuie sur n'importe quel bouton (il doit s'enfoncer), gagne ou dépense de l'or au village (le compteur doit monter, pas sauter), et ouvre le codex (il doit se monter en cascade au lieu d'apparaître d'un bloc)."
             },
@@ -296,7 +304,9 @@
               "theme": "Interface",
               "livre": {
                 "commit": "49d4f3b",
-                "quand": "24/08 à 15h50"
+                "quand": "24/08 à 15h50",
+                "pousse": true,
+                "enLigne": false
               },
               "resume": "À vérifier au village : la barre du haut est collée en haut, or / gemmes / Missions / infos / réglages sont sur UNE ligne, les boutons de droite sont plus gros, et la Boutique est enfin alignée sur BATAILLE. ⚠️ E4 (les missions « très modestes ») n'est PAS fait : dis-moi ce que tu veux y voir."
             },
@@ -432,7 +442,9 @@
               "theme": "Tactile",
               "livre": {
                 "commit": "9ebb63b",
-                "quand": "24/08 à 14h50"
+                "quand": "24/08 à 14h50",
+                "pousse": true,
+                "enLigne": true
               },
               "resume": "À vérifier au doigt : joue un coup en gardant la paume ou un second doigt posé sur l'écran. Le glissement ne doit plus mourir. Si le combat reste mauvais pour une AUTRE raison, dis-la — il faudra un relevé sur ton téléphone, je ne peux pas la deviner."
             }
@@ -459,7 +471,9 @@
               "theme": "Règles",
               "livre": {
                 "commit": "d3e0e12",
-                "quand": "24/08 à 17h30"
+                "quand": "24/08 à 17h30",
+                "pousse": true,
+                "enLigne": false
               }
             },
             {
@@ -483,7 +497,9 @@
               "theme": "Bancs",
               "livre": {
                 "commit": "de9e5a1",
-                "quand": "24/08 à 17h30"
+                "quand": "24/08 à 17h30",
+                "pousse": true,
+                "enLigne": false
               }
             },
             {
@@ -502,7 +518,9 @@
               "theme": "Bancs",
               "livre": {
                 "commit": "c369b46",
-                "quand": "24/08 à 17h30"
+                "quand": "24/08 à 17h30",
+                "pousse": true,
+                "enLigne": false
               }
             }
           ]
@@ -629,5 +647,5 @@
       "exportWeb": null
     }
   ],
-  "serie": 63
+  "serie": 64
 }

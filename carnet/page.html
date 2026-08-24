@@ -364,6 +364,22 @@ button[disabled]{opacity:.45;cursor:progress}
 .livraison{font-family:var(--mono);font-size:11px;color:var(--vert);display:flex;gap:8px;flex-wrap:wrap}
 .livraison code{color:var(--cyan)}
 .livraison .attend{color:var(--ambre)}
+/* ⚠️ TROIS ETATS DE LIVRAISON, ET LE CARNET N'EN MONTRAIT AUCUN.
+   Le chapo de l'onglet disait « Livres et en ligne » pour tout le monde : il
+   mentait des qu'une fiche etait livree sans reexport web, et le joueur allait
+   tester sur son telephone une correction que le build ne portait pas. */
+.pastille-livr{
+  font-family:var(--mono);font-size:9.5px;font-weight:700;letter-spacing:.06em;
+  padding:2px 7px;border-radius:3px;border:1px solid;white-space:nowrap;
+}
+.pastille-livr.vert{color:var(--vert);border-color:var(--vert);background:var(--fond-vert)}
+.pastille-livr.ambre{color:var(--ambre);border-color:var(--ambre);background:#1d1608}
+.pastille-livr.rouge{color:var(--rouge);border-color:var(--rouge);background:var(--fond-rouge)}
+.attente-bloc .groupe{
+  margin:14px 0 8px;font-family:var(--mono);font-size:10.5px;letter-spacing:.08em;
+  color:var(--attenue);display:flex;align-items:center;gap:8px;
+}
+.attente-bloc .groupe:before{content:"";flex:1 0 10px;height:1px;background:var(--filet);order:2}
 
 /* ───────────────────────────── LE FORMULAIRE D'AJOUT ─────────────────────── */
 
@@ -765,6 +781,23 @@ __ETAT__
       if (it.journal[i].qui !== "Toi") return it.journal[i].texte;
     return "";
   }
+  /* OU EN EST UNE LIVRAISON, en trois etats et pas deux.
+     Une fiche livree peut etre : seulement dans ma session (rien a tester),
+     poussee sur le depot (le code est sauf, mais le jeu en ligne est celui
+     d'avant), ou dans le build web en ligne - et la seulement il peut la
+     tester. Les deux drapeaux sont ecrits a la main au moment de la livraison :
+     ce sont deux faits que je connais, pas une deduction de la page. */
+  function livraisonEtat(it){
+    var liv = it.livre;
+    if (!liv) return null;
+    if (liv.enLigne) return {cle:"enligne", mot:"TESTABLE", ton:"vert",
+      dit:"dans le build en ligne"};
+    if (liv.pousse) return {cle:"pousse", mot:"PAS ENCORE TESTABLE", ton:"ambre",
+      dit:"commit poussé sur le dépôt, mais le build web n\u2019a pas été réexporté"};
+    return {cle:"local", mot:"PAS ENCORE POUSSÉ", ton:"rouge",
+      dit:"le commit n\u2019existe que dans ma session"};
+  }
+
   /* Depuis quand une fiche l'attend. C'est le TEMPS D'ATTENTE de la maquette,
      et c'est la seule des trois métriques inventées qui dit du vrai. */
   function attenteDepuis(it){
@@ -1121,17 +1154,30 @@ __ETAT__
     if (!att.length)
       return '<div class="vide">RIEN N’ATTEND TON VERDICT.<br>'
         + 'Tout ce qui est livré a déjà été tranché.</div>';
+    /* ⚠️ TESTABLES D'ABORD, ET SEPAREES. Melangees, il ne pouvait pas savoir
+       lesquelles il pouvait aller voir sur son telephone : le chapo affirmait
+       « en ligne » pour toutes, et c'etait faux des que je livrais sans
+       reexporter le web. */
+    var testables = att.filter(function(e){ var s = livraisonEtat(e[0]); return s && s.cle === "enligne"; });
+    var pasEncore = att.filter(function(e){ return testables.indexOf(e) < 0; });
     var h = '<div class="attente-bloc"><h2>'+att.length+' CHANTIER'
       + (att.length>1?'S ATTENDENT':' ATTEND')+' TA VALIDATION</h2>';
-    h += '<p>Livrés et en ligne. Je n’y retouche pas tant que tu n’as pas tranché : '
-      + '« ça marche » les replie, « toujours cassé » me les remet dans l’ordre de marche.</p><ul>';
-    att.forEach(function(e){
-      var it = e[0], liv = it.livre;
-      h += '<li data-s="'+e[1]+'" data-i="'+e[2]+'">';
+    h += '<p>Je n’y retouche pas tant que tu n’as pas tranché : '
+      + '« ça marche » les replie, « toujours cassé » me les remet dans l’ordre de marche. '
+      + '<strong>'+testables.length+'</strong> '+(testables.length>1?'sont testables':'est testable')
+      + ' tout de suite ; <strong>'+pasEncore.length+'</strong> '
+      + (pasEncore.length>1?'attendent':'attend')+' l’export web.</p>';
+
+    function ligneFiche(e){
+      var it = e[0], liv = it.livre, etat = livraisonEtat(it);
+      var h = '<li data-s="'+e[1]+'" data-i="'+e[2]+'">';
       h += '<span class="quoi"><span class="ref">'+esc(it.ref)+'</span> '+esc(it.titre)+'</span>';
       if (liv){
-        h += '<span class="livraison">Livré le '+esc(liv.quand||"?");
+        h += '<span class="livraison">';
+        if (etat) h += '<span class="pastille-livr '+etat.ton+'">'+etat.mot+'</span>';
+        h += 'Livré le '+esc(liv.quand||"?");
         if (liv.commit) h += ' · <code>'+esc(liv.commit)+'</code>';
+        if (etat) h += ' · '+esc(etat.dit);
         var d = attenteDepuis(it);
         if (d) h += ' · <span class="attend">'+esc(d)+'</span>';
         h += '</span>';
@@ -1142,8 +1188,20 @@ __ETAT__
       h += '<span class="verdict"><button class="btn-ok" data-act="ok">Ça marche (Valider)</button>'
         +  '<button class="btn-ko" data-act="ko">Toujours cassé</button></span>';
       h += '<span class="etat"></span></li>';
-    });
-    return h + '</ul></div>';
+      return h;
+    }
+
+    if (testables.length){
+      h += '<div class="groupe">TESTABLES MAINTENANT</div><ul>';
+      testables.forEach(function(e){ h += ligneFiche(e); });
+      h += '</ul>';
+    }
+    if (pasEncore.length){
+      h += '<div class="groupe">LIVRÉS, PAS ENCORE DANS LE BUILD EN LIGNE</div><ul>';
+      pasEncore.forEach(function(e){ h += ligneFiche(e); });
+      h += '</ul>';
+    }
+    return h + '</div>';
   }
 
   function marcheHtml(j){
@@ -1287,6 +1345,11 @@ __ETAT__
     var d = attenteDepuis(it);
     if (attendVerdict(it) && d) h += ligneMeta("TEMPS D’ATTENTE", esc(d), "ambre");
     else if (liv && liv.quand)  h += ligneMeta("LIVRÉ LE", esc(liv.quand), "vert");
+    /* Ce qu'il demandait : savoir, fiche par fiche, si ce qu'il va tester
+       existe ailleurs que dans ma session. */
+    var etatLivr = livraisonEtat(it);
+    if (etatLivr) h += ligneMeta("OÙ EN EST LA LIVRAISON", esc(etatLivr.dit).toUpperCase(),
+                                 etatLivr.ton === "vert" ? "vert" : etatLivr.ton);
     h += ligneMeta("MODULE CONTEXTE", theme(it) ? esc(theme(it)).toUpperCase() : "—", "");
     h += ligneMeta("PRIORITÉ", prio(it).toUpperCase(),
                    prio(it)==="haute"?"rouge":prio(it)==="basse"?"":"");
