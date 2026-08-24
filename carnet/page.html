@@ -900,6 +900,27 @@ __ETAT__
     }).join("\n");
   }
 
+  /* LE BLOC QUI DIT LA VERITE SUR UN ORDRE.
+     ⚠️ AUCUN BOUTON DE CE CARNET NE ME REVEILLE. Une coche republie la page
+     sous l'identite du joueur et n'envoie AUCUN signal : depuis une session
+     cloud, rien ne me notifie d'une republication. L'ordre est bien ENREGISTRE
+     - je l'ai retrouve intact en relisant - mais il dort jusqu'a ma prochaine
+     relecture.
+     Le 24/08, le joueur a presse METTRE EN LIGNE puis ARRETER, et il ne s'est
+     rien passe pendant deux heures. La page laissait croire au contraire :
+     « j'exporte des que la fiche en cours est finie ». Elle ne le dit plus.
+     Le canal qui marche a tous les coups est la discussion - d'ou ce bloc,
+     ecrit une fois et pose partout ou il y a un ordre. */
+  function blocTransmettre(texte, quoi){
+    return '<div class="transmettre"><b>⚠️ CE BOUTON NE ME RÉVEILLE PAS.</b> '
+      + esc(quoi) + ' est enregistré ici, et je le lirai à ma prochaine relecture du '
+      + 'carnet. <b>Pour que je m’y mette tout de suite, dis-le-moi en discussion</b> — '
+      + 'c’est le seul canal qui me parvient à coup sûr.'
+      + '<textarea readonly rows="3" class="a-coller">' + esc(texte) + '</textarea>'
+      + '<div class="bas"><button class="bouton-cyan" data-copier="1">COPIER POUR LA DISCUSSION</button>'
+      + '<span class="etat" id="etat-marche"></span></div></div>';
+  }
+
   /* ═══════════════════════════════ LE RENDU ═══════════════════════════════ */
 
   var LOGO = '<span class="logo" aria-hidden="true"></span>';
@@ -1053,7 +1074,9 @@ __ETAT__
     h += '<div style="flex:1;min-width:0">';
     if (demande){
       h += '<h2>MISE EN LIGNE DEMANDÉE</h2><p>Demandée le '+esc(x.demande)
-        +  '. J’exporte le jeu et je pousse sur gh-pages dès que la fiche en cours est finie.</p>';
+        +  '. <b>Cette demande ne me réveille pas</b> : je la lirai à ma prochaine relecture '
+        +  'du carnet, et j’exporterai alors. Pour l’avoir tout de suite, demande-le-moi en '
+        +  'discussion.</p>';
     } else {
       h += '<h2>'+(b.enLigne ? 'COMMIT ET TEST POSSIBLE'
                              : 'PAS ENCORE EN LIGNE — NE TESTE PAS TOUT DE SUITE')+'</h2><p>';
@@ -1231,12 +1254,14 @@ __ETAT__
           +  '<div class="bas"><button class="bouton-cyan" data-copier="1">COPIER POUR LA DISCUSSION</button>'
           +  '<span class="etat" id="etat-marche"></span></div></div>';
       } else {
-        h += '<div class="bas"><button class="bouton-cyan sourd" data-copier="1">COPIER L’ORDRE</button>';
-        h += '<span class="etat" id="etat-marche"></span></div>';
+        h += blocTransmettre(texteOrdre(j), "L’ordre de marche");
       }
-      /* Le frein, aussi gros que l'accélérateur. */
+      /* Le frein, aussi gros que l'accélérateur - mais il freine à retardement,
+         et il le dit maintenant. */
       h += '<div style="margin-top:12px"><button class="bouton-arret" data-arreter="1">'
-        +  '■ ARRÊTER LE TRAVAIL</button></div></div>';
+        +  '■ ARRÊTER LE TRAVAIL</button>'
+        +  '<p class="quand" style="margin-top:6px">Il vide l’ordre de marche ici. '
+        +  'Pour m’arrêter <b>maintenant</b>, dis-le-moi en discussion.</p></div></div>';
       return h;
     }
     if (!liste.length){

@@ -5,7 +5,29 @@
       "nom": "24/08 — Bâtiments & carnet",
       "maj": "24/08/2026",
       "tri": "priorite",
-      "marche": null,
+      "marche": {
+        "nom": "reprise, demandee en discussion",
+        "lance": "24/08 à 18h05",
+        "groupe": "tout",
+        "ordre": [
+          {
+            "ref": "5",
+            "titre": "Les deux lettres du Roi, entre l'intro et le village"
+          },
+          {
+            "ref": "n1",
+            "titre": "l'intro — bloquée : Figma non autorisé"
+          },
+          {
+            "ref": "n2",
+            "titre": "Le bouton COMBATTEZ — bloqué : Figma non autorisé"
+          },
+          {
+            "ref": "6",
+            "titre": "Les popups d'accompagnement — bloqués : Figma non autorisé"
+          }
+        ]
+      },
       "build": {
         "enLigne": "24/08, 17h56",
         "commit": "70c353b",
@@ -298,6 +320,11 @@
                   "quand": "24/08",
                   "qui": "Claude",
                   "texte": "Part code livrée en 2750e83 : letters.gd, l'état dans GameState, le compteur de défaites (un nul n'en est pas une — mesuré : le banc échoue à 1 au lieu de 0 sans la distinction). L'écran enveloppe/parchemin attend les deux PNG."
+                },
+                {
+                  "quand": "24/08",
+                  "qui": "Claude",
+                  "texte": "Reprise demandée en discussion. Je prends l'écran de dépli : la géométrie se mesure sans les images (les plissures sont à 39,5 % et 65,4 %, relevées dans la spec), et les deux PNG ne seront plus qu'un échange de texture."
                 }
               ],
               "priorite": "basse",
@@ -648,5 +675,5 @@
       }
     }
   ],
-  "serie": 70
+  "serie": 72
 }
