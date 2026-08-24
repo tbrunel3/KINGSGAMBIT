@@ -598,31 +598,27 @@ button[disabled]{opacity:.45;cursor:progress}
    "tri": "priorite",
    "marche": {
     "nom": "reprise, demandee en discussion",
-    "lance": "24/08 à 16h05",
+    "lance": "24/08 à 18h05",
     "groupe": "tout",
     "ordre": [
      {
       "ref": "n1",
-      "titre": "l'intro"
+      "titre": "l'intro — bloquée : Figma non autorisé"
      },
      {
       "ref": "n2",
-      "titre": "Le bouton COMBATTEZ ne suit pas la maquette"
-     },
-     {
-      "ref": "5",
-      "titre": "Les deux lettres du Roi, entre l'intro et le village"
+      "titre": "Le bouton COMBATTEZ — bloqué : Figma non autorisé"
      },
      {
       "ref": "6",
-      "titre": "Les popups d'accompagnement de Figma"
+      "titre": "Les popups d'accompagnement — bloqués : Figma non autorisé"
      }
     ]
    },
    "build": {
-    "enLigne": "24/08, 14h50",
-    "commit": "9ebb63b",
-    "quoi": "la fiche T — un second doigt ne tue plus le geste en cours",
+    "enLigne": "24/08, 17h56",
+    "commit": "70c353b",
+    "quoi": "d1 (la charge gelée), d2 (le banc qui n'appuyait sur rien), d3 (les quatre zones défilantes) et la part code de la fiche 5 — le compteur de défaites",
     "note": "Recharge en forçant : le service worker de Godot sert volontiers l'ancien build."
    },
    "sections": [
@@ -897,24 +893,40 @@ button[disabled]{opacity:.45;cursor:progress}
         "commit": "49d4f3b",
         "quand": "24/08 à 15h50",
         "pousse": true,
-        "enLigne": false
+        "enLigne": true
        },
        "resume": "À vérifier au village : la barre du haut est collée en haut, or / gemmes / Missions / infos / réglages sont sur UNE ligne, les boutons de droite sont plus gros, et la Boutique est enfin alignée sur BATAILLE. ⚠️ E4 (les missions « très modestes ») n'est PAS fait : dis-moi ce que tu veux y voir."
       },
       {
        "ref": "5",
        "titre": "Les deux lettres du Roi, entre l'intro et le village",
-       "detail": "Les quatre lettres du Roi, qui portent le \u003cem>pourquoi\u003c/em> du jeu là où \u003ccode>GuidePopup\u003c/code> porte le comment. \u003cstrong>La part code est faite et mesurée\u003c/strong> (\u003ccode>2750e83\u003c/code>) : les quatre textes en trois blocs, l'état des lettres, les quatre jalons, et le \u003cstrong>compteur de défaites\u003c/strong> qui manquait au jeu — avec le piège que la spec signalait, bien réel : un \u003cstrong>nul\u003c/strong> comptait comme une défaite. \u003cstrong>Reste l'écran de dépli\u003c/strong>, et il attend tes deux images : \u003ccode>assets/story/letter_envelope.png\u003c/code> et \u003ccode>letter_parchment.png\u003c/code> ne sont pas dans le dépôt.",
-       "statut": "encours",
+       "detail": "Les quatre lettres du Roi, qui portent le \u003cem>pourquoi\u003c/em> du jeu là où \u003ccode>GuidePopup\u003c/code> porte le comment. L'enveloppe se pose, le doigt touche le cachet, le parchemin se déroule \u003cstrong>en trois temps sur les plissures peintes\u003c/strong> (39,5 % et 65,4 %), le texte s'écrit bloc par bloc. La première s'impose une fois ; les trois autres attendent dans la \u003cstrong>pile de courrier du Château Royal\u003c/strong>. Le \u003cstrong>compteur de défaites\u003c/strong> qui manquait au jeu est là, et un nul n'en est pas une. \u003cstrong>⚠️ Tes deux PNG ne sont pas dans le dépôt\u003c/strong> — sans eux le papier se dessine (même géométrie, même dépli). Pose \u003ccode>assets/story/letter_envelope.png\u003c/code> et \u003ccode>letter_parchment.png\u003c/code> et l'illustration prend leur place sans une ligne de code.",
+       "statut": "attente",
        "journal": [
         {
          "quand": "24/08",
          "qui": "Claude",
          "texte": "Part code livrée en 2750e83 : letters.gd, l'état dans GameState, le compteur de défaites (un nul n'en est pas une — mesuré : le banc échoue à 1 au lieu de 0 sans la distinction). L'écran enveloppe/parchemin attend les deux PNG."
+        },
+        {
+         "quand": "24/08",
+         "qui": "Claude",
+         "texte": "Reprise demandée en discussion. Je prends l'écran de dépli : la géométrie se mesure sans les images (les plissures sont à 39,5 % et 65,4 %, relevées dans la spec), et les deux PNG ne seront plus qu'un échange de texture."
+        },
+        {
+         "quand": "24/08",
+         "qui": "Claude",
+         "texte": "Écran livré. Mesures : format_test [4] rend 0,00 pt de dérive sur les huit formats, plis à 39,5 % / 65,4 % partout. ui_test [19] : glisser depuis le cachet n'ouvre rien, le toucher l'ouvre, aucune tranche ne reste écrasée. smoke_test 10/10."
         }
        ],
        "priorite": "basse",
-       "theme": "Récit"
+       "theme": "Récit",
+       "livre": {
+        "commit": "533a02e",
+        "quand": "24/08 à 18h30",
+        "pousse": true,
+        "enLigne": false
+       }
       },
       {
        "ref": "6",
@@ -1062,6 +1074,11 @@ button[disabled]{opacity:.45;cursor:progress}
          "quand": "24/08",
          "qui": "Claude",
          "texte": "Livrée. Bancs verts sur cette machine : smoke_test 10/10 batailles, format_test 8 formats, ui_test. ⚠️ Le build web n'est PAS encore réexporté — ne teste pas sur ton téléphone tout de suite."
+        },
+        {
+         "quand": "24/08",
+         "qui": "Claude",
+         "texte": "Build web en ligne (gh-pages 3814d7a, sur 70c353b) : celle-ci est testable."
         }
        ],
        "priorite": "basse",
@@ -1070,7 +1087,7 @@ button[disabled]{opacity:.45;cursor:progress}
         "commit": "d3e0e12",
         "quand": "24/08 à 17h30",
         "pousse": true,
-        "enLigne": false
+        "enLigne": true
        }
       },
       {
@@ -1088,6 +1105,11 @@ button[disabled]{opacity:.45;cursor:progress}
          "quand": "24/08",
          "qui": "Claude",
          "texte": "Livrée. Bancs verts sur cette machine : smoke_test 10/10 batailles, format_test 8 formats, ui_test. ⚠️ Le build web n'est PAS encore réexporté — ne teste pas sur ton téléphone tout de suite."
+        },
+        {
+         "quand": "24/08",
+         "qui": "Claude",
+         "texte": "Build web en ligne (gh-pages 3814d7a, sur 70c353b) : celle-ci est testable."
         }
        ],
        "priorite": "basse",
@@ -1096,7 +1118,7 @@ button[disabled]{opacity:.45;cursor:progress}
         "commit": "de9e5a1",
         "quand": "24/08 à 17h30",
         "pousse": true,
-        "enLigne": false
+        "enLigne": true
        }
       },
       {
@@ -1109,6 +1131,11 @@ button[disabled]{opacity:.45;cursor:progress}
          "quand": "24/08",
          "qui": "Claude",
          "texte": "Livrée. Bancs verts sur cette machine : smoke_test 10/10 batailles, format_test 8 formats, ui_test. ⚠️ Le build web n'est PAS encore réexporté — ne teste pas sur ton téléphone tout de suite."
+        },
+        {
+         "quand": "24/08",
+         "qui": "Claude",
+         "texte": "Build web en ligne (gh-pages 3814d7a, sur 70c353b) : celle-ci est testable."
         }
        ],
        "priorite": "basse",
@@ -1117,7 +1144,7 @@ button[disabled]{opacity:.45;cursor:progress}
         "commit": "c369b46",
         "quand": "24/08 à 17h30",
         "pousse": true,
-        "enLigne": false
+        "enLigne": true
        }
       }
      ]
@@ -1241,10 +1268,12 @@ button[disabled]{opacity:.45;cursor:progress}
     "fait": "24/08 à 03h52",
     "quoi": "Quatre duplications supprimées : le chargement d'une silhouette de pièce vivait en quatre exemplaires, l'aperçu de glissement en deux, les deux zones de lâcher étaient copiées l'une sur l'autre, et une closure gardée sur un nœud est devenue une simple texture. Bancs identiques : 181 OK, aucun échec."
    },
-   "exportWeb": null
+   "exportWeb": {
+    "demande": "24/08 à 19h51"
+   }
   }
  ],
- "serie": 65
+ "serie": 73
 }
 </script>
 <script id="app">
@@ -1564,6 +1593,27 @@ button[disabled]{opacity:.45;cursor:progress}
     }).join("\n");
   }
 
+  /* LE BLOC QUI DIT LA VERITE SUR UN ORDRE.
+     ⚠️ AUCUN BOUTON DE CE CARNET NE ME REVEILLE. Une coche republie la page
+     sous l'identite du joueur et n'envoie AUCUN signal : depuis une session
+     cloud, rien ne me notifie d'une republication. L'ordre est bien ENREGISTRE
+     - je l'ai retrouve intact en relisant - mais il dort jusqu'a ma prochaine
+     relecture.
+     Le 24/08, le joueur a presse METTRE EN LIGNE puis ARRETER, et il ne s'est
+     rien passe pendant deux heures. La page laissait croire au contraire :
+     « j'exporte des que la fiche en cours est finie ». Elle ne le dit plus.
+     Le canal qui marche a tous les coups est la discussion - d'ou ce bloc,
+     ecrit une fois et pose partout ou il y a un ordre. */
+  function blocTransmettre(texte, quoi){
+    return '<div class="transmettre"><b>⚠️ CE BOUTON NE ME RÉVEILLE PAS.</b> '
+      + esc(quoi) + ' est enregistré ici, et je le lirai à ma prochaine relecture du '
+      + 'carnet. <b>Pour que je m’y mette tout de suite, dis-le-moi en discussion</b> — '
+      + 'c’est le seul canal qui me parvient à coup sûr.'
+      + '<textarea readonly rows="3" class="a-coller">' + esc(texte) + '</textarea>'
+      + '<div class="bas"><button class="bouton-cyan" data-copier="1">COPIER POUR LA DISCUSSION</button>'
+      + '<span class="etat" id="etat-marche"></span></div></div>';
+  }
+
   /* ═══════════════════════════════ LE RENDU ═══════════════════════════════ */
 
   var LOGO = '<span class="logo" aria-hidden="true"></span>';
@@ -1717,7 +1767,9 @@ button[disabled]{opacity:.45;cursor:progress}
     h += '<div style="flex:1;min-width:0">';
     if (demande){
       h += '<h2>MISE EN LIGNE DEMANDÉE</h2><p>Demandée le '+esc(x.demande)
-        +  '. J’exporte le jeu et je pousse sur gh-pages dès que la fiche en cours est finie.</p>';
+        +  '. <b>Cette demande ne me réveille pas</b> : je la lirai à ma prochaine relecture '
+        +  'du carnet, et j’exporterai alors. Pour l’avoir tout de suite, demande-le-moi en '
+        +  'discussion.</p>';
     } else {
       h += '<h2>'+(b.enLigne ? 'COMMIT ET TEST POSSIBLE'
                              : 'PAS ENCORE EN LIGNE — NE TESTE PAS TOUT DE SUITE')+'</h2><p>';
@@ -1895,12 +1947,14 @@ button[disabled]{opacity:.45;cursor:progress}
           +  '<div class="bas"><button class="bouton-cyan" data-copier="1">COPIER POUR LA DISCUSSION</button>'
           +  '<span class="etat" id="etat-marche"></span></div></div>';
       } else {
-        h += '<div class="bas"><button class="bouton-cyan sourd" data-copier="1">COPIER L’ORDRE</button>';
-        h += '<span class="etat" id="etat-marche"></span></div>';
+        h += blocTransmettre(texteOrdre(j), "L’ordre de marche");
       }
-      /* Le frein, aussi gros que l'accélérateur. */
+      /* Le frein, aussi gros que l'accélérateur - mais il freine à retardement,
+         et il le dit maintenant. */
       h += '<div style="margin-top:12px"><button class="bouton-arret" data-arreter="1">'
-        +  '■ ARRÊTER LE TRAVAIL</button></div></div>';
+        +  '■ ARRÊTER LE TRAVAIL</button>'
+        +  '<p class="quand" style="margin-top:6px">Il vide l’ordre de marche ici. '
+        +  'Pour m’arrêter <b>maintenant</b>, dis-le-moi en discussion.</p></div></div>';
       return h;
     }
     if (!liste.length){
