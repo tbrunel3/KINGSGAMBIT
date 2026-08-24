@@ -511,7 +511,7 @@ représentatif**, et confondre les deux a coûté cher :
 | `tools/promo_probe.tscn` | combien de Dames une campagne produit-elle ? | ~3 min |
 | `tools/debug_battle.tscn` | pourquoi cette bataille tourne mal ? (trace coup par coup) | court |
 | `tools/screenshot.tscn` | à quoi ressemblent les écrans ? (PNG dans `tools/screenshots/`) — ⚠️ **NE MARCHE PAS EN `--headless`**, voir ci-dessous | ~1 min |
-| `tools/resolutions.tscn` | qu'est-ce qui déborde sur les autres téléphones ? | court |
+| `tools/resolutions.tscn` | qu'est-ce qui déborde sur les autres téléphones ? — ⚠️ **NE MARCHE PAS EN `--headless` NON PLUS**, et c'est pire que `screenshot` : il ne sort pas, il **reste bloqué sans écrire une ligne** | court, avec fenêtre |
 
 ⚠️ **`screenshot.tscn` en `--headless` n'écrit AUCUN fichier, et ne le dit pas.**
 Il démarre, ne rend pas une ligne, sort avec le code 0, et les PNG de
@@ -526,6 +526,20 @@ godot --path . tools/screenshot.tscn
 **Vérifier l'horodatage des PNG avant de conclure sur une capture.** C'est le
 même piège que le banc vert qui a sauté ses questions, en pire : ici l'outil ne
 prétend même pas avoir travaillé.
+
+⚠️ **`resolutions.tscn` a la MÊME limite, et elle est plus traître.** Mesuré le
+24/08 : en `--headless` il ne rend pas une ligne et **ne sort jamais** — tué à
+45 s comme à 300 s, sortie vide. Vérifié sur la version d'avant toute
+modification, donc ce n'est pas une régression : les deux outils de capture
+veulent une fenêtre, et le manuel n'en signalait qu'un. Ne pas conclure qu'un
+changement l'a cassé sans relancer la version d'avant.
+
+⚠️ **Et les deux poussaient les animations à moitié.** `_finish_animations`
+n'appelait `custom_step` qu'une fois : une animation qui en **démarre** une
+autre — le sceau de la missive qui se brise, puis son callback qui lance le
+dépli — restait figée en cours de route, et l'outil croyait avoir fini. Corrigé
+le 24/08 dans les deux, plus `ui_test._skip_animations`. **Tout nouvel outil de
+capture doit repousser en boucle, pas une fois.**
 
 ⚠️ **`ui_test._press()` n'appuyait sur rien, sur la moitié des contrôles du jeu.**
 `gui_input` est un **signal** ; `_gui_input()` est une **méthode virtuelle**, et
