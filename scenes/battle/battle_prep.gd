@@ -80,6 +80,13 @@ var _chosen: Dictionary = {}
 var _composing: bool = true
 
 var _slot_flow: HFlowContainer
+
+## Les deux ZONES DE LACHER du glisser-deposer : le deploiement et la caserne.
+## Elles entourent les rangees plutot que de se confondre avec elles, pour
+## qu'un lacher tombe juste meme entre deux cases.
+var _zone_deploiement: Poignee
+var _zone_caserne: Poignee
+
 var _charge_label: Label
 var _hint_label: Label
 var _barracks_row: HBoxContainer
@@ -335,11 +342,21 @@ func _build_deployment_panel() -> void:
 	_charge_label.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
 	charge_pill.add_child(_charge_label)
 
+	# La zone de lacher ENTOURE les cases au lieu d'etre les cases : lacher
+	# entre deux cases, ou sous la derniere rangee, doit engager quand meme.
+	_zone_deploiement = Poignee.new()
+	_zone_deploiement.add_theme_stylebox_override("panel", StyleBoxEmpty.new())
+	_zone_deploiement.accepte = func(charge: Dictionary) -> bool:
+		return _composing and charge.get("ou", "") == "caserne" 			and _peut_engager(String(charge.get("type", "")))
+	_zone_deploiement.recoit = func(charge: Dictionary) -> void:
+		_add(String(charge.get("type", "")))
+	column.add_child(_zone_deploiement)
+
 	_slot_flow = HFlowContainer.new()
 	_slot_flow.add_theme_constant_override("h_separation", 6)
 	_slot_flow.add_theme_constant_override("v_separation", 6)
 	_slot_flow.alignment = FlowContainer.ALIGNMENT_CENTER
-	column.add_child(_slot_flow)
+	_zone_deploiement.add_child(_slot_flow)
 
 	_hint_label = _ink_label("", 11, INK_SOFT)
 	_hint_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
@@ -405,14 +422,17 @@ func _rebuild_slots() -> void:
 
 ## Case occupee : la piece choisie. On la touche pour la renvoyer a la caserne.
 func _filled_slot(type: String) -> PanelContainer:
-	var slot := _shell(TILE_BG, TILE_EDGE, 1.5, 10.0, 3)
+	var slot := _shell(TILE_BG, TILE_EDGE, 1.5, 10.0, 3, true)
 	slot.custom_minimum_size = Vector2(SLOT_SIZE, SLOT_SIZE)
 	if _composing:
 		slot.mouse_filter = Control.MOUSE_FILTER_STOP
-		slot.tooltip_text = "Renvoyer ce %s à la caserne" % Balance.unit_name(type)
+		slot.tooltip_text = "Glisse-le vers la caserne, ou touche-le, pour renvoyer ce %s" 			% Balance.unit_name(type)
 		slot.gui_input.connect(func(event: InputEvent):
 			if _is_tap(event):
 				_remove(type))
+		var poignee := slot as Poignee
+		poignee.charge = {"ou": "deploiement", "type": type}
+		poignee.apercu = func() -> Control: return _apercu(type)
 
 	var sprite := TextureRect.new()
 	var path := "res://assets/pieces/bleu/%s.png" % type
@@ -459,9 +479,19 @@ func _build_barracks_panel() -> void:
 	_barracks_total.size_flags_horizontal = Control.SIZE_SHRINK_END
 	header.add_child(_barracks_total)
 
+	# Meme raison qu'au deploiement : c'est la zone qui recoit, pas les cartes.
+	# Y lacher une piece engagee, c'est la renvoyer en reserve.
+	_zone_caserne = Poignee.new()
+	_zone_caserne.add_theme_stylebox_override("panel", StyleBoxEmpty.new())
+	_zone_caserne.accepte = func(charge: Dictionary) -> bool:
+		return _composing and charge.get("ou", "") == "deploiement" 			and int(_chosen.get(String(charge.get("type", "")), 0)) > 0
+	_zone_caserne.recoit = func(charge: Dictionary) -> void:
+		_remove(String(charge.get("type", "")))
+	column.add_child(_zone_caserne)
+
 	_barracks_row = HBoxContainer.new()
 	_barracks_row.add_theme_constant_override("separation", 8)
-	column.add_child(_barracks_row)
+	_zone_caserne.add_child(_barracks_row)
 
 
 func _rebuild_barracks() -> void:
@@ -495,7 +525,7 @@ func _rebuild_barracks() -> void:
 		if not level_text.is_empty():
 			subtitle += " · " + level_text
 		var card := _piece_card(type, "bleu" if left > 0 or engaged else "absent",
-			Balance.unit_name(type), subtitle, 12, 36, 44)
+			Balance.unit_name(type), subtitle, 12, 36, 44, _composing)
 		# La pastille descend dans la colonne de la carte, pas a cote d'elle :
 		# c'est le premier enfant du PanelContainer qui porte la mise en page.
 		card.get_child(0).add_child(
@@ -503,11 +533,17 @@ func _rebuild_barracks() -> void:
 
 		if _composing:
 			card.mouse_filter = Control.MOUSE_FILTER_STOP
-			card.tooltip_text = "Engager un %s (charge %d)" % [
+			card.tooltip_text = "Glisse-le vers le déploiement, ou touche-le : %s, charge %d" % [
 				Balance.unit_name(type), Balance.deploy_weight(type)]
 			card.gui_input.connect(func(event: InputEvent):
 				if _is_tap(event):
 					_add(type))
+			# On ne saisit que ce qui reste en reserve : glisser une carte vide
+			# ferait miroiter un engagement que `_add` refuserait au lacher.
+			if left > 0:
+				var poignee := card as Poignee
+				poignee.charge = {"ou": "caserne", "type": type}
+				poignee.apercu = func() -> Control: return _apercu(type)
 		if left <= 0 and not engaged:
 			card.modulate.a = 0.6
 
@@ -668,6 +704,35 @@ func _can_add_anything() -> bool:
 		if _run_reserve(type) > 0 and Balance.deploy_weight(type) <= left:
 			return true
 	return false
+
+
+## CE QUI SUIT LE DOIGT pendant le glissement.
+##
+## Centre sous le curseur : `set_drag_preview` pose le coin haut-gauche du
+## Control a la position du pointeur, et une piece qui pend en bas a droite du
+## doigt ne se lit pas comme une piece qu'on porte.
+func _apercu(type: String) -> Control:
+	var socle := Control.new()
+	var sprite := TextureRect.new()
+	var path := "res://assets/pieces/bleu/%s.png" % type
+	if ResourceLoader.exists(path):
+		sprite.texture = load(path)
+	sprite.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+	sprite.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+	sprite.size = Vector2(SLOT_SIZE, SLOT_SIZE)
+	sprite.position = -sprite.size * 0.5
+	sprite.modulate.a = 0.85
+	socle.add_child(sprite)
+	return socle
+
+
+## Ce qu'une carte de caserne peut promettre au moment ou on la saisit : les
+## MEMES deux conditions que `_add`, mais sans le message d'erreur. La zone de
+## lacher refuse alors visiblement au lieu d'accepter puis de ne rien faire.
+func _peut_engager(type: String) -> bool:
+	if type.is_empty() or _run_reserve(type) <= 0:
+		return false
+	return _chosen_weight() + Balance.deploy_weight(type) <= _capacity()
 
 
 func _add(type: String) -> void:
@@ -840,8 +905,8 @@ func _box(bg: Color, edge: Color, width: float, radius: float) -> StyleBoxFlat:
 ## c'est le MarginContainer qui les lit. Pose la, une marge ne fait rien du
 ## tout, et le contenu vient coller le trait.
 func _shell(bg: Color, edge: Color, width: float, radius: float,
-		padding: int) -> PanelContainer:
-	var panel := PanelContainer.new()
+		padding: int, saisissable: bool = false) -> PanelContainer:
+	var panel: PanelContainer = Poignee.new() if saisissable else PanelContainer.new()
 	var box := _box(bg, edge, width, radius)
 	box.content_margin_left = padding
 	box.content_margin_right = padding
@@ -912,9 +977,10 @@ func _pill(text: String, size: int) -> PanelContainer:
 ## Carte de piece : l'illustration, son nom, son niveau. Sert aux deux
 ## panneaux - l'ennemi en rouge, la caserne en bleu.
 func _piece_card(type: String, team: String, title: String, level_text: String,
-		name_size: int, art_width: float, art_height: float) -> PanelContainer:
+		name_size: int, art_width: float, art_height: float,
+		saisissable: bool = false) -> PanelContainer:
 	var card := _shell(TILE_BG, TILE_EDGE if team == "bleu" else PANEL_EDGE,
-		1.0, 14.0, 8)
+		1.0, 14.0, 8, saisissable)
 	card.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 
 	var column := VBoxContainer.new()
@@ -986,6 +1052,55 @@ func _light_button(text: String) -> Button:
 		box.content_margin_bottom = 6
 		button.add_theme_stylebox_override(state, box)
 	return button
+
+
+## LA POIGNEE : une coque qu'on peut SAISIR, et sur laquelle on peut LACHER.
+##
+## ⚠️ Godot ne sait glisser-deposer que par TROIS VIRTUELLES de Control
+## (`_get_drag_data`, `_can_drop_data`, `_drop_data`), et une virtuelle demande
+## un script. Or les cartes de cet ecran sont construites a la main, sans scene
+## ni script attache : il n'y avait donc aucun endroit ou les ecrire. D'ou
+## cette coque, qui les porte toutes les trois et delegue a des `Callable` -
+## le reste de l'ecran garde exactement la forme qu'il avait.
+##
+## ⚠️ ET LE TAP CONTINUE DE MARCHER. Godot ne demande `_get_drag_data` qu'une
+## fois le bouton enfonce ET la souris deplacee ; un appui immobile part encore
+## dans `gui_input`. Les deux gestes cohabitent donc sans se voler l'evenement,
+## et c'est important : le tap est le chemin court, le glissement est celui que
+## le joueur a demande.
+##
+## ⚠️ UNE ZONE QUI REFUSE FAIT REMONTER LE LACHER A SON PARENT. C'est ce qui
+## permet de laisser les cases du deploiement refuser tout, et la zone qui les
+## entoure accepter : le lacher tombe juste meme entre deux cases.
+class Poignee extends PanelContainer:
+	## Ce que la poignee DONNE quand on la saisit. Vide = on ne la saisit pas.
+	var charge: Dictionary = {}
+	## Ce qui suit le doigt pendant le glissement. Rend un Control.
+	var apercu: Callable
+	## (charge) -> bool : cette zone accepte-t-elle ce qu'on lui apporte ?
+	var accepte: Callable
+	## (charge) -> void : ce qu'elle en fait.
+	var recoit: Callable
+
+	func _get_drag_data(_position: Vector2) -> Variant:
+		if charge.is_empty():
+			return null
+		# ⚠️ `set_drag_preview` EXIGE que le viewport soit deja en train de
+		# glisser, et remonte une erreur sinon. C'est vrai pendant un vrai
+		# geste ; ce ne l'est pas quand un banc appelle cette virtuelle
+		# directement pour verifier le cablage - et le banc rendait alors deux
+		# erreurs dans une sortie par ailleurs verte, ce que le manuel
+		# interdit de laisser passer.
+		if apercu.is_valid() and get_viewport() != null 				and get_viewport().gui_is_dragging():
+			set_drag_preview(apercu.call())
+		return charge
+
+	func _can_drop_data(_position: Vector2, data: Variant) -> bool:
+		return accepte.is_valid() and data is Dictionary and bool(accepte.call(data))
+
+	func _drop_data(_position: Vector2, data: Variant) -> void:
+		if recoit.is_valid():
+			recoit.call(data)
 
 
 ## La case vide de la maquette : un carre arrondi au trait POINTILLE, marque

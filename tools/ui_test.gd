@@ -801,6 +801,53 @@ func _test_composition() -> void:
 	_check(int(prep._chosen.get(Balance.PION, 0)) == before - 1,
 		"toucher une case posee renvoie la piece a la caserne")
 
+	# ---- LE GLISSER-DEPOSER (chantier C) ----
+	#
+	# ⚠️ On appelle les TROIS VIRTUELLES directement. Godot ne les declenche
+	# que sur un vrai geste souris de son gestionnaire d'entree, qu'un banc
+	# headless ne joue pas - et `_press()` ne sait de toute facon pas lever le
+	# doigt. Ce qui est mesure ici est donc le CABLAGE : qui donne, qui
+	# accepte, qui refuse, et ce que le lacher fait vraiment.
+	var carte := _find_clickable(prep, "PION")
+	_check(carte != null and carte.has_method("_get_drag_data"),
+		"une carte de caserne se saisit")
+	if carte != null and carte.has_method("_get_drag_data"):
+		var charge = carte._get_drag_data(Vector2.ZERO)
+		_check(charge is Dictionary and charge.get("ou", "") == "caserne",
+			"elle donne bien une piece de la caserne (%s)" % str(charge))
+		_check(prep._zone_deploiement._can_drop_data(Vector2.ZERO, charge),
+			"le deploiement accepte ce qui vient de la caserne")
+		_check(not prep._zone_caserne._can_drop_data(Vector2.ZERO, charge),
+			"la caserne REFUSE ce qui vient d'elle-meme")
+		var avant := int(prep._chosen.get(Balance.PION, 0))
+		prep._zone_deploiement._drop_data(Vector2.ZERO, charge)
+		await _frames(2)
+		_check(int(prep._chosen.get(Balance.PION, 0)) == avant + 1,
+			"lacher sur le deploiement engage la piece")
+
+	# Et le retour : une case posee se glisse vers la caserne.
+	if prep._slot_flow.get_child_count() > 0:
+		var case: Node = prep._slot_flow.get_child(0)
+		_check(case.has_method("_get_drag_data"), "une case posee se saisit")
+		var rendue = case._get_drag_data(Vector2.ZERO)
+		_check(rendue is Dictionary and rendue.get("ou", "") == "deploiement",
+			"elle donne bien une piece deja engagee")
+		_check(prep._zone_caserne._can_drop_data(Vector2.ZERO, rendue),
+			"la caserne accepte ce qui revient du deploiement")
+		_check(not prep._zone_deploiement._can_drop_data(Vector2.ZERO, rendue),
+			"le deploiement REFUSE ce qui vient de lui-meme")
+		var avant_r := int(prep._chosen.get(Balance.PION, 0))
+		prep._zone_caserne._drop_data(Vector2.ZERO, rendue)
+		await _frames(2)
+		_check(int(prep._chosen.get(Balance.PION, 0)) == avant_r - 1,
+			"lacher sur la caserne renvoie la piece en reserve")
+
+	# Une charge pleine doit se voir AVANT le lacher : une zone qui accepte
+	# puis ne fait rien est pire qu'une zone qui refuse.
+	_check(not prep._zone_deploiement._can_drop_data(Vector2.ZERO,
+			{"ou": "caserne", "type": Balance.TOUR}),
+		"le deploiement refuse une piece que la caserne n'a pas")
+
 	# On pousse jusqu'au refus, puis on renvoie deux pieces a la caserne : ce
 	# qui compte n'est pas le maximum, c'est que la composition puisse etre
 	# PLUS PETITE que la caserne - sinon l'ecran ne deciderait de rien.
