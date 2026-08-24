@@ -40,6 +40,24 @@ var fight: int = 1
 ## Nombre de combats de la serie.
 var total: int = 1
 
+## CHARGE DU CHATEAU, GELEE A L'OUVERTURE DE LA SERIE.
+##
+## Le budget de poids (cf. Balance.deploy_capacity) est une donnee de la
+## SERIE, pas du village : il se lit une fois, quand la serie s'ouvre, et ne
+## bouge plus jusqu'a sa fin. Meme doctrine que `roster`, instantane pris au
+## meme moment.
+##
+## Sans ce gel, ameliorer le Chateau entre deux combats agrandissait la charge
+## du combat suivant - et rien ne l'empeche, puisqu'une serie survit a la
+## fermeture du jeu. Trois effets, tous silencieux : le placement acceptait
+## plus de poids que la composition n'en avait engage, `_reinforce` relevait
+## des blesses au-dela de ce que la serie avait coute, et le bandeau de charge
+## changeait de plafond entre deux combats sans rien dire.
+##
+## 0 = serie ouverte avant ce gel, ou run bati a la main par un banc : les
+## appelants retombent alors sur la charge du moment (cf. charge()).
+var capacity: int = 0
+
 ## Pieces encore disponibles pour la serie, par type - la RESERVE de la serie,
 ## a la place de l'armee du village.
 var roster: Dictionary = {}
@@ -89,14 +107,24 @@ var draws: int = 0
 var knights_made: int = 0
 
 
-## Ouvre une serie sur cette bataille, avec l'armee du village au complet.
-static func start(id: int, fights: int, army: Dictionary) -> CampaignRun:
+## Ouvre une serie sur cette bataille, avec l'armee du village au complet et
+## la charge du chateau telle qu'elle est A CET INSTANT (cf. capacity).
+static func start(id: int, fights: int, army: Dictionary,
+		deploy_charge: int = 0) -> CampaignRun:
 	var run := CampaignRun.new()
 	run.battle_id = id
 	run.total = maxi(1, fights)
 	run.fight = 1
 	run.roster = army.duplicate()
+	run.capacity = maxi(0, deploy_charge)
 	return run
+
+
+## La charge qui vaut pour cette serie : celle gelee a l'ouverture, ou celle du
+## moment pour une serie d'avant le gel. UN SEUL endroit tranche entre les
+## deux, pour qu'un ecran ne puisse pas lire une charge et un autre l'autre.
+func charge(fallback: int) -> int:
+	return capacity if capacity > 0 else fallback
 
 
 func is_last_fight() -> bool:
@@ -356,6 +384,7 @@ func to_dict() -> Dictionary:
 		"battle_id": battle_id,
 		"fight": fight,
 		"total": total,
+		"capacity": capacity,
 		"roster": roster.duplicate(),
 		"lineup": lineup.duplicate(),
 		"losses": losses.duplicate(),
@@ -373,6 +402,9 @@ static func from_dict(data: Dictionary) -> CampaignRun:
 	run.battle_id = int(data.get("battle_id", 1))
 	run.fight = int(data.get("fight", 1))
 	run.total = maxi(1, int(data.get("total", 1)))
+	# Absente des sauvegardes d'avant le gel : elles reprennent sur la charge du
+	# moment, exactement le comportement qu'elles avaient.
+	run.capacity = maxi(0, int(data.get("capacity", 0)))
 	run.reward = int(data.get("reward", 0))
 	run.enemies_defeated = int(data.get("enemies_defeated", 0))
 	run.promotions = int(data.get("promotions", 0))

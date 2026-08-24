@@ -798,12 +798,15 @@ func begin_run(battle_id: int) -> CampaignRun:
 	var army: Dictionary = {}
 	for type in Balance.ARMY_TYPES:
 		army[type] = units_owned(type)
-	var run := CampaignRun.start(battle_id, Balance.battle_fights(battle), army)
+	# La charge est GELEE ici, avec l'armee : ameliorer le Chateau en cours de
+	# serie ne doit pas agrandir le deploiement des combats suivants.
+	var run := CampaignRun.start(battle_id, Balance.battle_fights(battle), army,
+		deploy_capacity())
 	# La serie s'ouvre sur la derniere composition que le joueur avait validee
 	# ici, ramenee a ce qu'il possede encore et a la charge d'aujourd'hui. Sans
 	# rien en memoire - premiere bataille, ou un banc qui n'ouvre jamais la
 	# preparation - elle reste VIDE, et le placement propose le roster entier.
-	run.set_lineup(remembered_lineup(battle_id), deploy_capacity())
+	run.set_lineup(remembered_lineup(battle_id), run.charge(deploy_capacity()))
 	save_run(run)
 	return run
 

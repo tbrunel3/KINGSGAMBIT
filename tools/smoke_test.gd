@@ -253,9 +253,50 @@ func _check_run() -> void:
 		_fail("la charge doit borner la composition (%d au lieu de %d)" % [
 			greedy.lineup_weight(), capacity])
 
+	# ----- LA CHARGE EST GELEE A L'OUVERTURE DE LA SERIE -----
+	#
+	#  Une serie survit a la fermeture du jeu : rien n'empeche de repasser au
+	#  village entre deux combats, d'ameliorer le Chateau, puis de reprendre.
+	#  La charge doit rester celle sous laquelle la composition a ete arretee -
+	#  sinon le placement du combat 2 accepte plus de poids que le joueur n'en
+	#  avait engage, et les renforts se relevent au-dela de ce que la serie a
+	#  coute (cf. CampaignRun.capacity).
+	Game.reset_progress()
+	var frozen := Game.begin_run(series_id)
+	var charge_before := frozen.charge(Game.deploy_capacity())
+	if charge_before != Game.deploy_capacity():
+		_fail("une serie neuve doit partir sur la charge du moment (%d au lieu de %d)"
+			% [charge_before, Game.deploy_capacity()])
+
+	Game.add_gold(50000)
+	if not Game.start_upgrade(Balance.CASTLE):
+		_fail("l'amelioration du chateau devrait partir")
+	Game.force_finish_upgrade(Balance.CASTLE)
+	if Game.deploy_capacity() <= charge_before:
+		_fail("le chateau ameliore devrait agrandir la charge du VILLAGE")
+
+	# Relue depuis la sauvegarde, comme le fait le combat suivant.
+	var resumed := Game.current_run(series_id)
+	if resumed == null:
+		_fail("la serie devrait survivre a l'amelioration")
+	elif resumed.charge(Game.deploy_capacity()) != charge_before:
+		_fail("ameliorer le chateau en pleine serie ne doit PAS agrandir sa charge (%d au lieu de %d)"
+			% [resumed.charge(Game.deploy_capacity()), charge_before])
+
+	# Et la serie SUIVANTE, elle, en profite : le gel porte sur la serie en
+	# cours, pas sur le batiment.
+	Game.clear_run()
+	var next_run := Game.begin_run(series_id)
+	if next_run.charge(0) != Game.deploy_capacity():
+		_fail("la serie suivante doit partir sur la charge agrandie (%d au lieu de %d)"
+			% [next_run.charge(0), Game.deploy_capacity()])
+
+	var charge_village := Game.deploy_capacity()
 	Game.reset_progress()
 	print("  usure, renforts, nul, Dame de serie, sauvegarde, cloture : OK")
 	print("  composition : bornee par la charge, reduite des pertes, ouverte aux renforts")
+	print("  charge gelee a l'ouverture : la serie garde %d, le village passe a %d" % [
+		charge_before, charge_village])
 	_done("serie")
 
 

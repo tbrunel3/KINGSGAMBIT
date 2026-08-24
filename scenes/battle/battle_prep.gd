@@ -136,7 +136,8 @@ func _prepare_run() -> void:
 		var army: Dictionary = {}
 		for type in Balance.ARMY_TYPES:
 			army[type] = Game.units_owned(type)
-		_run = CampaignRun.start(id, Balance.battle_fights(_battle), army)
+		_run = CampaignRun.start(id, Balance.battle_fights(_battle), army,
+			Game.deploy_capacity())
 		# La derniere composition validee ici est reproposee, ramenee a ce que
 		# le joueur possede encore et a la charge d'aujourd'hui. Ce n'est pas
 		# une armee composee par l'ordinateur (regle 3) : c'est SA decision
@@ -671,8 +672,11 @@ func _commit_lineup() -> bool:
 
 # ------------------------------- COMPOSITION ---------------------------------
 
+## La charge de la SERIE, pas celle du village : une serie gele la sienne a son
+## ouverture (cf. CampaignRun.capacity). Le run provisoire monte juste au-dessus
+## la gele au passage, donc les deux chemins passent par la meme ligne.
 func _capacity() -> int:
-	return Game.deploy_capacity()
+	return _run.charge(Game.deploy_capacity())
 
 
 func _chosen_weight() -> int:
