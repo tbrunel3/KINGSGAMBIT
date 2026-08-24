@@ -245,13 +245,27 @@ static func stat_row(label_text: String, value: Control) -> HBoxContainer:
 	return row
 
 
-## Rend un sous-arbre transparent a la souris.
+static var _textures: Dictionary = {}
+
+
+## Charger une ressource si elle existe, sans erreur si elle manque.
 ##
-## Un Control a mouse_filter STOP (le defaut) par-dessus un parent cliquable
-## intercepte le clic avant qu'il n'atteigne le gui_input du parent : chaque
-## composant "panneau + gui_input" (chip de selection, pastille de campagne,
-## label de batiment...) doit donc neutraliser tout son contenu decoratif, ou
-## le joueur ne peut cliquer que sur les quelques pixels de marge non couverts.
+## Le meme quatuor - construire le chemin, verifier qu'il existe, charger,
+## retomber sur null - vivait aux quatre coins du depot. Il n'y a plus qu'ici.
+##
+## ⚠️ LE CACHE EXISTE PARCE QUE C'EST UN CHEMIN CHAUD. La preparation demolit
+## et rebatit ses trois panneaux a CHAQUE tap : sans cache, une charge de 16 en
+## pions demandait une quarantaine de `exists` + `load` par geste, la ou le
+## dossier n'a jamais que quinze textures possibles et immuables. Meme patron
+## que `GridView._load_piece_textures`, qui construit son dictionnaire une fois.
+static func texture_or_null(path: String) -> Texture2D:
+	if _textures.has(path):
+		return _textures[path]
+	var texture: Texture2D = load(path) if ResourceLoader.exists(path) else null
+	_textures[path] = texture
+	return texture
+
+
 ## LA SILHOUETTE D'UNE PIECE, en un seul endroit.
 ##
 ## Le meme quatuor - construire le chemin, verifier qu'il existe, charger,
@@ -259,8 +273,7 @@ static func stat_row(label_text: String, value: Control) -> HBoxContainer:
 ## la carte de caserne, l'apercu de glissement et la chip du placement. Quatre
 ## copies d'un chemin de fichier sont quatre endroits ou se tromper de dossier.
 static func piece_texture(team: String, type: String) -> Texture2D:
-	var path := "res://assets/pieces/%s/%s.png" % [team, type]
-	return load(path) if ResourceLoader.exists(path) else null
+	return texture_or_null("res://assets/pieces/%s/%s.png" % [team, type])
 
 
 ## CE QUI SUIT LE DOIGT pendant un glisser-deposer.
@@ -293,6 +306,13 @@ static func drag_preview_for(control: Control, texture: Texture2D,
 	control.set_drag_preview(socle)
 
 
+## Rend un sous-arbre transparent a la souris.
+##
+## Un Control a mouse_filter STOP (le defaut) par-dessus un parent cliquable
+## intercepte le clic avant qu'il n'atteigne le gui_input du parent : chaque
+## composant "panneau + gui_input" (chip de selection, pastille de campagne,
+## label de batiment...) doit donc neutraliser tout son contenu decoratif, ou
+## le joueur ne peut cliquer que sur les quelques pixels de marge non couverts.
 static func ignore_mouse_recursive(node: Node) -> void:
 	if node is Control:
 		(node as Control).mouse_filter = Control.MOUSE_FILTER_IGNORE

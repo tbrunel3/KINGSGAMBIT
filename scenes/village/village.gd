@@ -8,7 +8,6 @@ extends Control
 ## generique. Aucune regle de jeu ici : tout vient de GameState/Balance.
 ##
 
-const BuildingPopupScene := preload("res://scenes/village/building_popup.tscn")
 const MissionPopupScene := preload("res://scenes/village/mission_popup.tscn")
 const DevPanelScene := preload("res://scenes/village/dev_panel.tscn")
 
@@ -78,7 +77,8 @@ const CASTLE_HITBOX := Rect2(108, 292, 182, 140)
 const ZOOM_SCALE := 1.18
 ## ⚠️ ZOOM_SECONDS, VEIL_SECONDS et VEIL_DELAY_RATIO ont ete RETIREES d'ici.
 ## La duree du zoom vit maintenant dans Balance.MOTION ("village_zoom"), et le
-## voile local a disparu au profit de ScreenVeil - voir _zoom_to et _unzoom.
+## voile local a disparu au profit de ScreenVeil - voir _zoom_to. Le dezoom,
+## lui, n'existe plus : la caserne est un ECRAN, donc le village est detruit.
 
 const SCREEN_WIDTH := 393.0
 const SCREEN_MARGIN := 8.0
@@ -1087,25 +1087,6 @@ func _zoom_to(point: Vector2, then: Callable) -> void:
 	await tween.finished
 	then.call()
 	_zooming = false
-
-
-## Le retour : le decor reprend sa taille, en glissant.
-##
-## ⚠️ IL Y AVAIT UN VOILE ICI, ET IL SERVAIT A CACHER UN SAUT. L'ancienne
-## version noircissait l'ecran, REMETTAIT l'echelle a 1 d'un coup, puis
-## rallumait. Un tween de retour ne cache rien parce qu'il n'y a plus rien a
-## cacher - et c'est plus doux que le fondu qu'il remplace.
-func _unzoom() -> void:
-	if not is_inside_tree():
-		return
-	_zooming = true
-	var tween := create_tween().set_parallel(true)
-	for node in [_background, _decor]:
-		tween.tween_property(node, "scale", Vector2.ONE,
-				Balance.motion("village_zoom")) 			.set_trans(Tween.TRANS_CUBIC).set_ease(Tween.EASE_IN_OUT)
-	await tween.finished
-	_zooming = false
-
 
 func _on_battle_pressed() -> void:
 	Router.goto_campaign()

@@ -706,7 +706,6 @@ func _saisir(panel: PanelContainer, ou: String, type: String) -> void:
 	if poignee == null:
 		return
 	poignee.charge = {"ou": ou, "type": type}
-	poignee.apercu = UiTheme.piece_texture("bleu", type)
 
 
 ## La ZONE DE LACHER d'un panneau : une coque transparente qui entoure une
@@ -734,23 +733,31 @@ func _peut_engager(type: String) -> bool:
 	return _chosen_weight() + Balance.deploy_weight(type) <= _capacity()
 
 
+## ⚠️ UNE SEULE ECRITURE DE LA REGLE. `_add` re-verifiait mot pour mot ce que
+## `_peut_engager` venait de dire, et le commentaire l'assumait ("les MEMES
+## deux conditions"). Deux copies d'une regle de charge, c'est deux endroits a
+## corriger et un a oublier - et l'oubli produit exactement le defaut que le
+## refus avant lacher voulait supprimer : une zone qui accepte puis ne fait rien.
 func _add(type: String) -> void:
 	if not _composing:
 		return
-	if _run_reserve(type) <= 0:
-		_hint_label.text = "Plus de %s en caserne — recrute au village." % \
-			Balance.unit_name(type)
-		return
-	var weight: int = Balance.deploy_weight(type)
-	if _chosen_weight() + weight > _capacity():
-		# Le message nomme la piece ET son poids : "charge maximale" tout seul
-		# n'apprend pas pourquoi la Tour ne passe pas alors qu'un Pion passe.
-		_hint_label.text = "Charge pleine : un %s coûte %d, il reste %d." % [
-			Balance.unit_name(type), weight, _capacity() - _chosen_weight()]
+	if not _peut_engager(type):
+		_hint_label.text = _pourquoi_pas(type)
 		return
 	_chosen[type] = int(_chosen.get(type, 0)) + 1
 	_hint_label.text = ""
 	_queue_refresh()
+
+
+## Le refus se DIT. La regle est dans `_peut_engager` ; ici on explique.
+func _pourquoi_pas(type: String) -> String:
+	if _run_reserve(type) <= 0:
+		return "Plus de %s en caserne — recrute au village." % Balance.unit_name(type)
+	# Le message nomme la piece ET son poids : "charge maximale" tout seul
+	# n'apprend pas pourquoi la Tour ne passe pas alors qu'un Pion passe.
+	return "Charge pleine : un %s coûte %d, il reste %d." % [
+		Balance.unit_name(type), Balance.deploy_weight(type),
+		_capacity() - _chosen_weight()]
 
 
 func _remove(type: String) -> void:
@@ -1072,10 +1079,11 @@ func _light_button(text: String) -> Button:
 class Poignee extends PanelContainer:
 	## Ce que la poignee DONNE quand on la saisit. Vide = on ne la saisit pas.
 	var charge: Dictionary = {}
-	## La silhouette qui suivra le doigt. Une TEXTURE, pas une fabrique : une
-	## closure gardee sur un noeud retient tout son environnement pour la
-	## duree de vie du noeud, et il n'y avait rien a y gagner ici.
-	var apercu: Texture2D
+	## ⚠️ LA SILHOUETTE SE RESOUT AU MOMENT DU GLISSEMENT, PAS A LA
+	## CONSTRUCTION. Elle etait posee sur chaque case et chaque carte a chaque
+	## reconstruction - c'est-a-dire a chaque tap - alors que le joueur ne
+	## glisse jamais qu'un seul noeud. La moitie des chargements de cet ecran
+	## etait pour rien.
 	var apercu_cote: float = SLOT_SIZE
 	## (charge) -> bool : cette zone accepte-t-elle ce qu'on lui apporte ?
 	var accepte: Callable
@@ -1085,7 +1093,9 @@ class Poignee extends PanelContainer:
 	func _get_drag_data(_position: Vector2) -> Variant:
 		if charge.is_empty():
 			return null
-		UiTheme.drag_preview_for(self, apercu, apercu_cote)
+		UiTheme.drag_preview_for(self,
+			UiTheme.piece_texture("bleu", String(charge.get("type", ""))),
+			apercu_cote)
 		return charge
 
 	func _can_drop_data(_position: Vector2, data: Variant) -> bool:
