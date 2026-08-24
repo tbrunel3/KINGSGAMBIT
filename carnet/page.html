@@ -703,14 +703,11 @@ __ETAT__
      rendait le carnet inutilisable dès qu'il sortait de la plateforme. */
   var mode = (window.claude && window.claude.use) ? "artefact" : "depot";
   var lectureSeule = false;
-  var vueOnglet = "actives";
   var visee = null;          // {s:index de section, i:index de fiche}
   var inspOuvert = false;    // sur téléphone, l'inspecteur est une feuille
   var filtreTheme = null;    // vit dans la VUE seulement : deux lecteurs ne filtrent pas pareil
   var ajoutOuvert = false;
   var nommeOuvert = false;
-  var nomTravail = "";
-  var groupeAuto = true;
   var journalDeplie = {};
 
   function J(){ return state.journees[state.active]; }
@@ -859,68 +856,6 @@ __ETAT__
               entrees:rangees(vues.filter(function(e){ return e[0].statut===et[0]; }), true)};
     });
   }
-
-  /* ── l'ordre de marche ──────────────────────────────────────────────────
-     ⚠️ IL NE DEVINE PAS, IL FILTRE. Les mots du nom sont cherchés dans le
-     thème, le titre, le détail et la référence. Si RIEN ne correspond on ne
-     rend pas une liste vide : on prend tout ce qui est ouvert, parce qu'un
-     bouton qui ne lance rien après qu'on a tapé un nom se lit comme cassé. */
-  var VIDES = ["les","des","une","pour","dans","avec","tout","toute","toutes","tous",
-               "faire","finir","sur","chez","mon","son","ses","aux","que","qui","quoi",
-               "soir","matin","journee","travail","chantier"];
-  function sansAccents(s){
-    return String(s).toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g,"");
-  }
-  function motsUtiles(nom){
-    return sansAccents(nom).split(/[^a-z0-9]+/)
-      .filter(function(m){ return m.length >= 4 && VIDES.indexOf(m) < 0; });
-  }
-  function correspond(it, mots){
-    if (!mots.length) return true;
-    var foin = sansAccents([it.ref, it.titre, it.theme||"", it.detail||""].join(" "));
-    return mots.some(function(m){ return foin.indexOf(m) >= 0; });
-  }
-  function ordreDeMarche(mots){
-    var liste = [];
-    rangees(toutes(), false).forEach(function(e){
-      if (aFaire(e[0]) && retenue(e[0]) && (!mots || correspond(e[0], mots))) liste.push(e[0]);
-    });
-    return liste;
-  }
-  function enAttente(){
-    return toutes().filter(function(e){ return attendVerdict(e[0]) && retenue(e[0]); });
-  }
-
-  /* L'ordre, en texte, prêt à coller en discussion. C'est le seul canal qui
-     marche depuis le dépôt — et c'est aussi le plus fiable partout ailleurs. */
-  function texteOrdre(j){
-    if (!j.marche) return "";
-    return "AU TRAVAIL — " + j.nom + "\n" + j.marche.ordre.map(function(o, i){
-      return (i + 1) + ". " + o.ref + " — " + o.titre;
-    }).join("\n");
-  }
-
-  /* LE BLOC QUI DIT LA VERITE SUR UN ORDRE.
-     ⚠️ AUCUN BOUTON DE CE CARNET NE ME REVEILLE. Une coche republie la page
-     sous l'identite du joueur et n'envoie AUCUN signal : depuis une session
-     cloud, rien ne me notifie d'une republication. L'ordre est bien ENREGISTRE
-     - je l'ai retrouve intact en relisant - mais il dort jusqu'a ma prochaine
-     relecture.
-     Le 24/08, le joueur a presse METTRE EN LIGNE puis ARRETER, et il ne s'est
-     rien passe pendant deux heures. La page laissait croire au contraire :
-     « j'exporte des que la fiche en cours est finie ». Elle ne le dit plus.
-     Le canal qui marche a tous les coups est la discussion - d'ou ce bloc,
-     ecrit une fois et pose partout ou il y a un ordre. */
-  function blocTransmettre(texte, quoi){
-    return '<div class="transmettre"><b>⚠️ CE BOUTON NE ME RÉVEILLE PAS.</b> '
-      + esc(quoi) + ' est enregistré ici, et je le lirai à ma prochaine relecture du '
-      + 'carnet. <b>Pour que je m’y mette tout de suite, dis-le-moi en discussion</b> — '
-      + 'c’est le seul canal qui me parvient à coup sûr.'
-      + '<textarea readonly rows="3" class="a-coller">' + esc(texte) + '</textarea>'
-      + '<div class="bas"><button class="bouton-cyan" data-copier="1">COPIER POUR LA DISCUSSION</button>'
-      + '<span class="etat" id="etat-marche"></span></div></div>';
-  }
-
   /* ═══════════════════════════════ LE RENDU ═══════════════════════════════ */
 
   var LOGO = '<span class="logo" aria-hidden="true"></span>';
@@ -942,7 +877,7 @@ __ETAT__
          + '<span class="nom">'+esc(sj.nom)+'</span>'
          + '<span class="part">'+faites+'/'+total+'</span></button>';
     });
-    h += '</nav>' + moteurHtml(j) + '</aside>';
+    h += '</nav>' + '</aside>';
 
     /* ── la colonne principale ── */
     h += '<div class="principal">' + barreHauteHtml(j) + bandeauHtml(j);
@@ -994,37 +929,29 @@ __ETAT__
         + '<button class="bouton-cyan sourd" data-restaurer="1">Restaurer quand même l’ancienne</button>'
         + '</div></div>';
     }
-    h += '<div class="espace"><div class="colonne">' + ongletsHtml(j);
+    /* ⚠️ UNE SEULE VUE DEPUIS LE 24/08, ET C'EST UNE DECISION DU JOUEUR.
+       « tout ce que tu ne peux pas te servir pour le projet sans que j'ai a te
+       le dire doit disparaitre ».
 
-    if (vueOnglet === "actives")      h += reglagesHtml(j) + listeHtml(j) + ajoutHtml(j);
-    else if (vueOnglet === "verifier") h += attenteHtml();
-    else if (vueOnglet === "marche")   h += marcheHtml(j);
-    else                               h += nettoyageHtml(j);
+       Rien dans cette page ne me reveille : une coche la republie sous son
+       identite et n'envoie AUCUN signal. Mais tout ne se vaut pas devant ce
+       silence :
+
+         - un ORDRE (au travail, arreter, mettre en ligne) ne vaut rien en
+           retard : quand je le lis, le moment est passe. C'est ce qui l'a
+           laisse deux heures a me regarder ne rien faire.
+         - un COMMENTAIRE, lui, se lit tres bien en retard. C'est de
+           l'information sur du travail deja fait, et je la relis a chaque
+           passage.
+
+       D'ou la regle : ce qui COMMANDE est retire, ce qui INFORME reste. */
+    h += '<div class="espace"><div class="colonne">';
+    h += reglagesHtml(j) + listeHtml(j) + ajoutHtml(j);
 
     h += piedHtml(j) + '</div>' + inspecteurHtml(j) + '</div>';
     h += barreBasseHtml(j) + '</div>';
 
     root.innerHTML = h;
-  }
-
-  function moteurHtml(j){
-    var n = j.nettoyage;
-    var h = '<div class="moteur"><div class="haut"><span>MÉTRIQUE MOTEUR</span>';
-    if (n && n.fait)      h += '<span class="jeton vert">FAIT</span>';
-    else if (n)           h += '<span class="jeton ambre">DEMANDÉ</span>';
-    else                  h += '<span class="jeton cyan">PRÊT</span>';
-    h += '</div>';
-    if (n && n.fait){
-      h += '<b>Nettoyage terminé</b><span class="chiffre">'+esc(n.fait)+'</span>';
-      h += '<button class="bouton-scan" data-nettoyage="1">LANCER VÉRIFICATION</button>';
-    } else if (n){
-      h += '<b>Nettoyage demandé</b><span class="chiffre ambre">'+esc(n.demande)+'</span>';
-      h += '<button class="bouton-scan annule" data-nettoyage-annule="1">ANNULER LA DEMANDE</button>';
-    } else {
-      h += '<b>Registre de code propre</b><span class="chiffre">AUCUNE PASSE DEMANDÉE</span>';
-      h += '<button class="bouton-scan" data-nettoyage="1">LANCER VÉRIFICATION</button>';
-    }
-    return h + '</div>';
   }
 
   function barreHauteHtml(j){
@@ -1086,27 +1013,13 @@ __ETAT__
       h += esc(b.note||"")+'</p>';
     }
     h += '</div>';
-    if (!lectureSeule){
-      h += demande
-        ? '<button class="bouton-cyan sourd" data-export-annule="1" style="flex:none">ANNULER</button>'
-        : '<button class="bouton-cyan" data-export-demande="1" style="flex:none">'
-          + '⬆ METTRE EN LIGNE POUR TESTER</button>';
-    }
+    /* ⚠️ PLUS DE BOUTON DE MISE EN LIGNE. Il ecrivait une demande que je ne
+       voyais qu'a ma prochaine relecture : le joueur l'a pressee a 19h51 et
+       rien n'est parti avant que je relise, deux heures plus tard. Un bouton
+       qui a l'air de commander sans commander est pire que pas de bouton.
+       La demande se fait en discussion ; ce bandeau ne fait plus que DIRE ce
+       qui est en ligne. */
     return h + '</div>';
-  }
-
-  function ongletsHtml(j){
-    var att = enAttente().length;
-    var ouv = toutes(j).filter(function(e){ return ouverte(e[0]) && retenue(e[0]); }).length;
-    var o = [["actives","Tâches actives",ouv,"cyan"],["verifier","À vérifier",att,""],
-             ["marche","Ordre de marche",0,""],["nettoyage","Nettoyage",0,""]];
-    var h = '<nav class="onglets">';
-    o.forEach(function(x){
-      h += '<button data-onglet="'+x[0]+'"'+(vueOnglet===x[0]?' class="actif"':'')+'>'+x[1];
-      if (x[2]) h += '<span class="compte'+(x[3]?' '+x[3]:'')+'">'+x[2]+'</span>';
-      h += '</button>';
-    });
-    return h + '</nav>';
   }
 
   function reglagesHtml(j){
@@ -1169,160 +1082,6 @@ __ETAT__
       h += '</div>';
     });
     if (vide) h = '<div class="vide">AUCUNE FICHE'+(filtreTheme?' SOUS CE THÈME':'')+'.</div>';
-    return h;
-  }
-
-  function attenteHtml(){
-    var att = enAttente();
-    if (!att.length)
-      return '<div class="vide">RIEN N’ATTEND TON VERDICT.<br>'
-        + 'Tout ce qui est livré a déjà été tranché.</div>';
-    /* ⚠️ TESTABLES D'ABORD, ET SEPAREES. Melangees, il ne pouvait pas savoir
-       lesquelles il pouvait aller voir sur son telephone : le chapo affirmait
-       « en ligne » pour toutes, et c'etait faux des que je livrais sans
-       reexporter le web. */
-    var testables = att.filter(function(e){ var s = livraisonEtat(e[0]); return s && s.cle === "enligne"; });
-    var pasEncore = att.filter(function(e){ return testables.indexOf(e) < 0; });
-    var h = '<div class="attente-bloc"><h2>'+att.length+' CHANTIER'
-      + (att.length>1?'S ATTENDENT':' ATTEND')+' TA VALIDATION</h2>';
-    h += '<p>Je n’y retouche pas tant que tu n’as pas tranché : '
-      + '« ça marche » les replie, « toujours cassé » me les remet dans l’ordre de marche. '
-      + '<strong>'+testables.length+'</strong> '+(testables.length>1?'sont testables':'est testable')
-      + ' tout de suite ; <strong>'+pasEncore.length+'</strong> '
-      + (pasEncore.length>1?'attendent':'attend')+' l’export web.</p>';
-
-    function ligneFiche(e){
-      var it = e[0], liv = it.livre, etat = livraisonEtat(it);
-      var h = '<li data-s="'+e[1]+'" data-i="'+e[2]+'">';
-      h += '<span class="quoi"><span class="ref">'+esc(it.ref)+'</span> '+esc(it.titre)+'</span>';
-      if (liv){
-        h += '<span class="livraison">';
-        if (etat) h += '<span class="pastille-livr '+etat.ton+'">'+etat.mot+'</span>';
-        h += 'Livré le '+esc(liv.quand||"?");
-        if (liv.commit) h += ' · <code>'+esc(liv.commit)+'</code>';
-        if (etat) h += ' · '+esc(etat.dit);
-        var d = attenteDepuis(it);
-        if (d) h += ' · <span class="attend">'+esc(d)+'</span>';
-        h += '</span>';
-      }
-      var r = it.resume || dernierMot(it);
-      if (r) h += '<p class="resume">'+esc(r)+'</p>';
-      h += '<textarea class="note" rows="1" placeholder="Ce que tu vois, si ça ne va pas…"></textarea>';
-      h += '<span class="verdict"><button class="btn-ok" data-act="ok">Ça marche (Valider)</button>'
-        +  '<button class="btn-ko" data-act="ko">Toujours cassé</button></span>';
-      h += '<span class="etat"></span></li>';
-      return h;
-    }
-
-    if (testables.length){
-      h += '<div class="groupe">TESTABLES MAINTENANT</div><ul>';
-      testables.forEach(function(e){ h += ligneFiche(e); });
-      h += '</ul>';
-    }
-    if (pasEncore.length){
-      h += '<div class="groupe">LIVRÉS, PAS ENCORE DANS LE BUILD EN LIGNE</div><ul>';
-      pasEncore.forEach(function(e){ h += ligneFiche(e); });
-      h += '</ul>';
-    }
-    return h + '</div>';
-  }
-
-  function marcheHtml(j){
-    var liste = ordreDeMarche(), att = enAttente();
-    var h = '';
-    if (j.marche){
-      h += '<div class="marche"><h2>AU TRAVAIL — '+esc(j.marche.nom||"l’ordre est donné")+'</h2>';
-      h += '<p class="quand">Lancé le '+esc(j.marche.lance)+'. Je pars sur cette liste, dans cet '
-        +  'ordre, et je ne m’arrête plus : une fiche livrée sort de la liste et passe à '
-        +  '« à vérifier ». Je ne rends la main que quand il ne reste que des vérifs.</p><ol>';
-      j.marche.ordre.forEach(function(o){
-        h += '<li><span class="ref-mini">'+esc(o.ref)+'</span>'+esc(o.titre)+'</li>';
-      });
-      h += '</ol>';
-      /* ⚠️ LE DÉFAUT LE PLUS GRAVE DE LA v5, TROUVÉ EN UNE HEURE. Depuis le
-         dépôt, ce bouton n'a prévenu PERSONNE : il a écrit dans le navigateur,
-         et l'artefact que je relis affichait toujours « marche: null ». Le
-         joueur avait lancé le travail, je ne l'ai pas vu, et je lui ai demandé
-         de le lancer. Un bouton qui a l'air de commander sans commander est
-         pire que pas de bouton du tout — alors ici il le DIT, et il donne de
-         quoi me transmettre l'ordre en un geste. */
-      if (mode === "depot"){
-        h += '<div class="transmettre"><b>⚠️ CE CARNET NE ME PARLE PAS.</b> Il tourne depuis ton '
-          +  'dépôt : l’ordre est gardé dans ce navigateur, mais je ne le vois pas. '
-          +  '<b>Colle-moi ça en discussion</b> et je pars.'
-          +  '<textarea readonly rows="3" class="a-coller">' + esc(texteOrdre(j)) + '</textarea>'
-          +  '<div class="bas"><button class="bouton-cyan" data-copier="1">COPIER POUR LA DISCUSSION</button>'
-          +  '<span class="etat" id="etat-marche"></span></div></div>';
-      } else {
-        h += blocTransmettre(texteOrdre(j), "L’ordre de marche");
-      }
-      /* Le frein, aussi gros que l'accélérateur - mais il freine à retardement,
-         et il le dit maintenant. */
-      h += '<div style="margin-top:12px"><button class="bouton-arret" data-arreter="1">'
-        +  '■ ARRÊTER LE TRAVAIL</button>'
-        +  '<p class="quand" style="margin-top:6px">Il vide l’ordre de marche ici. '
-        +  'Pour m’arrêter <b>maintenant</b>, dis-le-moi en discussion.</p></div></div>';
-      return h;
-    }
-    if (!liste.length){
-      h += '<div class="vide">';
-      if (att.length){
-        h += '<b style="color:var(--ambre);font-size:15px">EN ATTENTE DE TOI</b><br><br>'
-          +  'Plus rien à prendre : tout ce qui reste attend ton verdict.<br>'
-          +  'Tranche une ligne et l’ordre de marche repart.';
-      } else {
-        h += '<b style="color:var(--vert);font-size:15px">REGISTRE TERMINÉ</b><br><br>'
-          +  'Aucun chantier ouvert. Ajoute un travail, ou ouvre un nouveau registre.';
-      }
-      return h + '</div>';
-    }
-    h += '<form class="commande" data-lancer="1">';
-    h += '<input type="text" name="nom" placeholder="Nomme le travail — « les animations », « l’intro »…" value="'+esc(nomTravail)+'">';
-    h += '<label class="auto"><input type="checkbox" name="auto"'+(groupeAuto?' checked':'')+'>';
-    h += 'GROUPER LES CHANTIERS QUI CORRESPONDENT AU NOM <span style="color:var(--cyan)">'
-      +  liste.length+' SINON</span></label>';
-    h += '<button class="bouton-lancer" type="submit">▶ AU TRAVAIL ! — '+liste.length
-      +  ' CHANTIER'+(liste.length>1?'S':'')+'</button>';
-    h += '<span class="etat" id="etat-marche"></span></form>';
-    h += '<div class="vide" style="text-align:left">⚠️ <b>Je ne travaille pas tant que tu n’as '
-      +  'pas lancé.</b> Une fois lancé, j’enchaîne toutes les fiches sans m’arrêter, jusqu’à ce '
-      +  'qu’il ne te reste que des vérifs et des retouches.'
-      +  (mode === "depot"
-          ? '<br><br><b style="color:var(--ambre)">Depuis le dépôt, ce bouton ne me prévient '
-            + 'pas.</b> Il prépare l’ordre ; c’est en me le collant en discussion que je pars. '
-            + 'Le carnet te donnera le texte, tout prêt.'
-          : '')
-      +  '</div>';
-    return h;
-  }
-
-  function nettoyageHtml(j){
-    var n = j.nettoyage;
-    var h = '';
-    if (n && n.fait){
-      h += '<div class="marche" style="border-color:var(--vert);background:linear-gradient(180deg,rgba(16,185,129,.12),rgba(13,20,36,.9))">';
-      h += '<h2 style="color:var(--vert)">✓ NETTOYAGE FAIT</h2>';
-      h += '<p class="quand">Demandé le '+esc(n.demande)+', terminé le '+esc(n.fait)+'.</p>';
-      if (n.quoi) h += '<p style="font-size:13px;margin:0">'+esc(n.quoi)+'</p>';
-      h += '</div>';
-    } else if (n){
-      h += '<div class="marche" style="border-color:var(--ambre);background:linear-gradient(180deg,rgba(245,158,11,.12),rgba(13,20,36,.9))">';
-      h += '<h2 style="color:var(--ambre)">NETTOYAGE DEMANDÉ</h2>';
-      h += '<p class="quand">Le '+esc(n.demande)+'.</p>';
-      h += '<p style="font-size:13px;margin:0 0 12px">Passe de simplification sur ce que les '
-        +  'derniers chantiers ont laissé : doublons, code mort, chemins concurrents. '
-        +  '<b>Aucun changement de comportement</b> — les bancs doivent rendre exactement les '
-        +  'mêmes chiffres après qu’avant.</p>';
-      h += '<div class="bas"><button class="bouton-cyan sourd" data-nettoyage-annule="1">ANNULER LA DEMANDE</button>';
-      h += '<span class="etat" id="etat-nettoyage"></span></div></div>';
-    } else {
-      h += '<div class="vide" style="text-align:left">Aucune passe demandée.<br><br>'
-        +  'Le nettoyage n’est pas une tâche du carnet — il ne produit rien de visible à '
-        +  'l’écran. C’est une passe sur ce que les gros chantiers ont laissé derrière eux.'
-        +  '<br><br><b style="color:var(--texte)">Ce n’est pas à toi de dire que c’est fait</b> : '
-        +  'tu ne peux pas le voir. Tu demandes, je date la fin.</div>';
-      h += '<button class="bouton-scan" data-nettoyage="1" style="padding:14px">🧹 LANCER VÉRIFICATION</button>';
-    }
     return h;
   }
 
@@ -1533,33 +1292,9 @@ __ETAT__
   }
   function touche(){ J().maj = aujourdhui()+"/2026"; }
 
-  function lancerTravail(nom, auto){
-    var mots = auto ? motsUtiles(nom) : null;
-    var liste = ordreDeMarche(mots), retombee = false;
-    if (!liste.length){ liste = ordreDeMarche(null); retombee = liste.length > 0; }
-    if (!liste.length) return;
-    J().marche = {
-      nom:(nom||"").trim() || "l’ordre est donné",
-      lance:maintenant(),
-      groupe:(auto && !retombee) ? "auto" : "tout",
-      ordre:liste.map(function(it){ return {ref:it.ref, titre:it.titre}; })
-    };
-    if (liste[0].statut === "todo"){
-      liste[0].statut = "encours";
-      liste[0].journal.push({quand:aujourdhui(), qui:"Toi",
-        texte:"AU TRAVAIL : première de l’ordre de marche."});
-    }
-    nomTravail = "";
-    touche(); render();
-    enregistrer(document.getElementById("etat-marche"));
-  }
-
   /* ═══════════════════════════════ LES GESTES ═════════════════════════════ */
 
   root.addEventListener("submit", function(ev){
-    var f = ev.target.closest("form[data-lancer]");
-    if (f){ ev.preventDefault(); lancerTravail(f.nom.value, f.auto.checked); return; }
-
     f = ev.target.closest("form[data-nommer]");
     if (f){
       ev.preventDefault();
@@ -1606,13 +1341,9 @@ __ETAT__
   });
 
   root.addEventListener("input", function(ev){
-    var champ = ev.target.closest('form[data-lancer] input[name="nom"]');
-    if (champ) nomTravail = champ.value;
   });
 
   root.addEventListener("change", function(ev){
-    var coche = ev.target.closest('form[data-lancer] input[name="auto"]');
-    if (coche){ groupeAuto = coche.checked; return; }
     var sel = ev.target.closest("select[data-prio]");
     if (!sel || !visee) return;
     var it = fiche(visee);
@@ -1641,15 +1372,13 @@ __ETAT__
       if (n < 0 || n >= state.journees.length) return;
       state.active = n; visee = null; render(); return;
     }
-    var ong = t.closest("button[data-onglet]");
-    if (ong){ vueOnglet = ong.dataset.onglet; render(); return; }
     var filt = t.closest("button[data-filtre]");
     if (filt){
       var v = filt.dataset.filtre;
       filtreTheme = (!v || filtreTheme === v) ? null : v;
       render(); return;
     }
-    if (t.closest("button[data-ouvrir-ajout]")){ vueOnglet="actives"; ajoutOuvert=true; render(); return; }
+    if (t.closest("button[data-ouvrir-ajout]")){ ajoutOuvert=true; render(); return; }
     if (t.closest("button[data-fermer-ajout]")){ ajoutOuvert=false; render(); return; }
     if (t.closest("button[data-nouvelle]")){ nommeOuvert=true; render(); return; }
     if (t.closest("button[data-annuler]")){ nommeOuvert=false; render(); return; }
@@ -1683,58 +1412,6 @@ __ETAT__
       enregistrer(root.querySelector(".inspecteur .etat")); return;
     }
 
-    /* — la mise en ligne, demandée par lui — */
-    if (t.closest("button[data-export-demande]")){
-      J().exportWeb = {demande: maintenant()};
-      touche(); render();
-      enregistrer(document.getElementById("etat-marche"));
-      return;
-    }
-    if (t.closest("button[data-export-annule]")){
-      J().exportWeb = null;
-      touche(); render();
-      enregistrer(document.getElementById("etat-marche"));
-      return;
-    }
-
-    /* — le nettoyage — */
-    if (t.closest("button[data-nettoyage]")){
-      J().nettoyage = {demande:maintenant()}; touche(); render();
-      enregistrer(document.getElementById("etat-nettoyage")); return;
-    }
-    if (t.closest("button[data-nettoyage-annule]")){
-      J().nettoyage = null; touche(); render();
-      enregistrer(document.getElementById("etat-marche")); return;
-    }
-
-    /* — l'ordre de marche — */
-    if (t.closest("button[data-arreter]")){
-      J().marche = null; touche(); render();
-      enregistrer(document.getElementById("etat-marche")); return;
-    }
-    var cop = t.closest("button[data-copier]");
-    if (cop){
-      var texte = texteOrdre(J());
-      var dit = document.getElementById("etat-marche");
-      /* Le presse-papier se fait refuser sur certains navigateurs, et sur un
-         téléphone c'est courant. On retombe alors sur la zone de texte, qu'on
-         sélectionne pour lui : il n'a plus qu'à copier à la main. */
-      function aLaMain(){
-        var zone = root.querySelector(".a-coller");
-        if (zone){
-          zone.focus(); zone.select();
-          dit.textContent = "Sélectionné — copie-le à la main.";
-        } else {
-          dit.textContent = "Copie refusée par le navigateur.";
-        }
-      }
-      if (navigator.clipboard && navigator.clipboard.writeText){
-        navigator.clipboard.writeText(texte)
-          .then(function(){ dit.textContent = "Copié — colle-le en discussion."; })
-          .catch(aLaMain);
-      } else aLaMain();
-      return;
-    }
 
     /* — l'export vers le dépôt — */
     var expo = t.closest("button[data-export]");

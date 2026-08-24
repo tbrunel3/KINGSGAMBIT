@@ -178,7 +178,7 @@
               "ref": "D",
               "titre": "Les animations qui manquent",
               "detail": "Le retour à l'appui sur <strong>tous</strong> les boutons — à poser dans les composants partagés, jamais écran par écran, sinon la moitié en aura et l'autre pas. Le codex. L'or qui monte au lieu de sauter.",
-              "statut": "attente",
+              "statut": "ko",
               "journal": [
                 {
                   "quand": "24/08",
@@ -214,6 +214,11 @@
                   "quand": "24/08",
                   "qui": "Claude",
                   "texte": "Bancs : ui_test 203 OK / 0 échec / 0 erreur (191 avant, +12 assertions neuves), smoke_test 10/10 batailles et 17 promotions, format_test les huit formats."
+                },
+                {
+                  "quand": "24/08",
+                  "qui": "Toi",
+                  "texte": "sur le bouton bataille retour chateau non , meme sur les pop up batiment , il faut avoir l'impression d'un appuis smooth"
                 }
               ],
               "priorite": "moyenne",
@@ -230,7 +235,7 @@
               "ref": "E",
               "titre": "L'habillage : barre du haut, alignements, polices",
               "detail": "La barre du haut (or + gemmes), l'alignement Boutique / BATAILLE, les polices, et l'interface des missions — que tu as jugée <strong>« très modeste »</strong>.",
-              "statut": "attente",
+              "statut": "ko",
               "journal": [
                 {
                   "quand": "24/08",
@@ -276,6 +281,11 @@
                   "quand": "24/08",
                   "qui": "Claude",
                   "texte": "Livrée pendant que tu regardais le carnet — c'est pour ça qu'elle était encore « à faire » chez toi. Tu as ensuite arrêté le travail : je ne prends plus rien, et l'ordre de marche reste vide."
+                },
+                {
+                  "quand": "24/08",
+                  "qui": "Toi",
+                  "texte": "oui mais reglage n'affiche rien, pour l'instant sert t'en pour le dev mode"
                 }
               ],
               "priorite": "moyenne",
@@ -292,7 +302,7 @@
               "ref": "5",
               "titre": "Les deux lettres du Roi, entre l'intro et le village",
               "detail": "Les quatre lettres du Roi, qui portent le <em>pourquoi</em> du jeu là où <code>GuidePopup</code> porte le comment. L'enveloppe se pose, le doigt touche le cachet, le parchemin se déroule <strong>en trois temps sur les plissures peintes</strong> (39,5 % et 65,4 %), le texte s'écrit bloc par bloc. La première s'impose une fois ; les trois autres attendent dans la <strong>pile de courrier du Château Royal</strong>. Le <strong>compteur de défaites</strong> qui manquait au jeu est là, et un nul n'en est pas une. <strong>⚠️ Tes deux PNG ne sont pas dans le dépôt</strong> — sans eux le papier se dessine (même géométrie, même dépli). Pose <code>assets/story/letter_envelope.png</code> et <code>letter_parchment.png</code> et l'illustration prend leur place sans une ligne de code.",
-              "statut": "attente",
+              "statut": "ko",
               "journal": [
                 {
                   "quand": "24/08",
@@ -308,6 +318,11 @@
                   "quand": "24/08",
                   "qui": "Claude",
                   "texte": "Écran livré. Mesures : format_test [4] rend 0,00 pt de dérive sur les huit formats, plis à 39,5 % / 65,4 % partout. ui_test [19] : glisser depuis le cachet n'ouvre rien, le toucher l'ouvre, aucune tranche ne reste écrasée. smoke_test 10/10."
+                },
+                {
+                  "quand": "24/08",
+                  "qui": "Toi",
+                  "texte": "bah du coup ça c'est pas du tout bien, la lettre arrive des le debut du jeu, il n'y a plus l'animation du roi alors que la lettre devrait arriver apres le roi, en plus y'a rien ecrit et on voit pas l'item lettre, sert de l'ecran figma : https://www.figma.com/design/rqEdH4O2R21TuUFv7OUlF7/KING-sGAMBIT?node-id=510-2&t=4jXODt9Vhwz2rOeE-4 et https://www.figma.com/design/rqEdH4O2R21TuUFv7OUlF7/KING-sGAMBIT?node-id=510-7&t=4jXODt9Vhwz2rOeE-4.\n je pense que ca a peut etre avoir avec le chantier sur l'intro en cours"
                 }
               ],
               "priorite": "basse",
@@ -405,7 +420,7 @@
               "ref": "T",
               "titre": "Le combat au doigt",
               "detail": "Tu le trouves mauvais, et je n'ai <strong>rien trouvé de prouvable</strong> en lisant : la sélection se fait à l'appui, donc un doigt tremblé sélectionne quand même, et le seuil de glissement (8 pt) est exactement le <em>touch slop</em> standard d'Android. La seule faiblesse réelle : <strong>il n'y a pas un seul événement tactile dans tout le jeu</strong> — tout repose sur l'émulation souris de Godot, et un second doigt produit un second appui émulé qui tue le geste en cours.",
-              "statut": "attente",
+              "statut": "ok",
               "journal": [
                 {
                   "quand": "24/08",
@@ -451,6 +466,11 @@
                   "quand": "24/08",
                   "qui": "Claude",
                   "texte": "CE QUI RESTE, et que je ne peux pas trancher seul : le seuil de glissement (8 pt, exactement le touch slop d'Android) et la sélection à l'appui. Rien à la lecture ne les incrimine, et le manuel interdit d'y toucher sur une intuition. Il faut ton téléphone."
+                },
+                {
+                  "quand": "24/08",
+                  "qui": "Toi",
+                  "texte": "Ça marche."
                 }
               ],
               "priorite": "haute",
@@ -474,7 +494,7 @@
               "ref": "d1",
               "titre": "Améliorer le Château en pleine série n'agrandit plus la charge",
               "detail": "La charge devient une donnée de la <strong>série</strong>, gelée à son ouverture comme le roster l'est déjà — <code>deploy_capacity()</code> était relue à chaud à six endroits. Trois effets, tous silencieux : le placement acceptait plus de poids que la composition n'en avait engagé, les renforts se relevaient au-delà de ce que la série avait coûté, et le bandeau de charge changeait de plafond sans rien dire. Mesuré : smoke_test échoue à <strong>19 au lieu de 16</strong> quand on retire le gel.",
-              "statut": "attente",
+              "statut": "ok",
               "journal": [
                 {
                   "quand": "24/08",
@@ -485,6 +505,11 @@
                   "quand": "24/08",
                   "qui": "Claude",
                   "texte": "Build web en ligne (gh-pages 3814d7a, sur 70c353b) : celle-ci est testable."
+                },
+                {
+                  "quand": "24/08",
+                  "qui": "Toi",
+                  "texte": "Ça marche."
                 }
               ],
               "priorite": "basse",
@@ -500,7 +525,7 @@
               "ref": "d2",
               "titre": "Le banc d'interface n'appuyait sur rien, et ne le disait pas",
               "detail": "Deux trous : <code>_press()</code> n'envoyait qu'un enfoncé (donc plus rien depuis que les contrôles décident au relâchement), et émettre <code>gui_input</code> n'appelle pas la virtuelle <code>_gui_input()</code>. Plus la garde qui manquait : une <code>SCRIPT ERROR</code> tue la coroutine d'un cas sans compter un échec — les dix-huit cas posent maintenant leur marque, et l'absence d'une seule fait échouer le banc.",
-              "statut": "attente",
+              "statut": "ok",
               "journal": [
                 {
                   "quand": "24/08",
@@ -516,6 +541,11 @@
                   "quand": "24/08",
                   "qui": "Claude",
                   "texte": "Build web en ligne (gh-pages 3814d7a, sur 70c353b) : celle-ci est testable."
+                },
+                {
+                  "quand": "24/08",
+                  "qui": "Toi",
+                  "texte": "Ça marche."
                 }
               ],
               "priorite": "basse",
@@ -531,7 +561,7 @@
               "ref": "d3",
               "titre": "Les quatre zones défilantes, auditées et débouchées",
               "detail": "Aucune ne défilait complètement. Relevé avant correction : <strong>21 blocages dans le codex</strong> (les filets ornementaux), 5 dans la préparation (trois entretoises pleine largeur), 1 dans le showcase. Pire : trois contrôles agissaient sur l'<em>appui</em> — la puce de filtre du codex changeait le filtre dès qu'on la touchait pour faire glisser la rangée, et dans la boutique la plaque de prix <strong>achetait</strong>. <code>UiTheme.on_tap</code> porte la règle une seule fois.",
-              "statut": "attente",
+              "statut": "ok",
               "journal": [
                 {
                   "quand": "24/08",
@@ -542,6 +572,11 @@
                   "quand": "24/08",
                   "qui": "Claude",
                   "texte": "Build web en ligne (gh-pages 3814d7a, sur 70c353b) : celle-ci est testable."
+                },
+                {
+                  "quand": "24/08",
+                  "qui": "Toi",
+                  "texte": "Ça marche."
                 }
               ],
               "priorite": "basse",
@@ -669,15 +704,11 @@
         }
       ],
       "groupe": "etat",
-      "nettoyage": {
-        "demande": "24/08 à 03h30",
-        "fait": "24/08 à 03h52",
-        "quoi": "Quatre duplications supprimées : le chargement d'une silhouette de pièce vivait en quatre exemplaires, l'aperçu de glissement en deux, les deux zones de lâcher étaient copiées l'une sur l'autre, et une closure gardée sur un nœud est devenue une simple texture. Bancs identiques : 181 OK, aucun échec."
-      },
+      "nettoyage": null,
       "exportWeb": {
         "demande": "24/08 à 19h51"
       }
     }
   ],
-  "serie": 76
+  "serie": 86
 }
