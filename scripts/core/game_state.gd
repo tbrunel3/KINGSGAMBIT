@@ -57,6 +57,14 @@ func _default_state() -> Dictionary:
 			"units_recruited": 0,
 			"upgrades": 0,
 			"flawless_wins": 0,
+			# ⚠️ LE JEU N'AVAIT AUCUN COMPTEUR DE DEFAITE. record_battle ne
+			# bumpait que sur victoire, et rien ne savait dire combien de fois
+			# le joueur etait tombe - c'est la seule donnee qui manquait aux
+			# quatre missives du Roi (cf. chantier_i_missives.md).
+			#
+			# Absent des sauvegardes d'avant : la migration remplit a 0 toute
+			# cle de `stats` manquante, il n'y a rien a migrer.
+			"defeats": 0,
 			"captures": 0,
 			"promotions": 0,
 		},
@@ -487,15 +495,33 @@ func claim_mission(id: String) -> int:
 
 ## Resultat d'une bataille, du point de vue des compteurs. Appele une fois
 ## par bataille depuis l'ecran de combat, victoire ou defaite.
-func record_battle(victory: bool, pieces_lost: int, captures: int, promotions: int) -> void:
+## ⚠️ `draw` N'EST PAS UN DETAIL DE SIGNATURE.
+##
+## Le jeu a trois facons de finir sans vainqueur, et `battle.gd` appelait cette
+## fonction avec `victory = false` pour un nul comme pour une defaite. Compter
+## les defaites sans distinguer les deux ferait arriver la missive de la
+## premiere defaite apres un simple match nul, et son texte mentirait - alors
+## qu'au nul « la serie n'est pas rompue ». Le pat est frequent ici (6 des 19
+## parties du banc, bataille 1 comprise) : ca arriverait tot, et a presque tout
+## le monde.
+func record_battle(victory: bool, pieces_lost: int, captures: int, promotions: int,
+		draw: bool = false) -> void:
 	_bump("captures", captures)
 	_bump("promotions", promotions)
 	if victory:
 		_bump("battles_won")
 		if pieces_lost <= 0:
 			_bump("flawless_wins")
+	elif not draw:
+		_bump("defeats")
 	save()
 	missions_changed.emit()
+
+
+## Combats perdus depuis le debut de la partie. Total de carriere : il ne
+## retombe jamais, et un nul n'en fait pas partie.
+func defeats() -> int:
+	return int(_state["stats"].get("defeats", 0))
 
 
 # ------------------------------- BATIMENTS -----------------------------------
@@ -930,6 +956,64 @@ func mark_guide_seen(key: String) -> void:
 	seen[key] = true
 	_state["seen_guides"] = seen
 	save()
+
+
+# ------------------------------- LES MISSIVES DU ROI -------------------------
+#
+#  Quatre lettres scellees, posees aux quatre moments ou le jeu bascule (cf.
+#  chantier_i_missives.md). Elles portent le POURQUOI - le sens, l'heritage,
+#  l'enjeu - la ou GuidePopup porte le comment.
+#
+#  DEUX ETATS ET NON UN, et ils ne servent pas a la meme chose : `recue` decide
+#  de la pastille sur l'entree du Chateau Royal, `lue` decide de la mise en gras
+#  dans la pile de courrier. Une lettre recue et non lue est le seul cas ou le
+#  chateau reclame l'attention.
+#
+#  Lu avec .get("letters", {}), comme seen_guides : une sauvegarde ecrite avant
+#  ce chantier n'a pas la cle et doit se charger sans broncher.
+
+func _letters() -> Dictionary:
+	return _state.get("letters", {})
+
+
+func letter_received(key: String) -> bool:
+	return bool(_letters().get(key, {}).get("received", false))
+
+
+func letter_read(key: String) -> bool:
+	return bool(_letters().get(key, {}).get("read", false))
+
+
+## Marque une lettre comme arrivee. Rend `true` si c'est la premiere fois -
+## c'est ce qui evite qu'un ecran la fasse rejouer a chaque passage.
+func receive_letter(key: String) -> bool:
+	if letter_received(key):
+		return false
+	var letters := _letters()
+	letters[key] = {"received": true, "read": false}
+	_state["letters"] = letters
+	save()
+	return true
+
+
+func mark_letter_read(key: String) -> void:
+	if not letter_received(key) or letter_read(key):
+		return
+	var letters := _letters()
+	var entry: Dictionary = letters[key]
+	entry["read"] = true
+	letters[key] = entry
+	_state["letters"] = letters
+	save()
+
+
+## Combien de lettres attendent d'etre lues. C'est le chiffre de la pastille.
+func unread_letters() -> int:
+	var count := 0
+	for key in _letters().keys():
+		if letter_received(String(key)) and not letter_read(String(key)):
+			count += 1
+	return count
 
 
 func has_seen_intro() -> bool:

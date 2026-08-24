@@ -20,7 +20,7 @@ var _finished: Array = []
 ## interrompue en cours de route.
 const SECTIONS := [
 	"donnees", "missions", "sauvegarde", "formation", "menaces", "pertes",
-	"regles", "serie", "batailles", "ecrans", "boucle", "boutique",
+	"regles", "serie", "batailles", "ecrans", "boucle", "boutique", "missives",
 ]
 
 
@@ -64,6 +64,7 @@ func _ready() -> void:
 	_check_run()
 	_check_endgame()
 	_check_shop()
+	_check_letters()
 	_play_all_battles()
 	await _check_scenes()
 	_check_campaign_loop()
@@ -78,6 +79,111 @@ func _ready() -> void:
 	else:
 		print("RESULTAT : %d probleme(s) detecte(s)." % _failures)
 	get_tree().quit(0 if _failures == 0 else 1)
+
+
+# ------------------------------- LES MISSIVES DU ROI -------------------------
+
+## Les quatre lettres (cf. Letters, chantier_i_missives.md) : leurs jalons, leur
+## etat, et la regle d'ecriture qui les empeche de mentir.
+func _check_letters() -> void:
+	print("
+[3d] Les missives du Roi")
+	Game.reset_progress()
+
+	# ----- LE COMPTEUR DE DEFAITES, ET LE NUL QUI N'EN EST PAS UNE -----
+	#
+	#  ⚠️ Le jeu appelait record_battle(false, ...) pour un nul comme pour une
+	#  defaite. Sans la distinction, la missive de la premiere defaite arriverait
+	#  apres un simple match nul - et le pat est frequent ici (6 des 19 parties
+	#  de ce banc), donc ca arriverait tot et a presque tout le monde.
+	if Game.defeats() != 0:
+		_fail("une partie neuve ne doit compter aucune defaite")
+	Game.record_battle(true, 0, 3, 0)
+	if Game.defeats() != 0:
+		_fail("une victoire ne doit pas compter de defaite")
+	Game.record_battle(false, 2, 1, 0, true)
+	if Game.defeats() != 0:
+		_fail("un NUL n'est pas une defaite (%d)" % Game.defeats())
+	Game.record_battle(false, 2, 1, 0)
+	if Game.defeats() != 1:
+		_fail("une defaite doit se compter (%d)" % Game.defeats())
+
+	# ----- LES QUATRE JALONS, UN PAR UN -----
+	Game.reset_progress()
+	if Letters.due() != "":
+		_fail("une partie neuve, intro non vue, n'a aucune lettre due")
+	Game.mark_intro_seen()
+	if Letters.due() != Letters.HERITAGE:
+		_fail("l'intro vue doit rendre la lettre d'heritage due (%s)" % Letters.due())
+	if not Letters.is_forced(Letters.HERITAGE):
+		_fail("la premiere lettre doit s'imposer")
+
+	# Recue, elle sort de la file et laisse la suivante venir.
+	if not Game.receive_letter(Letters.HERITAGE):
+		_fail("la premiere reception doit rendre vrai")
+	if Game.receive_letter(Letters.HERITAGE):
+		_fail("une lettre deja recue ne se recoit pas deux fois")
+	if Letters.due() != "":
+		_fail("aucun autre jalon n'est atteint (%s)" % Letters.due())
+
+	if Game.unread_letters() != 1:
+		_fail("une lettre recue et non lue doit reclamer l'attention")
+	Game.mark_letter_read(Letters.HERITAGE)
+	if Game.unread_letters() != 0 or not Game.letter_read(Letters.HERITAGE):
+		_fail("une lettre lue ne reclame plus rien")
+
+	Game.grant_dames(1)
+	if Letters.due() != Letters.PREMIERE_DAME:
+		_fail("la premiere Dame doit appeler sa lettre (%s)" % Letters.due())
+	Game.receive_letter(Letters.PREMIERE_DAME)
+
+	Game.record_battle(false, 1, 0, 0)
+	if Letters.due() != Letters.PREMIERE_DEFAITE:
+		_fail("la premiere defaite doit appeler sa lettre (%s)" % Letters.due())
+	Game.receive_letter(Letters.PREMIERE_DEFAITE)
+	if Letters.is_forced(Letters.PREMIERE_DEFAITE):
+		_fail("les trois dernieres lettres attendent, elles ne s'imposent pas")
+
+	for id in range(1, Balance.battle_count()):
+		Game.win_battle(id, 0)
+	if Letters.due() != Letters.ELLE_EST_LA:
+		_fail("la derniere bataille debloquee doit appeler la derniere lettre (%s, debloquee %d/%d)"
+			% [Letters.due(), Game.unlocked_battle(), Balance.battle_count()])
+
+	# ----- AUCUN CHIFFRE EN DUR, ET AUCUNE REGLE -----
+	#
+	#  Meme verrou que GuidePopup : un texte qui transcrit se decale des qu'on
+	#  regle le jeu, et c'est ce qui avait produit le codex faux.
+	var heritage: String = " ".join(Letters.blocks(Letters.HERITAGE))
+	if not heritage.contains(str(Balance.STARTING_GOLD)):
+		_fail("la lettre d'heritage doit dire la bourse de depart")
+	for type in Balance.ARMY_TYPES:
+		var count := int(Balance.STARTING_UNITS.get(type, 0))
+		if count > 0 and not heritage.contains(String(Balance.unit_name(type)).to_lower()):
+			_fail("la lettre d'heritage doit nommer les %s de depart" % type)
+	var source := FileAccess.get_file_as_string("res://scripts/data/letters.gd")
+	if not source.contains("Balance.STARTING_UNITS") or not source.contains("Balance.STARTING_GOLD"):
+		_fail("l'heritage doit s'interpoler depuis Balance, pas se transcrire")
+
+	# Une lettre du Roi n'entre jamais en combat : elle ne dit pas les regles.
+	for key in Letters.ORDER:
+		var blocks := Letters.blocks(key)
+		if blocks.size() != 3:
+			_fail("la lettre %s doit tenir en trois blocs (%d)" % [key, blocks.size()])
+		var texte: String = " ".join(blocks).to_lower()
+		for mot in ["pat", "charge", "aura", "temps réel", "nul"]:
+			if texte.contains(" %s " % mot):
+				_fail("la lettre %s parle de regles ('%s') - c'est GuidePopup" % [key, mot])
+
+	# ----- UNE SAUVEGARDE D'AVANT CE CHANTIER SE CHARGE -----
+	Game.reset_progress()
+	if Game.letter_received(Letters.HERITAGE) or Game.unread_letters() != 0:
+		_fail("une partie sans la cle `letters` doit se lire sans broncher")
+
+	Game.reset_progress()
+	print("  compteur de defaites : un nul n'en est pas une")
+	print("  quatre jalons, deux etats par lettre, aucun chiffre transcrit")
+	_done("missives")
 
 
 func _fail(message: String) -> void:
