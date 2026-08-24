@@ -313,9 +313,15 @@
             {
               "ref": "5",
               "titre": "Les deux lettres du Roi, entre l'intro et le village",
-              "detail": "Les écrans sont faits par le graphiste. Le reste est déjà spécifié dans <code>chantier_i_missives.md</code> : mesures des illustrations, quatre textes, déclencheurs. <strong>Une seule pièce manque au jeu : il n'a aucun compteur de défaite.</strong>",
-              "statut": "todo",
-              "journal": [],
+              "detail": "Les quatre lettres du Roi, qui portent le <em>pourquoi</em> du jeu là où <code>GuidePopup</code> porte le comment. <strong>La part code est faite et mesurée</strong> (<code>2750e83</code>) : les quatre textes en trois blocs, l'état des lettres, les quatre jalons, et le <strong>compteur de défaites</strong> qui manquait au jeu — avec le piège que la spec signalait, bien réel : un <strong>nul</strong> comptait comme une défaite. <strong>Reste l'écran de dépli</strong>, et il attend tes deux images : <code>assets/story/letter_envelope.png</code> et <code>letter_parchment.png</code> ne sont pas dans le dépôt.",
+              "statut": "encours",
+              "journal": [
+                {
+                  "quand": "24/08",
+                  "qui": "Claude",
+                  "texte": "Part code livrée en 2750e83 : letters.gd, l'état dans GameState, le compteur de défaites (un nul n'en est pas une — mesuré : le banc échoue à 1 au lieu de 0 sans la distinction). L'écran enveloppe/parchemin attend les deux PNG."
+                }
+              ],
               "priorite": "basse",
               "theme": "Récit"
             },
@@ -647,5 +653,5 @@
       "exportWeb": null
     }
   ],
-  "serie": 64
+  "serie": 65
 }
