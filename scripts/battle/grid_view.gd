@@ -44,6 +44,23 @@ var _pointer: Vector2 = Vector2.ZERO
 var _dragging: bool = false
 var _drag_unit_id: int = -1
 
+## UN DOIGT EST-IL DEJA POSE ?
+##
+## ⚠️ C'EST LA SEULE FAIBLESSE PROUVABLE DE "LE COMBAT AU DOIGT". Il n'y a pas
+## un seul InputEventScreenTouch dans tout le depot : le jeu ecoute la SOURIS,
+## et au doigt c'est l'emulation de Godot qui la fabrique
+## (`emulate_mouse_from_touch`, laisse a son defaut jusqu'au 24/08).
+##
+## Un SECOND contact produit donc un SECOND appui emule, qui repassait par
+## `_begin_press` - donc par `_reset_press` - et TUAIT le glissement en cours.
+## Paume posee sur l'ecran, pouce qui traine, doigt de l'autre main : le coup
+## etait perdu sans que rien ne l'explique.
+##
+## Le reste de la fiche (le seuil de 8 pt, la selection a l'appui) n'a rien
+## montre a la lecture, et le manuel interdit d'y toucher sans un releve sur
+## appareil. Celui-ci se prouve au banc.
+var _pointer_down: bool = false
+
 ## Zones de deploiement (pointilles rouge/bleu) : visibles pendant le
 ## placement, masquees pendant le combat - cf. captures Figma 04 vs 05, ou le
 ## terrain redevient un simple fond illustre une fois la bataille lancee.
@@ -197,7 +214,13 @@ func _gui_input(event: InputEvent) -> void:
 
 
 func _begin_press(point: Vector2) -> void:
+	# ⚠️ UN SECOND DOIGT NE TOUCHE PAS AU GESTE EN COURS. Voir `_pointer_down` :
+	# sans cette ligne, le second appui emule repassait par `_reset_press` et le
+	# glissement mourait.
+	if _pointer_down:
+		return
 	_reset_press()
+	_pointer_down = true
 	var cell := position_to_cell(point)
 	if not engine.grid.in_bounds(cell):
 		return
@@ -216,6 +239,7 @@ func _begin_press(point: Vector2) -> void:
 
 
 func _end_press(point: Vector2) -> void:
+	_pointer_down = false
 	var from := _press_cell
 	var was_dragging := _dragging
 	var had_piece := _drag_unit_id != -1
@@ -236,6 +260,19 @@ func _reset_press() -> void:
 	_press_cell = Vector2i(-1, -1)
 	_dragging = false
 	_drag_unit_id = -1
+
+
+## ⚠️ LA GARDE NE DOIT PAS POUVOIR RENDRE LA GRILLE SOURDE.
+##
+## `_pointer_down` refuse un second appui ; si le relachement n'arrive jamais -
+## le doigt quitte la grille et se leve dehors, `_gui_input` ne le voit pas -
+## le drapeau resterait vrai et plus aucun coup ne partirait. Le remede est
+## pire que le mal, donc on le desarme des que le doigt sort ET que le bouton
+## n'est plus tenu.
+func _notification(what: int) -> void:
+	if what == NOTIFICATION_MOUSE_EXIT \
+			and not Input.is_mouse_button_pressed(MOUSE_BUTTON_LEFT):
+		_pointer_down = false
 
 # ------------------------------- DESSIN --------------------------------------
 

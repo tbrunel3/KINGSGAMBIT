@@ -42,6 +42,7 @@ func _ready() -> void:
 	await _test_press_feedback()
 	await _test_gold_count()
 	await _test_codex_entry()
+	await _test_second_finger()
 
 	print("")
 	if _failures == 0:
@@ -1525,4 +1526,98 @@ func _test_codex_entry() -> void:
 		"filtrer ne rejoue pas l'entree et ne laisse rien d'invisible (%d)" % ternes)
 
 	codex.queue_free()
+	await _frames(1)
+
+
+## ═══════════════════════════════════════════════════════════════════════════
+## [16] LE COMBAT AU DOIGT — UN SECOND DOIGT NE TUE PLUS LE GESTE
+##
+## ⚠️ C'EST LA SEULE MOITIE DE LA FICHE T QUI SE PROUVE SANS APPAREIL. Le
+## reste — le seuil de 8 pt, la selection a l'appui — n'a rien montre a la
+## lecture, et le manuel interdit d'y toucher sans un releve sur telephone.
+##
+## Ce qui se prouve : il n'y a pas un seul InputEventScreenTouch dans le
+## depot. Le jeu ecoute la souris, et au doigt c'est Godot qui la fabrique.
+## Un SECOND contact produit un SECOND appui emule, qui repassait par
+## `_begin_press` -> `_reset_press` et effacait le glissement en cours.
+## ═══════════════════════════════════════════════════════════════════════════
+func _test_second_finger() -> void:
+	print("\n[16] Le combat au doigt : le second doigt")
+
+	Game.reset_progress()
+	Router.current_battle_id = 1
+	var battle: Node = load("res://scenes/battle/battle.tscn").instantiate()
+	add_child(battle)
+	await _frames(3)
+	Driver.auto_place(battle)
+	await _frames(2)
+	battle._start_combat()
+	await _frames(3)
+
+	var vue: Control = battle._grid_view
+	_check(vue != null, "la vue de grille existe")
+	if vue == null:
+		battle.queue_free()
+		return
+
+	# On cherche une piece du joueur, et une case voisine libre.
+	var mienne: Vector2i = Vector2i(-1, -1)
+	for unit in battle._engine.living(BattleUnit.TEAM_PLAYER):
+		mienne = unit.cell
+		break
+	_check(mienne.x >= 0, "une piece du joueur est sur le plateau (%s)" % str(mienne))
+	if mienne.x < 0:
+		battle.queue_free()
+		return
+
+	# `cell_center` donne le milieu de la case — exactement ou un doigt se pose.
+	var centre: Vector2 = vue.cell_center(mienne)
+
+	# 1. Le premier doigt se pose et commence a glisser.
+	var doigt1 := InputEventMouseButton.new()
+	doigt1.button_index = MOUSE_BUTTON_LEFT
+	doigt1.pressed = true
+	doigt1.position = centre
+	vue._gui_input(doigt1)
+	await _frames(1)
+	_check(vue._pointer_down, "le premier doigt est enregistre")
+	var saisie: int = vue._drag_unit_id
+	_check(saisie != -1, "il a bien saisi une piece (id %d)" % saisie)
+
+	var bouge := InputEventMouseMotion.new()
+	bouge.position = centre + Vector2(0, 40)   # bien au-dela des 8 pt du seuil
+	vue._gui_input(bouge)
+	await _frames(1)
+	_check(vue._dragging, "le glissement a demarre")
+
+	# 2. ⚠️ LE SECOND DOIGT. Paume posee, pouce qui traine : Godot fabrique un
+	#    second appui emule. Il ne doit RIEN casser.
+	var doigt2 := InputEventMouseButton.new()
+	doigt2.button_index = MOUSE_BUTTON_LEFT
+	doigt2.pressed = true
+	doigt2.position = centre + Vector2(60, 60)
+	vue._gui_input(doigt2)
+	await _frames(1)
+	_check(vue._dragging, "⚠️ le second doigt ne tue pas le glissement en cours")
+	_check(vue._drag_unit_id == saisie,
+		"la piece saisie est toujours la meme (%d)" % vue._drag_unit_id)
+
+	# 3. Le premier doigt se leve : le coup part quand meme.
+	var leve := InputEventMouseButton.new()
+	leve.button_index = MOUSE_BUTTON_LEFT
+	leve.pressed = false
+	leve.position = centre + Vector2(0, 40)
+	vue._gui_input(leve)
+	await _frames(1)
+	_check(not vue._pointer_down, "le relachement rearme la grille")
+
+	# 4. ET LA GARDE NE REND PAS LA GRILLE SOURDE. Un appui suivant doit
+	#    reprendre normalement - sinon le remede serait pire que le mal.
+	vue._gui_input(doigt1)
+	await _frames(1)
+	_check(vue._pointer_down, "un geste suivant est bien pris")
+	vue._gui_input(leve)
+	await _frames(1)
+
+	battle.queue_free()
 	await _frames(1)
