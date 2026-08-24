@@ -30,11 +30,18 @@ const BG_PATH := "res://assets/intro/king_throne_background.png"
 ## la, mais ils partagent la meme image. Les deux frames en veulent deux
 ## differentes, et elles racontent deux choses :
 ##
-##   410:35  le Roi DEBOUT a cote du trone VIDE, tete baissee, la main au
-##           visage. C'est l'image du royaume diminue - celle qui donne envie
-##           de s'approcher.
-##   410:71  le Roi ASSIS, cadre plus serre. C'est celle que le jeu possede,
-##           et c'est la bonne pour le dialogue.
+##   410:36  le Roi ACCABLE, la main au visage, affaisse sur le socle, avec le
+##           trone VIDE de la Dame a sa droite. Cadrage large : on voit les
+##           marches. C'est l'image du royaume diminue - celle qui donne
+##           envie de s'approcher.
+##   410:71  le Roi REDRESSE sur son trone, cadrage plus serre, la bulle de
+##           dialogue par-dessus. C'est celle que le jeu possede, et c'est la
+##           bonne pour le dialogue.
+##
+## ⚠️ LA DIFFERENCE N'EST PAS "debout / assis" - il est assis sur les deux.
+## C'est la POSTURE qui change (accable, puis redresse) et le CADRAGE qui se
+## resserre. Ecrit apres avoir vu les deux frames : la version d'avant de ce
+## commentaire les decrivait de memoire, et se trompait.
 ##
 ## Poser le fichier suffit : sans lui, les deux temps gardent l'image unique -
 ## exactement le comportement d'avant, donc rien ne casse en attendant.
@@ -128,7 +135,7 @@ func _ready() -> void:
 	_tap_catcher = _build_tap_catcher()
 	await _tapped
 	await _dismiss_approach(hint)
-	_swap_to_seated_king()
+	_swap_to_speaking_king()
 
 	var area := _build_dialogue_area()
 	var panel: PanelContainer = area["panel"]
@@ -149,7 +156,7 @@ func _ready() -> void:
 # ------------------------------- CONSTRUCTION --------------------------------
 
 func _build_background() -> void:
-	# L'approche montre le Roi debout si son illustration est la ; sinon on
+	# L'approche montre le Roi accable si son illustration est la ; sinon on
 	# garde l'unique, et l'ecran se comporte comme avant.
 	var depart := BG_APPROACH_PATH if ResourceLoader.exists(BG_APPROACH_PATH) else BG_PATH
 	if ResourceLoader.exists(depart):
@@ -353,10 +360,10 @@ func _build_tap_catcher() -> Control:
 	return catcher
 
 
-## Le Roi s'assied : on fond de l'illustration d'approche vers celle du
-## dialogue. Sans la premiere, il n'y a rien a fondre et la fonction ne fait
+## Le Roi se redresse : on fond de l'illustration d'approche vers celle du
+## dialogue - il est assis sur les deux, c'est la posture qui change. Sans la premiere, il n'y a rien a fondre et la fonction ne fait
 ## rien - c'est le cas tant que le fichier n'est pas dans le depot.
-func _swap_to_seated_king() -> void:
+func _swap_to_speaking_king() -> void:
 	if not ResourceLoader.exists(BG_APPROACH_PATH) or not ResourceLoader.exists(BG_PATH):
 		return
 	# ⚠️ ON SUPERPOSE, ON NE REMPLACE PAS. Changer la texture d'un coup ferait
