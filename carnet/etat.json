@@ -80,8 +80,8 @@
               "livre": {
                 "commit": "7dcf766",
                 "quand": "24/08 à 02h30",
-                "pousse": true,
-                "enLigne": true
+                "pousse": false,
+                "enLigne": false
               }
             },
             {
@@ -106,8 +106,8 @@
               "livre": {
                 "commit": "7dcf766",
                 "quand": "24/08 à 02h30",
-                "pousse": true,
-                "enLigne": true
+                "pousse": false,
+                "enLigne": false
               }
             }
           ]
@@ -169,8 +169,8 @@
               "livre": {
                 "commit": "940d5ea",
                 "quand": "24/08 à 03h05",
-                "pousse": true,
-                "enLigne": true
+                "pousse": false,
+                "enLigne": false
               },
               "resume": "À vérifier : glisse une carte de la caserne dans le déploiement, et une pièce de l'inventaire directement sur sa case. Le tap doit marcher exactement comme avant, partout."
             },
@@ -383,7 +383,7 @@
             {
               "ref": "n1",
               "titre": "l'intro",
-              "detail": "« je vois seulement la deuxième image ». Vérifié dans Figma : la cause n'est pas dans le code — l'écran a bien ses deux temps, mais <code>assets/intro/</code> ne contient qu'<strong>une illustration</strong>, et tes deux frames en veulent deux. <code>410:35</code> montre le Roi <strong>debout près du trône vide</strong>, tête baissée ; <code>410:71</code> le montre <strong>assis</strong> — c'est celle que le jeu possède. Le code prend maintenant la première si elle est là, et le Roi <strong>s'assied par un fondu</strong> quand on s'approche. <strong>⚠️ Il ne manque que le fichier</strong> : exporte <code>410:36</code> dans <code>assets/intro/king_before_dialogue.png</code> et l'intro est finie.",
+              "detail": "« je vois seulement la deuxième image ». La cause n'est pas dans le code — l'écran a bien ses deux temps, mais <code>assets/intro/</code> ne contient qu'<strong>une illustration</strong>, et les deux frames en veulent deux. <strong>Vues, cette fois</strong> (Figma est enfin lisible) : <code>410:36</code> montre le Roi <strong>accablé, la main au visage</strong>, affaissé devant le <strong>trône vide</strong> de la Dame, cadrage large ; <code>410:71</code> le montre <strong>redressé</strong> sur son trône, cadrage serré — c'est celle que le jeu possède. Il est assis sur les deux : ce n'est pas « debout / assis », c'est la posture et le cadrage. <strong>⚠️ Il ne manque que le fichier, et je ne peux pas l'exporter moi-même</strong> — le proxy de sortie de ce conteneur refuse <code>figma.com</code>.",
               "statut": "encours",
               "priorite": "moyenne",
               "journal": [
@@ -411,6 +411,36 @@
                   "quand": "24/08",
                   "qui": "Claude",
                   "texte": "Code prêt et poussé. Je ne peux pas exporter l'image moi-même : figma.com est bloqué depuis ce conteneur (403 avec et sans proxy)."
+                },
+                {
+                  "quand": "24/08",
+                  "qui": "Claude",
+                  "texte": "Le blocage annoncé ici n'existe plus : le compte connecté est maintenant tbrunel3@gmail.com en siège Full, et je lis la maquette sans rien demander. C'était une fausse piste — celle d'avant a conclu au siège VIEW parce que Figma refusait, et le vrai coupable était ailleurs."
+                },
+                {
+                  "quand": "24/08",
+                  "qui": "Claude",
+                  "texte": "⚠️ Le vrai blocage, mesuré : le proxy de sortie du conteneur refuse figma.com sur TOUS ses hôtes — 403 au CONNECT sur www.figma.com, api.figma.com et s3-alpha-sig.figma.com, pendant que github.com répond. C'est une liste d'autorisation d'egress qui ne contient pas Figma, et le manuel du proxy interdit de la contourner. Je peux donc LIRE la maquette et pas RAPATRIER un binaire."
+                },
+                {
+                  "quand": "24/08",
+                  "qui": "Claude",
+                  "texte": "Ce que la lecture a quand même rapporté : les commentaires du code décrivaient les deux frames DE MÉMOIRE, et se trompaient — « le Roi DEBOUT » alors qu'il est assis sur les deux. La fonction _swap_to_seated_king portait la même erreur dans son nom, elle s'appelle _swap_to_speaking_king. Corrigé en 6ff5016."
+                },
+                {
+                  "quand": "24/08",
+                  "qui": "Claude",
+                  "texte": "⚠️ Rien de testable dans ce commit : il ne change aucun comportement. Le build en ligne reste celui de 21h05, et le bandeau ne bouge pas."
+                },
+                {
+                  "quand": "24/08",
+                  "qui": "Claude",
+                  "texte": "CE QU'IL ME FAUT DE TOI, et c'est une minute : dans Figma, sélectionne le calque « King Illustration Background » (410:36) de la frame king-intro-before-dialogue, exporte-le en PNG à l'échelle 2 (≈ 804 × 1748 — l'illustration déjà en jeu fait 864 × 1821), et dépose-le dans assets/intro/king_before_dialogue.png. Le code le prend tout seul. Ou : fais donner à cette session l'accès sortant à figma.com, et je le fais."
+                },
+                {
+                  "quand": "24/08",
+                  "qui": "Claude",
+                  "texte": "Bancs relancés (il a fallu installer Godot 4.7, il n'était pas dans ce conteneur) : ui_test 19 cas, format_test 8 formats, smoke_test 10/10 batailles et 17 promotions. 0 SCRIPT ERROR sur les trois."
                 }
               ],
               "theme": "Intro"
@@ -752,5 +782,5 @@
       }
     }
   ],
-  "serie": 91
+  "serie": 95
 }
