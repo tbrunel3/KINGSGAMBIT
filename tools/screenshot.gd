@@ -51,6 +51,9 @@ func _ready() -> void:
 	ScreenVeil.instant = true
 	# Idem : la regle d'abandon s'applique, mais sans modale a attendre.
 	Router.ask_before_leaving = false
+	# Un banc instancie ses ecrans comme enfants de lui-meme : un vrai
+	# change_scene_to_file() remplacerait la scene du banc et le detruirait.
+	Router.navigation_enabled = false
 	DirAccess.make_dir_recursive_absolute(ProjectSettings.globalize_path(OUTPUT_DIR))
 
 	# Etat de depart previsible : la capture doit toujours montrer la meme chose.

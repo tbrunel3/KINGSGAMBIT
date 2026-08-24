@@ -1039,15 +1039,19 @@ func _on_building_pressed(type: String, from: Vector2 = Vector2.INF) -> void:
 ## salle du trone, ou l'on voit d'un coup d'oeil si la Dame est rentree - donc
 ## il change de scene la ou les quatre autres posent un popup.
 func _open_building(type: String) -> void:
+	# ⚠️ LES QUATRE CASERNES NE SONT PLUS DES MODALES. Le joueur, apres test :
+	# "ce n'est pas vraiment une pop up, c'est une transition vers un nouvel
+	# ecran". Chacune a desormais son propre decor (Figma 517:2), ce qu'une
+	# modale posee sur le village ne pouvait pas rendre - elles partageaient
+	# toutes le meme fond, defaut deja signale au chantier E.
+	#
+	# Le zoom du village reste : il donne son elan a la transition, et le voile
+	# global prend le relais quand la scene change. Il n'y a donc plus rien a
+	# "dezoomer" - le village est detruit.
 	if type == Balance.CASTLE:
 		Router.goto_castle()
 		return
-	_popup = BuildingPopupScene.instantiate()
-	add_child(_popup)
-	_popup.open(type)
-	# Le village reprend sa taille quand le popup se ferme, pas avant : le
-	# decor zoome reste visible DERRIERE lui, ce qui est tout l'interet.
-	_popup.tree_exited.connect(_unzoom)
+	Router.goto_building(type)
 
 
 ## LE ZOOM VERS LE POINT TOUCHE.

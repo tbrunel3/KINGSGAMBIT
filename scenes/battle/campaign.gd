@@ -385,7 +385,7 @@ func _build_village_button() -> void:
 	_village_button.mouse_filter = Control.MOUSE_FILTER_STOP
 	_village_button.gui_input.connect(func(event: InputEvent):
 		if event is InputEventMouseButton and event.pressed and event.button_index == MOUSE_BUTTON_LEFT:
-			Router.goto_village())
+			Router.leave_battle_for_village())
 	_bottom_bar.add_child(_village_button)
 
 	# Ancre en bas plutot que pose a une ordonnee calculee : la zone de jeu

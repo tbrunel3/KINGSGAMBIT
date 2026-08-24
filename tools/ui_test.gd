@@ -11,6 +11,7 @@ extends Node
 ##
 
 const Driver := preload("res://tools/battle_driver.gd")
+const BuildingScreenScene := preload("res://scenes/village/building_screen.tscn")
 
 var _failures: int = 0
 
@@ -22,6 +23,9 @@ func _ready() -> void:
 	ScreenVeil.instant = true
 	# Idem : la regle d'abandon s'applique, mais sans modale a attendre.
 	Router.ask_before_leaving = false
+	# Un banc instancie ses ecrans comme enfants de lui-meme : un vrai
+	# change_scene_to_file() remplacerait la scene du banc et le detruirait.
+	Router.navigation_enabled = false
 	print("=== KING'S GAMBIT - test d'interface ===")
 	await _test_village()
 	await _test_codex()
@@ -94,19 +98,27 @@ func _test_modal_entry() -> void:
 	print("\n[8] Modales : l'entree se joue, et elle se termine")
 
 	Game.reset_progress()
-	var village: Node = load("res://scenes/village/village.tscn").instantiate()
-	add_child(village)
+
+	# ⚠️ LE VILLAGE N'INSTANCIE PLUS RIEN. La caserne est un ECRAN depuis que
+	# le joueur a tranche ("ce n'est pas vraiment une pop up"), donc
+	# `village._popup` n'existe plus - et ce test appelait `find_child` dessus,
+	# c'est-a-dire sur `null`. L'erreur de script tuait la coroutine SANS
+	# incrementer un seul echec : le banc annoncait "toutes les interactions
+	# repondent correctement" en ayant saute quatre assertions. Un banc qui
+	# meurt en silence est pire qu'un banc rouge.
+	#
+	# On monte donc l'ecran directement, comme le fait [1].
+	Router.current_building = Balance.PION
+	var screen: Node = BuildingScreenScene.instantiate()
+	add_child(screen)
+	# Trois images : `open()` au _ready, l'image que Modal attend pour mesurer
+	# son panneau, et le depart du tween. L'entree ne doit PAS etre finie ici.
 	await _frames(3)
 
-	village._on_building_pressed(Balance.PION)
-	# Le zoom du village d'abord, la modale ensuite.
-	await _skip_animations()
-	await _frames(2)
-
-	var modal: Modal = village._popup.find_child("Modal", true, false)
+	var modal: Modal = screen.find_child("Modal", true, false)
 	if modal == null:
-		_check(false, "la modale du popup de batiment est introuvable")
-		village.queue_free()
+		_check(false, "la modale de l'ecran de batiment est introuvable")
+		screen.queue_free()
 		return
 
 	var panel: Control = modal.get_node("Center/Panel")
@@ -118,7 +130,7 @@ func _test_modal_entry() -> void:
 	_check(panel.modulate.a > 0.99, "elle finit opaque (%.2f)" % panel.modulate.a)
 	_check(absf(panel.scale.x - 1.0) < 0.01, "et a l'echelle 1 (%.3f)" % panel.scale.x)
 
-	village.queue_free()
+	screen.queue_free()
 	await _frames(2)
 
 
@@ -367,11 +379,38 @@ func _test_village() -> void:
 		_check(zone.size.x > 0.0 and zone.size.y > 0.0,
 			"%s a une surface (%.0f x %.0f)" % [zone.name, zone.size.x, zone.size.y])
 
+	# ⚠️ UNE CASERNE N'EST PLUS UNE MODALE, C'EST UN ECRAN. Le joueur, apres
+	# test : "ce n'est pas vraiment une pop up, c'est une transition vers un
+	# nouvel ecran". Le village ROUTE desormais, il n'instancie plus rien.
+	#
+	# La navigation est coupee dans les bancs (Router.navigation_enabled), donc
+	# on verifie la destination demandee, puis on monte l'ecran soi-meme pour
+	# lui poser les questions.
+	Router.last_scene_path = ""
 	village._on_building_pressed(Balance.PION)
 	await _skip_animations()
 	await _frames(3)
-	_check(is_instance_valid(village._popup), "le popup de batiment s'ouvre")
-	if not is_instance_valid(village._popup):
+	_check(Router.last_scene_path == Router.BUILDING_SCENE,
+		"toucher une caserne mene a son ecran (%s)" % Router.last_scene_path)
+	_check(Router.current_building == Balance.PION,
+		"c'est bien la caserne touchee qui s'ouvre (%s)" % Router.current_building)
+
+	# ⚠️ LE VILLAGE RESTE EN VIE. Le liberer ici semblait logique - le vrai jeu
+	# remplace la scene - mais la suite du test lui reparle (les missions), et
+	# une instance liberee ne rend pas une erreur propre : elle SEGFAULTE. Le
+	# banc mourait a la fin de [1], sans une seule ligne d'echec, et le premier
+	# essai est meme alle jusqu'au bout - un usage-apres-liberation ne tombe pas
+	# deux fois au meme endroit. Ne pas le liberer ici : c'est fait plus bas.
+	var screen: Control = BuildingScreenScene.instantiate()
+	add_child(screen)
+	await _frames(3)
+	await _skip_animations()
+	var panel: Control = screen.get_node_or_null("Popup")
+	_check(panel != null, "l'ecran de batiment porte son panneau")
+	_check(screen.get_node("Background").texture != null,
+		"le batiment a son propre fond")
+	if panel == null:
+		screen.queue_free()
 		village.queue_free()
 		return
 
@@ -379,7 +418,7 @@ func _test_village() -> void:
 	var gold_before := Game.gold
 	var owned_before := Game.units_owned(Balance.PION)
 	var cost := Game.recruit_cost(Balance.PION)
-	var recruit := _find_clickable(village._popup, "RECRUTER")
+	var recruit := _find_clickable(panel, "RECRUTER")
 	_check(recruit != null, "le bouton Recruter est present")
 	if recruit != null:
 		_press(recruit)
@@ -390,7 +429,7 @@ func _test_village() -> void:
 	# Ameliorer : l'or doit suffire
 	Game.add_gold(5000)
 	await _frames(2)
-	var upgrade := _find_clickable(village._popup, "AMELIORER")
+	var upgrade := _find_clickable(panel, "AMELIORER")
 	_check(upgrade != null, "le bouton Ameliorer est present")
 	if upgrade != null:
 		_press(upgrade)
@@ -411,7 +450,7 @@ func _test_village() -> void:
 		_check(Game.upgrade_remaining(Balance.PION) > 0, "le compte a rebours est arme")
 
 		# Le raccourci de test doit appliquer le niveau
-		var skip := _find_clickable(village._popup, "Terminer")
+		var skip := _find_clickable(panel, "Terminer")
 		_check(skip != null, "le bouton de fin immediate est present")
 		if skip != null:
 			_press(skip)
@@ -427,13 +466,18 @@ func _test_village() -> void:
 	_check(Game.is_at_capacity(Balance.PION), "la caserne atteint sa capacite (%d)" % capacity)
 	_check(not Game.recruit(Balance.PION), "le recrutement est refuse caserne pleine")
 
-	# Fermeture (croix de la modale, cf. scenes/ui/components/modal.gd)
-	var modal: Modal = village._popup.get_node("Modal")
-	_check(modal != null, "la modale du popup est presente")
+	# Fermeture : la croix du panneau ramene au village.
+	var modal: Modal = panel.get_node("Modal")
+	_check(modal != null, "le panneau porte sa modale")
 	if modal != null:
+		Router.last_scene_path = ""
 		modal.close()
 		await _frames(3)
-		_check(not is_instance_valid(village._popup), "le popup se ferme")
+		_check(not is_instance_valid(panel), "le panneau se ferme")
+		_check(Router.last_scene_path == Router.VILLAGE_SCENE,
+			"fermer une caserne ramene au village (%s)" % Router.last_scene_path)
+	screen.queue_free()
+	await _frames(2)
 
 	# Les missions : le bouton de la barre du haut ouvre le panneau, et une
 	# mission terminee se reclame d'un clic. A tester popup de batiment ferme,

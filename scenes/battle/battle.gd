@@ -95,7 +95,7 @@ var _reset_button: Button = null
 func _ready() -> void:
 	_battle = Router.current_battle()
 	if _battle.is_empty():
-		Router.goto_village()
+		Router.leave_battle_for_village()
 		return
 
 	_style_stats_hud()
@@ -1613,7 +1613,7 @@ func _show_fight_drawn(losses: Dictionary) -> void:
 	else:
 		screen.add_primary_button("REJOUER LE COMBAT %d SUR %d" % [done, fights],
 			func(): Router.goto_battle(battle_id))
-	screen.add_action_button("ROYAUME", "castle", Router.goto_village)
+	screen.add_action_button("ROYAUME", "castle", Router.leave_battle_for_village)
 	screen.add_action_button("CAMPAGNE", "compass", Router.goto_campaign)
 
 
@@ -1665,7 +1665,7 @@ func _show_run_won(dame_bonus: int) -> void:
 		screen.add_primary_button("REJOUER LA SÉRIE",
 			func(): Router.goto_battle(battle_id))
 
-	screen.add_action_button("ROYAUME", "castle", Router.goto_village)
+	screen.add_action_button("ROYAUME", "castle", Router.leave_battle_for_village)
 	screen.add_action_button("CAMPAGNE", "compass", Router.goto_campaign)
 
 
@@ -1697,7 +1697,7 @@ func _show_run_lost() -> void:
 
 	screen.add_primary_button("REPRENDRE LA SÉRIE",
 		func(): Router.goto_battle(battle_id))
-	screen.add_action_button("ROYAUME", "castle", Router.goto_village)
+	screen.add_action_button("ROYAUME", "castle", Router.leave_battle_for_village)
 	screen.add_action_button("CAMPAGNE", "compass", Router.goto_campaign)
 
 
@@ -1741,4 +1741,4 @@ func _clear_bottom() -> void:
 func _on_quit() -> void:
 	_running = false
 	_clear_blockage_badge()
-	Router.goto_village()
+	Router.leave_battle_for_village()

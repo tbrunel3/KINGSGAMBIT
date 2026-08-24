@@ -16,30 +16,48 @@ const BATTLE_SCENE := "res://scenes/battle/battle.tscn"
 const CASTLE_SCENE := "res://scenes/village/castle_screen.tscn"
 const CODEX_SCENE := "res://scenes/village/codex_popup.tscn"
 const SHOP_SCENE := "res://scenes/village/shop.tscn"
+const BUILDING_SCENE := "res://scenes/village/building_screen.tscn"
 
 ## Bataille en cours de preparation ou de combat.
 var current_battle_id: int = 1
+
+## Batiment dont l'ecran s'ouvre. Meme raison que current_battle_id : Godot ne
+## sait pas passer d'argument a un changement de scene.
+var current_building: String = ""
 
 
 func goto_intro() -> void:
 	_change(INTRO_SCENE)
 
 
-## ⚠️ LA PORTE UNIQUE VERS LE VILLAGE, ET DONC LE SEUL ENDROIT OU POSER LA
-## GARDE. Regle demandee par le joueur : repartir au royaume en pleine serie
-## l'abandonne.
+## Le village, sans rien demander.
 ##
-## Ce n'etait pas pour boucher un exploit - celui qu'il craignait n'existe pas,
-## `CampaignRun.roster` est un instantane pris a l'ouverture et les pieces
-## achetees ensuite n'y entrent jamais. C'est une decision de jeu : une serie
-## est un engagement, on ne la met pas en pause pour aller faire ses courses.
+## ⚠️ NE PAS Y REMETTRE LA GARDE D'ABANDON DE SERIE. Elle y a ete posee un
+## moment, sur l'idee que c'etait "la porte unique vers le village" - et c'est
+## vrai, mais c'est justement le probleme : le CHATEAU, le CODEX et la BOUTIQUE
+## reviennent au village par ici. Fermer le codex en pleine serie aurait donc
+## demande de l'abandonner.
+##
+## Naviguer DANS le village n'est pas quitter la serie. Seul le chemin qui sort
+## du combat la quitte - voir leave_battle_for_village().
+func goto_village() -> void:
+	_change(VILLAGE_SCENE)
+
+
+## Repartir au royaume DEPUIS le combat ou la carte : la serie est abandonnee.
+##
+## Regle demandee par le joueur. Elle ne bouche PAS l'exploit qu'il craignait -
+## celui-la n'existe pas, `CampaignRun.roster` est un instantane pris a
+## l'ouverture et les pieces achetees ensuite n'y entrent jamais. C'est une
+## decision de jeu : une serie est un engagement, on ne la met pas en pause
+## pour aller faire ses courses.
 ##
 ## L'avertissement n'est pas negociable : sans lui, le joueur perdrait deux
 ## combats gagnes en touchant un bouton qui, jusque-la, ne coutait rien.
 var ask_before_leaving: bool = true
 
 
-func goto_village() -> void:
+func leave_battle_for_village() -> void:
 	var run := Game.current_run()
 	if run == null:
 		_change(VILLAGE_SCENE)
@@ -52,13 +70,9 @@ func goto_village() -> void:
 		_change(VILLAGE_SCENE)
 		return
 
-	# ⚠️ CHARGE A L'APPEL, PAS EN PRELOAD NI PAR SON class_name.
-	#
-	# Router est un autoload : le nommer a l'analyse tirait toute la chaine
-	# d'interface (Modal, UiTheme, les scenes de composants) dans le chargement
-	# des autoloads, et le jeu ne demarrait plus du tout - les bancs
-	# n'affichaient meme plus leur premiere ligne. Un routeur ne doit rien
-	# savoir des ecrans avant d'en avoir besoin.
+	# ⚠️ Charge a l'appel, pas par son class_name : nommer une classe
+	# d'interface dans un autoload tire tout le graphe des ecrans au chargement
+	# des autoloads, et le jeu ne demarre plus du tout. Piege deja paye.
 	var Confirm := load("res://scenes/ui/confirm_leave.gd")
 	Confirm.ask(get_tree().current_scene, run, func():
 		Game.abandon_run()
@@ -69,6 +83,16 @@ func goto_village() -> void:
 ## village, il ne tient pas dans une modale.
 func goto_castle() -> void:
 	_change(CASTLE_SCENE)
+
+
+## L'ecran d'un batiment, en plein ecran et non en modale.
+##
+## Demande du joueur apres test : "ce n'est pas vraiment une pop up, c'est une
+## transition vers un nouvel ecran". Chaque batiment a son propre decor, ce
+## qu'une modale posee sur le village ne pouvait pas rendre.
+func goto_building(type: String) -> void:
+	current_building = type
+	_change(BUILDING_SCENE)
 
 
 ## Codex du royaume. En plein ecran defilant et non en modale : il enumere
@@ -120,6 +144,24 @@ func current_battle() -> Dictionary:
 ##
 ## L'attente du voile remplace aussi le call_deferred d'avant : on est de toute
 ## facon sorti du traitement d'input quand la scene est remplacee, donc
-## l'appeler depuis un signal de bouton reste sans danger.
+## l'appeler depuis un signal de bouton reste sans danger. En mode instantane
+## - les bancs - c'est ScreenVeil qui differe l'appel a sa place.
+
+
+## ⚠️ A POSER A `false` DANS LES BANCS. Un banc instancie ses ecrans comme
+## ENFANTS DE LUI-MEME : change_scene_to_file() y remplacerait la scene du banc
+## elle-meme, et le banc se detruirait en cours de route. Il enregistre alors
+## la destination sans l'ouvrir, ce qui suffit a verifier qu'un bouton mene ou
+## il doit. Meme doctrine que ScreenVeil.instant.
+var navigation_enabled: bool = true
+
+## Derniere destination demandee. Ce que lisent les bancs quand la navigation
+## est coupee.
+var last_scene_path: String = ""
+
+
 func _change(path: String, veil_color: Color = ScreenVeil.BLACK) -> void:
+	last_scene_path = path
+	if not navigation_enabled:
+		return
 	ScreenVeil.go(func(): get_tree().change_scene_to_file(path), veil_color)

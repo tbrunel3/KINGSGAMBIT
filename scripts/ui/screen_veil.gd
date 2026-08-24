@@ -81,7 +81,15 @@ func reveal(duration: float = -1.0) -> void:
 ## empeche de revoir un fond pas encore charge.
 func go(action: Callable, color: Color = BLACK) -> void:
 	if instant:
-		action.call()
+		# ⚠️ DIFFERE MEME EN INSTANTANE. Router._change appelait autrefois
+		# change_scene_to_file en call_deferred, avec une raison ecrite :
+		# "on peut ainsi appeler ces methodes depuis un signal de bouton sans
+		# detruire la scene pendant qu'elle traite son input". L'attente du
+		# voile remplacait ce delai - mais en instantane il n'y a plus
+		# d'attente, et la scene se detruisait au milieu de sa propre
+		# coroutine. Les bancs rendaient alors "process_frame on a null
+		# instance" : l'appelant n'etait plus dans l'arbre a la reprise.
+		action.call_deferred()
 		return
 
 	await cover(color)
