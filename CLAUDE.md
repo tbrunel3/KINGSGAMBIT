@@ -483,6 +483,19 @@ appeler `node._gui_input(event)` directement.
 sait pas lever le doigt ne peut pas distinguer un appui d'un geste — c'est ce
 qui a laissé passer le bug des cachets (cf. « Le tactile » plus bas).
 
+⚠️ **Un banc VERT peut avoir sauté la moitié de ses questions.** Payé deux fois
+le 24/08/2026, dans `ui_test`, en rebranchant les casernes :
+
+- **Une `SCRIPT ERROR` tue la coroutine sans incrémenter un seul échec.** Un
+  `find_child` sur un nœud disparu a fait sauter quatre assertions, et le banc
+  a conclu « toutes les interactions répondent correctement ». **Une erreur de
+  script dans la sortie d'un banc vert est un échec** — rien ne les compte.
+- **Un usage-après-libération SEGFAULTE**, il ne rend pas d'erreur propre. Un
+  `queue_free()` posé trop tôt sur le village a tué le banc à la fin de son
+  premier cas — mais un essai sur deux allait jusqu'au bout. **Un banc qui ne
+  tombe pas deux fois au même endroit lit de la mémoire libérée ; ce n'est pas
+  un caprice de machine.**
+
 ```bash
 godot --headless --path . tools/smoke_test.tscn
 ```

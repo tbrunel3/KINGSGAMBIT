@@ -7,7 +7,16 @@ pendant les allers-retours avec le joueur.
 Lire [`CLAUDE.md`](CLAUDE.md) en premier. Ce document ne le répète pas.
 
 **Le carnet de suivi est un artefact web INTERACTIF**, et c'est LUI qui fait foi :
-`https://claude.ai/code/artifact/47c96d8b-a61a-4222-932d-04430c13692f`. **Le joueur y coche lui-même** « Ça marche » ou « Toujours cassé », et y dépose
+`https://claude.ai/code/artifact/857ffdc3-e16a-485b-8651-853b31916069`.
+
+⚠️ **Ce n'est plus le carnet d'origine.** Le premier
+(`47c96d8b-a61a-4222-932d-04430c13692f`) a été supprimé, et **la liste
+détaillée des vingt-deux retours ne vivait que là** — le dépôt n'en gardait
+rien. Le carnet du 24/08 est une reconstruction depuis ce document : les
+paquets, les décisions prises, les dettes connues. Les coches du joueur, elles,
+sont perdues. *La leçon a un coût nul à retenir et un coût élevé à réapprendre :
+**une liste qui n'existe que dans un artefact n'existe qu'à moitié.** Ce qui est
+tranché redescend ici.* **Le joueur y coche lui-même** « Ça marche » ou « Toujours cassé », et y dépose
 ses notes de bug. Chaque ligne porte un **journal daté**, signé *Claude* ou
 *Toi*, pour qu'il puisse commenter derrière chaque modification. Les lignes
 validées se replient.
@@ -291,3 +300,56 @@ Zoom, fondu sortant, fondu entrant, **et un fond différent par bâtiment**.
    missions.
 5. **Les deux écrans de lettre du Roi**, entre l'intro et le village.
 6. **Les popups d'information** de Figma, jamais intégrés.
+
+
+---
+
+## Ce que le 24/08 (jour) a ajouté
+
+### Les casernes sont des écrans — commit `62b48d8`
+
+C'était le point 1 de la liste ci-dessus, et il est fait : `building_screen.tscn`
+porte le décor du lieu et instancie `building_popup` **tel quel**. Le contenu
+n'a pas été réécrit — il lisait déjà ses chiffres dans `Balance` et
+`GameState`, et le refaire aurait créé des règles concurrentes pour un gain nul.
+
+Un défaut trouvé en route, qui n'était visible d'aucun écran avant ce chantier :
+**la garde d'abandon de série vivait sur `Router.goto_village()`**, posée là
+comme « la porte unique vers le village ». C'est vrai, et c'est justement le
+problème — le château, le codex et la boutique en reviennent par là. **Fermer le
+codex en pleine série aurait demandé de l'abandonner.** Elle vit désormais sur
+`Router.leave_battle_for_village()`, le seul chemin qui sort vraiment du combat.
+
+### ⚠️ Deux défauts d'instrument, tous deux SILENCIEUX
+
+Les deux étaient dans `ui_test`, tous deux introduits par le chantier, et
+**aucun des deux ne rendait le banc rouge** :
+
+1. **Une erreur de script tue la coroutine sans compter un échec.** `[8]`
+   appelait `find_child` sur `village._popup`, qui n'existe plus. Le banc a
+   sauté quatre assertions et a conclu « toutes les interactions répondent
+   correctement ». **Une `SCRIPT ERROR` dans la sortie d'un banc vert doit être
+   lue comme un échec** — il n'y a aujourd'hui rien qui les compte.
+2. **Un usage-après-libération SEGFAULTE, il ne rend pas d'erreur propre.**
+   `[1]` libérait le village avant de lui reparler pour les missions. Le
+   premier essai est allé jusqu'au bout, le deuxième est mort à la fin de `[1]`
+   sans une ligne d'échec. **Un banc qui ne tombe pas deux fois au même endroit
+   n'est pas capricieux : il lit de la mémoire libérée.**
+
+Ça ne remplace pas l'audit de `_press()` — mais ça le rend moins théorique :
+deux défauts trouvés par hasard dans le seul fichier qu'on a touché.
+
+### État des bancs au moment d'écrire
+
+| Banc | Verdict |
+|---|---|
+| `tools/ui_test.tscn` | 162 OK, 0 échec, aucune erreur de script |
+| `tools/format_test.tscn` | dérive nulle sur les huit formats, intro comprise |
+| `tools/smoke_test.tscn` | 10 / 10 batailles gagnables |
+
+### ⚠️ Ce qui n'est PAS fait
+
+**Le build n'a pas été ré-exporté.** Rien de ce commit n'est sur `gh-pages`,
+donc rien n'est testable sur le téléphone du joueur. C'est exactement le piège
+n°1 de ce document, et le carnet porte le bandeau « pas encore en ligne » pour
+qu'il ne teste pas une version qui ne contient pas le travail.
