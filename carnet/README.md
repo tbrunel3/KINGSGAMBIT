@@ -71,6 +71,28 @@ suppression **ne coûte plus rien**.
 4. **L'archive horodatée.** `build` dépose la page telle qu'elle part dans
    `carnet/build/archive/`. Filet **local** — `build/` est ignoré par git.
 
+### ⚠️ Ses ordres ne me réveillent PAS. Il faut aller les lire.
+
+Payé le 24/08, et c'est le défaut le plus coûteux du carnet : le joueur a
+pressé **⬆ METTRE EN LIGNE POUR TESTER** puis **■ ARRÊTER LE TRAVAIL**, et il
+ne s'est rien passé pendant deux heures. Il a fini par écrire *« j'ai donné les
+ordres sur le carnet mais tu ne fais rien »* — et il avait entièrement raison.
+
+**Une coche republie la page sous son identité ; elle n'envoie aucun signal.**
+Depuis une session **cloud** (claude.ai/code), rien ne notifie l'agent d'une
+republication : il n'y a pas d'abonnement vivant, l'outil `Artifact` le dit
+lui-même à chaque publication. Ses deux boutons de commande — l'accélérateur et
+le frein — sont donc **muets tant que personne ne relit la page**.
+
+La conséquence est asymétrique, et c'est ce qui la rend piégeuse : je vois très
+bien ce qu'il écrit dans la conversation, et pas du tout ce qu'il coche. Du
+sien, les deux se ressemblent.
+
+**La règle qui en sort : relire l'artefact au début de chaque tour où il peut
+avoir coché** — donc après toute livraison, et à chaque fois qu'il redonne la
+main. `Artifact action:"read"` puis `carnet.py recupere` : c'est deux appels, et
+c'est le prix de ses deux boutons.
+
 Et une discipline : **vérifier que l'adresse répond avant de republier**
 (`WebFetch` dessus). Une suppression se voit alors tout de suite.
 

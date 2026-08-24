@@ -5,33 +5,11 @@
       "nom": "24/08 — Bâtiments & carnet",
       "maj": "24/08/2026",
       "tri": "priorite",
-      "marche": {
-        "nom": "reprise, demandee en discussion",
-        "lance": "24/08 à 16h05",
-        "groupe": "tout",
-        "ordre": [
-          {
-            "ref": "n1",
-            "titre": "l'intro"
-          },
-          {
-            "ref": "n2",
-            "titre": "Le bouton COMBATTEZ ne suit pas la maquette"
-          },
-          {
-            "ref": "5",
-            "titre": "Les deux lettres du Roi, entre l'intro et le village"
-          },
-          {
-            "ref": "6",
-            "titre": "Les popups d'accompagnement de Figma"
-          }
-        ]
-      },
+      "marche": null,
       "build": {
-        "enLigne": "24/08, 14h50",
-        "commit": "9ebb63b",
-        "quoi": "la fiche T — un second doigt ne tue plus le geste en cours",
+        "enLigne": "24/08, 17h56",
+        "commit": "70c353b",
+        "quoi": "d1 (la charge gelée), d2 (le banc qui n'appuyait sur rien), d3 (les quatre zones défilantes) et la part code de la fiche 5 — le compteur de défaites",
         "note": "Recharge en forçant : le service worker de Godot sert volontiers l'ancien build."
       },
       "sections": [
@@ -306,7 +284,7 @@
                 "commit": "49d4f3b",
                 "quand": "24/08 à 15h50",
                 "pousse": true,
-                "enLigne": false
+                "enLigne": true
               },
               "resume": "À vérifier au village : la barre du haut est collée en haut, or / gemmes / Missions / infos / réglages sont sur UNE ligne, les boutons de droite sont plus gros, et la Boutique est enfin alignée sur BATAILLE. ⚠️ E4 (les missions « très modestes ») n'est PAS fait : dis-moi ce que tu veux y voir."
             },
@@ -471,6 +449,11 @@
                   "quand": "24/08",
                   "qui": "Claude",
                   "texte": "Livrée. Bancs verts sur cette machine : smoke_test 10/10 batailles, format_test 8 formats, ui_test. ⚠️ Le build web n'est PAS encore réexporté — ne teste pas sur ton téléphone tout de suite."
+                },
+                {
+                  "quand": "24/08",
+                  "qui": "Claude",
+                  "texte": "Build web en ligne (gh-pages 3814d7a, sur 70c353b) : celle-ci est testable."
                 }
               ],
               "priorite": "basse",
@@ -479,7 +462,7 @@
                 "commit": "d3e0e12",
                 "quand": "24/08 à 17h30",
                 "pousse": true,
-                "enLigne": false
+                "enLigne": true
               }
             },
             {
@@ -497,6 +480,11 @@
                   "quand": "24/08",
                   "qui": "Claude",
                   "texte": "Livrée. Bancs verts sur cette machine : smoke_test 10/10 batailles, format_test 8 formats, ui_test. ⚠️ Le build web n'est PAS encore réexporté — ne teste pas sur ton téléphone tout de suite."
+                },
+                {
+                  "quand": "24/08",
+                  "qui": "Claude",
+                  "texte": "Build web en ligne (gh-pages 3814d7a, sur 70c353b) : celle-ci est testable."
                 }
               ],
               "priorite": "basse",
@@ -505,7 +493,7 @@
                 "commit": "de9e5a1",
                 "quand": "24/08 à 17h30",
                 "pousse": true,
-                "enLigne": false
+                "enLigne": true
               }
             },
             {
@@ -518,6 +506,11 @@
                   "quand": "24/08",
                   "qui": "Claude",
                   "texte": "Livrée. Bancs verts sur cette machine : smoke_test 10/10 batailles, format_test 8 formats, ui_test. ⚠️ Le build web n'est PAS encore réexporté — ne teste pas sur ton téléphone tout de suite."
+                },
+                {
+                  "quand": "24/08",
+                  "qui": "Claude",
+                  "texte": "Build web en ligne (gh-pages 3814d7a, sur 70c353b) : celle-ci est testable."
                 }
               ],
               "priorite": "basse",
@@ -526,7 +519,7 @@
                 "commit": "c369b46",
                 "quand": "24/08 à 17h30",
                 "pousse": true,
-                "enLigne": false
+                "enLigne": true
               }
             }
           ]
@@ -650,8 +643,10 @@
         "fait": "24/08 à 03h52",
         "quoi": "Quatre duplications supprimées : le chargement d'une silhouette de pièce vivait en quatre exemplaires, l'aperçu de glissement en deux, les deux zones de lâcher étaient copiées l'une sur l'autre, et une closure gardée sur un nœud est devenue une simple texture. Bancs identiques : 181 OK, aucun échec."
       },
-      "exportWeb": null
+      "exportWeb": {
+        "demande": "24/08 à 19h51"
+      }
     }
   ],
-  "serie": 65
+  "serie": 70
 }

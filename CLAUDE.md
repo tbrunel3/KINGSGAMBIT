@@ -47,6 +47,13 @@ documents complètent celui-ci et ne le répètent pas :
      des vérifs et des retouches**. Une fiche livrée passe en `attente`, sort de
      l'ordre de marche, et l'attend.
 
+  ⚠️ **Ses coches ne réveillent personne.** Depuis une session cloud, rien ne
+  notifie l'agent qu'il a pressé **AU TRAVAIL !**, **METTRE EN LIGNE** ou
+  **ARRÊTER LE TRAVAIL** : la page se republie sous son identité, sans signal.
+  Ses deux boutons de commande sont muets tant que personne ne relit la page —
+  payé le 24/08, deux heures d'ordres ignorés. **Relire l'artefact à chaque
+  fois qu'il redonne la main**, et après chaque livraison.
+
   Deux freins : le bouton **ARRÊTER LE TRAVAIL**, et le **crédit** relevé dans
   `etat.json` — sous le seuil, la console dit *PASSATION REQUISE*. ⚠️ Le crédit
   ne se relève pas tout seul : je ne vois mes tokens qu'au début d'un tour, donc
