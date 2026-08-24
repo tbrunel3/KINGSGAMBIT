@@ -845,10 +845,17 @@ func _format_thousands(n: int) -> String:
 
 # ------------------------------- RAFRAICHISSEMENT ----------------------------
 
-func _refresh() -> void:
+## Pose la barre du haut a partir de la valeur AFFICHEE de l'or.
+##
+## Extrait de `_refresh` parce que le compteur la rappelle a chaque pas : la
+## pastille change de largeur en passant de 930 a 1 080, et sans ca les gemmes
+## et le bouton des missions resteraient a leur ancienne place pendant toute la
+## montee, puis sauteraient a la fin.
+func _layout_topbar() -> void:
 	var pill_y := TOP_BAR_Y + 11.5
 
-	_gold_pill.set_data("", _format_thousands(Game.gold), Pill.Variant.TOPBAR)
+	_gold_pill.set_data("", _format_thousands(maxi(_gold_affiche, 0)),
+		Pill.Variant.TOPBAR)
 	_gold_pill.set_bold(true)
 	_gold_pill.size = _gold_pill.get_combined_minimum_size()
 	_gold_pill.position = Vector2(12, pill_y)
@@ -863,6 +870,53 @@ func _refresh() -> void:
 	_missions_button.reset_size()
 	_missions_button.position = Vector2(
 		_gem_pill.position.x + _gem_pill.size.x + 16, pill_y - 2)
+
+
+## Decide si l'or se pose ou s'il monte.
+func _maj_or() -> void:
+	if _gold_affiche == Game.gold:
+		return
+	# ⚠️ PREMIERE OUVERTURE : ON POSE, ON NE FAIT PAS MONTER DEPUIS ZERO. Une
+	# montee a l'arrivee au village ferait croire a un gain a chaque retour.
+	if _gold_affiche < 0:
+		_gold_affiche = Game.gold
+		return
+	if _gold_tween != null and _gold_tween.is_valid():
+		_gold_tween.kill()
+	var depuis := _gold_affiche
+	# Un gain de vingt et un gain de cinq mille ne peuvent pas durer pareil :
+	# le premier trainerait, le second defilerait trop vite pour se lire.
+	var ecart := absi(Game.gold - depuis)
+	var duree := Balance.motion("gold_count") \
+		* clampf(float(ecart) / 500.0, 0.35, 1.0)
+	_gold_tween = create_tween()
+	_gold_tween.set_trans(Tween.TRANS_CUBIC)
+	_gold_tween.set_ease(Tween.EASE_OUT)
+	_gold_tween.tween_method(
+		func(valeur: int) -> void:
+			_gold_affiche = valeur
+			_layout_topbar(),
+		depuis, Game.gold, duree)
+
+
+## L'OR MONTE, IL NE SAUTE PLUS.
+##
+## Retour du joueur : "l'or saute au lieu de monter". Un chiffre qui change d'un
+## coup ne se lit pas comme un gain - on voit l'ancien, puis l'autre, et rien ne
+## relie les deux. C'est le seul endroit du village ou une somme change sous les
+## yeux du joueur, et c'etait le seul a ne rien en dire.
+##
+## ⚠️ LA VALEUR AFFICHEE EST UN ETAT DE L'ECRAN, PAS DU JEU. `Game.gold` est
+## juste a tout instant ; c'est la pastille qui prend son temps pour le
+## rattraper. Un banc qui lit `Game.gold` ne voit donc aucune difference - c'est
+## exactement ce qu'on veut : l'animation ne doit rien pouvoir casser.
+var _gold_affiche: int = -1
+var _gold_tween: Tween = null
+
+
+func _refresh() -> void:
+	_maj_or()
+	_layout_topbar()
 	_refresh_missions_button.call_deferred()
 
 	_refresh_castle_glow()

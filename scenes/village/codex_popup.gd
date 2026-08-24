@@ -86,11 +86,71 @@ var _filter: String = ""
 var _chips: Dictionary = {}
 
 
+## L'ENTREE DU CODEX. Il n'en avait AUCUNE - pas un tween dans tout le fichier.
+## L'ecran apparaissait d'un bloc, et le joueur l'a resume par "il s'ouvre sans
+## animation, et trop agressivement".
+##
+## ⚠️ ON N'ANIME QUE L'OPACITE ET L'ECHELLE, jamais la position : tout ce qui
+## est ici est enfant d'un conteneur, qui reecrit sa position a chaque trame.
+## Un tween dessus se bat avec la mise en page - c'est le piege qui avait colle
+## le bandeau de serie en haut de l'ecran (cf. CLAUDE.md).
+const ENTRY_BLOCK_SCALE := 0.96
+const ENTRY_CARD_SCALE := 0.94
+## Au-dela, les cartes qui entrent sont sous la ligne de flottaison : les faire
+## attendre allonge l'ouverture sans que personne ne le voie.
+const ENTRY_MAX_STEPS := 8.0
+
+var _entree_jouee: bool = false
+
+
 func _ready() -> void:
 	_build_background()
 	_build_header()
 	_build_filters()
 	_rebuild()
+	_animer_entree()
+
+
+func _animer_entree() -> void:
+	# Les pivots ne se lisent qu'une fois la mise en page faite : releves a la
+	# construction, ils valent zero et l'echelle partirait du coin.
+	await get_tree().process_frame
+	if not is_inside_tree() or _entree_jouee:
+		return
+	_entree_jouee = true
+
+	var tween := create_tween().set_parallel(true)
+	var pas := Balance.motion("card_stagger")
+	_paraitre(tween, _header, 0.0, ENTRY_BLOCK_SCALE, Balance.motion("panel_entry"))
+	_paraitre(tween, _filter_row, pas, ENTRY_BLOCK_SCALE, Balance.motion("panel_entry"))
+
+	var rang := 0
+	for carte in _body.get_children():
+		if not (carte is Control):
+			continue
+		_paraitre(tween, carte as Control,
+			minf(pas * float(rang + 2), pas * ENTRY_MAX_STEPS),
+			ENTRY_CARD_SCALE, Balance.motion("card_entry"))
+		rang += 1
+
+
+## Un bloc qui parait : opacite de 0 a 1, echelle de `depuis` a 1.
+##
+## ⚠️ IL NE FAUT PAS REJOUER CA A CHAQUE FILTRE. `_rebuild` remplace les cartes
+## du corps quand le joueur touche une puce ; les neuves naissent opaques, et
+## `_entree_jouee` empeche l'ecran de se rejouer entier. Une entree qui se
+## redeclenche a chaque geste, c'est precisement "trop agressif" dans l'autre
+## sens.
+func _paraitre(tween: Tween, node: Control, retard: float, depuis: float,
+		duree: float) -> void:
+	if node == null or not is_instance_valid(node):
+		return
+	node.pivot_offset = node.size * 0.5
+	node.modulate.a = 0.0
+	node.scale = Vector2.ONE * depuis
+	tween.tween_property(node, "modulate:a", 1.0, duree).set_delay(retard)
+	tween.tween_property(node, "scale", Vector2.ONE, duree).set_delay(retard) \
+		.set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
 
 
 ## Fond de la maquette : un degrade radial tres sombre, plus clair au centre,

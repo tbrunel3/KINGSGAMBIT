@@ -40,6 +40,8 @@ func _ready() -> void:
 	await _test_guide_popups()
 	await _test_campaign_drag()
 	await _test_press_feedback()
+	await _test_gold_count()
+	await _test_codex_entry()
 
 	print("")
 	if _failures == 0:
@@ -1412,4 +1414,115 @@ func _test_press_feedback() -> void:
 	await _frames(2)
 	_check(chip.has_meta("_press_feedback"), "la chip de selection l'a aussi")
 	chip.queue_free()
+	await _frames(1)
+
+
+## ═══════════════════════════════════════════════════════════════════════════
+## [14] L'OR MONTE, IL NE SAUTE PLUS
+##
+## ⚠️ CE QUE CE CAS PROTEGE VRAIMENT, ce n'est pas l'animation : c'est que
+## l'animation NE PUISSE RIEN CASSER. La valeur affichee est un etat de
+## l'ecran ; `Game.gold` doit rester juste a chaque instant, y compris pendant
+## la montee. Un compteur qui deviendrait la source de verite ferait payer un
+## achat au mauvais prix pendant une demi-seconde.
+## ═══════════════════════════════════════════════════════════════════════════
+func _test_gold_count() -> void:
+	print("\n[14] L'or monte au lieu de sauter")
+
+	Game.reset_progress()
+	var village: Node = load("res://scenes/village/village.tscn").instantiate()
+	add_child(village)
+	await _frames(3)
+	await _skip_animations()
+
+	var depart: int = Game.gold
+	_check(village._gold_affiche == depart,
+		"a l'ouverture l'or est POSE, pas monte depuis zero (%d)" % village._gold_affiche)
+
+	# ⚠️ `Game.gold` EST EN LECTURE SEULE - un accesseur sans `set`. Ce banc lui
+	# assignait une valeur et le test passait a cote sans rien dire : l'or ne
+	# bougeait pas, donc "il ne saute pas" etait vrai pour la mauvaise raison.
+	# On passe par la vraie porte, celle que le jeu emprunte.
+	Game.add_gold(640)
+	await _frames(1)
+	_check(village._gold_affiche > depart and village._gold_affiche < Game.gold,
+		"apres un gain il monte au lieu de sauter (%d entre %d et %d)"
+			% [village._gold_affiche, depart, Game.gold])
+	_check(Game.gold == depart + 640,
+		"⚠️ la verite du jeu ne bouge pas pendant la montee (%d)" % Game.gold)
+
+	await _skip_animations()
+	_check(village._gold_affiche == Game.gold,
+		"la montee arrive exactement a la valeur (%d)" % village._gold_affiche)
+
+	# ⚠️ ET ELLE DESCEND AUSSI. Un achat retire de l'or : le meme compteur doit
+	# savoir aller dans l'autre sens, sinon la pastille se fige au maximum.
+	var avant_achat: int = Game.gold
+	_check(Game.spend_gold(300), "la depense passe")
+	await _skip_animations()
+	_check(village._gold_affiche == Game.gold,
+		"une depense le fait descendre jusqu'au bon chiffre (%d)" % village._gold_affiche)
+
+	# La pastille AFFICHE bien ce chiffre - pas seulement la variable.
+	var affiche := UiTheme.format_thousands(Game.gold)
+	var pose := String(village._gold_pill._text.text)
+	_check(pose == affiche, "la pastille porte le chiffre (%s pour %s)" % [pose, affiche])
+
+	village.queue_free()
+	await _frames(1)
+
+
+## ═══════════════════════════════════════════════════════════════════════════
+## [15] L'ENTREE DU CODEX
+##
+## ⚠️ CE QUE CE CAS PROTEGE, ce n'est pas la beaute de l'animation : c'est
+## qu'AUCUNE CARTE NE RESTE INVISIBLE. Une entree qui pose `modulate.a = 0`
+## puis rate son tween laisse un codex VIDE - et ca ne se voit sur aucune
+## capture, parce que les bancs d'image sautent justement a la fin des tweens.
+## C'est le meme piege qui avait fait ressortir la preparation quasiment nue.
+## ═══════════════════════════════════════════════════════════════════════════
+func _test_codex_entry() -> void:
+	print("\n[15] L'entree du codex")
+
+	Game.reset_progress()
+	var codex: Node = load("res://scenes/village/codex_popup.tscn").instantiate()
+	add_child(codex)
+	await _frames(2)
+
+	var body: Node = codex.get_node("Safe/Root/Scroll/Body")
+	var cartes: Array = body.get_children().filter(
+		func(n: Node) -> bool: return n is Control)
+	_check(cartes.size() > 0, "le corps porte %d blocs" % cartes.size())
+
+	# Pendant l'entree, au moins un bloc n'est pas encore a pleine opacite.
+	var en_cours := cartes.any(func(n: Node) -> bool: return (n as Control).modulate.a < 1.0)
+	_check(en_cours, "a l'ouverture les blocs montent au lieu d'apparaitre d'un coup")
+
+	await _skip_animations()
+	await _frames(2)
+
+	# ⚠️ ET SURTOUT : PLUS AUCUN N'EST INVISIBLE A LA FIN.
+	var invisibles: int = cartes.filter(
+		func(n: Node) -> bool: return (n as Control).modulate.a < 0.99).size()
+	_check(invisibles == 0,
+		"aucun bloc ne reste invisible une fois l'entree finie (%d)" % invisibles)
+	var detaillees: int = cartes.filter(
+		func(n: Node) -> bool: return not (n as Control).scale.is_equal_approx(Vector2.ONE)).size()
+	_check(detaillees == 0,
+		"aucun bloc ne reste a une echelle bancale (%d)" % detaillees)
+
+	# ⚠️ CHANGER DE FILTRE NE REJOUE PAS L'ENTREE. Une ouverture qui se
+	# redeclenche a chaque geste, c'est "trop agressif" dans l'autre sens - et
+	# les cartes neuves doivent naitre OPAQUES, pas invisibles.
+	codex._filter = Balance.TOUR
+	codex._rebuild()
+	await _frames(2)
+	var neuves: Array = body.get_children().filter(
+		func(n: Node) -> bool: return n is Control)
+	var ternes: int = neuves.filter(
+		func(n: Node) -> bool: return (n as Control).modulate.a < 0.99).size()
+	_check(ternes == 0,
+		"filtrer ne rejoue pas l'entree et ne laisse rien d'invisible (%d)" % ternes)
+
+	codex.queue_free()
 	await _frames(1)

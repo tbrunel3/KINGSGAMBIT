@@ -727,6 +727,12 @@ const MOTION := {
 	# mou. Voir UiTheme.press_feedback, qui les lit en direct.
 	"press_in": 0.06,
 	"press_out": 0.13,
+
+	# --- LE COMPTEUR D'OR. "L'or saute au lieu de monter."
+	# C'est la duree d'un GROS gain ; les petits sont raccourcis a la
+	# proportion de l'ecart (cf. village._maj_or). Celle-ci suit `scale` :
+	# c'est de la mise en scene, pas une reponse au doigt.
+	"gold_count": 0.55,
 }
 
 ## De combien un controle rapetisse sous le doigt. 4 %, mesure a l'oeil sur un
