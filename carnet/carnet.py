@@ -158,7 +158,34 @@ def build():
     print("Avant de publier : verifier que l'adresse repond, puis `recupere`.")
 
 
-def recupere(chemin):
+def _fiches(etat):
+    """Toutes les fiches d'un etat, indexees par ref, journees confondues."""
+    return {it["ref"]: it for j in _journees(etat)
+            for sec in j["sections"] for it in sec["items"]}
+
+
+def _ecarts(source, page):
+    """Ce que `recupere` CHANGERAIT, fiche par fiche. Sans ca, refuser la
+    fusion serait aussi aveugle que l'accepter."""
+    ici, la_bas = _fiches(source), _fiches(page)
+    lignes = []
+    # L'ordre de marche n'est pas une fiche, et c'est pourtant lui qu'on a
+    # perdu le 24/08 : il commande la boucle de travail.
+    for j_ici, j_la in zip(_journees(source), _journees(page)):
+        m_ici, m_la = j_ici.get("marche"), j_la.get("marche")
+        if bool(m_ici) != bool(m_la) or (m_ici and m_la and m_ici != m_la):
+            lignes.append("  ordre de marche : %s -> %s"
+                          % ((m_ici or {}).get("nom", "aucun") if m_ici else "aucun",
+                             (m_la or {}).get("nom", "aucun") if m_la else "aucun"))
+    for ref in sorted(set(ici) | set(la_bas)):
+        a = ici.get(ref, {}).get("statut", "(absente)")
+        b = la_bas.get(ref, {}).get("statut", "(absente)")
+        if a != b:
+            lignes.append("  %-4s source %-9s -> page %s" % (ref, a, b))
+    return lignes
+
+
+def recupere(chemin, force=False):
     """Reverse dans etat.json l'etat lu dans une page publiee.
 
     Le fichier attendu est la page telle qu'elle est servie - recuperee par
@@ -170,6 +197,44 @@ def recupere(chemin):
     if m is None:
         raise SystemExit("aucun etat trouve dans %s" % chemin)
     etat = json.loads(m.group(1).replace("\\u003c", "<"))
+
+    # ⚠️ LE SENS DE LA FUSION, ET C'EST LE TROU DE LA PROCEDURE DU README.
+    #
+    # `recupere` n'ajoute rien : il ECRASE etat.json avec ce que porte la page.
+    # Or le README fait de « recupere » l'etape obligatoire AVANT de republier.
+    # Si la page est plus VIEILLE que la source - je viens de livrer et je n'ai
+    # pas encore republie - suivre la procedure detruit la livraison au lieu de
+    # proteger les coches du joueur. Le filet devient l'accident, exactement
+    # comme le miroir du navigateur avant sa correction.
+    #
+    # Paye le 24/08 : page a serie 61, source a 62. La fusion a efface l'ordre
+    # de marche lance a 16h05 et remis n1 en `todo`. Rien n'etait a recuperer :
+    # les dix verdicts du joueur etaient deja dans la source.
+    #
+    # `serie` tranche, et lui seul : il monte a chaque build ICI (carnet.py) et
+    # a chaque geste LA-BAS (page.html, miroirEcrit). Le plus haut est le plus
+    # recent, sans exception.
+    if os.path.exists(ETAT):
+        source = json.loads(_lire(ETAT))
+        ici, la_bas = int(source.get("serie", 0)), int(etat.get("serie", 0))
+        if la_bas < ici and not force:
+            print("REFUS : la page publiee est plus VIEILLE que la source.")
+            print("  source %s : serie %d" % (os.path.relpath(ETAT, RACINE), ici))
+            print("  page   %s : serie %d" % (os.path.basename(chemin), la_bas))
+            print("")
+            print("Le joueur n'a donc rien coche depuis le dernier build : il n'y")
+            print("a rien a recuperer, et fusionner effacerait la livraison.")
+            ecarts = _ecarts(source, etat)
+            if ecarts:
+                print("Ce que la fusion changerait :")
+                print("\n".join(ecarts))
+            print("")
+            print("Fais `build` puis republie - la page rattrapera la source.")
+            print("Si tu sais ce que tu fais : recupere <page> --force")
+            raise SystemExit(1)
+        if la_bas == ici:
+            print("Page et source au meme point (serie %d) : rien de neuf." % ici)
+
     _ecrire(ETAT, json.dumps(etat, ensure_ascii=False, indent=2) + "\n")
     coches = [(it["ref"], it["statut"]) for j in _journees(etat)
               for sec in j["sections"] for it in sec["items"]
@@ -265,7 +330,7 @@ def main():
     elif args[0] == "recupere":
         if len(args) < 2:
             raise SystemExit("usage : carnet.py recupere <page-servie.html>")
-        recupere(args[1])
+        recupere(args[1], force="--force" in args[2:])
     elif args[0] == "enligne":
         enligne()
     elif args[0] == "neuf":
