@@ -254,9 +254,14 @@ static func _press_scale(control: Control, enfonce: bool) -> void:
 	# tirer la MEME propriete en sens contraire, et le controle se figeait a une
 	# echelle quelconque - d'autant plus visible que l'aller dure 0,06 s et le
 	# retour 0,13.
-	var ancien := control.get_meta("_press_tween", null) as Tween
-	if ancien != null and ancien.is_valid():
-		ancien.kill()
+	# ⚠️ `has_meta` D'ABORD. `get_meta(cle, defaut)` remonte une ERROR quand la
+	# cle manque - la valeur par defaut ne la supprime pas. Au premier appui de
+	# chaque controle, le banc rendait donc une erreur dans une sortie par
+	# ailleurs verte : precisement ce que le manuel interdit de laisser passer.
+	if control.has_meta("_press_tween"):
+		var ancien := control.get_meta("_press_tween") as Tween
+		if ancien != null and ancien.is_valid():
+			ancien.kill()
 	if is_equal_approx(control.scale.x, cible):
 		control.scale = Vector2(cible, cible)
 		return

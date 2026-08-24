@@ -39,6 +39,7 @@ func _ready() -> void:
 	await _test_mission_claim()
 	await _test_guide_popups()
 	await _test_campaign_drag()
+	await _test_press_feedback()
 
 	print("")
 	if _failures == 0:
@@ -1170,6 +1171,8 @@ func _test_shop() -> void:
 # ------------------------------- LA CARTE AU DOIGT ---------------------------
 
 const CampaignScene := preload("res://scenes/battle/campaign.tscn")
+const CornerButtonScript := preload("res://scenes/ui/components/corner_button.gd")
+const SelectionChipScene := preload("res://scenes/ui/components/selection_chip.tscn")
 
 ## Faire glisser la carte en partant d'un CACHET doit la faire defiler, pas
 ## lancer la bataille.
@@ -1301,4 +1304,112 @@ func _test_campaign_drag() -> void:
 
 
 	screen.queue_free()
+	await _frames(1)
+
+
+## ═══════════════════════════════════════════════════════════════════════════
+## [13] LE RETOUR A L'APPUI
+##
+## ⚠️ CE CAS EXISTE PARCE QU'UN BANC VERT NE PROUVE RIEN SUR CE QU'IL NE
+## DEMANDE PAS. Le retour a l'appui a ete pose dans UiTheme, les 181 assertions
+## d'avant sont repassees a l'identique - et aucune ne regardait l'echelle d'un
+## controle. Un banc qui ne pose pas la question ne repond pas non.
+##
+## ⚠️ ET ON PEUT LE TESTER, contrairement a la moitie des controles du jeu : le
+## retour ecoute le SIGNAL `gui_input`, pas la virtuelle `_gui_input`. Emettre
+## le signal l'atteint donc vraiment - c'est exactement le sens que le piege de
+## `_press()` inversait.
+## ═══════════════════════════════════════════════════════════════════════════
+func _test_press_feedback() -> void:
+	print("\n[13] Le retour a l'appui")
+
+	var bouton := UiTheme.make_button("ESSAI")
+	add_child(bouton)
+	bouton.size = Vector2(120, 44)
+	await _frames(2)
+	_check(bouton.has_meta("_press_feedback"),
+		"un bouton du theme recoit le retour sans rien demander")
+
+	bouton.button_down.emit()
+	await _skip_animations()
+	_check(is_equal_approx(bouton.scale.x, Balance.PRESS_SCALE),
+		"l'appui le retrecit (%.3f pour %.3f)" % [bouton.scale.x, Balance.PRESS_SCALE])
+
+	# ⚠️ LE PIVOT AU CENTRE. Pose a la construction il tomberait a (0,0) et le
+	# bouton se retracterait vers son coin haut-gauche, pas sous le doigt.
+	_check(bouton.pivot_offset.is_equal_approx(bouton.size * 0.5),
+		"il retrecit depuis son centre, pas depuis son coin")
+
+	bouton.button_up.emit()
+	await _skip_animations()
+	_check(is_equal_approx(bouton.scale.x, 1.0),
+		"le relachement lui rend sa taille (%.3f)" % bouton.scale.x)
+
+	# ⚠️ DEUX APPUIS RAPPROCHES NE DOIVENT PAS LAISSER DEUX TWEENS SE BATTRE.
+	# `create_tween` ne tue PAS le precedent : sans le kill explicite, l'aller
+	# (0,06 s) et le retour (0,13 s) tiraient la meme propriete en sens
+	# contraire et le bouton se figeait a une echelle quelconque.
+	for i in range(4):
+		bouton.button_down.emit()
+		await _frames(1)
+		bouton.button_up.emit()
+		await _frames(1)
+	await _skip_animations()
+	_check(is_equal_approx(bouton.scale.x, 1.0),
+		"quatre appuis rapides le rendent bien a 1.0 (%.3f)" % bouton.scale.x)
+	bouton.queue_free()
+	await _frames(1)
+
+	# ── LE CACHET DE CAMPAGNE ────────────────────────────────────────────────
+	# C'est la cible tactile principale du jeu, et le seul cliquable ou le
+	# retour peut RESTER enfonce : le geste qui fait defiler la carte part de
+	# lui et se relache ailleurs.
+	var screen: Control = CampaignScene.instantiate()
+	add_child(screen)
+	await _frames(3)
+	await _skip_animations()
+
+	var seal: Control = screen._nodes.get(1, null)
+	_check(seal != null and seal.has_meta("_press_feedback"),
+		"le cachet de campagne a le retour a l'appui")
+	if seal != null:
+		var down := InputEventMouseButton.new()
+		down.button_index = MOUSE_BUTTON_LEFT
+		down.pressed = true
+		down.position = seal.size * 0.5
+		seal.gui_input.emit(down)
+		await _skip_animations()
+		_check(is_equal_approx(seal.scale.x, Balance.PRESS_SCALE),
+			"poser le doigt sur un cachet l'enfonce (%.3f)" % seal.scale.x)
+
+		# Le doigt part en defilement : le relachement n'arrive JAMAIS ici.
+		var glisse := InputEventMouseMotion.new()
+		glisse.button_mask = 0
+		glisse.position = seal.size * 0.5
+		seal.gui_input.emit(glisse)
+		await _skip_animations()
+		_check(is_equal_approx(seal.scale.x, 1.0),
+			"un geste qui part du cachet ne le laisse pas enfonce (%.3f)" % seal.scale.x)
+
+	screen.queue_free()
+	await _frames(1)
+
+	# ── LES DEUX AUTRES CLIQUABLES MAISON ────────────────────────────────────
+	#
+	# ⚠️ PAS EN LES CHERCHANT DANS LA CARTE : elle n'a AUCUN bouton de coin. La
+	# premiere version de ce cas les y cherchait et rendait "0 boutons" - le
+	# banc avait raison, c'est l'assertion qui visait le mauvais ecran. On les
+	# construit donc par leur fabrique, ce qui teste aussi le bon endroit : le
+	# COMPOSANT, pas l'ecran qui s'en sert.
+	var coin: Control = CornerButtonScript.back(func() -> void: pass)
+	add_child(coin)
+	await _frames(2)
+	_check(coin.has_meta("_press_feedback"), "le bouton de coin l'a aussi")
+	coin.queue_free()
+
+	var chip: Control = SelectionChipScene.instantiate()
+	add_child(chip)
+	await _frames(2)
+	_check(chip.has_meta("_press_feedback"), "la chip de selection l'a aussi")
+	chip.queue_free()
 	await _frames(1)
