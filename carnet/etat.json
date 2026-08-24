@@ -5,7 +5,41 @@
       "nom": "24/08 — Bâtiments & carnet",
       "maj": "24/08/2026",
       "tri": "priorite",
-      "marche": null,
+      "marche": {
+        "nom": "reprise, demandee en discussion",
+        "lance": "24/08 à 16h05",
+        "groupe": "tout",
+        "ordre": [
+          {
+            "ref": "n1",
+            "titre": "l'intro"
+          },
+          {
+            "ref": "n2",
+            "titre": "Le bouton COMBATTEZ ne suit pas la maquette"
+          },
+          {
+            "ref": "5",
+            "titre": "Les deux lettres du Roi, entre l'intro et le village"
+          },
+          {
+            "ref": "6",
+            "titre": "Les popups d'accompagnement de Figma"
+          },
+          {
+            "ref": "d1",
+            "titre": "Améliorer le Château en pleine série augmente la charge"
+          },
+          {
+            "ref": "d2",
+            "titre": "L'audit du banc d'interface n'a jamais été fait"
+          },
+          {
+            "ref": "d3",
+            "titre": "Quatre zones défilantes jamais auditées"
+          }
+        ]
+      },
       "build": {
         "enLigne": "24/08, 14h50",
         "commit": "9ebb63b",
@@ -300,13 +334,18 @@
               "ref": "n1",
               "titre": "l'intro",
               "detail": "je vois seulement la deuxieme image de l'ecran figma, il faut que au depart le bouton soit cet ecran : https://www.figma.com/design/rqEdH4O2R21TuUFv7OUlF7/KING-sGAMBIT?node-id=410-35&amp;t=ttUec04lRmnYwEXC-4\napres le click ça passe à ça :https://www.figma.com/design/rqEdH4O2R21TuUFv7OUlF7/KING-sGAMBIT?node-id=525-2&amp;t=ttUec04lRmnYwEXC-4 . L'ecran a ete retravaillé par le graphiste tu peux t'y fier aussi a l'animation avec le zoom",
-              "statut": "todo",
+              "statut": "encours",
               "priorite": "moyenne",
               "journal": [
                 {
                   "quand": "24/08",
                   "qui": "Toi",
                   "texte": "Ajoutée au carnet."
+                },
+                {
+                  "quand": "24/08",
+                  "qui": "Toi",
+                  "texte": "« continue les taches du carnet » — reprise demandee en discussion apres l'arret."
                 }
               ],
               "theme": "Intro"
@@ -557,5 +596,5 @@
       "exportWeb": null
     }
   ],
-  "serie": 61
+  "serie": 62
 }
