@@ -33,9 +33,27 @@ décision** :
 2. **Qu'est-ce qui attend MA validation ?** — c'est la seule chose que la page
    lui demande, tout le reste lui rend compte. *Il doit pouvoir trancher sans
    descendre.*
-3. **Qu'est-ce que Claude fait maintenant ?** — l'ordre de marche.
+3. **Qu'est-ce que je lance maintenant ?** — les trois commandes.
 
-Le reste — les fiches, les réglages, l'ajout d'une tâche — vient après.
+### Les trois commandes, à égalité
+
+**Ce sont elles la page.** Le joueur l'a dit mot pour mot : *« ajouter un
+travail est la fonctionnalité principale, avec lancer le travail et nettoyage
+code »*. Elles doivent se voir ensemble, en haut, et se ressembler assez pour
+qu'on comprenne qu'elles sont du même rang :
+
+- **AJOUTER UN TRAVAIL** — il déplie un formulaire. C'était un lien discret en
+  bas de page, sous les filtres : c'est-à-dire là où on ne le voyait pas.
+- **LANCER LE TRAVAIL** — on le **nomme** (« les animations », « l'intro »),
+  et une case à cocher **groupe automatiquement** les chantiers dont le thème,
+  le titre ou le détail correspondent au nom. Si rien ne correspond, la pile
+  prend tout ce qui est ouvert plutôt que de ne rien lancer.
+- **NETTOYER LE CODE** — une passe de simplification après un gros chantier.
+  Le joueur peut **annuler** sa demande tant qu'elle est en cours ; c'est moi
+  qui la **date** à la fin, et elle s'affiche alors en vert. *Il n'a pas à
+  déclarer fini un travail qu'il ne peut pas voir.*
+
+Le reste — les fiches, les réglages — vient après.
 
 ### La boucle de travail, qui explique les états
 
@@ -74,11 +92,18 @@ Le reste — les fiches, les réglages, l'ajout d'une tâche — vient après.
 >    - un champ de note court,
 >    - deux boutons : **« Ça marche »** (vert) et **« Toujours cassé »** (rouge),
 >    - un lien discret « Voir la fiche ».
-> 4. **AU TRAVAIL** — soit un grand bouton or « AU TRAVAIL ! — N chantiers dans
->    l'ordre », soit, une fois lancé, la liste numérotée de l'ordre de marche
->    avec l'heure du lancement. À côté, un bouton secondaire **« 🧹 Nettoyer le
->    code »**. Et quand il n'y a plus rien à prendre, un état de repos
->    **EN ATTENTE DE TOI** / **JOURNÉE FINIE**.
+> 4. **LES TROIS COMMANDES**, groupées et de rang égal — c'est le cœur de la
+>    page :
+>    - **lancer le travail** : un champ de texte pour le **nommer**, une case
+>      « grouper automatiquement les chantiers qui correspondent au nom », puis
+>      un grand bouton or **« AU TRAVAIL ! — N chantiers ouverts »**. Une fois
+>      lancé, il laisse place à la liste numérotée de l'ordre de marche, coiffée
+>      du **nom donné au travail** et de l'heure ;
+>    - **« + AJOUTER UN TRAVAIL »**, qui déplie le formulaire sur place ;
+>    - **« 🧹 NETTOYER LE CODE »**, et ses deux suites : *demandé* (avec un
+>      bouton **Annuler la demande**) ou ***✓ fait*, en vert, daté** ;
+>    - quand il n'y a plus rien à prendre, un état de repos **EN ATTENTE DE
+>      TOI** / **JOURNÉE FINIE** à la place du bouton.
 > 5. **Le bandeau de build** — deux états, et ils doivent être impossibles à
 >    confondre : **vert vif « COMMIT ET TEST POSSIBLE — en ligne depuis … »**, ou
 >    **ambre « Pas encore en ligne — ne teste pas tout de suite »**. Ce bandeau
@@ -102,6 +127,9 @@ Le reste — les fiches, les réglages, l'ajout d'une tâche — vient après.
 >   vert**, **verdict rouge**, **bouton discret**.
 > - **Formulaire d'ajout de tâche** replié / déplié : titre, détail, section,
 >   thème, priorité, état.
+> - **Champ de lancement** : le texte, la case de groupage automatique, le
+>   grand bouton or — les trois lisibles comme un seul geste.
+> - **Bloc de nettoyage** : *demandé* (bleu, annulable) et *fait* (vert, daté).
 >
 > ### Les contraintes, qui ne se négocient pas
 >
@@ -130,9 +158,10 @@ Le reste — les fiches, les réglages, l'ajout d'une tâche — vient après.
 >
 > ### Le mouvement, si tu en mets
 >
-> Trois moments, et pas un de plus : la **jauge qui se remplit** à l'ouverture,
-> la **carte validée qui se replie** dans le groupe *Validé*, et le **bandeau
-> vert** qui s'allume quand un build passe en ligne. Rien d'autre ne bouge.
+> Quatre moments, et pas un de plus : la **jauge qui se remplit** à l'ouverture,
+> la **carte validée qui se replie** dans le groupe *Validé*, le **bandeau vert**
+> qui s'allume quand un build passe en ligne, et le **nettoyage qui passe du
+> bleu au vert** quand il est daté. Rien d'autre ne bouge.
 >
 > ### Livrables
 >

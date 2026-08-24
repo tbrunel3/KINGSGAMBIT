@@ -344,12 +344,11 @@ func _build_deployment_panel() -> void:
 
 	# La zone de lacher ENTOURE les cases au lieu d'etre les cases : lacher
 	# entre deux cases, ou sous la derniere rangee, doit engager quand meme.
-	_zone_deploiement = Poignee.new()
-	_zone_deploiement.add_theme_stylebox_override("panel", StyleBoxEmpty.new())
-	_zone_deploiement.accepte = func(charge: Dictionary) -> bool:
-		return _composing and charge.get("ou", "") == "caserne" 			and _peut_engager(String(charge.get("type", "")))
-	_zone_deploiement.recoit = func(charge: Dictionary) -> void:
-		_add(String(charge.get("type", "")))
+	_zone_deploiement = _zone(
+		func(charge: Dictionary) -> bool:
+			return _composing and charge.get("ou", "") == "caserne" \
+				and _peut_engager(_type_de(charge)),
+		func(charge: Dictionary) -> void: _add(_type_de(charge)))
 	column.add_child(_zone_deploiement)
 
 	_slot_flow = HFlowContainer.new()
@@ -426,18 +425,14 @@ func _filled_slot(type: String) -> PanelContainer:
 	slot.custom_minimum_size = Vector2(SLOT_SIZE, SLOT_SIZE)
 	if _composing:
 		slot.mouse_filter = Control.MOUSE_FILTER_STOP
-		slot.tooltip_text = "Glisse-le vers la caserne, ou touche-le, pour renvoyer ce %s" 			% Balance.unit_name(type)
+		slot.tooltip_text = "Glisse-le vers la caserne, ou touche-le, pour le renvoyer"
 		slot.gui_input.connect(func(event: InputEvent):
 			if _is_tap(event):
 				_remove(type))
-		var poignee := slot as Poignee
-		poignee.charge = {"ou": "deploiement", "type": type}
-		poignee.apercu = func() -> Control: return _apercu(type)
+		_saisir(slot, "deploiement", type)
 
 	var sprite := TextureRect.new()
-	var path := "res://assets/pieces/bleu/%s.png" % type
-	if ResourceLoader.exists(path):
-		sprite.texture = load(path)
+	sprite.texture = UiTheme.piece_texture("bleu", type)
 	sprite.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
 	sprite.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
 	sprite.mouse_filter = Control.MOUSE_FILTER_IGNORE
@@ -481,12 +476,11 @@ func _build_barracks_panel() -> void:
 
 	# Meme raison qu'au deploiement : c'est la zone qui recoit, pas les cartes.
 	# Y lacher une piece engagee, c'est la renvoyer en reserve.
-	_zone_caserne = Poignee.new()
-	_zone_caserne.add_theme_stylebox_override("panel", StyleBoxEmpty.new())
-	_zone_caserne.accepte = func(charge: Dictionary) -> bool:
-		return _composing and charge.get("ou", "") == "deploiement" 			and int(_chosen.get(String(charge.get("type", "")), 0)) > 0
-	_zone_caserne.recoit = func(charge: Dictionary) -> void:
-		_remove(String(charge.get("type", "")))
+	_zone_caserne = _zone(
+		func(charge: Dictionary) -> bool:
+			return _composing and charge.get("ou", "") == "deploiement" \
+				and int(_chosen.get(_type_de(charge), 0)) > 0,
+		func(charge: Dictionary) -> void: _remove(_type_de(charge)))
 	column.add_child(_zone_caserne)
 
 	_barracks_row = HBoxContainer.new()
@@ -541,9 +535,7 @@ func _rebuild_barracks() -> void:
 			# On ne saisit que ce qui reste en reserve : glisser une carte vide
 			# ferait miroiter un engagement que `_add` refuserait au lacher.
 			if left > 0:
-				var poignee := card as Poignee
-				poignee.charge = {"ou": "caserne", "type": type}
-				poignee.apercu = func() -> Control: return _apercu(type)
+				_saisir(card, "caserne", type)
 		if left <= 0 and not engaged:
 			card.modulate.a = 0.6
 
@@ -706,24 +698,31 @@ func _can_add_anything() -> bool:
 	return false
 
 
-## CE QUI SUIT LE DOIGT pendant le glissement.
-##
-## Centre sous le curseur : `set_drag_preview` pose le coin haut-gauche du
-## Control a la position du pointeur, et une piece qui pend en bas a droite du
-## doigt ne se lit pas comme une piece qu'on porte.
-func _apercu(type: String) -> Control:
-	var socle := Control.new()
-	var sprite := TextureRect.new()
-	var path := "res://assets/pieces/bleu/%s.png" % type
-	if ResourceLoader.exists(path):
-		sprite.texture = load(path)
-	sprite.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
-	sprite.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
-	sprite.size = Vector2(SLOT_SIZE, SLOT_SIZE)
-	sprite.position = -sprite.size * 0.5
-	sprite.modulate.a = 0.85
-	socle.add_child(sprite)
-	return socle
+## Rendre une coque SAISISSABLE : ce qu'elle donne, et ce qu'on verra sous
+## le doigt. Deux lignes recopiees a deux endroits ; une de plus et le
+## troisieme aurait oublie l'apercu.
+func _saisir(panel: PanelContainer, ou: String, type: String) -> void:
+	var poignee := panel as Poignee
+	if poignee == null:
+		return
+	poignee.charge = {"ou": ou, "type": type}
+	poignee.apercu = UiTheme.piece_texture("bleu", type)
+
+
+## La ZONE DE LACHER d'un panneau : une coque transparente qui entoure une
+## rangee et repond a sa place. Les deux panneaux la fabriquaient a
+## l'identique, a la provenance pres.
+func _zone(accepte: Callable, recoit: Callable) -> Poignee:
+	var zone := Poignee.new()
+	zone.add_theme_stylebox_override("panel", StyleBoxEmpty.new())
+	zone.accepte = accepte
+	zone.recoit = recoit
+	return zone
+
+
+## Le type porte par une charge de glissement, quelle que soit sa provenance.
+func _type_de(charge: Dictionary) -> String:
+	return String(charge.get("type", ""))
 
 
 ## Ce qu'une carte de caserne peut promettre au moment ou on la saisit : les
@@ -989,9 +988,7 @@ func _piece_card(type: String, team: String, title: String, level_text: String,
 	card.add_child(column)
 
 	var sprite := TextureRect.new()
-	var path := "res://assets/pieces/%s/%s.png" % [team, type]
-	if ResourceLoader.exists(path):
-		sprite.texture = load(path)
+	sprite.texture = UiTheme.piece_texture(team, type)
 	sprite.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
 	sprite.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
 	sprite.custom_minimum_size = Vector2(art_width, art_height)
@@ -1075,8 +1072,11 @@ func _light_button(text: String) -> Button:
 class Poignee extends PanelContainer:
 	## Ce que la poignee DONNE quand on la saisit. Vide = on ne la saisit pas.
 	var charge: Dictionary = {}
-	## Ce qui suit le doigt pendant le glissement. Rend un Control.
-	var apercu: Callable
+	## La silhouette qui suivra le doigt. Une TEXTURE, pas une fabrique : une
+	## closure gardee sur un noeud retient tout son environnement pour la
+	## duree de vie du noeud, et il n'y avait rien a y gagner ici.
+	var apercu: Texture2D
+	var apercu_cote: float = SLOT_SIZE
 	## (charge) -> bool : cette zone accepte-t-elle ce qu'on lui apporte ?
 	var accepte: Callable
 	## (charge) -> void : ce qu'elle en fait.
@@ -1085,14 +1085,7 @@ class Poignee extends PanelContainer:
 	func _get_drag_data(_position: Vector2) -> Variant:
 		if charge.is_empty():
 			return null
-		# ⚠️ `set_drag_preview` EXIGE que le viewport soit deja en train de
-		# glisser, et remonte une erreur sinon. C'est vrai pendant un vrai
-		# geste ; ce ne l'est pas quand un banc appelle cette virtuelle
-		# directement pour verifier le cablage - et le banc rendait alors deux
-		# erreurs dans une sortie par ailleurs verte, ce que le manuel
-		# interdit de laisser passer.
-		if apercu.is_valid() and get_viewport() != null 				and get_viewport().gui_is_dragging():
-			set_drag_preview(apercu.call())
+		UiTheme.drag_preview_for(self, apercu, apercu_cote)
 		return charge
 
 	func _can_drop_data(_position: Vector2, data: Variant) -> bool:

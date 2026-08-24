@@ -801,8 +801,7 @@ func _build_placement_ui() -> void:
 	for type in Balance.ARMY_TYPES:
 		var chip: SelectionChip = SelectionChipScene.instantiate()
 		var folder := "bleu" if int(_remaining[type]) > 0 else "absent"
-		var path := "res://assets/pieces/%s/%s.png" % [folder, type]
-		var texture: Texture2D = load(path) if ResourceLoader.exists(path) else null
+		var texture := UiTheme.piece_texture(folder, type)
 		row.add_child(chip)
 		# Le type descend DANS la chip : c'est ce qu'elle donnera au plateau
 		# quand on la fera glisser (cf. SelectionChip._get_drag_data).

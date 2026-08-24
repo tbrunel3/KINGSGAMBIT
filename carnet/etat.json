@@ -431,7 +431,9 @@
       ],
       "groupe": "etat",
       "nettoyage": {
-        "demande": "24/08 à 03h30"
+        "demande": "24/08 à 03h30",
+        "fait": "24/08 à 03h52",
+        "quoi": "Quatre duplications supprimées : le chargement d'une silhouette de pièce vivait en quatre exemplaires, l'aperçu de glissement en deux, les deux zones de lâcher étaient copiées l'une sur l'autre, et une closure gardée sur un nœud est devenue une simple texture. Bancs identiques : 181 OK, aucun échec."
       }
     }
   ]

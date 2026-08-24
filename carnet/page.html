@@ -111,6 +111,19 @@ h1{
   border:1px solid #ffe580;border-radius:10px
 }
 .travail .lancer:hover{background:linear-gradient(180deg,var(--or-pale),var(--or));border-color:#fff}
+.commande{display:grid;gap:9px}
+.commande input[type=text]{
+  font-family:var(--corps);font-size:15px;color:var(--texte);
+  background:#0e1424;border:1px solid var(--filet);border-radius:9px;
+  padding:12px 14px;width:100%
+}
+.commande input[type=text]:focus{outline:none;border-color:var(--or)}
+.commande .auto{
+  display:flex;gap:8px;align-items:center;font-size:12.5px;color:var(--attenue);
+  flex-wrap:wrap
+}
+.commande .auto input{accent-color:var(--or);width:17px;height:17px}
+.commande .auto .apercu-groupe{color:var(--or);font-weight:600}
 .travail .lancer[disabled]{opacity:.4}
 .marche{
   margin:0;padding:16px 18px;border-radius:10px;
@@ -172,7 +185,7 @@ h1{
 .nettoyer{
   font-family:var(--serif);font-size:14px;font-weight:700;letter-spacing:.06em;
   color:var(--bleu);border:1px solid #1d5c8e;background:rgba(38,140,217,.1);
-  border-radius:10px;padding:13px 16px
+  border-radius:10px;padding:13px 16px;width:100%
 }
 .nettoyer:hover{background:rgba(38,140,217,.2);border-color:var(--bleu)}
 .nettoyage{
@@ -185,6 +198,11 @@ h1{
 }
 .nettoyage p{margin:0;color:var(--attenue);font-size:13px}
 .nettoyage .bas{margin:12px 0 0;display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+.nettoyage.fait{
+  border-color:var(--succes);
+  background:linear-gradient(180deg,rgba(95,179,122,.16),rgba(20,26,43,.9))
+}
+.nettoyage.fait h2{color:var(--succes)}
 
 /* ---- sections ---- */
 section{margin:46px 0 0}
@@ -358,9 +376,11 @@ button[disabled]{opacity:.45;cursor:progress}
   margin:20px 0 0;border:1px dashed var(--filet);border-radius:10px;
   background:rgba(20,26,43,.5)
 }
+.ajout{margin:12px 0 0}
 .ajout summary{
-  cursor:pointer;padding:13px 18px;font-weight:600;font-size:13.5px;
-  color:var(--or);list-style:none
+  cursor:pointer;padding:13px 16px;list-style:none;text-align:center;
+  font-family:var(--serif);font-size:14px;font-weight:700;letter-spacing:.06em;
+  color:var(--or-pale);border-radius:10px
 }
 .ajout summary::-webkit-details-marker{display:none}
 .ajout summary:hover{color:var(--or-pale)}
@@ -428,6 +448,9 @@ __ETAT__
   // carnet ne filtrent pas pareil, et un filtre enregistre cacherait des fiches
   // a l'autre sans qu'il sache pourquoi.
   var filtreTheme = null;
+  // Ce que le joueur est en train de taper au-dessus du bouton AU TRAVAIL.
+  var nomTravail = "";
+  var groupeAuto = true;
 
   // ⚠️ LE CARNET EST FAIT DE JOURNEES. Une journee = un onglet = une seance de
   // travail : son propre build, ses propres fiches, son propre ordre de marche.
@@ -555,15 +578,42 @@ __ETAT__
     });
   }
 
+  // LE REGROUPEMENT AUTOMATIQUE, d'apres le nom qu'on donne au travail.
+  //
+  // ⚠️ IL NE DEVINE PAS, IL FILTRE. Les mots du nom sont cherches dans le
+  // theme, le titre, le detail et la reference de chaque fiche ouverte ; ce
+  // qui correspond entre dans l'ordre. Si RIEN ne correspond, on ne rend pas
+  // une liste vide - on prend tout ce qui est ouvert, parce qu'un bouton qui
+  // ne lance rien apres qu'on a tape un nom se lit comme un bouton casse.
+  var VIDES = ["les","des","une","pour","dans","avec","tout","toute","toutes",
+               "tous","faire","finir","sur","chez","mon","son","ses","aux",
+               "que","qui","quoi","soir","matin","journee","travail","chantier"];
+
+  function sansAccents(s){
+    return String(s).toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+  }
+
+  function motsUtiles(nom){
+    return sansAccents(nom).split(/[^a-z0-9]+/)
+      .filter(function(m){ return m.length >= 4 && VIDES.indexOf(m) < 0; });
+  }
+
+  function correspond(it, mots){
+    if (!mots.length) return true;
+    var foin = sansAccents([it.ref, it.titre, it.theme || "", it.detail || ""].join(" "));
+    return mots.some(function(m){ return foin.indexOf(m) >= 0; });
+  }
+
   // L'ORDRE DE MARCHE : ce que "AU TRAVAIL !" fige. Toutes les fiches ouvertes
   // de la journee, dans l'ordre ou elles s'affichent.
-  function ordreDeMarche(){
+  function ordreDeMarche(mots){
     var liste = [];
     J().sections.forEach(function(sec){
       classees(sec.items).forEach(function(paire){
         // Le filtre commande AUSSI l'ordre de marche : filtrer sur un theme et
         // lancer les travaux, c'est demander cette pile-la et rien d'autre.
-        if (aFaire(paire[0]) && retenue(paire[0])) liste.push(paire[0]);
+        if (aFaire(paire[0]) && retenue(paire[0])
+            && (!mots || correspond(paire[0], mots))) liste.push(paire[0]);
       });
     });
     return liste;
@@ -796,7 +846,8 @@ __ETAT__
     }
 
     if (j.marche){
-      h += '<div class="marche"><h2>AU TRAVAIL — l’ordre est donné</h2>';
+      h += '<div class="marche"><h2>AU TRAVAIL — '
+         + esc(j.marche.nom || "l’ordre est donné") + '</h2>';
       h += '<p class="quand-lance">Lancé le ' + esc(j.marche.lance) + '. Dis-moi « au travail » en discussion : je relis le carnet et je pars sur cette liste, dans cet ordre. Une fiche livrée sort de la liste et passe au bloc du dessus — je ne l’y remets que si tu la rouvres.</p>';
       h += '<ol>';
       j.marche.ordre.forEach(function(o){
@@ -806,19 +857,63 @@ __ETAT__
       h += '<button data-arreter="1">Annuler l’ordre</button>';
       h += '<span class="etat" id="etat-marche"></span></div></div>';
     } else if (liste.length){
-      h += '<button class="lancer" data-travail="1">';
-      h += 'AU TRAVAIL ! — ' + liste.length + ' chantier' + (liste.length>1?'s':'') + ' dans l’ordre';
-      h += '</button><span class="etat" id="etat-marche"></span>';
+      // LANCER UN TRAVAIL EN LE NOMMANT. Le nom n'est pas qu'une etiquette :
+      // c'est lui qui compose la pile quand le regroupement auto est coche.
+      h += '<form class="commande" data-lancer="1">';
+      h += '<input type="text" name="nom" placeholder="Nomme le travail — « les animations », « l’intro »…" value="' + esc(nomTravail) + '">';
+      h += '<label class="auto"><input type="checkbox" name="auto"' + (groupeAuto ? ' checked' : '') + '>';
+      h += 'Grouper automatiquement les chantiers qui correspondent au nom';
+      h += '<span class="apercu-groupe">' + liste.length + ' sinon</span></label>';
+      h += '<button class="lancer" type="submit">AU TRAVAIL ! — ' + liste.length
+         + ' chantier' + (liste.length>1?'s':'') + ' ouvert' + (liste.length>1?'s':'') + '</button>';
+      h += '<span class="etat" id="etat-marche"></span></form>';
     }
+
+    // ⚠️ AJOUTER UN TRAVAIL EST UNE COMMANDE, PAS UN REGLAGE. Le joueur :
+    // « ajouter un travail est la fonctionnalite principale, avec lancer le
+    // travail et nettoyage code ». C'etait un depliant discret en bas de
+    // page, sous les filtres - c'est-a-dire la ou on ne le voyait pas.
+    h += '<details class="ajout"' + (ajoutOuvert ? ' open' : '') + '>';
+    h += '<summary>+ AJOUTER UN TRAVAIL</summary><form data-ajout="1">';
+    h += '<label>Ce que tu veux voir corrigé ou fait<input name="titre" required placeholder="Le bouton COMBATTEZ ne suit pas la maquette"></label>';
+    h += '<label>Le détail, si tu en as<textarea name="detail" placeholder="Où tu l’as vu, ce que tu attendais…"></textarea></label>';
+    h += '<div class="duo"><label>Dans quelle partie<select name="section">';
+    j.sections.forEach(function(sec, i){
+      h += '<option value="' + i + '"' + (i === ajoutSection ? ' selected' : '') + '>' + esc(sec.titre) + '</option>';
+    });
+    h += '</select></label><label>Thème<input name="theme" list="les-themes" placeholder="Interface, Combat, Intro…" value="' + esc(filtreTheme || "") + '"></label></div>';
+    h += '<datalist id="les-themes">';
+    themes().forEach(function(t){ h += '<option value="' + esc(t) + '"></option>'; });
+    h += '</datalist>';
+    h += '<div class="duo"><label>Priorité<select name="priorite">';
+    h += '<option value="haute">haute</option><option value="moyenne" selected>moyenne</option><option value="basse">basse</option>';
+    h += '</select></label></div>';
+    h += '<label>État<select name="statut">';
+    h += '<option value="todo">à faire</option><option value="ko">toujours cassé</option><option value="attente">à vérifier</option>';
+    h += '</select></label>';
+    h += '<div class="bas"><button type="submit">Ajouter au carnet</button>';
+    h += '<span class="etat" id="etat-ajout"></span></div></form></details>';
 
     // 3. LE NETTOYAGE, demande apres coup : "un bouton aussi pour lancer un
     // nettoyage du code apres de gros travaux". Ce n'est pas une tache du
     // carnet - il ne produit rien de visible a l'ecran - mais une passe sur
     // ce que les gros chantiers ont laisse derriere eux.
-    if (j.nettoyage){
+    // ⚠️ CE N'EST PAS AU JOUEUR DE DIRE QUE C'EST FAIT. Le bouton "c'est fait,
+    // retire-le" lui demandait de clore un travail qu'il n'a pas fait et qu'il
+    // ne peut pas voir - un nettoyage ne se voit pas a l'ecran. Il peut
+    // ANNULER sa demande tant qu'elle est en cours ; la fin, c'est moi qui la
+    // date, et elle s'affiche en vert.
+    if (j.nettoyage && j.nettoyage.fait){
+      h += '<div class="nettoyage fait"><h2>✓ NETTOYAGE FAIT</h2>';
+      h += '<p>Demandé le ' + esc(j.nettoyage.demande) + ', terminé le '
+         + esc(j.nettoyage.fait) + '.';
+      if (j.nettoyage.quoi) h += ' ' + esc(j.nettoyage.quoi);
+      h += '</p></div>';
+      h += '<div class="bouton-rangee"><button class="nettoyer" data-nettoyage="1">🧹 NETTOYER LE CODE</button></div>';
+    } else if (j.nettoyage){
       h += '<div class="nettoyage"><h2>NETTOYAGE DEMANDÉ</h2>';
       h += '<p>Le ' + esc(j.nettoyage.demande) + '. Passe de simplification sur ce que les derniers chantiers ont laissé : doublons, code mort, chemins concurrents. Aucun changement de comportement — les bancs doivent rendre exactement les mêmes chiffres après qu’avant.</p>';
-      h += '<div class="bas"><button data-nettoyage-fini="1">C’est fait, retire-le</button>';
+      h += '<div class="bas"><button data-nettoyage-annule="1">Annuler la demande</button>';
       h += '<span class="etat" id="etat-nettoyage"></span></div></div>';
     } else {
       h += '<div class="bouton-rangee"><button class="nettoyer" data-nettoyage="1">🧹 NETTOYER LE CODE</button></div>';
@@ -868,27 +963,6 @@ __ETAT__
       h += '</div>';
     }
 
-    // Ajouter une tache.
-    h += '<details class="ajout"' + (ajoutOuvert ? ' open' : '') + '>';
-    h += '<summary>+ Ajouter une tâche</summary><form data-ajout="1">';
-    h += '<label>Ce que tu veux voir corrigé ou fait<input name="titre" required placeholder="Le bouton COMBATTEZ ne suit pas la maquette"></label>';
-    h += '<label>Le détail, si tu en as<textarea name="detail" placeholder="Où tu l’as vu, ce que tu attendais…"></textarea></label>';
-    h += '<div class="duo"><label>Dans quelle partie<select name="section">';
-    j.sections.forEach(function(sec, i){
-      h += '<option value="' + i + '"' + (i === ajoutSection ? ' selected' : '') + '>' + esc(sec.titre) + '</option>';
-    });
-    h += '</select></label><label>Thème<input name="theme" list="les-themes" placeholder="Interface, Combat, Intro…" value="' + esc(filtreTheme || "") + '"></label></div>';
-    h += '<datalist id="les-themes">';
-    themes().forEach(function(t){ h += '<option value="' + esc(t) + '"></option>'; });
-    h += '</datalist>';
-    h += '<div class="duo"><label>Priorité<select name="priorite">';
-    h += '<option value="haute">haute</option><option value="moyenne" selected>moyenne</option><option value="basse">basse</option>';
-    h += '</select></label></div>';
-    h += '<label>État<select name="statut">';
-    h += '<option value="todo">à faire</option><option value="ko">toujours cassé</option><option value="attente">à vérifier</option>';
-    h += '</select></label>';
-    h += '<div class="bas"><button type="submit">Ajouter au carnet</button>';
-    h += '<span class="etat" id="etat-ajout"></span></div></form></details>';
 
     // Le rang dans l'ordre de marche, pour retrouver une fiche depuis la liste.
     var rangs = {};
@@ -966,7 +1040,43 @@ __ETAT__
   function touche(){ J().maj = aujourdhui() + "/2026"; }
 
   // ---- créer une journée, en changer ----
+  // LANCER UN TRAVAIL. Un seul chemin, que le nom vienne du formulaire ou pas.
+  function lancerTravail(nom, auto){
+    var mots = auto ? motsUtiles(nom) : null;
+    var liste = ordreDeMarche(mots);
+    var retombee = false;
+    if (!liste.length){
+      // Rien ne correspond au nom : on prend tout plutot que de ne rien
+      // lancer, et on le DIT dans le nom pour que la liste ne mente pas.
+      liste = ordreDeMarche(null);
+      retombee = liste.length > 0;
+    }
+    if (!liste.length) return;
+    J().marche = {
+      nom: (nom || "").trim() || "l’ordre est donné",
+      lance: maintenant(),
+      groupe: auto && !retombee ? "auto" : "tout",
+      ordre: liste.map(function(it){ return {ref: it.ref, titre: it.titre}; })
+    };
+    if (liste[0].statut === "todo"){
+      liste[0].statut = "encours";
+      liste[0].journal.push({quand: aujourdhui(), qui: "Toi",
+        texte: "AU TRAVAIL : première de l’ordre de marche."});
+    }
+    nomTravail = "";
+    touche();
+    render();
+    enregistrer(document.getElementById("etat-marche"));
+  }
+
   root.addEventListener("submit", function(ev){
+    var lancer = ev.target.closest("form[data-lancer]");
+    if (lancer){
+      ev.preventDefault();
+      lancerTravail(lancer.nom.value, lancer.auto.checked);
+      return;
+    }
+
     var nommer = ev.target.closest("form[data-nommer]");
     if (nommer){
       ev.preventDefault();
@@ -1028,7 +1138,16 @@ __ETAT__
   });
 
   // ---- la priorité d'une fiche ----
+  // Ce que le joueur tape doit survivre au re-rendu que la coche declenche.
+  root.addEventListener("input", function(ev){
+    var champ = ev.target.closest('form[data-lancer] input[name="nom"]');
+    if (champ) nomTravail = champ.value;
+  });
+
   root.addEventListener("change", function(ev){
+    var coche = ev.target.closest('form[data-lancer] input[name="auto"]');
+    if (coche){ groupeAuto = coche.checked; return; }
+
     var sel = ev.target.closest("select[data-prio]");
     if (!sel) return;
     var fiche = sel.closest("[data-s]");
@@ -1097,21 +1216,9 @@ __ETAT__
       return;
     }
 
-    // AU TRAVAIL.
+    // AU TRAVAIL (bouton nu, garde pour les vues sans formulaire).
     if (ev.target.closest("button[data-travail]")){
-      var liste = ordreDeMarche();
-      if (!liste.length) return;
-      J().marche = {
-        lance: maintenant(),
-        ordre: liste.map(function(it){ return {ref: it.ref, titre: it.titre}; })
-      };
-      if (liste[0].statut === "todo" || liste[0].statut === "attente"){
-        liste[0].statut = "encours";
-        liste[0].journal.push({quand: aujourdhui(), qui: "Toi", texte: "AU TRAVAIL : première de l’ordre de marche."});
-      }
-      touche();
-      render();
-      enregistrer(document.getElementById("etat-marche"));
+      lancerTravail("", false);
       return;
     }
     if (ev.target.closest("button[data-nettoyage]")){
@@ -1121,7 +1228,7 @@ __ETAT__
       enregistrer(document.getElementById("etat-nettoyage"));
       return;
     }
-    if (ev.target.closest("button[data-nettoyage-fini]")){
+    if (ev.target.closest("button[data-nettoyage-annule]")){
       J().nettoyage = null;
       touche();
       render();

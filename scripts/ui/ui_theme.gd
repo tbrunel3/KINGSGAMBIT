@@ -252,6 +252,47 @@ static func stat_row(label_text: String, value: Control) -> HBoxContainer:
 ## composant "panneau + gui_input" (chip de selection, pastille de campagne,
 ## label de batiment...) doit donc neutraliser tout son contenu decoratif, ou
 ## le joueur ne peut cliquer que sur les quelques pixels de marge non couverts.
+## LA SILHOUETTE D'UNE PIECE, en un seul endroit.
+##
+## Le meme quatuor - construire le chemin, verifier qu'il existe, charger,
+## retomber sur null - vivait en QUATRE exemplaires : la case du deploiement,
+## la carte de caserne, l'apercu de glissement et la chip du placement. Quatre
+## copies d'un chemin de fichier sont quatre endroits ou se tromper de dossier.
+static func piece_texture(team: String, type: String) -> Texture2D:
+	var path := "res://assets/pieces/%s/%s.png" % [team, type]
+	return load(path) if ResourceLoader.exists(path) else null
+
+
+## CE QUI SUIT LE DOIGT pendant un glisser-deposer.
+##
+## ⚠️ DEUX PIEGES, LES DEUX PAYES.
+##
+## - `set_drag_preview` EXIGE que le viewport soit deja en train de glisser, et
+##   remonte une erreur sinon. C'est vrai pendant un vrai geste, faux quand un
+##   banc appelle `_get_drag_data` directement pour verifier le cablage - et le
+##   banc rendait alors des erreurs dans une sortie par ailleurs verte, ce que
+##   le manuel interdit de laisser passer.
+## - L'apercu se pose par son COIN HAUT-GAUCHE a la position du pointeur. Une
+##   piece qui pend en bas a droite du doigt ne se lit pas comme une piece
+##   qu'on porte : elle est donc decalee de la moitie de son cote.
+static func drag_preview_for(control: Control, texture: Texture2D,
+		side: float) -> void:
+	if control == null or control.get_viewport() == null:
+		return
+	if not control.get_viewport().gui_is_dragging():
+		return
+	var socle := Control.new()
+	var sprite := TextureRect.new()
+	sprite.texture = texture
+	sprite.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+	sprite.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+	sprite.size = Vector2(side, side)
+	sprite.position = -sprite.size * 0.5
+	sprite.modulate.a = 0.85
+	socle.add_child(sprite)
+	control.set_drag_preview(socle)
+
+
 static func ignore_mouse_recursive(node: Node) -> void:
 	if node is Control:
 		(node as Control).mouse_filter = Control.MOUSE_FILTER_IGNORE

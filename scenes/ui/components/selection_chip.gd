@@ -64,28 +64,9 @@ func set_count(count: int) -> void:
 func _get_drag_data(_position: Vector2) -> Variant:
 	if piece_type.is_empty() or _count_value <= 0:
 		return null
-	# `set_drag_preview` exige un viewport deja en train de glisser : vrai
-	# pendant un vrai geste, faux quand un banc appelle cette virtuelle a
-	# froid - et une erreur dans une sortie de banc verte est un echec.
-	if get_viewport() != null and get_viewport().gui_is_dragging():
-		set_drag_preview(_apercu())
+	UiTheme.drag_preview_for(self, _icon.texture if _icon != null else null, 48.0)
 	return {"ou": "inventaire", "type": piece_type}
 
-
-## Ce qui suit le doigt : la silhouette de la piece, centree sous le curseur -
-## `set_drag_preview` pose le coin haut-gauche a la position du pointeur.
-func _apercu() -> Control:
-	var socle := Control.new()
-	var sprite := TextureRect.new()
-	if _icon != null:
-		sprite.texture = _icon.texture
-	sprite.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
-	sprite.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
-	sprite.size = Vector2(48, 48)
-	sprite.position = -sprite.size * 0.5
-	sprite.modulate.a = 0.85
-	socle.add_child(sprite)
-	return socle
 
 
 func _on_gui_input(event: InputEvent) -> void:
