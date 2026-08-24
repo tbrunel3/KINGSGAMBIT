@@ -212,6 +212,11 @@ l'URL de l'artefact dans `url`**.
 ⚠️ **Sans `url`, un SECOND carnet est créé** — et le joueur continue de cocher
 l'ancien pendant qu'on lit le nouveau.
 
+⚠️ **Ne jamais toucher `serie` à la main.** `build` l'incrémente lui-même
+(`carnet.py:254`), et c'est ce compteur qui arbitre entre la page et la source :
+un `+1` ajouté en éditant `etat.json` le fait dériver du nombre de builds. Le
+sens de la comparaison survit, mais l'écart ment sur ce qui s'est passé.
+
 ### Avant de republier : récupérer ses coches
 
 1. **`WebFetch` sur l'URL rend le HTML BRUT**, `<script id="state">` compris, et

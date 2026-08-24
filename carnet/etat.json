@@ -383,8 +383,8 @@
             {
               "ref": "n1",
               "titre": "l'intro",
-              "detail": "« je vois seulement la deuxième image ». La cause n'est pas dans le code — l'écran a bien ses deux temps, mais <code>assets/intro/</code> ne contient qu'<strong>une illustration</strong>, et les deux frames en veulent deux. <strong>Vues, cette fois</strong> (Figma est enfin lisible) : <code>410:36</code> montre le Roi <strong>accablé, la main au visage</strong>, affaissé devant le <strong>trône vide</strong> de la Dame, cadrage large ; <code>410:71</code> le montre <strong>redressé</strong> sur son trône, cadrage serré — c'est celle que le jeu possède. Il est assis sur les deux : ce n'est pas « debout / assis », c'est la posture et le cadrage. <strong>⚠️ Il ne manque que le fichier, et je ne peux pas l'exporter moi-même</strong> — le proxy de sortie de ce conteneur refuse <code>figma.com</code>.",
-              "statut": "encours",
+              "detail": "« je vois seulement la deuxième image ». La cause n'était pas dans le code : l'écran avait bien ses deux temps, mais <code>assets/intro/</code> ne contenait qu'<strong>une illustration</strong>. <strong>Tu l'as posée, elle est en place.</strong> Renommée <code>solitaire.png</code> → <code>king_before_dialogue.png</code> : les assets du dossier portent leur rôle, c'est ce qui les rend trouvables depuis le code. 852 × 1846, soit un rapport de 0,4615 quand l'écran fait 0,4613 — elle ne perd quasiment rien sur les bords.",
+              "statut": "attente",
               "priorite": "moyenne",
               "journal": [
                 {
@@ -441,9 +441,41 @@
                   "quand": "24/08",
                   "qui": "Claude",
                   "texte": "Bancs relancés (il a fallu installer Godot 4.7, il n'était pas dans ce conteneur) : ui_test 19 cas, format_test 8 formats, smoke_test 10/10 batailles et 17 promotions. 0 SCRIPT ERROR sur les trois."
+                },
+                {
+                  "quand": "24/08",
+                  "qui": "Toi",
+                  "texte": "j'ai commit le png"
+                },
+                {
+                  "quand": "24/08",
+                  "qui": "Claude",
+                  "texte": "Reçue et posée. Vérifiée sur les captures RÉELLES, pas en lisant le code : 9a montre le Roi accablé, le trône vide et l'invite ; 9_intro_ready montre le Roi redressé, cadré par le zoom, avec la bulle. Le fondu de l'un à l'autre ne s'était jamais joué jusqu'ici — il n'avait pas de seconde image."
+                },
+                {
+                  "quand": "24/08",
+                  "qui": "Claude",
+                  "texte": "⚠️ Et la capture 9a MENTAIT, sur le piège que le manuel décrit déjà. Prise à 0,6 s alors que l'invite n'arrive qu'après 1 s puis met 0,8 s à monter : elle photographiait un écran sans son invite, qui n'existe à aucun moment pour toi. L'attente se lit maintenant sur la constante de l'écran."
+                },
+                {
+                  "quand": "24/08",
+                  "qui": "Claude",
+                  "texte": "Nettoyage du script, comme demandé : _fade_overlay et son nœud (restes du fondu local retiré), FADE_DURATION plus lue, SETTLE_SCALE/SETTLE_DURATION jamais appliquées. Les MESURES Figma ne sont pas perdues — elles passent dans le bloc TIMELINE, à la place qui liste ce qui n'est pas repris de la maquette. Bancs verts et 35 captures refaites : l'intro rend la même chose qu'avant."
+                },
+                {
+                  "quand": "24/08",
+                  "qui": "Claude",
+                  "texte": "⚠️ Le build web n'est PAS réexporté : ne teste pas encore sur ton téléphone, le bandeau du haut est orange. Je le dis parce que la règle est la tienne — ne pas pousser une ligne avant que le build correspondant soit lançable."
                 }
               ],
-              "theme": "Intro"
+              "theme": "Intro",
+              "livre": {
+                "commit": "66377ff",
+                "quand": "24/08 à 22h10",
+                "pousse": true,
+                "enLigne": false
+              },
+              "resume": "À vérifier au tout début d'une partie neuve : le Roi arrive ACCABLÉ, la main au visage, avec le trône vide de la Dame à côté, et « S'APPROCHER DU TRÔNE » monte en bas. Au toucher, il se REDRESSE par un fondu, l'image se resserre, et il parle. ⚠️ Le build web n'est pas encore réexporté — attends le bandeau vert."
             },
             {
               "ref": "n2",
@@ -782,5 +814,5 @@
       }
     }
   ],
-  "serie": 95
+  "serie": 97
 }
