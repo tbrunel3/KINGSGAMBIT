@@ -140,6 +140,38 @@ func position_to_cell(point: Vector2) -> Vector2i:
 	return Vector2i(floori(local.x), floori(local.y))
 
 
+# ------------------------- LACHER UNE PIECE DE L'INVENTAIRE -------------------
+#
+#  Troisieme geste du placement, apres "taper la chip puis la case" et "glisser
+#  une piece deja posee" : on prend la piece dans l'inventaire et on la porte
+#  directement sur sa case.
+#
+#  ⚠️ LA VUE NE DECIDE RIEN. Elle ne connait ni la zone de deploiement, ni la
+#  charge, ni ce qui reste en main - tout ca vit dans l'ecran de bataille. Elle
+#  lui demande donc, par un Callable, si le lacher est legal, exactement comme
+#  elle se contente d'emettre `cell_pressed` sans juger le coup.
+
+## (type, case) -> bool : l'ecran repond a la place de la vue.
+var accepte_lacher: Callable
+
+## Une piece de l'inventaire vient d'etre lachee sur une case.
+signal inventaire_lachee(type: String, cell: Vector2i)
+
+
+func _can_drop_data(position: Vector2, data: Variant) -> bool:
+	if not (data is Dictionary) or String(data.get("ou", "")) != "inventaire":
+		return false
+	if not accepte_lacher.is_valid():
+		return false
+	return bool(accepte_lacher.call(String(data.get("type", "")),
+		position_to_cell(position)))
+
+
+func _drop_data(position: Vector2, data: Variant) -> void:
+	inventaire_lachee.emit(String(data.get("type", "")),
+		position_to_cell(position))
+
+
 # ------------------------------- ENTREE --------------------------------------
 #
 #  Deux gestes pour un meme coup, parce que les deux sont naturels au doigt :

@@ -898,6 +898,57 @@ func _test_composition() -> void:
 		"le placement ne propose que les %d pions composes" % chosen)
 	_check(Game.units_owned(Balance.PION) > chosen,
 		"...alors que la caserne en compte %d" % Game.units_owned(Balance.PION))
+
+	# ---- LE GLISSER-DEPOSER DE L'INVENTAIRE VERS LE PLATEAU (chantier C) ----
+	#
+	# Meme methode qu'a la preparation : on appelle les virtuelles a la main,
+	# un banc headless ne jouant pas de geste souris. Ce qui est mesure est le
+	# cablage - la chip donne son type, la grille demande a l'ecran, et le
+	# lacher pose vraiment une piece.
+	var chip: Node = battle._type_buttons.get(Balance.PION)
+	_check(chip != null and chip.has_method("_get_drag_data"),
+		"la chip d'inventaire se saisit")
+	if chip != null:
+		var charge_i = chip._get_drag_data(Vector2.ZERO)
+		_check(charge_i is Dictionary and charge_i.get("type", "") == Balance.PION,
+			"elle donne le type qu'elle affiche (%s)" % str(charge_i))
+
+		# Une case de la zone bleue, libre : c'est la seule qui doit accepter.
+		var libre := Vector2i(-1, -1)
+		for y in range(battle._engine.grid.rows):
+			for x in range(battle._engine.grid.cols):
+				var c := Vector2i(x, y)
+				if battle._engine.grid.is_player_zone(c) 						and battle._engine.grid.unit_at(c) == null:
+					libre = c
+					break
+			if libre.x >= 0:
+				break
+		_check(libre.x >= 0, "il reste une case libre en zone bleue (%s)" % str(libre))
+		if libre.x >= 0:
+			_check(battle._grid_view._can_drop_data(
+					battle._grid_view.cell_center(libre), charge_i),
+				"le plateau accepte le lacher sur une case libre de la zone bleue")
+			var poses: int = battle._placed.size()
+			battle._grid_view._drop_data(
+				battle._grid_view.cell_center(libre), charge_i)
+			await _frames(2)
+			_check(battle._placed.size() == poses + 1,
+				"lacher sur la case pose vraiment la piece")
+			_check(battle._engine.grid.unit_at(libre) != null,
+				"...et la piece est bien sur CETTE case")
+			# La meme case, maintenant occupee, doit refuser : un glissement
+			# qui viderait la case en croyant la remplir serait un piege.
+			_check(not battle._grid_view._can_drop_data(
+					battle._grid_view.cell_center(libre), charge_i),
+				"une case deja occupee refuse le lacher")
+
+		# Hors zone bleue : la derniere rangee appartient a l'ennemi.
+		var ennemie := Vector2i(0, 0)
+		_check(not battle._grid_view._can_drop_data(
+				battle._grid_view.cell_center(ennemie),
+				{"ou": "inventaire", "type": Balance.PION}),
+			"le plateau refuse le lacher hors de la zone bleue")
+
 	battle.queue_free()
 	await _frames(2)
 

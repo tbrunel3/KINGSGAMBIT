@@ -125,6 +125,10 @@ func _ready() -> void:
 	_grid_view.setup(_engine)
 	_grid_view.cell_clicked.connect(_on_cell_clicked)
 	_grid_view.cell_pressed.connect(_on_cell_pressed)
+	# Le troisieme geste du placement : porter une piece de l'inventaire
+	# directement sur sa case. La vue ne decide rien - elle nous demande.
+	_grid_view.accepte_lacher = _peut_poser
+	_grid_view.inventaire_lachee.connect(_on_inventaire_lachee)
 	_grid_view.piece_dropped.connect(_on_piece_dropped)
 	_grid_view.draggable_team = BattleUnit.TEAM_PLAYER
 
@@ -800,6 +804,9 @@ func _build_placement_ui() -> void:
 		var path := "res://assets/pieces/%s/%s.png" % [folder, type]
 		var texture: Texture2D = load(path) if ResourceLoader.exists(path) else null
 		row.add_child(chip)
+		# Le type descend DANS la chip : c'est ce qu'elle donnera au plateau
+		# quand on la fera glisser (cf. SelectionChip._get_drag_data).
+		chip.piece_type = type
 		chip.set_piece.call_deferred(texture, Balance.unit_name(type).to_upper(), int(_remaining[type]))
 		chip.pressed.connect(_on_type_selected.bind(type))
 		_type_buttons[type] = chip
@@ -1061,6 +1068,35 @@ func _on_piece_dropped(from: Vector2i, to: Vector2i) -> void:
 
 
 # ------------------------------- PLACEMENT : GESTES --------------------------
+
+## LE LACHER EST-IL LEGAL ? Les memes conditions que `_on_placement_tap`, mais
+## rendues AVANT le geste, pour que la case refuse visiblement au lieu
+## d'accepter puis de ne rien faire.
+##
+## ⚠️ On ne remplace pas une piece deja posee : au tap, toucher une case
+## occupee la RETIRE, et un glissement qui viderait la case tout en croyant la
+## remplir serait un piege. Pour deplacer, on glisse la piece elle-meme.
+func _peut_poser(type: String, cell: Vector2i) -> bool:
+	if _phase != Phase.PLACEMENT or type.is_empty():
+		return false
+	if not _engine.grid.in_bounds(cell) or not _engine.grid.is_player_zone(cell):
+		return false
+	if _engine.grid.unit_at(cell) != null:
+		return false
+	if int(_remaining.get(type, 0)) <= 0:
+		return false
+	return _placed_weight() + Balance.deploy_weight(type) <= Game.deploy_capacity()
+
+
+## La piece portee depuis l'inventaire arrive sur sa case. On repasse par le
+## chemin du tap plutot que d'en ecrire un second : c'est le meme placement,
+## avec ses memes garde-fous, et deux chemins finiraient par diverger.
+func _on_inventaire_lachee(type: String, cell: Vector2i) -> void:
+	if not _peut_poser(type, cell):
+		return
+	_on_type_selected(type)
+	_on_placement_tap(cell)
+
 
 func _on_placement_tap(cell: Vector2i) -> void:
 	_clear_selection()

@@ -16,6 +16,12 @@ signal pressed
 		selected = value
 		_restyle()
 
+## Le type de piece que la chip represente, et ce qu'il en reste. La chip s'en
+## sert pour se laisser SAISIR : sans le type, elle ne saurait pas quoi donner
+## au plateau, et sans le compte elle proposerait de poser une piece epuisee.
+var piece_type: String = ""
+var _count_value: int = 0
+
 @onready var _icon: TextureRect = %Icon
 @onready var _name: Label = %NameLabel
 @onready var _count: Label = %CountLabel
@@ -41,8 +47,45 @@ func set_icon(icon: Texture2D) -> void:
 
 
 func set_count(count: int) -> void:
+	_count_value = count
 	_count.text = "×%d" % count
 	modulate.a = 1.0 if count > 0 else 0.5
+
+
+## LE GLISSER-DEPOSER VERS LE PLATEAU (chantier C).
+##
+## ⚠️ Le tap n'est pas remplace. Godot ne demande `_get_drag_data` qu'une fois
+## le bouton enfonce ET la souris deplacee ; un appui immobile part encore dans
+## `gui_input`, donc "je touche la chip puis je touche la case" continue de
+## marcher exactement comme avant. Le glissement s'ajoute, il ne remplace pas.
+##
+## La chip epuisee ne se saisit pas : faire miroiter un placement que le
+## plateau refusera au lacher est pire que ne rien proposer.
+func _get_drag_data(_position: Vector2) -> Variant:
+	if piece_type.is_empty() or _count_value <= 0:
+		return null
+	# `set_drag_preview` exige un viewport deja en train de glisser : vrai
+	# pendant un vrai geste, faux quand un banc appelle cette virtuelle a
+	# froid - et une erreur dans une sortie de banc verte est un echec.
+	if get_viewport() != null and get_viewport().gui_is_dragging():
+		set_drag_preview(_apercu())
+	return {"ou": "inventaire", "type": piece_type}
+
+
+## Ce qui suit le doigt : la silhouette de la piece, centree sous le curseur -
+## `set_drag_preview` pose le coin haut-gauche a la position du pointeur.
+func _apercu() -> Control:
+	var socle := Control.new()
+	var sprite := TextureRect.new()
+	if _icon != null:
+		sprite.texture = _icon.texture
+	sprite.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+	sprite.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+	sprite.size = Vector2(48, 48)
+	sprite.position = -sprite.size * 0.5
+	sprite.modulate.a = 0.85
+	socle.add_child(sprite)
+	return socle
 
 
 func _on_gui_input(event: InputEvent) -> void:
