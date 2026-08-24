@@ -1098,6 +1098,11 @@ button[disabled]{opacity:.45;cursor:progress}
      même la publication. Artefact supprimé = il rouvre, la page voit que le
      local est plus frais, et elle le lui rend.
      ═══════════════════════════════════════════════════════════════════════ */
+  /* L'ADRESSE DU CARNET QUI COMMANDE. La copie de secours doit pouvoir y
+     renvoyer : c'est la seule difference qui compte entre les deux, et le
+     joueur a lance le travail depuis la muette faute de le savoir. */
+  var ARTEFACT = "https://claude.ai/code/artifact/47c96d8b-a61a-4222-932d-04430c13692f";
+
   var CLE = "carnet-kings-gambit-v5";
   var plusFrais = null;
 
@@ -1161,7 +1166,6 @@ button[disabled]{opacity:.45;cursor:progress}
      rendait le carnet inutilisable dès qu'il sortait de la plateforme. */
   var mode = (window.claude && window.claude.use) ? "artefact" : "depot";
   var lectureSeule = false;
-  var depotVu = false;
   var vueOnglet = "actives";
   var visee = null;          // {s:index de section, i:index de fiche}
   var inspOuvert = false;    // sur téléphone, l'inspecteur est une feuille
@@ -1370,16 +1374,19 @@ button[disabled]{opacity:.45;cursor:progress}
     if (lectureSeule){
       h += '<div class="lecture-seule">Cette vue est en <b>lecture seule</b> : tes coches '
         + 's’affichent mais ne sont pas enregistrées. Ouvre le carnet depuis ton compte.</div>';
-    } else if (mode === "depot" && !depotVu){
-      /* Refermable : l'information compte à la première lecture, et devient du
-         bruit ensuite — sur un téléphone elle mangeait 143 px à chaque écran. */
-      h += '<div class="lecture-seule" style="border-color:var(--cyan);color:var(--cyan);'
-        + 'background:rgba(0,210,255,.07);display:flex;gap:10px;align-items:flex-start">'
-        + '<span style="flex:1"><b>MODE DÉPÔT.</b> Ce carnet tourne depuis ton git — '
-        + '<b>personne ne peut le supprimer</b>. Coche normalement : tout est gardé dans ce '
-        + 'navigateur, et <b>EXPORTER L’ÉTAT</b> en bas de page me le renvoie.</span>'
-        + '<button data-depot-vu="1" title="J’ai lu" style="flex:none;color:var(--cyan);'
-        + 'font-family:var(--mono);font-size:13px;padding:0 4px">✕</button></div>';
+    } else if (mode === "depot"){
+      /* ⚠️ PAS REFERMABLE, ET C'EST LE POINT. Les deux versions se ressemblent
+         trait pour trait, et le joueur a lance le travail depuis celle-ci en
+         croyant me commander. Un bandeau qu'on peut fermer aurait laissé le
+         meme piege se retendre. Celui-la reste, et il donne la sortie. */
+      h += '<div class="lecture-seule" style="border-color:var(--ambre);color:var(--ambre);'
+        + 'background:rgba(245,158,11,.1)"><b>COPIE DE SECOURS — ELLE NE ME PARLE PAS.</b><br>'
+        + 'Tu peux lire et cocher (tout est gardé dans ce navigateur), mais <b>rien ne me '
+        + 'parvient</b> : ni tes verdicts, ni AU TRAVAIL.<br>'
+        + '<a href="' + ARTEFACT + '" target="_blank" rel="noopener" '
+        + 'style="display:inline-block;margin-top:9px;padding:9px 14px;border-radius:4px;'
+        + 'background:var(--ambre);color:var(--fond);font-family:var(--mono);font-weight:700;'
+        + 'font-size:12px;text-decoration:none">OUVRIR LE CARNET QUI ME COMMANDE →</a></div>';
     }
     if (plusFrais){
       h += '<div class="lecture-seule" style="border-color:var(--ambre);color:var(--ambre);'
@@ -1984,7 +1991,6 @@ button[disabled]{opacity:.45;cursor:progress}
       render(); enregistrer(document.getElementById("etat-marche")); return;
     }
     if (t.closest("button[data-oublier]")){ plusFrais = null; render(); return; }
-    if (t.closest("button[data-depot-vu]")){ depotVu = true; render(); return; }
 
     /* — lecture pure : ni miroir ni publication — */
     var reg = t.closest("button[data-journee]");
