@@ -38,10 +38,25 @@ const SHOTS := [
 ## un ecran a MOITIE APPARU - la preparation ressortait quasiment vide, et le
 ## banc accusait la mise en page. On saute donc a la fin des tweens plutot que
 ## d'attendre : c'est instantane, et c'est exact.
+## ⚠️ UN SEUL PASSAGE NE SUFFIT PAS QUAND UNE ANIMATION EN LANCE UNE AUTRE.
+##
+## La missive enchaine : le sceau se brise, et son `tween_callback` DEMARRE le
+## depli du parchemin. Pousser les tweens une fois ne finissait donc que le
+## sceau - la capture aurait photographie une lettre a moitie ouverte, et c'est
+## exactement le piege deja paye sur la preparation, en pire : ici l'outil
+## croyait avoir fini.
+##
+## On repousse tant qu'il en nait de nouveaux, avec une borne : une animation
+## qui se relance en boucle (une lueur pulsee) ne doit pas bloquer la capture.
 func _finish_animations() -> void:
-	for tween in get_tree().get_processed_tweens():
-		if tween.is_valid():
-			tween.custom_step(10.0)
+	for essai in range(6):
+		var tweens := get_tree().get_processed_tweens()
+		if tweens.is_empty():
+			break
+		for tween in tweens:
+			if tween.is_valid():
+				tween.custom_step(10.0)
+		await get_tree().process_frame
 	await RenderingServer.frame_post_draw
 
 func _ready() -> void:
