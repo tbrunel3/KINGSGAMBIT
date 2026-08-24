@@ -5,7 +5,53 @@
       "nom": "24/08 — Bâtiments & carnet",
       "maj": "24/08/2026",
       "tri": "priorite",
-      "marche": null,
+      "marche": {
+        "nom": "tout ce qui est ouvert",
+        "lance": "24/08 à 06h35",
+        "groupe": "tout",
+        "ordre": [
+          {
+            "ref": "T",
+            "titre": "Le combat au doigt"
+          },
+          {
+            "ref": "D",
+            "titre": "Les animations qui manquent"
+          },
+          {
+            "ref": "E",
+            "titre": "L'habillage : barre du haut, alignements, polices"
+          },
+          {
+            "ref": "n1",
+            "titre": "l'intro"
+          },
+          {
+            "ref": "n2",
+            "titre": "Le bouton COMBATTEZ ne suit pas la maquette"
+          },
+          {
+            "ref": "5",
+            "titre": "Les deux lettres du Roi, entre l'intro et le village"
+          },
+          {
+            "ref": "6",
+            "titre": "Les popups d'accompagnement de Figma"
+          },
+          {
+            "ref": "d1",
+            "titre": "Améliorer le Château en pleine série augmente la charge"
+          },
+          {
+            "ref": "d2",
+            "titre": "L'audit du banc d'interface n'a jamais été fait"
+          },
+          {
+            "ref": "d3",
+            "titre": "Quatre zones défilantes jamais auditées"
+          }
+        ]
+      },
       "build": {
         "enLigne": "24/08, 03h05",
         "commit": "940d5ea",
