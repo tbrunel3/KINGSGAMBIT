@@ -1,0 +1,2056 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="color-scheme" content="dark">
+</head>
+<body style="margin:0">
+<title>Carnet des travaux — King's Gambit</title>
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Geist+Mono:wght@400;700;800&family=Inter:wght@400;600;700;800&display=swap">
+<style id="sheet">
+/* ═══════════════════════════════════════════════════════════════════════════
+   LA CONSOLE D'ATELIER — maquette Figma YTypQjzEG1JG4w9QZUClVk, node 13:373.
+   Trois colonnes : les registres, les fiches, l'inspecteur.
+
+   ⚠️ LES COULEURS ET LES POLICES VIENNENT DE LA MAQUETTE, LES REGLES DU CODE.
+   Meme discipline que le jeu (CLAUDE.md, regle 2) : si la maquette montre un
+   ecran sans le bouton dont l'outil a besoin, on garde le bouton et on
+   l'habille. C'est ce qui est arrive quatre fois ici - le bandeau de build,
+   le tri, les filtres et l'export ne sont pas sur la maquette, et le joueur a
+   demande qu'ils restent.
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+:root{
+  /* Les six fonds, du plus profond au plus clair. */
+  --fond:#060913;
+  --panneau:#0d1424;
+  --filet:#1c2c4e;
+  --puce:#14213d;
+  --actif:#2a4d80;
+  /* Le texte. */
+  --texte:#e2e8f0;
+  --attenue:#6b7c96;
+  /* Les quatre accents. Un etat = une couleur, partout, sans exception. */
+  --cyan:#00d2ff;
+  --ambre:#f59e0b;
+  --rouge:#ef4444;
+  --vert:#10b981;
+  --fond-rouge:#22151b;
+  --fond-vert:#081a16;
+  /* Les deux polices : le mono porte TOUT le meta, l'Inter porte les phrases.
+     C'est ce contraste qui fait lire la page comme une console. */
+  --mono:"Geist Mono",ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+  --corps:"Inter",system-ui,-apple-system,"Segoe UI",sans-serif;
+  --rail:240px;
+  --inspecteur:440px;
+}
+
+*{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%}
+body{
+  margin:0;background:var(--fond);color:var(--texte);
+  font-family:var(--corps);font-size:14px;line-height:1.5;
+  -webkit-font-smoothing:antialiased;
+}
+button,input,textarea,select{font-family:inherit}
+button{cursor:pointer;border:0;background:none;color:inherit}
+button[disabled]{opacity:.45;cursor:progress}
+:focus-visible{outline:2px solid var(--cyan);outline-offset:2px}
+
+/* Le cadre de 4 px de la maquette. Sur telephone il mange de la largeur pour
+   rien : il tombe a 0. */
+#root{
+  height:100vh;height:100dvh;overflow:hidden;border:4px solid var(--filet);
+  display:grid;grid-template-columns:var(--rail) 1fr;
+  grid-template-areas:"rail principal";
+}
+
+/* ─────────────────────────── LE RAIL DES REGISTRES ───────────────────────── */
+
+.rail{
+  grid-area:rail;background:var(--panneau);border-right:1px solid var(--filet);
+  display:flex;flex-direction:column;justify-content:space-between;min-width:0;
+}
+.marque{
+  display:flex;gap:12px;align-items:center;padding:20px;
+  border-bottom:1px solid var(--filet);
+}
+.marque .logo{width:42px;height:30px;flex:none;background:center/contain no-repeat url(data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%20104%2073%22%20fill%3D%22none%22%3E%3Cg%20id%3D%22StudioBNL%20Logo%22%20clip-path%3D%22url%28%23clip0_0_12%29%22%3E%20%3Cpath%20id%3D%22Vector%22%20d%3D%22M37.4254%209.39414L37.3035%209.3981H25.0729L25.065%200.0590938V0.00955526H0.141577C0.114048%200.00955526%200%20-0.0122417%200%200.0135183V72.9997H25.0965L25.067%2072.8035V63.9321L25.0768%2063.7082C25.0788%2063.6606%2025.2262%2063.6686%2025.2951%2063.6686H37.4549V9.53086C37.4549%209.44368%2037.4549%209.39414%2037.4254%209.39414ZM14.6886%2012.0989H18.4522V16.1948C18.5643%2016.3414%2018.7137%2016.3969%2018.9064%2016.3711V12.097L31.6896%2012.0989C33.2627%2012.0989%2034.6647%2012.8281%2035.3372%2014.2648C35.6144%2014.8989%2035.7678%2015.5528%2035.7698%2016.2661L35.7737%2020.3481H23.0062L23.0003%2016.5178H32.136C32.1497%2016.4286%2032.1497%2016.2681%2032.1026%2016.2146C32.0554%2016.1631%2031.9315%2016.1135%2031.8214%2016.0719H22.5658V20.3481H18.5997C18.055%2020.3065%2017.5614%2020.2272%2017.058%2020.037C16.1103%2019.6704%2015.3906%2018.9531%2015.017%2018C14.7987%2017.4392%2014.7083%2016.8725%2014.6886%2016.2582V12.0989ZM18.3735%2024.8898C18.346%2024.9889%2018.3322%2025.1712%2018.3794%2025.2227C18.4247%2025.2722%2018.5308%2025.3059%2018.6449%2025.3376H30.2385V29.1679H18.641C17.587%2029.1402%2016.6471%2028.7677%2015.89%2028.0504C15.1389%2027.2875%2014.6984%2026.2907%2014.6965%2025.191L14.6906%2020.9188H35.7718V24.8878H34.3422V29.166H30.6809V24.8878H18.3735V24.8898ZM35.7737%2060.9776H18.5544C16.9342%2060.8746%2015.658%2060.1731%2015.0307%2058.6612C14.8243%2058.1024%2014.6925%2057.5456%2014.6925%2056.9333V52.5957H31.8292C32.4388%2052.5957%2032.9894%2052.7324%2033.5262%2052.9544C34.4464%2053.3368%2035.115%2054.068%2035.467%2054.9973C35.6754%2055.566%2035.76%2056.1308%2035.7737%2056.751V60.9757V60.9776ZM35.7737%2052.0131H14.6886V47.7667H35.7737V52.0131ZM14.6906%2038.7685H35.7718V47.1762H18.519C17.2271%2047.1108%2016.1142%2046.4965%2015.4004%2045.4622C14.956%2044.7686%2014.6945%2043.9998%2014.6945%2043.1517L14.6906%2038.7685ZM14.6886%2038.1681L14.6925%2029.7763H35.7737V33.7493H18.3224L18.3342%2034.1951H35.7718L35.7757%2038.1681H14.6886Z%22%20fill%3D%22%23F5F5FA%22%2F%3E%20%3Cg%20id%3D%22Vector_2%22%3E%20%3C%2Fg%3E%20%3Cpath%20id%3D%22Vector_3%22%20d%3D%22M72.4107%2018.7949C72.0469%2018.7474%2071.6536%2018.7553%2071.278%2018.7771V63.6689H61.2005V9.4143H82.4783V63.6689H72.4107V18.7949Z%22%20fill%3D%22%23F5F5FA%22%2F%3E%20%3Cpath%20id%3D%22Vector_4%22%20d%3D%22M60.6637%2039.7854L60.6578%2053.3689C60.6578%2054.8411%2060.3806%2056.2599%2059.8673%2057.6074C58.9373%2060.0526%2057.0594%2061.9073%2054.6369%2062.8505C53.3174%2063.336%2051.9489%2063.6531%2050.5154%2063.6551L39.3957%2063.6729V9.41629L60.6617%209.42025V32.3606C60.6499%2033.4603%2060.4946%2034.4986%2060.1702%2035.535C59.6628%2037.1698%2058.7741%2038.5965%2057.5372%2039.7814L60.6657%2039.7854H60.6637ZM50.596%2035.2794V18.7711H49.4673V36.1592C49.723%2036.175%2050.0061%2036.2127%2050.2185%2036.1017C50.478%2035.967%2050.596%2035.636%2050.596%2035.2814V35.2794ZM50.596%2053.0815V45.5834H49.4673V54.2368H50.0592C50.3502%2054.2368%2050.598%2053.6126%2050.598%2053.0815H50.596Z%22%20fill%3D%22%23F5F5FA%22%2F%3E%20%3Cpath%20id%3D%22Vector_5%22%20d%3D%22M94.2981%2020.2593H103.998V63.6689H83.0899V9.41827H92.9216H93.1261C93.1182%209.39449%2093.1379%209.45592%2093.1576%209.52725V54.2308L94.2981%2054.2328V20.2593Z%22%20fill%3D%22%23F5F5FA%22%2F%3E%20%3Cpath%20id%3D%22Vector_6%22%20d%3D%22M32.1497%2042.7379H18.3499V43.1877H32.1497V42.7379Z%22%20fill%3D%22%23F5F5FA%22%2F%3E%20%3Cpath%20id%3D%22Vector_7%22%20d%3D%22M32.1497%2056.5651H18.3499V57.0149H32.1497V56.5651Z%22%20fill%3D%22%23F5F5FA%22%2F%3E%20%3C%2Fg%3E%20%3Cdefs%3E%20%3CclipPath%20id%3D%22clip0_0_12%22%3E%20%3Crect%20width%3D%22104%22%20height%3D%2273%22%20fill%3D%22white%22%2F%3E%20%3C%2FclipPath%3E%20%3C%2Fdefs%3E%3C%2Fsvg%3E)}
+.marque b{display:block;font-family:var(--mono);font-weight:800;font-size:14px}
+.marque span{display:block;font-family:var(--mono);font-size:9px;color:var(--cyan);margin-top:2px}
+
+.registres{display:flex;flex-direction:column;gap:4px;padding:12px;min-width:0;overflow-y:auto}
+.etiquette{
+  font-family:var(--mono);font-weight:700;font-size:10px;color:var(--attenue);
+  letter-spacing:.04em;margin:0 0 2px;
+}
+.registre{
+  display:flex;align-items:center;justify-content:space-between;gap:8px;
+  padding:10px 12px;border-radius:6px;width:100%;text-align:left;min-width:0;
+}
+.registre:hover{background:rgba(28,44,78,.5)}
+.registre.actif{background:var(--filet)}
+.registre .nom{
+  font-size:13px;color:var(--attenue);overflow:hidden;
+  text-overflow:ellipsis;white-space:nowrap;min-width:0;
+}
+.registre.actif .nom{color:var(--texte);font-weight:700}
+.registre .part{font-family:var(--mono);font-size:11px;color:var(--attenue);flex:none}
+.registre.actif .part{color:var(--cyan)}
+.pastille-ronde{width:8px;height:8px;border-radius:50%;flex:none;background:var(--attenue)}
+.registre.actif .pastille-ronde{background:var(--cyan)}
+.registre.finie .pastille-ronde{background:var(--vert)}
+
+/* Le panneau de nettoyage, en bas du rail — c'est la MÉTRIQUE MOTEUR de la
+   maquette. Le bouton demande la passe ; ce n'est pas au joueur de la clore. */
+.moteur{display:flex;flex-direction:column;gap:12px;padding:16px;border-top:1px solid var(--filet)}
+.moteur .haut{display:flex;align-items:center;justify-content:space-between;gap:8px}
+.moteur .haut>span{font-family:var(--mono);font-size:11px;color:var(--attenue)}
+.jeton{
+  font-family:var(--mono);font-weight:700;font-size:8px;letter-spacing:.06em;
+  padding:2px 6px;border-radius:4px;border:1px solid currentColor;
+}
+.jeton.vert{color:var(--vert);background:rgba(16,185,129,.1)}
+.jeton.ambre{color:var(--ambre);background:rgba(245,158,11,.1)}
+.jeton.cyan{color:var(--cyan);background:rgba(0,210,255,.1)}
+.moteur b{font-size:13px;font-weight:700}
+.moteur .chiffre{font-family:var(--mono);font-size:11px;color:var(--vert)}
+.moteur .chiffre.ambre{color:var(--ambre)}
+.bouton-scan{
+  display:flex;align-items:center;justify-content:center;width:100%;
+  padding:8px 12px;border-radius:4px;font-family:var(--mono);font-weight:700;
+  font-size:11px;letter-spacing:.04em;
+  color:var(--vert);border:1px solid var(--vert);background:rgba(16,185,129,.1);
+}
+.bouton-scan:hover{background:rgba(16,185,129,.2)}
+.bouton-scan.annule{color:var(--attenue);border-color:var(--filet);background:transparent}
+
+/* ──────────────────────────── LA COLONNE PRINCIPALE ──────────────────────── */
+
+.principal{grid-area:principal;display:flex;flex-direction:column;min-width:0;min-height:0}
+
+.barre-haute{
+  background:var(--panneau);border-bottom:1px solid var(--filet);
+  padding:12px 24px;display:flex;align-items:center;gap:14px;flex-wrap:wrap;
+}
+/* ⚠️ MESURÉ : à 1280 de large, la barre se repliait sur deux lignes — 110 px
+   de haut au lieu de 66. Trois blocs de largeur fixe dans 1032 px n'entrent
+   pas. Le titre et le compteur doivent pouvoir RÉTRÉCIR ; seules les actions
+   gardent leur taille, parce qu'un bouton tronqué ne se clique plus. */
+.titre-journee{display:flex;align-items:center;gap:6px;min-width:0;flex:0 1 auto}
+.fleche{
+  width:22px;height:22px;border-radius:4px;background:var(--fond);flex:none;
+  display:flex;align-items:center;justify-content:center;
+}
+.fleche:hover{background:var(--actif)}
+.fleche[disabled]{opacity:.3}
+.titre-journee h1{
+  font-size:18px;font-weight:800;margin:0;min-width:0;
+  overflow:hidden;text-overflow:ellipsis;white-space:nowrap;
+}
+.compteur-haut{display:flex;align-items:center;gap:10px;flex:0 1 auto;min-width:0}
+.compteur-haut .mot{
+  font-family:var(--mono);font-size:11px;color:var(--attenue);white-space:nowrap;
+  overflow:hidden;text-overflow:ellipsis;
+}
+/* Sous 1180, le compteur chiffré s'efface avant tout le reste : la jauge dit
+   déjà la même chose, en moins de place. */
+@media (max-width:1180px){ .compteur-haut .mot{display:none} }
+.rail-jauge{width:120px;height:6px;border-radius:3px;background:var(--filet);overflow:hidden;flex:none}
+.rail-jauge>span{display:block;height:100%;border-radius:3px;background:var(--vert)}
+.voyant{display:flex;align-items:center;gap:6px;font-family:var(--mono);font-size:11px}
+.voyant i{width:6px;height:6px;border-radius:50%;background:currentColor;font-style:normal}
+.voyant.vert{color:var(--vert)} .voyant.ambre{color:var(--ambre)}
+.actions-haut{display:flex;gap:8px;margin-left:auto;flex:none}
+.bouton-cyan{
+  display:flex;align-items:center;gap:8px;padding:8px 14px;border-radius:4px;
+  background:var(--cyan);color:var(--fond);
+  font-family:var(--mono);font-weight:700;font-size:12px;letter-spacing:.03em;
+}
+.bouton-cyan:hover{background:#5ee4ff}
+.bouton-cyan.sourd{background:transparent;color:var(--attenue);border:1px solid var(--filet)}
+.bouton-cyan.sourd:hover{color:var(--texte);border-color:var(--attenue)}
+
+/* LE BANDEAU DE BUILD. ⚠️ CONSIGNE DU JOUEUR, mot pour mot : « tu me mets une
+   notif genre écran tout vert avec écrit COMMIT ET TEST POSSIBLE ». La maquette
+   le réduisait à un point de 11 px dans la barre du haut ; il a tranché qu'il
+   restait grand. Il a perdu un test sur un build pas encore exporté, une fois,
+   et c'est ce qui a créé cette règle. */
+.bandeau{
+  display:flex;gap:12px;align-items:center;padding:10px 24px;
+  border-bottom:1px solid var(--filet);
+}
+.bandeau .feu{width:11px;height:11px;border-radius:50%;flex:none}
+.bandeau h2{
+  font-family:var(--mono);font-weight:700;font-size:clamp(13px,2.4vw,17px);
+  letter-spacing:.06em;margin:0 0 2px;line-height:1.15;
+}
+.bandeau p{
+  margin:0;font-size:12px;color:var(--attenue);line-height:1.4;
+  display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;
+}
+.bandeau code{font-family:var(--mono);font-size:12px;color:var(--cyan)}
+.bandeau.en-ligne{background:linear-gradient(180deg,rgba(16,185,129,.18),rgba(13,20,36,0));border-bottom-color:var(--vert)}
+.bandeau.en-ligne h2{color:var(--vert)} .bandeau.en-ligne .feu{background:var(--vert);box-shadow:0 0 0 5px rgba(16,185,129,.22)}
+.bandeau.hors-ligne{background:linear-gradient(180deg,rgba(245,158,11,.14),rgba(13,20,36,0));border-bottom-color:var(--ambre)}
+.bandeau.hors-ligne h2{color:var(--ambre)} .bandeau.hors-ligne .feu{background:var(--ambre);box-shadow:0 0 0 5px rgba(245,158,11,.2)}
+
+.espace{flex:1;display:grid;grid-template-columns:1fr var(--inspecteur);min-height:0}
+
+/* ──────────────────────────── LA COLONNE DES FICHES ──────────────────────── */
+
+.colonne{padding:20px;display:flex;flex-direction:column;gap:16px;min-width:0;overflow-y:auto}
+
+.onglets{
+  display:flex;gap:4px;padding:4px;border-radius:6px;
+  background:var(--panneau);border:1px solid var(--filet);
+}
+.onglets button{
+  flex:1;min-width:0;padding:8px 6px;border-radius:4px;font-size:13px;
+  color:var(--attenue);display:flex;align-items:center;justify-content:center;gap:6px;
+}
+.onglets button:hover{color:var(--texte)}
+.onglets button.actif{background:var(--actif);color:var(--texte);font-weight:700}
+.onglets .compte{
+  font-family:var(--mono);font-weight:700;font-size:9px;color:var(--fond);
+  background:var(--ambre);border-radius:10px;padding:0 6px;
+}
+.onglets .compte.cyan{background:var(--cyan)}
+
+/* Les reglages de lecture — tri, groupement, theme. Pas sur la maquette ; le
+   joueur les a demandes explicitement, donc ils restent, en discret. */
+.reglages{display:flex;flex-wrap:wrap;gap:6px;align-items:center}
+.reglages .mot{font-family:var(--mono);font-size:10px;color:var(--attenue);letter-spacing:.06em}
+.reglages button{
+  font-family:var(--mono);font-size:10px;letter-spacing:.03em;padding:4px 9px;
+  border-radius:99px;border:1px solid var(--filet);color:var(--attenue);
+}
+.reglages button:hover{border-color:var(--attenue);color:var(--texte)}
+.reglages button.actif{border-color:var(--cyan);color:var(--cyan)}
+.reglages .sep{width:1px;height:16px;background:var(--filet);margin:0 4px}
+
+.groupe-titre{
+  display:flex;align-items:baseline;gap:10px;margin:6px 0 0;
+  font-family:var(--mono);font-weight:700;font-size:11px;letter-spacing:.12em;
+}
+.groupe-titre .compte{font-weight:400;font-size:10px;color:var(--attenue);margin-left:auto}
+.g-encours{color:var(--cyan)} .g-attente{color:var(--ambre)}
+.g-ko{color:var(--rouge)} .g-ok{color:var(--vert)} .g-todo{color:var(--attenue)}
+
+.fiches{display:flex;flex-direction:column;gap:10px}
+
+.carte{
+  width:100%;text-align:left;display:flex;flex-direction:column;gap:12px;
+  padding:12px;border-radius:8px;background:var(--panneau);
+  border:1px solid var(--filet);
+}
+.carte:hover{border-color:var(--actif)}
+.carte.attente{border:1.5px solid var(--ambre)}
+.carte.ko{background:var(--fond-rouge);border-color:var(--rouge)}
+.carte.encours{border-color:var(--cyan)}
+.carte.vise{box-shadow:0 0 0 1px var(--cyan)}
+.carte .tete{display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap}
+.carte .gauche{display:flex;align-items:center;gap:8px;flex-wrap:wrap;min-width:0}
+.ref{font-family:var(--mono);font-weight:700;font-size:12px}
+.carte h3{font-size:14px;font-weight:600;line-height:20px;margin:0}
+.puce-theme{
+  font-family:var(--mono);font-size:10px;color:var(--cyan);
+  background:var(--puce);border-radius:4px;padding:2px 6px;
+}
+.puce-focus{
+  font-family:var(--mono);font-size:9px;color:var(--cyan);
+  background:var(--actif);border-radius:2px;padding:1px 4px;letter-spacing:.04em;
+}
+.badge{
+  font-family:var(--mono);font-weight:700;font-size:10px;letter-spacing:.04em;
+  padding:4px 8px;border-radius:4px;border:1px solid currentColor;white-space:nowrap;
+}
+.badge.attente{color:var(--ambre);background:rgba(245,158,11,.1)}
+.badge.encours{color:var(--cyan);background:rgba(0,210,255,.1)}
+.badge.ko{color:var(--rouge);background:rgba(239,68,68,.1)}
+.badge.ok{color:var(--vert);background:rgba(16,185,129,.1)}
+.badge.todo{color:var(--attenue);background:transparent;border-color:var(--filet)}
+
+/* La fiche validée se replie sur une seule ligne, comme sur la maquette. */
+.carte.ok{
+  flex-direction:row;align-items:center;gap:12px;padding:10px 12px;border-radius:6px;
+  background:var(--fond-vert);border-color:var(--vert);
+}
+.carte.ok .ref{color:var(--vert)}
+.carte.ok h3{
+  flex:1;min-width:0;font-size:13px;font-weight:400;color:var(--attenue);
+  overflow:hidden;text-overflow:ellipsis;white-space:nowrap;line-height:normal;
+}
+
+/* La jauge par fiche : elle dit où en est la ligne, là où le statut ne dit
+   que dans quelle case elle est. */
+.carte .avance{display:flex;align-items:center;gap:8px;font-family:var(--mono);font-size:10px;color:var(--attenue)}
+.carte .avance .rail-jauge{width:100%;height:4px}
+.carte .prio{font-family:var(--mono);font-size:10px;letter-spacing:.04em}
+.prio-haute{color:var(--rouge)} .prio-moyenne{color:var(--attenue)} .prio-basse{color:#4a5a75}
+
+.vide{
+  padding:26px 18px;border:1px dashed var(--filet);border-radius:8px;text-align:center;
+  color:var(--attenue);font-family:var(--mono);font-size:12px;
+}
+
+/* ─────────────────────── L'ORDRE DE MARCHE ET SES BOUTONS ────────────────── */
+
+.marche{
+  padding:16px;border-radius:8px;border:2px solid var(--cyan);
+  background:linear-gradient(180deg,rgba(0,210,255,.12),rgba(13,20,36,.9));
+}
+.marche h2{
+  font-family:var(--mono);font-weight:700;font-size:14px;letter-spacing:.06em;
+  color:var(--cyan);margin:0 0 4px;
+}
+.marche .quand{font-family:var(--mono);font-size:11px;color:var(--attenue);margin:0 0 12px}
+.marche ol{margin:0;padding-left:22px;display:grid;gap:5px;font-size:13px}
+.marche .ref-mini{font-family:var(--mono);font-size:11px;color:var(--cyan);margin-right:7px}
+.marche .bas{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-top:14px}
+
+.commande{display:grid;gap:9px}
+.commande input[type=text]{
+  width:100%;padding:11px 13px;border-radius:6px;font-size:14px;color:var(--texte);
+  background:var(--fond);border:1px solid var(--filet);
+}
+.commande input[type=text]:focus{outline:none;border-color:var(--cyan)}
+.commande .auto{display:flex;gap:8px;align-items:center;flex-wrap:wrap;font-family:var(--mono);font-size:11px;color:var(--attenue)}
+.commande .auto input{accent-color:var(--cyan);width:16px;height:16px}
+.bouton-lancer{
+  width:100%;padding:15px 18px;border-radius:6px;background:var(--cyan);color:var(--fond);
+  font-family:var(--mono);font-weight:700;font-size:clamp(14px,3vw,17px);letter-spacing:.08em;
+}
+.bouton-lancer:hover{background:#5ee4ff}
+/* ⚠️ ARRÊTER LE TRAVAIL est aussi gros que le lancer. C'est la moitié de la
+   règle principale : il lance, j'enchaîne sans m'arrêter — donc il lui faut un
+   frein aussi visible que l'accélérateur. */
+.bouton-arret{
+  width:100%;padding:13px 18px;border-radius:6px;
+  color:var(--rouge);border:1px solid var(--rouge);background:rgba(239,68,68,.1);
+  font-family:var(--mono);font-weight:700;font-size:13px;letter-spacing:.06em;
+}
+.bouton-arret:hover{background:rgba(239,68,68,.22)}
+
+.attente-bloc{
+  padding:16px;border-radius:8px;border:2px solid var(--ambre);
+  background:linear-gradient(180deg,rgba(245,158,11,.14),rgba(13,20,36,.9));
+}
+.attente-bloc h2{
+  font-family:var(--mono);font-weight:700;font-size:14px;letter-spacing:.06em;
+  color:var(--ambre);margin:0 0 4px;
+}
+.attente-bloc>p{margin:0 0 12px;font-size:12.5px;color:var(--attenue)}
+.attente-bloc ul{margin:0;padding:0;list-style:none;display:grid;gap:10px}
+.attente-bloc li{
+  display:grid;gap:7px;padding:12px;border-radius:6px;
+  border:1px solid var(--filet);background:rgba(6,9,19,.55);
+}
+.attente-bloc .quoi{font-size:14px;font-weight:600}
+.attente-bloc .resume{margin:0;font-size:12.5px;color:var(--attenue)}
+
+.livraison{font-family:var(--mono);font-size:11px;color:var(--vert);display:flex;gap:8px;flex-wrap:wrap}
+.livraison code{color:var(--cyan)}
+.livraison .attend{color:var(--ambre)}
+
+/* ───────────────────────────── LE FORMULAIRE D'AJOUT ─────────────────────── */
+
+.ajout{border:1px solid var(--filet);border-radius:8px;background:var(--panneau);padding:16px;display:grid;gap:12px}
+.ajout h2{font-family:var(--mono);font-weight:700;font-size:12px;letter-spacing:.1em;color:var(--cyan);margin:0}
+.ajout label{display:grid;gap:5px;font-family:var(--mono);font-size:10px;letter-spacing:.06em;color:var(--attenue)}
+.ajout input,.ajout textarea,.ajout select{
+  width:100%;padding:9px 12px;border-radius:6px;font-family:var(--corps);font-size:14px;
+  letter-spacing:normal;color:var(--texte);background:var(--fond);border:1px solid var(--filet);
+}
+.ajout textarea{min-height:64px;resize:vertical}
+.ajout input:focus,.ajout textarea:focus,.ajout select:focus{outline:none;border-color:var(--cyan)}
+.ajout .duo{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.ajout .bas{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+@media (max-width:560px){.ajout .duo{grid-template-columns:1fr}}
+
+/* ───────────────────────────────  L'INSPECTEUR  ──────────────────────────── */
+
+.inspecteur{
+  background:var(--panneau);border-left:1px solid var(--filet);
+  padding:20px;display:flex;flex-direction:column;gap:18px;overflow-y:auto;min-width:0;
+}
+.insp-tete{display:flex;align-items:center;justify-content:space-between;gap:10px}
+.insp-tete .mot{font-family:var(--mono);font-size:11px;color:var(--attenue)}
+.inspecteur h2.sujet{font-size:16px;font-weight:800;margin:0;line-height:1.3}
+.trait{height:1px;background:var(--filet);border:0;margin:0}
+.meta{display:grid;gap:8px;font-family:var(--mono);font-size:12px}
+.meta .ligne{display:flex;align-items:baseline;justify-content:space-between;gap:12px}
+.meta .cle{color:var(--attenue)}
+.meta .val{font-weight:700;text-align:right}
+.meta .val.cyan{color:var(--cyan)} .meta .val.ambre{color:var(--ambre)}
+.meta .val.vert{color:var(--vert)} .meta .val.rouge{color:var(--rouge)}
+.insp-detail{font-size:13px;color:var(--attenue);margin:0}
+.insp-detail strong{color:var(--texte)}
+.insp-detail code{font-family:var(--mono);font-size:12px;color:var(--cyan);background:var(--fond);padding:1px 5px;border-radius:4px}
+.bloc-note{display:grid;gap:8px}
+.bloc-note>span{font-family:var(--mono);font-size:11px;color:var(--attenue);letter-spacing:.03em}
+.note{
+  width:100%;min-height:80px;padding:12px;border-radius:6px;resize:vertical;
+  font-size:13px;line-height:1.5;color:var(--texte);
+  background:var(--fond);border:1px solid var(--actif);
+}
+.note::placeholder{color:var(--attenue)}
+.note:focus{outline:none;border-color:var(--cyan)}
+.verdict{display:flex;gap:12px;flex-wrap:wrap}
+.verdict>button{flex:1 1 150px;padding:12px 16px;border-radius:4px;font-size:13px;font-weight:700}
+.btn-ok{background:var(--vert);color:var(--fond)}
+.btn-ok:hover{background:#34d8a2}
+.btn-ko{background:var(--rouge);color:var(--texte)}
+.btn-ko:hover{background:#f56b6b}
+.verdict-bis{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+.verdict-bis button,.verdict-bis select{
+  font-family:var(--mono);font-size:11px;padding:6px 11px;border-radius:4px;
+  border:1px solid var(--filet);color:var(--attenue);background:transparent;
+}
+.verdict-bis button:hover{border-color:var(--attenue);color:var(--texte)}
+.etat{font-family:var(--mono);font-size:11px;color:var(--attenue)}
+.etat.erreur{color:var(--rouge)}
+
+.journal{display:grid;gap:8px}
+.journal>.mot{font-family:var(--mono);font-size:11px;color:var(--attenue);letter-spacing:.03em}
+.journal .lignes{display:grid;gap:6px;max-height:300px;overflow-y:auto;padding-right:4px}
+.journal .entree{font-family:var(--mono);font-size:11px;line-height:1.55;color:var(--attenue)}
+.journal .entree .sig{color:var(--cyan)}
+.journal .entree.toi .sig{color:var(--ambre)}
+.journal .plus{
+  align-self:start;font-family:var(--mono);font-size:10.5px;padding:4px 9px;border-radius:4px;
+  border:1px dashed var(--filet);color:var(--attenue);
+}
+
+.resume-journees{border:1px solid var(--filet);border-radius:6px;background:var(--panneau);padding:12px;display:grid;gap:10px}
+.resume-journees>.mot{font-family:var(--mono);font-size:11px;color:var(--attenue)}
+.resume-journees .jour{border:1px solid var(--filet);border-radius:4px;background:var(--fond);padding:10px;display:grid;gap:4px}
+.resume-journees .jour b{font-family:var(--mono);font-size:11px}
+.resume-journees .jour span{font-family:var(--mono);font-size:11px;color:var(--attenue)}
+
+.insp-vide{
+  flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;
+  gap:8px;text-align:center;color:var(--attenue);font-family:var(--mono);font-size:12px;
+}
+.fermer-insp{display:none}
+
+/* ─────────────────────────────── LA BARRE DU BAS ─────────────────────────── */
+
+/* ⚠️ LA MAQUETTE Y METTAIT « PING: 14MS // TEMPS_IMAGE: 8.3MS » — de la
+   télémétrie décorative, sans rien derrière. On y met la seule télémétrie
+   vraie qu'il y ait : le CRÉDIT qui reste avant la passation.
+   Il ne se met PAS à jour tout seul : je ne vois mes tokens qu'au début d'un
+   tour, jamais pendant. Le relevé est daté pour que ça se voie. */
+.barre-basse{
+  background:var(--panneau);border-top:1px solid var(--filet);
+  padding:8px 24px;display:flex;align-items:center;justify-content:space-between;
+  gap:12px;flex-wrap:wrap;font-family:var(--mono);font-size:11px;color:var(--attenue);
+}
+.barre-basse .droite{display:flex;gap:24px;align-items:center;flex-wrap:wrap}
+.credit{display:flex;gap:8px;align-items:center}
+.credit .rail-jauge{width:90px;height:5px}
+.credit.ok{color:var(--cyan)} .credit.ok .rail-jauge>span{background:var(--cyan)}
+.credit.bas{color:var(--ambre)} .credit.bas .rail-jauge>span{background:var(--ambre)}
+.credit.critique{color:var(--rouge);font-weight:700} .credit.critique .rail-jauge>span{background:var(--rouge)}
+
+.passation{
+  padding:12px 24px;background:rgba(239,68,68,.14);border-top:1px solid var(--rouge);
+  font-family:var(--mono);font-size:12px;color:var(--rouge);font-weight:700;letter-spacing:.05em;
+}
+
+.lecture-seule{
+  margin:16px 20px 0;padding:12px 14px;border-radius:6px;
+  border:1px solid var(--rouge);background:rgba(239,68,68,.08);
+  color:var(--rouge);font-size:13px;
+}
+
+.pied{padding:0 20px 20px;font-family:var(--mono);font-size:11px;color:var(--attenue);display:grid;gap:8px}
+.pied .export{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+.pied textarea{
+  width:100%;min-height:120px;font-family:var(--mono);font-size:11px;
+  background:var(--fond);color:var(--attenue);border:1px solid var(--filet);
+  border-radius:6px;padding:10px;
+}
+
+/* ══════════════════════════════ LES TROIS FORMATS ═════════════════════════
+   Le joueur teste le jeu sur SON TÉLÉPHONE. Un carnet qu'il ne peut pas
+   cocher là où il teste est un carnet qu'il coche plus tard, donc jamais.
+   ══════════════════════════════════════════════════════════════════════════ */
+
+/* 1180 → 1: l'inspecteur rétrécit avant de partir. */
+@media (max-width:1320px){ :root{--inspecteur:380px} }
+
+/* Sous 1080, le rail passe en bandeau horizontal au-dessus de tout. */
+@media (max-width:1080px){
+  #root{grid-template-columns:1fr;grid-template-areas:"rail" "principal"}
+  .rail{
+    flex-direction:row;align-items:stretch;overflow-x:auto;
+    border-right:0;border-bottom:1px solid var(--filet);
+  }
+  .marque{border-bottom:0;border-right:1px solid var(--filet);flex:none;padding:8px 14px}
+  .registres{flex-direction:row;align-items:center;flex:1;padding:8px}
+  .etiquette{display:none}
+  .registre{width:auto;white-space:nowrap}
+  /* ⚠️ MESURÉ À 900 × 800 : le rail en bandeau faisait 100 px de haut à lui
+     seul, et le chrome montait à 361 sur 800. Empilé, ce panneau est une
+     colonne ; couché, il doit être une LIGNE — sinon il impose sa hauteur à
+     toute la barre. Le libellé et le chiffre partent, le bouton reste : c'est
+     lui la commande. */
+  .moteur{
+    border-top:0;border-left:1px solid var(--filet);flex:none;
+    flex-direction:row;align-items:center;gap:10px;padding:8px 14px;
+  }
+  .moteur .haut,.moteur b,.moteur .chiffre{display:none}
+  .bouton-scan{width:auto;white-space:nowrap}
+}
+
+/* Sous 860, l'inspecteur devient une feuille par-dessus la page. */
+@media (max-width:860px){
+  #root{border-width:0}
+  .espace{grid-template-columns:1fr}
+  .inspecteur{
+    position:fixed;inset:0;z-index:40;border-left:0;
+    padding:16px;gap:14px;display:none;
+  }
+  .inspecteur.ouvert{display:flex}
+  .fermer-insp{
+    display:flex;align-items:center;justify-content:center;gap:8px;width:100%;
+    padding:10px;border-radius:6px;border:1px solid var(--filet);
+    font-family:var(--mono);font-size:12px;color:var(--attenue);
+  }
+  .colonne{padding:14px;gap:14px}
+  .barre-haute{padding:10px 14px;gap:8px}
+  .bandeau{padding:9px 14px}
+  .barre-basse{padding:8px 14px;font-size:10px}
+  .pied{padding:0 14px 18px}
+  .actions-haut{width:100%;margin-left:0}
+  .actions-haut .bouton-cyan{flex:1;justify-content:center}
+  .onglets{overflow-x:auto}
+  .onglets button{flex:none;padding:8px 12px;white-space:nowrap}
+
+  /* ⚠️ MESURÉ SUR 375 × 812 : 471 px de chrome, 204 px pour les fiches. Un
+     carnet où l'on voit deux lignes et demie ne se coche pas — c'est ce qui
+     décide s'il l'ouvre sur son téléphone ou « plus tard ». Quatre coupables,
+     et on les enlève tous les quatre. Après : ~270 px de chrome. */
+  .marque{padding:10px 12px}
+  .marque>span{display:none}            /* le logo suffit, le nom prend 130 px */
+  .registres{padding:8px}
+  .moteur{display:none}                 /* le nettoyage a son propre onglet */
+  .compteur-haut .voyant{display:none}  /* le bandeau dit déjà s'il est en ligne */
+  /* La barre restait sur TROIS rangées (118 px) parce que le titre et la jauge
+     n'entraient pas ensemble. Le titre devient élastique et s'ellipse, la
+     jauge rétrécit : deux rangées, le titre puis les actions. */
+  .titre-journee{flex:1 1 0}
+  .compteur-haut{flex:none}
+  .compteur-haut .rail-jauge{width:64px}
+  .bandeau p{-webkit-line-clamp:1}
+  .lecture-seule{margin:10px 14px 0;padding:9px 11px;font-size:12px}
+}
+
+@media (prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
+</style>
+
+<div id="root"></div>
+
+<script id="state" type="application/json">
+{
+ "active": 0,
+ "journees": [
+  {
+   "nom": "24/08 — Bâtiments & carnet",
+   "maj": "24/08/2026",
+   "tri": "priorite",
+   "marche": null,
+   "build": {
+    "enLigne": "24/08, 03h05",
+    "commit": "940d5ea",
+    "quoi": "le glisser-déposer du chantier C",
+    "note": "Recharge en forçant : le service worker de Godot sert volontiers l'ancien build."
+   },
+   "sections": [
+    {
+     "id": "verdict",
+     "titre": "En attente de ton verdict",
+     "chapo": "Fait et mesuré ici. À toi de dire, une fois le build en ligne.",
+     "items": [
+      {
+       "ref": "1",
+       "titre": "Les casernes sont des écrans, plus des popups",
+       "detail": "« Zoom, fade in, fade out, ce n'est pas vraiment une pop up, c'est une transition vers un nouvel écran » — chaque caserne a désormais son écran plein et \u003cstrong>son propre décor\u003c/strong> (Figma 517:2). Le panneau lui-même n'a pas été réécrit : il tenait déjà les quatre états et lisait ses chiffres dans \u003ccode>Balance\u003c/code>. Englobe A3 et F1.",
+       "statut": "ok",
+       "journal": [
+        {
+         "quand": "24/08",
+         "qui": "Claude",
+         "texte": "Écran monté, quatre fonds posés, le village route au lieu d'instancier. Bancs : ui_test 162 OK / 0 échec, format_test 8 formats, smoke_test 10/10."
+        },
+        {
+         "quand": "24/08",
+         "qui": "Claude",
+         "texte": "Deux défauts d'instrument corrigés au passage, tous deux silencieux : ui_test [8] appelait find_child sur un nœud disparu — l'erreur tuait la coroutine sans compter un seul échec, le banc annonçait « tout répond » en ayant sauté quatre assertions. Et [1] libérait le village avant de lui reparler : segfault, une fois sur deux."
+        },
+        {
+         "quand": "24/08",
+         "qui": "Toi",
+         "texte": "Toujours cassé."
+        },
+        {
+         "quand": "24/08",
+         "qui": "Toi",
+         "texte": "toujours uniquement un popup qui flick"
+        },
+        {
+         "quand": "24/08",
+         "qui": "Claude",
+         "texte": "Tu as testé la version d'AVANT : le travail est commité mais pas ré-exporté sur gh-pages, et le bandeau en haut de ce carnet le dit. Ce que tu décris — un popup qui clignote — est exactement l'ancien comportement. Je ne rouvre donc rien sur cette base : la ligne repasse en attente le temps que j'exporte."
+        },
+        {
+         "quand": "24/08",
+         "qui": "Claude",
+         "texte": "C'est en ligne maintenant. Si tu revois un popup qui clignote, c'est un vrai défaut et je le prends — mais recharge en forçant d'abord, le service worker garde l'ancien build."
+        },
+        {
+         "quand": "24/08",
+         "qui": "Toi",
+         "texte": "alors ne met pas a jour avant le commit que je peux tester"
+        },
+        {
+         "quand": "24/08",
+         "qui": "Toi",
+         "texte": "tu me met une notif a droit genre ecran tout vert avec ecrit COMMIT ET TEST POSSIBLE"
+        },
+        {
+         "quand": "24/08",
+         "qui": "Claude",
+         "texte": "D'accord, et c'est fait : le bandeau du haut est vert et dit COMMIT ET TEST POSSIBLE, ou reste orange tant que le travail n'est pas exporté. Règle prise : je ne pousse plus une ligne dans le carnet avant que le build correspondant soit en ligne."
+        },
+        {
+         "quand": "24/08",
+         "qui": "Toi",
+         "texte": "Ça marche."
+        }
+       ],
+       "priorite": "haute",
+       "theme": "Village",
+       "livre": {
+        "commit": "7dcf766",
+        "quand": "24/08 à 02h30"
+       }
+      },
+      {
+       "ref": "2",
+       "titre": "Repartir au royaume n'abandonne plus la série par erreur",
+       "detail": "La garde d'abandon avait été posée sur \u003ccode>goto_village()\u003c/code>, « la porte unique vers le village ». C'était vrai, et c'était le problème : le château, le codex et la boutique en reviennent par là. \u003cstrong>Fermer le codex en pleine série l'aurait perdue.\u003c/strong> Elle ne vit plus que sur le chemin qui sort vraiment du combat.",
+       "statut": "ok",
+       "journal": [
+        {
+         "quand": "24/08",
+         "qui": "Claude",
+         "texte": "Trouvé en rebranchant les casernes : le défaut n'était pas visible avant, aucun écran ne repassait par cette porte."
+        },
+        {
+         "quand": "24/08",
+         "qui": "Toi",
+         "texte": "Ça marche."
+        }
+       ],
+       "priorite": "moyenne",
+       "theme": "Navigation",
+       "livre": {
+        "commit": "7dcf766",
+        "quand": "24/08 à 02h30"
+       }
+      }
+     ]
+    },
+    {
+     "id": "ordre",
+     "titre": "Le chantier, dans l'ordre convenu",
+     "chapo": "L'ordre est le tien. Je ne le change pas sans te le demander.",
+     "items": [
+      {
+       "ref": "C",
+       "titre": "Le glisser-déposer",
+       "detail": "Caserne → déploiement, et inventaire → plateau. Plus le bouton \u003cstrong>COMBATTEZ\u003c/strong> qui ne suit pas la maquette. \u003cstrong>Le paquet le plus lourd.\u003c/strong>",
+       "statut": "ok",
+       "journal": [
+        {
+         "quand": "24/08",
+         "qui": "Claude",
+         "texte": "Prochain sur la liste après les écrans de bâtiment."
+        },
+        {
+         "quand": "24/08",
+         "qui": "Toi",
+         "texte": "AU TRAVAIL : première de l’ordre de marche."
+        },
+        {
+         "quand": "24/08",
+         "qui": "Claude",
+         "texte": "Fait, les deux moitiés. À la préparation : on saisit une carte de caserne et on la lâche dans le déploiement, et une case posée se glisse vers la caserne pour renvoyer la pièce en réserve. Au placement : on prend la pièce dans l'inventaire et on la dépose directement sur sa case."
+        },
+        {
+         "quand": "24/08",
+         "qui": "Claude",
+         "texte": "Le tap n'est remplacé nulle part — Godot ne démarre un glissement qu'après un déplacement, donc l'appui immobile passe toujours par l'ancien chemin. Le glissement s'ajoute."
+        },
+        {
+         "quand": "24/08",
+         "qui": "Claude",
+         "texte": "Une zone refuse AVANT le lâcher ce qu'elle aurait refusé après : plus de réserve, charge pleine, case occupée, hors zone bleue. Une zone qui accepte puis ne fait rien est pire qu'une zone qui refuse."
+        },
+        {
+         "quand": "24/08",
+         "qui": "Claude",
+         "texte": "Bancs : ui_test 181 OK / 0 échec / 0 erreur (dix assertions neuves sur le glisser-déposer), smoke_test 10/10, format_test sur les huit formats. Le banc appelle les virtuelles directement : headless, il ne joue pas de geste souris."
+        },
+        {
+         "quand": "24/08",
+         "qui": "Claude",
+         "texte": "Le bouton COMBATTEZ sort de cette fiche : il ne demande pas du code mais la maquette, et le mélanger ici t'obligerait à valider deux choses d'un coup. Il a sa propre ligne."
+        },
+        {
+         "quand": "24/08",
+         "qui": "Toi",
+         "texte": "Ça marche."
+        }
+       ],
+       "priorite": "haute",
+       "theme": "Placement",
+       "livre": {
+        "commit": "940d5ea",
+        "quand": "24/08 à 03h05"
+       },
+       "avancement": 90,
+       "resume": "À vérifier : glisse une carte de la caserne dans le déploiement, et une pièce de l'inventaire directement sur sa case. Le tap doit marcher exactement comme avant, partout."
+      },
+      {
+       "ref": "D",
+       "titre": "Les animations qui manquent",
+       "detail": "Le retour à l'appui sur \u003cstrong>tous\u003c/strong> les boutons — à poser dans les composants partagés, jamais écran par écran, sinon la moitié en aura et l'autre pas. Le codex. L'or qui monte au lieu de sauter.",
+       "statut": "encours",
+       "journal": [
+        {
+         "quand": "24/08",
+         "qui": "Claude",
+         "texte": "D3 est à moitié fait : le fondu au blanc est là, le dézoom d'élévation non."
+        },
+        {
+         "quand": "24/08",
+         "qui": "Claude",
+         "texte": "Le socle existe : Balance.MOTION rassemble les vingt-deux durées qui vivaient dans huit fichiers, et MOTION.scale ralentit tout le jeu d'un seul bouton."
+        }
+       ],
+       "priorite": "moyenne",
+       "theme": "Animations",
+       "avancement": 35
+      },
+      {
+       "ref": "E",
+       "titre": "L'habillage : barre du haut, alignements, polices",
+       "detail": "La barre du haut (or + gemmes), l'alignement Boutique / BATAILLE, les polices, et l'interface des missions — que tu as jugée \u003cstrong>« très modeste »\u003c/strong>.",
+       "statut": "todo",
+       "journal": [],
+       "priorite": "moyenne",
+       "theme": "Interface"
+      },
+      {
+       "ref": "5",
+       "titre": "Les deux lettres du Roi, entre l'intro et le village",
+       "detail": "Les écrans sont faits par le graphiste. Le reste est déjà spécifié dans \u003ccode>chantier_i_missives.md\u003c/code> : mesures des illustrations, quatre textes, déclencheurs. \u003cstrong>Une seule pièce manque au jeu : il n'a aucun compteur de défaite.\u003c/strong>",
+       "statut": "todo",
+       "journal": [],
+       "priorite": "basse",
+       "theme": "Récit"
+      },
+      {
+       "ref": "6",
+       "titre": "Les popups d'accompagnement de Figma",
+       "detail": "Quatre maquettes posées (pat, composition, aura de la Dame, temps réel), jamais intégrées telles quelles. Le code les affiche déjà une fois chacune — c'est leur habillage qui reste.",
+       "statut": "todo",
+       "journal": [],
+       "priorite": "basse",
+       "theme": "Interface"
+      },
+      {
+       "ref": "n1",
+       "titre": "l'intro",
+       "detail": "je vois seulement la deuxieme image de l'ecran figma, il faut que au depart le bouton soit cet ecran : https://www.figma.com/design/rqEdH4O2R21TuUFv7OUlF7/KING-sGAMBIT?node-id=410-35&amp;t=ttUec04lRmnYwEXC-4\napres le click ça passe à ça :https://www.figma.com/design/rqEdH4O2R21TuUFv7OUlF7/KING-sGAMBIT?node-id=525-2&amp;t=ttUec04lRmnYwEXC-4 . L'ecran a ete retravaillé par le graphiste tu peux t'y fier aussi a l'animation avec le zoom",
+       "statut": "todo",
+       "priorite": "moyenne",
+       "journal": [
+        {
+         "quand": "24/08",
+         "qui": "Toi",
+         "texte": "Ajoutée au carnet."
+        }
+       ],
+       "theme": "Intro"
+      },
+      {
+       "ref": "n2",
+       "titre": "Le bouton COMBATTEZ ne suit pas la maquette",
+       "detail": "Détaché de \u003cstrong>C\u003c/strong> : c'est le seul morceau du paquet qui ne demande pas du code mais un relevé Figma. Dis-moi le node-id, ou je le cherche dans \u003ccode>MAINPROJECT\u003c/code>.",
+       "statut": "todo",
+       "priorite": "moyenne",
+       "theme": "Interface",
+       "journal": [
+        {
+         "quand": "24/08",
+         "qui": "Claude",
+         "texte": "Sorti de la fiche C pour que tu puisses valider le glisser-déposer sans attendre celui-là."
+        }
+       ]
+      }
+     ]
+    },
+    {
+     "id": "appareil",
+     "titre": "Ce que le code seul ne peut pas trancher",
+     "chapo": "Il me faut ton téléphone, ou un banc que je n'ai pas encore écrit.",
+     "items": [
+      {
+       "ref": "T",
+       "titre": "Le combat au doigt",
+       "detail": "Tu le trouves mauvais, et je n'ai \u003cstrong>rien trouvé de prouvable\u003c/strong> en lisant : la sélection se fait à l'appui, donc un doigt tremblé sélectionne quand même, et le seuil de glissement (8 pt) est exactement le \u003cem>touch slop\u003c/em> standard d'Android. La seule faiblesse réelle : \u003cstrong>il n'y a pas un seul événement tactile dans tout le jeu\u003c/strong> — tout repose sur l'émulation souris de Godot, et un second doigt produit un second appui émulé qui tue le geste en cours.",
+       "statut": "todo",
+       "journal": [
+        {
+         "quand": "24/08",
+         "qui": "Claude",
+         "texte": "Décision prise : ne pas toucher au seuil sur une intuition. S'il faut y aller, ce sera sur un relevé d'appareil."
+        },
+        {
+         "quand": "24/08",
+         "qui": "Claude",
+         "texte": "Aucun banc ne joue un geste DANS le combat. Le cas [12] ne couvre que la carte de campagne."
+        }
+       ],
+       "priorite": "haute",
+       "theme": "Tactile"
+      }
+     ]
+    },
+    {
+     "id": "dettes",
+     "titre": "Les dettes connues",
+     "chapo": "Rien de tout ça ne t'a encore gêné. Je les écris pour qu'elles ne se redécouvrent pas trois fois.",
+     "items": [
+      {
+       "ref": "d1",
+       "titre": "Améliorer le Château en pleine série augmente la charge",
+       "detail": "La vraie fuite, et elle n'est pas bouchée : \u003ccode>deploy_capacity()\u003c/code> est relue à chaud. L'exploit que tu craignais, lui, n'existe pas — le roster est un instantané pris à l'ouverture.",
+       "statut": "todo",
+       "journal": [],
+       "priorite": "basse",
+       "theme": "Règles"
+      },
+      {
+       "ref": "d2",
+       "titre": "L'audit du banc d'interface n'a jamais été fait",
+       "detail": "\u003ccode>ui_test._press()\u003c/code> n'appuie sur rien pour les contrôles qui utilisent la méthode virtuelle plutôt que le signal. D'autres assertions passent peut-être à vide. \u003cstrong>Deux cas viennent d'être trouvés par hasard\u003c/strong>, ce qui rend l'audit moins théorique qu'hier.",
+       "statut": "todo",
+       "journal": [
+        {
+         "quand": "24/08",
+         "qui": "Claude",
+         "texte": "Les deux trouvés aujourd'hui étaient dans le même fichier et personne ne les voyait : le banc se déclarait vert."
+        }
+       ],
+       "priorite": "basse",
+       "theme": "Bancs"
+      },
+      {
+       "ref": "d3",
+       "titre": "Quatre zones défilantes jamais auditées",
+       "detail": "Préparation, codex, boutique, showcase. C'est le même conflit que celui qui empêchait la carte de défiler, et il peut s'y cacher dès qu'un enfant cliquable est en \u003ccode>MOUSE_FILTER_STOP\u003c/code>.",
+       "statut": "todo",
+       "journal": [],
+       "priorite": "basse",
+       "theme": "Bancs"
+      }
+     ]
+    },
+    {
+     "id": "valide",
+     "titre": "Déjà validé par toi",
+     "chapo": "Replié. Rouvre une ligne si elle se remet à casser.",
+     "items": [
+      {
+       "ref": "A1",
+       "titre": "La carte suit le doigt",
+       "detail": "Mesuré : 100 points de doigt déplacent la carte de 100. Deux bugs, pas un — le cachet partait à l'appui, et le geste n'atteignait jamais la zone défilante.",
+       "statut": "ok",
+       "journal": [
+        {
+         "quand": "24/08",
+         "qui": "Toi",
+         "texte": "Validé."
+        }
+       ],
+       "priorite": "moyenne",
+       "theme": "Tactile"
+      },
+      {
+       "ref": "A2",
+       "titre": "La ligne nette au bord droit de l'intro",
+       "detail": "Deux vignettes posées en absolu, larges de 393 en dur. Mesuré en réintroduisant la régression : 85,34 pt de bande nue sur le web, 101,71 sur écran court. Zéro après correction.",
+       "statut": "ok",
+       "journal": [
+        {
+         "quand": "24/08",
+         "qui": "Toi",
+         "texte": "Validé."
+        }
+       ],
+       "priorite": "moyenne",
+       "theme": "Format"
+      },
+      {
+       "ref": "B1",
+       "titre": "Le rythme des transitions",
+       "detail": "",
+       "statut": "ok",
+       "journal": [
+        {
+         "quand": "24/08",
+         "qui": "Toi",
+         "texte": "Validé."
+        }
+       ],
+       "priorite": "moyenne",
+       "theme": "Animations"
+      },
+      {
+       "ref": "B2",
+       "titre": "Le zoom des bâtiments et le fondu au noir",
+       "detail": "",
+       "statut": "ok",
+       "journal": [
+        {
+         "quand": "24/08",
+         "qui": "Toi",
+         "texte": "Validé."
+        }
+       ],
+       "priorite": "moyenne",
+       "theme": "Animations"
+      },
+      {
+       "ref": "B3",
+       "titre": "Le clignotement des écrans de résultat",
+       "detail": "Ils naissaient à pleine opacité puis étaient remis à zéro par l'animation différée. Ils naissent invisibles.",
+       "statut": "ok",
+       "journal": [
+        {
+         "quand": "24/08",
+         "qui": "Toi",
+         "texte": "Validé."
+        }
+       ],
+       "priorite": "moyenne",
+       "theme": "Animations"
+      },
+      {
+       "ref": "B4",
+       "titre": "Le château",
+       "detail": "",
+       "statut": "ok",
+       "journal": [
+        {
+         "quand": "24/08",
+         "qui": "Toi",
+         "texte": "Validé."
+        }
+       ],
+       "priorite": "moyenne",
+       "theme": "Village"
+      },
+      {
+       "ref": "M1",
+       "titre": "Les missions",
+       "detail": "Fermé après vérification : ce n'était pas un bug.",
+       "statut": "ok",
+       "journal": [
+        {
+         "quand": "23/08",
+         "qui": "Toi",
+         "texte": "Pas un bug."
+        }
+       ],
+       "priorite": "moyenne",
+       "theme": "Interface"
+      }
+     ]
+    }
+   ],
+   "groupe": "etat",
+   "nettoyage": {
+    "demande": "24/08 à 03h30",
+    "fait": "24/08 à 03h52",
+    "quoi": "Quatre duplications supprimées : le chargement d'une silhouette de pièce vivait en quatre exemplaires, l'aperçu de glissement en deux, les deux zones de lâcher étaient copiées l'une sur l'autre, et une closure gardée sur un nœud est devenue une simple texture. Bancs identiques : 181 OK, aucun échec."
+   }
+  }
+ ],
+ "credit": {
+  "restant": 14846000,
+  "total": 15000000,
+  "releve": "24/08 à 06h22",
+  "seuil": 12
+ },
+ "serie": 0
+}
+</script>
+<script id="app">
+(function(){
+  "use strict";
+
+  var LABEL = {attente:"À VÉRIFIER", todo:"À FAIRE", encours:"EN COURS",
+               ok:"VALIDÉ", ko:"TOUJOURS CASSÉ"};
+  var RANG = {haute:0, moyenne:1, basse:2};
+  var PAR_ETAT = {todo:0, ko:10, encours:50, attente:90, ok:100};
+  /* Entrées de journal visibles sans déplier. Le journal grossit à chaque
+     échange : dix entrées dans un inspecteur de 440 px, et on ne voit plus la
+     fiche. */
+  var RECENT = 3;
+
+  var state = JSON.parse(document.getElementById("state").textContent);
+  var root = document.getElementById("root");
+
+  /* ═══════════════════════════════════════════════════════════════════════
+     LE MIROIR LOCAL — « je ne veux plus jamais que le carnet vivant soit
+     supprimé ».
+
+     ⚠️ JE NE PEUX PAS EMPÊCHER LA SUPPRESSION : la page se republie sous
+     l'identité du joueur, et la plateforme ne m'appartient pas. Ce que je
+     peux faire, c'est que ça ne coûte plus rien.
+
+     Le trou n'a jamais été le carnet lui-même — `etat.json` est versionné et
+     vient de nous sauver une fois. Le trou est la FENÊTRE entre une coche du
+     joueur et ma relecture : pendant ce temps, ses verdicts ne vivent qu'à un
+     seul endroit. Le miroir écrit dans SON navigateur à chaque geste, avant
+     même la publication. Artefact supprimé = il rouvre, la page voit que le
+     local est plus frais, et elle le lui rend.
+     ═══════════════════════════════════════════════════════════════════════ */
+  var CLE = "carnet-kings-gambit-v5";
+  var plusFrais = null;
+
+  function miroirEcrit(){
+    try{
+      state.serie = (state.serie || 0) + 1;
+      localStorage.setItem(CLE, JSON.stringify({quand:Date.now(), etat:state}));
+    }catch(e){ /* mode privé, quota : le miroir est un filet, pas une dépendance */ }
+  }
+  function miroirLu(){
+    try{
+      var brut = localStorage.getItem(CLE);
+      if (!brut) return null;
+      var paquet = JSON.parse(brut);
+      return (paquet && paquet.etat) ? paquet : null;
+    }catch(e){ return null; }
+  }
+
+  /* ⚠️ LE CARNET EST FAIT DE JOURNÉES. Une journée = un registre = une séance :
+     son build, ses fiches, son ordre de marche. Les carnets d'avant n'avaient
+     qu'un seul niveau ; on les enveloppe plutôt que de les convertir, pour
+     qu'une page publiée avant ce jour continue de s'ouvrir. */
+  function normalise(e){
+    if (e.journees) return e;
+    return {
+      active:0, serie:0,
+      journees:[{
+        nom:e.nom || "Journée 1", maj:e.maj || "", tri:"priorite", groupe:"etat",
+        marche:null, build:e.build || {enLigne:false,commit:"",quoi:"",note:""},
+        sections:e.sections || []
+      }]
+    };
+  }
+  state = normalise(state);
+
+  (function compareAuMiroir(){
+    var m = miroirLu();
+    if (!m) return;
+    var local = normalise(m.etat);
+    /* Plus frais = plus d'écritures. On ne restaure JAMAIS tout seul : écraser
+       la version servie sans le dire serait le même défaut, dans l'autre sens. */
+    if ((local.serie || 0) > (state.serie || 0)) plusFrais = {etat:local, quand:m.quand};
+  })();
+
+  /* ═══════════════════════════════════════════════════════════════════════
+     LES TROIS MODES. La même page tourne à deux endroits, et il ne faut
+     surtout pas qu'elle se croie cassée au mauvais.
+
+       "artefact" — publiée sur claude.ai. Elle se republie elle-même à chaque
+                    coche ; c'est le carnet vivant.
+       "depot"    — servie depuis GitHub Pages, ou ouverte en fichier local.
+                    `window.claude` n'existe pas, donc AUCUNE publication n'est
+                    possible — mais le joueur peut cocher quand même : tout va
+                    dans le miroir local, et il exporte pour me le renvoyer.
+                    ⚠️ C'est ce mode qui rend le carnet INSUPPRIMABLE : il vit
+                    dans git, et git ne perd rien.
+       "lecture"  — la vue d'un artefact partagé, sans droit d'écriture. Là,
+                    et là seulement, les boutons disparaissent.
+
+     Confondre "depot" et "lecture" — ce que faisait la version d'avant —
+     rendait le carnet inutilisable dès qu'il sortait de la plateforme. */
+  var mode = (window.claude && window.claude.use) ? "artefact" : "depot";
+  var lectureSeule = false;
+  var depotVu = false;
+  var vueOnglet = "actives";
+  var visee = null;          // {s:index de section, i:index de fiche}
+  var inspOuvert = false;    // sur téléphone, l'inspecteur est une feuille
+  var filtreTheme = null;    // vit dans la VUE seulement : deux lecteurs ne filtrent pas pareil
+  var ajoutOuvert = false;
+  var nommeOuvert = false;
+  var nomTravail = "";
+  var groupeAuto = true;
+  var journalDeplie = {};
+
+  function J(){ return state.journees[state.active]; }
+  function esc(s){
+    return String(s).replace(/&/g,"&amp;").replace(/</g,"&lt;")
+                    .replace(/>/g,"&gt;").replace(/"/g,"&quot;");
+  }
+  function aujourdhui(){
+    var d = new Date();
+    return String(d.getDate()).padStart(2,"0")+"/"+String(d.getMonth()+1).padStart(2,"0");
+  }
+  function maintenant(){
+    var d = new Date();
+    return aujourdhui()+" à "+String(d.getHours()).padStart(2,"0")+"h"+String(d.getMinutes()).padStart(2,"0");
+  }
+
+  function prio(it){ return it.priorite || "moyenne"; }
+  function theme(it){ return it.theme || ""; }
+  function ouverte(it){ return it.statut !== "ok"; }
+  /* ⚠️ UNE FICHE « À VÉRIFIER » N'EST PAS DANS L'ORDRE DE MARCHE. Règle du
+     joueur : quand j'attends une vérif, je passe à la suite ; quand tout est
+     fait je reboucle sur les reprises, sinon je me mets en attente. Une fiche
+     livrée l'attend, LUI — la reprendre serait refaire un travail non jugé. */
+  function aFaire(it){ return it.statut==="todo" || it.statut==="ko" || it.statut==="encours"; }
+  function attendVerdict(it){ return it.statut === "attente"; }
+  function retenue(it){ return !filtreTheme || theme(it) === filtreTheme; }
+  function avance(it){
+    if (typeof it.avancement === "number") return Math.max(0, Math.min(100, it.avancement));
+    return PAR_ETAT[it.statut] !== undefined ? PAR_ETAT[it.statut] : 0;
+  }
+  function toutes(j){
+    var liste = [];
+    (j || J()).sections.forEach(function(sec, si){
+      sec.items.forEach(function(it, ii){ liste.push([it, si, ii]); });
+    });
+    return liste;
+  }
+  /* L'avancement GLOBAL est la MOYENNE des fiches, pas la part de validées :
+     sinon une journée de dix chantiers reste à 0 % jusqu'à la première coche,
+     alors que le travail a bel et bien avancé. */
+  function avanceGlobale(j){
+    var tout = toutes(j).filter(function(e){ return j ? true : retenue(e[0]); });
+    if (!tout.length) return 0;
+    var somme = 0;
+    tout.forEach(function(e){ somme += avance(e[0]); });
+    return Math.round(somme / tout.length);
+  }
+  function themes(){
+    var vus = [];
+    toutes().forEach(function(e){
+      if (theme(e[0]) && vus.indexOf(theme(e[0])) < 0) vus.push(theme(e[0]));
+    });
+    return vus.sort();
+  }
+  function jauge(pc, classe){
+    return '<span class="rail-jauge'+(classe?' '+classe:'')+'"><span style="width:'+pc+'%"></span></span>';
+  }
+  function fiche(v){
+    if (!v) return null;
+    var sec = J().sections[v.s];
+    return sec ? sec.items[v.i] : null;
+  }
+  /* À défaut de résumé écrit, la dernière chose que J'AI dite sur la fiche.
+     C'est presque toujours la note de livraison — donc exactement ce qu'il y a
+     à vérifier — et ça évite un champ de plus à tenir à jour. */
+  function dernierMot(it){
+    if (!it.journal) return "";
+    for (var i = it.journal.length - 1; i >= 0; i--)
+      if (it.journal[i].qui !== "Toi") return it.journal[i].texte;
+    return "";
+  }
+  /* Depuis quand une fiche l'attend. C'est le TEMPS D'ATTENTE de la maquette,
+     et c'est la seule des trois métriques inventées qui dit du vrai. */
+  function attenteDepuis(it){
+    var liv = it.livre;
+    if (!liv || !liv.quand) return null;
+    var m = /^(\d{2})\/(\d{2}).*?(\d{2})h(\d{2})/.exec(liv.quand);
+    if (!m) return liv.quand;
+    var n = new Date(), d = new Date(n.getFullYear(), +m[2]-1, +m[1], +m[3], +m[4]);
+    var mn = Math.floor((n - d) / 60000);
+    if (mn < 0 || mn > 60*24*40) return liv.quand;
+    if (mn < 60) return mn + "m écoulées";
+    return Math.floor(mn/60) + "h " + (mn%60) + "m écoulées";
+  }
+
+  /* ── le classement ──────────────────────────────────────────────────────
+     DEUX modes, parce que le joueur a demandé les deux : la priorité, et la
+     main. En mode priorité le tri est STABLE — l'ordre du fichier, le sien,
+     départage les égalités. */
+  function rangees(entrees, parEtat){
+    var j = J();
+    return entrees.slice().sort(function(a,b){
+      if (!parEtat){
+        var oa = a[0].statut==="ok"?1:0, ob = b[0].statut==="ok"?1:0;
+        if (oa !== ob) return oa - ob;
+      }
+      if (j.tri === "manuel") return (a[1]-b[1]) || (a[2]-b[2]);
+      var pa = RANG[prio(a[0])], pb = RANG[prio(b[0])];
+      return pa !== pb ? pa - pb : ((a[1]-b[1]) || (a[2]-b[2]));
+    });
+  }
+
+  var ETATS = [
+    ["encours","EN COURS","Ce que je fais maintenant."],
+    ["ko","ROUVERT PAR TOI","Tu l’as remis en cause : ça repasse devant."],
+    ["todo","À FAIRE","Pas encore commencé."],
+    ["attente","EN ATTENTE DE TON VERDICT","Livré et en ligne. Je n’y retouche pas sans toi."],
+    ["ok","VALIDÉ","Replié. Rouvre une ligne si elle se remet à casser."]
+  ];
+
+  function paquets(){
+    var j = J(), mode = j.groupe || "etat";
+    var vues = toutes().filter(function(e){ return retenue(e[0]); });
+    if (mode === "section"){
+      return j.sections.map(function(sec, si){
+        return {titre:sec.titre.toUpperCase(), chapo:sec.chapo, classe:"g-todo",
+                entrees:rangees(vues.filter(function(e){ return e[1]===si; }), false)};
+      });
+    }
+    if (mode === "theme"){
+      var noms = themes().slice();
+      if (vues.some(function(e){ return !theme(e[0]); })) noms.push("");
+      return noms.map(function(nom){
+        return {titre:(nom||"SANS THÈME").toUpperCase(), chapo:"", classe:"g-todo",
+                entrees:rangees(vues.filter(function(e){ return theme(e[0])===nom; }), false)};
+      });
+    }
+    return ETATS.map(function(et){
+      return {titre:et[1], chapo:et[2], classe:"g-"+et[0],
+              entrees:rangees(vues.filter(function(e){ return e[0].statut===et[0]; }), true)};
+    });
+  }
+
+  /* ── l'ordre de marche ──────────────────────────────────────────────────
+     ⚠️ IL NE DEVINE PAS, IL FILTRE. Les mots du nom sont cherchés dans le
+     thème, le titre, le détail et la référence. Si RIEN ne correspond on ne
+     rend pas une liste vide : on prend tout ce qui est ouvert, parce qu'un
+     bouton qui ne lance rien après qu'on a tapé un nom se lit comme cassé. */
+  var VIDES = ["les","des","une","pour","dans","avec","tout","toute","toutes","tous",
+               "faire","finir","sur","chez","mon","son","ses","aux","que","qui","quoi",
+               "soir","matin","journee","travail","chantier"];
+  function sansAccents(s){
+    return String(s).toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g,"");
+  }
+  function motsUtiles(nom){
+    return sansAccents(nom).split(/[^a-z0-9]+/)
+      .filter(function(m){ return m.length >= 4 && VIDES.indexOf(m) < 0; });
+  }
+  function correspond(it, mots){
+    if (!mots.length) return true;
+    var foin = sansAccents([it.ref, it.titre, it.theme||"", it.detail||""].join(" "));
+    return mots.some(function(m){ return foin.indexOf(m) >= 0; });
+  }
+  function ordreDeMarche(mots){
+    var liste = [];
+    rangees(toutes(), false).forEach(function(e){
+      if (aFaire(e[0]) && retenue(e[0]) && (!mots || correspond(e[0], mots))) liste.push(e[0]);
+    });
+    return liste;
+  }
+  function enAttente(){
+    return toutes().filter(function(e){ return attendVerdict(e[0]) && retenue(e[0]); });
+  }
+
+  /* ═══════════════════════════════ LE RENDU ═══════════════════════════════ */
+
+  var LOGO = '<span class="logo" aria-hidden="true"></span>';
+
+  function render(){
+    var j = J();
+    var h = "";
+
+    /* ── le rail ── */
+    h += '<aside class="rail"><div class="marque">' + LOGO
+      + '<span><b>STUDIO BNL</b><span>CARNET v5</span></span></div>';
+    h += '<nav class="registres"><p class="etiquette">REGISTRES ACTIFS</p>';
+    state.journees.forEach(function(sj, i){
+      var pc = avanceGlobale(sj);
+      var reste = toutes(sj).filter(function(e){ return ouverte(e[0]); }).length;
+      h += '<button class="registre'+(i===state.active?' actif':'')+(reste===0?' finie':'')
+         + '" data-journee="'+i+'"><span class="pastille-ronde"></span>'
+         + '<span class="nom">'+esc(sj.nom)+'</span>'
+         + '<span class="part">'+(reste===0 ? "100%" : pc+"%")+'</span></button>';
+    });
+    h += '</nav>' + moteurHtml(j) + '</aside>';
+
+    /* ── la colonne principale ── */
+    h += '<div class="principal">' + barreHauteHtml(j) + bandeauHtml(j);
+    if (lectureSeule){
+      h += '<div class="lecture-seule">Cette vue est en <b>lecture seule</b> : tes coches '
+        + 's’affichent mais ne sont pas enregistrées. Ouvre le carnet depuis ton compte.</div>';
+    } else if (mode === "depot" && !depotVu){
+      /* Refermable : l'information compte à la première lecture, et devient du
+         bruit ensuite — sur un téléphone elle mangeait 143 px à chaque écran. */
+      h += '<div class="lecture-seule" style="border-color:var(--cyan);color:var(--cyan);'
+        + 'background:rgba(0,210,255,.07);display:flex;gap:10px;align-items:flex-start">'
+        + '<span style="flex:1"><b>MODE DÉPÔT.</b> Ce carnet tourne depuis ton git — '
+        + '<b>personne ne peut le supprimer</b>. Coche normalement : tout est gardé dans ce '
+        + 'navigateur, et <b>EXPORTER L’ÉTAT</b> en bas de page me le renvoie.</span>'
+        + '<button data-depot-vu="1" title="J’ai lu" style="flex:none;color:var(--cyan);'
+        + 'font-family:var(--mono);font-size:13px;padding:0 4px">✕</button></div>';
+    }
+    if (plusFrais){
+      h += '<div class="lecture-seule" style="border-color:var(--ambre);color:var(--ambre);'
+        + 'background:rgba(245,158,11,.08)"><b>Ton navigateur a une version plus récente</b> '
+        + 'que celle servie ici — sans doute des coches faites avant que la page ne soit '
+        + 'republiée. <button class="bouton-cyan" data-restaurer="1" style="margin-top:8px">'
+        + 'RESTAURER MA VERSION</button> <button class="bouton-cyan sourd" data-oublier="1" '
+        + 'style="margin-top:8px">Ignorer</button></div>';
+    }
+    h += '<div class="espace"><div class="colonne">' + ongletsHtml(j);
+
+    if (vueOnglet === "actives")      h += reglagesHtml(j) + listeHtml(j) + ajoutHtml(j);
+    else if (vueOnglet === "verifier") h += attenteHtml();
+    else if (vueOnglet === "marche")   h += marcheHtml(j);
+    else                               h += nettoyageHtml(j);
+
+    h += piedHtml(j) + '</div>' + inspecteurHtml(j) + '</div>';
+    h += barreBasseHtml(j) + '</div>';
+
+    root.innerHTML = h;
+  }
+
+  function moteurHtml(j){
+    var n = j.nettoyage;
+    var h = '<div class="moteur"><div class="haut"><span>MÉTRIQUE MOTEUR</span>';
+    if (n && n.fait)      h += '<span class="jeton vert">FAIT</span>';
+    else if (n)           h += '<span class="jeton ambre">DEMANDÉ</span>';
+    else                  h += '<span class="jeton cyan">PRÊT</span>';
+    h += '</div>';
+    if (n && n.fait){
+      h += '<b>Nettoyage terminé</b><span class="chiffre">'+esc(n.fait)+'</span>';
+      h += '<button class="bouton-scan" data-nettoyage="1">LANCER VÉRIFICATION</button>';
+    } else if (n){
+      h += '<b>Nettoyage demandé</b><span class="chiffre ambre">'+esc(n.demande)+'</span>';
+      h += '<button class="bouton-scan annule" data-nettoyage-annule="1">ANNULER LA DEMANDE</button>';
+    } else {
+      h += '<b>Registre de code propre</b><span class="chiffre">AUCUNE PASSE DEMANDÉE</span>';
+      h += '<button class="bouton-scan" data-nettoyage="1">LANCER VÉRIFICATION</button>';
+    }
+    return h + '</div>';
+  }
+
+  function barreHauteHtml(j){
+    var tout = toutes(j), val = tout.filter(function(e){ return e[0].statut==="ok"; }).length;
+    var pc = avanceGlobale(j), b = j.build || {};
+    var h = '<div class="barre-haute"><div class="titre-journee">';
+    h += '<button class="fleche" data-glisse="-1"'+(state.active<=0?' disabled':'')
+      +' title="Registre précédent"><svg width="22" height="22" viewBox="0 0 22 22" fill="none">'
+      +'<path d="M16 16L6 11L16 6" stroke="#E2E8F0" stroke-width="2" stroke-linecap="round"/></svg></button>';
+    h += '<h1>'+esc(j.nom)+'</h1>';
+    h += '<button class="fleche" data-glisse="1"'+(state.active>=state.journees.length-1?' disabled':'')
+      +' title="Registre suivant"><svg width="22" height="22" viewBox="0 0 22 22" fill="none">'
+      +'<path d="M6 16L16 11L6 6" stroke="#E2E8F0" stroke-width="2" stroke-linecap="round"/></svg></button>';
+    h += '</div><div class="compteur-haut">';
+    h += '<span class="mot">'+val+'/'+tout.length+' VALIDÉES</span>' + jauge(pc);
+    h += '<span class="voyant '+(b.enLigne?'vert':'ambre')+'"><i></i>'
+      + (b.enLigne ? esc(String(b.commit||"build"))+' EN LIGNE' : 'PAS ENCORE EN LIGNE')+'</span>';
+    h += '</div><div class="actions-haut">';
+    h += '<button class="bouton-cyan" data-ouvrir-ajout="1"><svg width="12" height="12" viewBox="0 0 14.5 14.5" fill="none"><path d="M1.25 7.25H13.25M7.25 1.25V13.25" stroke="#060913" stroke-width="2.5" stroke-linecap="round"/></svg>AJOUTER UN TRAVAIL</button>';
+    h += '<button class="bouton-cyan sourd" data-nouvelle="1">+ REGISTRE</button>';
+    h += '</div></div>';
+    if (nommeOuvert){
+      h += '<form class="barre-haute" data-nommer="1" style="gap:8px">'
+        + '<input name="nom" required placeholder="Le nom du registre — « 25/08, les animations »" '
+        + 'style="flex:1 1 240px;padding:9px 12px;border-radius:6px;background:var(--fond);'
+        + 'border:1px solid var(--filet);color:var(--texte);font-size:14px">'
+        + '<button class="bouton-cyan" type="submit">CRÉER</button>'
+        + '<button class="bouton-cyan sourd" type="button" data-annuler="1">ANNULER</button></form>';
+    }
+    return h;
+  }
+
+  function bandeauHtml(j){
+    var b = j.build || {};
+    var h = '<div class="bandeau '+(b.enLigne?'en-ligne':'hors-ligne')+'"><span class="feu"></span><div>';
+    h += '<h2>'+(b.enLigne ? 'COMMIT ET TEST POSSIBLE' : 'PAS ENCORE EN LIGNE — NE TESTE PAS TOUT DE SUITE')+'</h2>';
+    h += '<p>';
+    if (b.enLigne) h += 'En ligne depuis '+esc(b.enLigne)+'. ';
+    if (b.commit)  h += 'Commit <code>'+esc(b.commit)+'</code>'+(b.quoi?' — '+esc(b.quoi):'')+'. ';
+    else if (b.quoi) h += esc(b.quoi)+'. ';
+    h += esc(b.note||"")+'</p></div></div>';
+    return h;
+  }
+
+  function ongletsHtml(j){
+    var att = enAttente().length;
+    var ouv = toutes(j).filter(function(e){ return ouverte(e[0]) && retenue(e[0]); }).length;
+    var o = [["actives","Tâches actives",ouv,"cyan"],["verifier","À vérifier",att,""],
+             ["marche","Ordre de marche",0,""],["nettoyage","Nettoyage",0,""]];
+    var h = '<nav class="onglets">';
+    o.forEach(function(x){
+      h += '<button data-onglet="'+x[0]+'"'+(vueOnglet===x[0]?' class="actif"':'')+'>'+x[1];
+      if (x[2]) h += '<span class="compte'+(x[3]?' '+x[3]:'')+'">'+x[2]+'</span>';
+      h += '</button>';
+    });
+    return h + '</nav>';
+  }
+
+  function reglagesHtml(j){
+    var h = '<div class="reglages"><span class="mot">CLASSER</span>';
+    h += '<button data-tri="priorite"'+(j.tri!=="manuel"?' class="actif"':'')+'>priorité</button>';
+    h += '<button data-tri="manuel"'+(j.tri==="manuel"?' class="actif"':'')+'>à la main</button>';
+    h += '<span class="sep"></span><span class="mot">GROUPER</span>';
+    [["etat","état"],["section","section"],["theme","thème"]].forEach(function(x){
+      h += '<button data-groupe="'+x[0]+'"'+((j.groupe||"etat")===x[0]?' class="actif"':'')+'>'+x[1]+'</button>';
+    });
+    var ts = themes();
+    if (ts.length){
+      h += '<span class="sep"></span><span class="mot">THÈME</span>';
+      h += '<button data-filtre=""'+(filtreTheme?'':' class="actif"')+'>tous</button>';
+      ts.forEach(function(t){
+        h += '<button data-filtre="'+esc(t)+'"'+(filtreTheme===t?' class="actif"':'')+'>'+esc(t)+'</button>';
+      });
+    }
+    return h + '</div>';
+  }
+
+  function carteHtml(e, rang){
+    var it = e[0], repli = it.statut === "ok";
+    var vu = visee && visee.s===e[1] && visee.i===e[2];
+    var h = '<button class="carte '+it.statut+(vu?' vise':'')+'" data-s="'+e[1]+'" data-i="'+e[2]+'">';
+    if (repli){
+      h += '<span class="pastille-ronde" style="background:var(--vert)"></span>'
+        +  '<span class="ref">'+esc(it.ref)+'</span><h3>'+esc(it.titre)+'</h3>'
+        +  '<span class="badge ok">VALIDÉ</span></button>';
+      return h;
+    }
+    h += '<span class="tete"><span class="gauche">';
+    h += '<span class="pastille-ronde" style="background:var(--'
+      + (it.statut==="ko"?"rouge":it.statut==="attente"?"ambre":it.statut==="encours"?"cyan":"attenue")+')"></span>';
+    h += '<span class="ref">'+esc(it.ref)+'</span>';
+    if (theme(it)) h += '<span class="puce-theme">'+esc(theme(it)).toUpperCase()+'</span>';
+    if (rang) h += '<span class="puce-focus">'+rang+'<sup>'+(rang===1?"re":"e")+'</sup> DE L’ORDRE</span>';
+    h += '</span><span class="badge '+it.statut+'">'+LABEL[it.statut]+'</span></span>';
+    h += '<h3>'+esc(it.titre)+'</h3>';
+    h += '<span class="avance"><span class="prio prio-'+prio(it)+'">'+prio(it).toUpperCase()+'</span>'
+      +  jauge(avance(it)) + '<span>'+avance(it)+'%</span></span>';
+    return h + '</button>';
+  }
+
+  function listeHtml(j){
+    var liste = ordreDeMarche();
+    var rangs = {};
+    liste.forEach(function(it,i){ rangs[it.ref] = i+1; });
+    var h = '', vide = true;
+    paquets().forEach(function(p){
+      if (!p.entrees.length) return;
+      vide = false;
+      var reste = p.entrees.filter(function(e){ return ouverte(e[0]); }).length;
+      h += '<div class="groupe-titre '+p.classe+'">'+esc(p.titre)
+        +  '<span class="compte">'+(reste?reste+" ouvert"+(reste>1?"s":"")+" / ":"")
+        +  p.entrees.length+'</span></div>';
+      h += '<div class="fiches">';
+      p.entrees.forEach(function(e){ h += carteHtml(e, rangs[e[0].ref]); });
+      h += '</div>';
+    });
+    if (vide) h = '<div class="vide">AUCUNE FICHE'+(filtreTheme?' SOUS CE THÈME':'')+'.</div>';
+    return h;
+  }
+
+  function attenteHtml(){
+    var att = enAttente();
+    if (!att.length)
+      return '<div class="vide">RIEN N’ATTEND TON VERDICT.<br>'
+        + 'Tout ce qui est livré a déjà été tranché.</div>';
+    var h = '<div class="attente-bloc"><h2>'+att.length+' CHANTIER'
+      + (att.length>1?'S ATTENDENT':' ATTEND')+' TA VALIDATION</h2>';
+    h += '<p>Livrés et en ligne. Je n’y retouche pas tant que tu n’as pas tranché : '
+      + '« ça marche » les replie, « toujours cassé » me les remet dans l’ordre de marche.</p><ul>';
+    att.forEach(function(e){
+      var it = e[0], liv = it.livre;
+      h += '<li data-s="'+e[1]+'" data-i="'+e[2]+'">';
+      h += '<span class="quoi"><span class="ref">'+esc(it.ref)+'</span> '+esc(it.titre)+'</span>';
+      if (liv){
+        h += '<span class="livraison">Livré le '+esc(liv.quand||"?");
+        if (liv.commit) h += ' · <code>'+esc(liv.commit)+'</code>';
+        var d = attenteDepuis(it);
+        if (d) h += ' · <span class="attend">'+esc(d)+'</span>';
+        h += '</span>';
+      }
+      var r = it.resume || dernierMot(it);
+      if (r) h += '<p class="resume">'+esc(r)+'</p>';
+      h += '<textarea class="note" rows="1" placeholder="Ce que tu vois, si ça ne va pas…"></textarea>';
+      h += '<span class="verdict"><button class="btn-ok" data-act="ok">Ça marche (Valider)</button>'
+        +  '<button class="btn-ko" data-act="ko">Toujours cassé</button></span>';
+      h += '<span class="etat"></span></li>';
+    });
+    return h + '</ul></div>';
+  }
+
+  function marcheHtml(j){
+    var liste = ordreDeMarche(), att = enAttente();
+    var h = '';
+    if (j.marche){
+      h += '<div class="marche"><h2>AU TRAVAIL — '+esc(j.marche.nom||"l’ordre est donné")+'</h2>';
+      h += '<p class="quand">Lancé le '+esc(j.marche.lance)+'. Je pars sur cette liste, dans cet '
+        +  'ordre, et je ne m’arrête plus : une fiche livrée sort de la liste et passe à '
+        +  '« à vérifier ». Je ne rends la main que quand il ne reste que des vérifs.</p><ol>';
+      j.marche.ordre.forEach(function(o){
+        h += '<li><span class="ref-mini">'+esc(o.ref)+'</span>'+esc(o.titre)+'</li>';
+      });
+      h += '</ol><div class="bas"><button class="bouton-cyan sourd" data-copier="1">COPIER L’ORDRE</button>';
+      h += '<span class="etat" id="etat-marche"></span></div>';
+      /* Le frein, aussi gros que l'accélérateur. */
+      h += '<div style="margin-top:12px"><button class="bouton-arret" data-arreter="1">'
+        +  '■ ARRÊTER LE TRAVAIL</button></div></div>';
+      return h;
+    }
+    if (!liste.length){
+      h += '<div class="vide">';
+      if (att.length){
+        h += '<b style="color:var(--ambre);font-size:15px">EN ATTENTE DE TOI</b><br><br>'
+          +  'Plus rien à prendre : tout ce qui reste attend ton verdict.<br>'
+          +  'Tranche une ligne et l’ordre de marche repart.';
+      } else {
+        h += '<b style="color:var(--vert);font-size:15px">REGISTRE TERMINÉ</b><br><br>'
+          +  'Aucun chantier ouvert. Ajoute un travail, ou ouvre un nouveau registre.';
+      }
+      return h + '</div>';
+    }
+    h += '<form class="commande" data-lancer="1">';
+    h += '<input type="text" name="nom" placeholder="Nomme le travail — « les animations », « l’intro »…" value="'+esc(nomTravail)+'">';
+    h += '<label class="auto"><input type="checkbox" name="auto"'+(groupeAuto?' checked':'')+'>';
+    h += 'GROUPER LES CHANTIERS QUI CORRESPONDENT AU NOM <span style="color:var(--cyan)">'
+      +  liste.length+' SINON</span></label>';
+    h += '<button class="bouton-lancer" type="submit">▶ AU TRAVAIL ! — '+liste.length
+      +  ' CHANTIER'+(liste.length>1?'S':'')+'</button>';
+    h += '<span class="etat" id="etat-marche"></span></form>';
+    h += '<div class="vide" style="text-align:left">⚠️ <b>Je ne travaille pas tant que tu n’as '
+      +  'pas lancé.</b> Une fois lancé, j’enchaîne toutes les fiches sans m’arrêter, jusqu’à ce '
+      +  'qu’il ne te reste que des vérifs et des retouches.</div>';
+    return h;
+  }
+
+  function nettoyageHtml(j){
+    var n = j.nettoyage;
+    var h = '';
+    if (n && n.fait){
+      h += '<div class="marche" style="border-color:var(--vert);background:linear-gradient(180deg,rgba(16,185,129,.12),rgba(13,20,36,.9))">';
+      h += '<h2 style="color:var(--vert)">✓ NETTOYAGE FAIT</h2>';
+      h += '<p class="quand">Demandé le '+esc(n.demande)+', terminé le '+esc(n.fait)+'.</p>';
+      if (n.quoi) h += '<p style="font-size:13px;margin:0">'+esc(n.quoi)+'</p>';
+      h += '</div>';
+    } else if (n){
+      h += '<div class="marche" style="border-color:var(--ambre);background:linear-gradient(180deg,rgba(245,158,11,.12),rgba(13,20,36,.9))">';
+      h += '<h2 style="color:var(--ambre)">NETTOYAGE DEMANDÉ</h2>';
+      h += '<p class="quand">Le '+esc(n.demande)+'.</p>';
+      h += '<p style="font-size:13px;margin:0 0 12px">Passe de simplification sur ce que les '
+        +  'derniers chantiers ont laissé : doublons, code mort, chemins concurrents. '
+        +  '<b>Aucun changement de comportement</b> — les bancs doivent rendre exactement les '
+        +  'mêmes chiffres après qu’avant.</p>';
+      h += '<div class="bas"><button class="bouton-cyan sourd" data-nettoyage-annule="1">ANNULER LA DEMANDE</button>';
+      h += '<span class="etat" id="etat-nettoyage"></span></div></div>';
+    } else {
+      h += '<div class="vide" style="text-align:left">Aucune passe demandée.<br><br>'
+        +  'Le nettoyage n’est pas une tâche du carnet — il ne produit rien de visible à '
+        +  'l’écran. C’est une passe sur ce que les gros chantiers ont laissé derrière eux.'
+        +  '<br><br><b style="color:var(--texte)">Ce n’est pas à toi de dire que c’est fait</b> : '
+        +  'tu ne peux pas le voir. Tu demandes, je date la fin.</div>';
+      h += '<button class="bouton-scan" data-nettoyage="1" style="padding:14px">🧹 LANCER VÉRIFICATION</button>';
+    }
+    return h;
+  }
+
+  function ajoutHtml(j){
+    if (!ajoutOuvert) return "";
+    var h = '<form class="ajout" data-ajout="1"><h2>+ AJOUTER UN TRAVAIL</h2>';
+    h += '<label>CE QUE TU VEUX VOIR CORRIGÉ OU FAIT<input name="titre" required placeholder="Le bouton COMBATTEZ ne suit pas la maquette"></label>';
+    h += '<label>LE DÉTAIL, SI TU EN AS<textarea name="detail" placeholder="Où tu l’as vu, ce que tu attendais…"></textarea></label>';
+    h += '<div class="duo"><label>DANS QUELLE PARTIE<select name="section">';
+    j.sections.forEach(function(sec,i){ h += '<option value="'+i+'">'+esc(sec.titre)+'</option>'; });
+    h += '</select></label><label>THÈME<input name="theme" list="les-themes" placeholder="Interface, Combat…" value="'+esc(filtreTheme||"")+'"></label></div>';
+    h += '<datalist id="les-themes">';
+    themes().forEach(function(t){ h += '<option value="'+esc(t)+'"></option>'; });
+    h += '</datalist>';
+    h += '<div class="duo"><label>PRIORITÉ<select name="priorite">'
+      +  '<option value="haute">haute</option><option value="moyenne" selected>moyenne</option>'
+      +  '<option value="basse">basse</option></select></label>';
+    h += '<label>ÉTAT<select name="statut"><option value="todo">à faire</option>'
+      +  '<option value="ko">toujours cassé</option><option value="attente">à vérifier</option>'
+      +  '</select></label></div>';
+    h += '<div class="bas"><button class="bouton-cyan" type="submit">AJOUTER AU CARNET</button>';
+    h += '<button class="bouton-cyan sourd" type="button" data-fermer-ajout="1">ANNULER</button>';
+    h += '<span class="etat" id="etat-ajout"></span></div></form>';
+    return h;
+  }
+
+  function inspecteurHtml(j){
+    var it = fiche(visee);
+    var h = '<aside class="inspecteur'+(inspOuvert?' ouvert':'')+'">';
+    h += '<button class="fermer-insp" data-fermer-insp="1">✕ FERMER L’INSPECTEUR</button>';
+    if (!it){
+      h += '<div class="insp-vide"><b>INSPECTEUR CONSOLE</b>'
+        +  '<span>Choisis une fiche à gauche pour la lire, la trancher, ou lui laisser une note.</span>'
+        +  '</div>' + resumeJourneesHtml() + '</aside>';
+      return h;
+    }
+    h += '<div data-s="'+visee.s+'" data-i="'+visee.i+'" style="display:contents">';
+    h += '<div class="insp-tete"><span class="mot">INSPECTEUR CONSOLE // FICHE '+esc(it.ref)+'</span>';
+    h += '<span class="badge '+it.statut+'">'+LABEL[it.statut]+'</span></div>';
+    h += '<h2 class="sujet">'+esc(it.titre)+'</h2><hr class="trait">';
+
+    h += '<div class="meta">';
+    var liv = it.livre;
+    h += ligneMeta("VERSION CIBLE", liv && liv.commit ? esc(liv.commit) : (j.build&&j.build.commit?esc(j.build.commit):"—"), "cyan");
+    var d = attenteDepuis(it);
+    if (attendVerdict(it) && d) h += ligneMeta("TEMPS D’ATTENTE", esc(d), "ambre");
+    else if (liv && liv.quand)  h += ligneMeta("LIVRÉ LE", esc(liv.quand), "vert");
+    h += ligneMeta("MODULE CONTEXTE", theme(it) ? esc(theme(it)).toUpperCase() : "—", "");
+    h += ligneMeta("PRIORITÉ", prio(it).toUpperCase(),
+                   prio(it)==="haute"?"rouge":prio(it)==="basse"?"":"");
+    h += '<div class="ligne"><span class="cle">AVANCEMENT</span>'
+      +  '<span class="val cyan">'+avance(it)+'%</span></div>' + jauge(avance(it));
+    h += '</div>';
+
+    if (it.detail) h += '<p class="insp-detail">'+it.detail+'</p>';
+
+    if (!lectureSeule){
+      h += '<div class="bloc-note"><span>NOTE DE RAPPORT DE VALIDATION (ENTRÉE LOG)</span>';
+      h += '<textarea class="note" placeholder="Ajouter une note de validation ou rapport d’erreur…"></textarea></div>';
+      if (it.statut === "ok"){
+        h += '<div class="verdict"><button class="btn-ko" data-act="rouvrir">Ça s’est remis à casser</button></div>';
+      } else {
+        h += '<div class="verdict"><button class="btn-ok" data-act="ok">Ça marche (Valider)</button>';
+        h += '<button class="btn-ko" data-act="ko">Toujours cassé</button></div>';
+      }
+      h += '<div class="verdict-bis"><button data-act="note">Juste une note</button>';
+      h += '<select data-prio>';
+      ["haute","moyenne","basse"].forEach(function(v){
+        h += '<option value="'+v+'"'+(prio(it)===v?' selected':'')+'>priorité '+v+'</option>';
+      });
+      h += '</select>';
+      if ((j.tri === "manuel") && it.statut !== "ok"){
+        h += '<button data-bouge="-1" title="Monter">↑</button><button data-bouge="1" title="Descendre">↓</button>';
+      }
+      h += '<span class="etat"></span></div>';
+    }
+    h += '</div>';
+
+    h += '<hr class="trait">' + journalHtml(it) + resumeJourneesHtml();
+    return h + '</aside>';
+  }
+
+  function ligneMeta(cle, val, classe){
+    return '<div class="ligne"><span class="cle">'+cle+'</span>'
+         + '<span class="val'+(classe?' '+classe:'')+'">'+val+'</span></div>';
+  }
+
+  function journalHtml(it){
+    var log = it.journal || [];
+    var h = '<div class="journal"><span class="mot">HISTORIQUE DES AUDITS</span>';
+    if (!log.length) return h + '<span class="entree">Aucune entrée.</span></div>';
+    var tout = journalDeplie[it.ref] === true;
+    var caches = tout ? 0 : Math.max(0, log.length - RECENT);
+    if (caches > 0){
+      h += '<button class="plus" data-journal="'+esc(it.ref)+'">▾ '+caches+' entrée'
+        +  (caches>1?'s':'')+' plus ancienne'+(caches>1?'s':'')+'</button>';
+    } else if (tout && log.length > RECENT){
+      h += '<button class="plus" data-journal-moins="'+esc(it.ref)+'">▴ Replier</button>';
+    }
+    h += '<div class="lignes">';
+    log.slice(caches).forEach(function(e){
+      var toi = e.qui === "Toi";
+      h += '<p class="entree'+(toi?' toi':'')+'">['+esc(e.quand)+'] <span class="sig">'
+        +  esc(e.qui)+'</span> '+esc(e.texte)+'</p>';
+    });
+    return h + '</div></div>';
+  }
+
+  function resumeJourneesHtml(){
+    if (state.journees.length < 2) return "";
+    var h = '<div class="resume-journees"><span class="mot">RÉSUMÉ DES REGISTRES</span>';
+    state.journees.slice().reverse().forEach(function(sj){
+      var t = toutes(sj);
+      var ok = t.filter(function(e){ return e[0].statut==="ok"; }).length;
+      var ko = t.filter(function(e){ return e[0].statut==="ko"; }).length;
+      h += '<div class="jour"><b>'+esc(sj.nom)+'</b><span>'+ok+' fiche'+(ok>1?'s':'')
+        +  ' validée'+(ok>1?'s':'')+', '+ko+' cassé'+(ko>1?'s':'')+'</span></div>';
+    });
+    return h + '</div>';
+  }
+
+  /* LE CRÉDIT. ⚠️ Il ne se met PAS à jour tout seul — je ne vois mes tokens
+     qu'au début d'un tour. Le relevé est daté pour que ça se voie, et il est
+     écrit par MOI dans etat.json, à chaque fois que je touche au carnet. */
+  function barreBasseHtml(j){
+    var c = state.credit || null;
+    var h = "";
+    if (c && c.restant && c.total){
+      var pc = Math.max(0, Math.min(100, Math.round(c.restant / c.total * 100)));
+      var seuil = c.seuil || 12;
+      var classe = pc <= Math.round(seuil/2) ? "critique" : (pc <= seuil ? "bas" : "ok");
+      if (classe === "critique"){
+        h += '<div class="passation">⚠ PASSATION REQUISE — crédit sous '
+          +  Math.round(seuil/2)+' %. Je m’arrête, je commite, j’écris la passation.</div>';
+      }
+    }
+    h += '<div class="barre-basse"><span>CARNET_V5 // REGISTRE: '+esc(j.nom).toUpperCase()+'</span>';
+    h += '<span class="droite"><span>MAJ: '+esc(j.maj||"—")+'</span>';
+    if (c && c.restant && c.total){
+      var p = Math.max(0, Math.min(100, Math.round(c.restant/c.total*100)));
+      var s = c.seuil || 12;
+      var cl = p <= Math.round(s/2) ? "critique" : (p <= s ? "bas" : "ok");
+      h += '<span class="credit '+cl+'">CRÉDIT: '+(c.restant/1e6).toFixed(1)+'M / '
+        +  (c.total/1e6).toFixed(1)+'M'+jauge(p)+p+'%</span>';
+      h += '<span>RELEVÉ: '+esc(c.releve||"—")+'</span>';
+    } else {
+      h += '<span>CRÉDIT: NON RELEVÉ</span>';
+    }
+    return h + '</span></div>';
+  }
+
+  function piedHtml(j){
+    var h = '<div class="pied"><p>La source de ce carnet vit dans le dépôt, sous <code>carnet/</code> : '
+      + 'la page, l’état, et de quoi le rebâtir. Ce qui est tranché ici redescend là-bas. '
+      + '<b>Tes coches sont aussi copiées dans ce navigateur</b> — si la page publiée disparaît, '
+      + 'rouvre-la et elle te rendra ta version.</p>';
+    h += '<div class="export"><button class="bouton-cyan sourd" data-export="1">EXPORTER L’ÉTAT POUR LE DÉPÔT</button>';
+    h += '<span class="etat" id="etat-export"></span></div></div>';
+    return h;
+  }
+
+  /* ═══════════════════════════ ENREGISTRER ════════════════════════════════ */
+
+  function construireDoc(){
+    var css = document.getElementById("sheet").textContent;
+    var app = document.getElementById("app").textContent;
+    var json = JSON.stringify(state, null, 1).replace(/</g, "\\u003c");
+    var fin = "<\/script>";
+    return '<!doctype html>\n<html lang="fr">\n<head>\n<meta charset="utf-8">\n'
+      + '<meta name="viewport" content="width=device-width, initial-scale=1">\n'
+      + '<title>Carnet des travaux — King’s Gambit</title>\n'
+      + '<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>\n'
+      + '<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Geist+Mono:wght@400;700;800&family=Inter:wght@400;600;700;800&display=swap">\n'
+      + '<style id="sheet">' + css + '</style>\n</head>\n<body>\n<div id="root"></div>\n'
+      + '<script id="state" type="application/json">\n' + json + '\n' + fin + '\n'
+      + '<script id="app">' + app + fin + '\n</body>\n</html>';
+  }
+
+  function enregistrer(etat){
+    /* ⚠️ LE MIROIR D'ABORD, LA PUBLICATION ENSUITE. Si la publication échoue,
+       ou si l'artefact disparaît demain, la coche est déjà en sécurité. */
+    miroirEcrit();
+    etat = etat || document.createElement("span");
+    /* En mode dépôt il n'y a RIEN à publier, et c'est normal. Dire
+       « enregistrement… » puis échouer ferait croire à une panne à chaque
+       coche — alors que le miroir vient justement de faire son travail. */
+    if (mode === "depot"){
+      etat.textContent = "Gardé dans ce navigateur.";
+      etat.classList.remove("erreur");
+      return;
+    }
+    etat.textContent = "Enregistrement…";
+    etat.classList.remove("erreur");
+    root.querySelectorAll("button").forEach(function(b){ b.disabled = true; });
+    window.claude.use("artifact").then(function(api){
+      if (!api) throw {code:"not_granted"};
+      return api.publish(construireDoc());
+    }).then(function(){
+      etat.textContent = "Enregistré.";
+    }).catch(function(err){
+      var code = err && err.code;
+      root.querySelectorAll("button").forEach(function(b){ b.disabled = false; });
+      if (code === "conflict"){
+        etat.textContent = "Quelqu’un a écrit avant — la page se recharge sur sa version.";
+        return;
+      }
+      if (code==="not_writer" || code==="not_granted" || code==="not_declared"
+          || code==="capability_disabled" || code==="consent_required"){
+        lectureSeule = true; render(); return;
+      }
+      etat.textContent = "Pas enregistré — mais gardé dans ce navigateur.";
+      etat.classList.add("erreur");
+    });
+  }
+
+  function etatDe(hote){
+    var s = hote.dataset ? hote.dataset.s : null;
+    if (s === undefined || s === null) return null;
+    return root.querySelector('[data-s="'+s+'"][data-i="'+hote.dataset.i+'"] .etat');
+  }
+  function touche(){ J().maj = aujourdhui()+"/2026"; }
+
+  function lancerTravail(nom, auto){
+    var mots = auto ? motsUtiles(nom) : null;
+    var liste = ordreDeMarche(mots), retombee = false;
+    if (!liste.length){ liste = ordreDeMarche(null); retombee = liste.length > 0; }
+    if (!liste.length) return;
+    J().marche = {
+      nom:(nom||"").trim() || "l’ordre est donné",
+      lance:maintenant(),
+      groupe:(auto && !retombee) ? "auto" : "tout",
+      ordre:liste.map(function(it){ return {ref:it.ref, titre:it.titre}; })
+    };
+    if (liste[0].statut === "todo"){
+      liste[0].statut = "encours";
+      liste[0].journal.push({quand:aujourdhui(), qui:"Toi",
+        texte:"AU TRAVAIL : première de l’ordre de marche."});
+    }
+    nomTravail = "";
+    touche(); render();
+    enregistrer(document.getElementById("etat-marche"));
+  }
+
+  /* ═══════════════════════════════ LES GESTES ═════════════════════════════ */
+
+  root.addEventListener("submit", function(ev){
+    var f = ev.target.closest("form[data-lancer]");
+    if (f){ ev.preventDefault(); lancerTravail(f.nom.value, f.auto.checked); return; }
+
+    f = ev.target.closest("form[data-nommer]");
+    if (f){
+      ev.preventDefault();
+      var nom = f.nom.value.trim();
+      if (!nom){ f.nom.focus(); return; }
+      state.journees.push({
+        nom:nom, maj:aujourdhui()+"/2026", tri:"priorite", groupe:"etat",
+        marche:null, nettoyage:null,
+        build:{enLigne:false, commit:"", quoi:"", note:"Rien n’est encore en ligne pour ce registre."},
+        sections:[
+          {id:"verdict", titre:"En attente de ton verdict",
+           chapo:"Fait et mesuré. À toi de dire, une fois le build en ligne.", items:[]},
+          {id:"chantier", titre:"Le chantier",
+           chapo:"Ce qui reste à faire, dans l’ordre que tu fixes.", items:[]},
+          {id:"valide", titre:"Déjà validé par toi",
+           chapo:"Replié. Rouvre une ligne si elle se remet à casser.", items:[]}
+        ]
+      });
+      state.active = state.journees.length - 1;
+      nommeOuvert = false; visee = null;
+      render(); enregistrer(document.getElementById("etat-marche"));
+      return;
+    }
+
+    f = ev.target.closest("form[data-ajout]");
+    if (!f) return;
+    ev.preventDefault();
+    var titre = f.titre.value.trim();
+    if (!titre){ f.titre.focus(); return; }
+    var si = +f.section.value, n = 1;
+    J().sections.forEach(function(sec){
+      sec.items.forEach(function(it){
+        var m = /^n(\d+)$/.exec(it.ref);
+        if (m && +m[1] >= n) n = +m[1] + 1;
+      });
+    });
+    J().sections[si].items.push({
+      ref:"n"+n, titre:titre, detail:esc(f.detail.value.trim()),
+      statut:f.statut.value, priorite:f.priorite.value, theme:f.theme.value.trim(),
+      journal:[{quand:aujourdhui(), qui:"Toi", texte:"Ajoutée au carnet."}]
+    });
+    touche(); ajoutOuvert = false; render();
+    enregistrer(document.getElementById("etat-ajout"));
+  });
+
+  root.addEventListener("input", function(ev){
+    var champ = ev.target.closest('form[data-lancer] input[name="nom"]');
+    if (champ) nomTravail = champ.value;
+  });
+
+  root.addEventListener("change", function(ev){
+    var coche = ev.target.closest('form[data-lancer] input[name="auto"]');
+    if (coche){ groupeAuto = coche.checked; return; }
+    var sel = ev.target.closest("select[data-prio]");
+    if (!sel || !visee) return;
+    var it = fiche(visee);
+    if (!it || prio(it) === sel.value) return;
+    it.priorite = sel.value;
+    touche(); render();
+    enregistrer(root.querySelector(".inspecteur .etat"));
+  });
+
+  root.addEventListener("click", function(ev){
+    var t = ev.target;
+
+    /* — restaurer le miroir — */
+    if (t.closest("button[data-restaurer]")){
+      state = plusFrais.etat; plusFrais = null; visee = null;
+      render(); enregistrer(document.getElementById("etat-marche")); return;
+    }
+    if (t.closest("button[data-oublier]")){ plusFrais = null; render(); return; }
+    if (t.closest("button[data-depot-vu]")){ depotVu = true; render(); return; }
+
+    /* — lecture pure : ni miroir ni publication — */
+    var reg = t.closest("button[data-journee]");
+    if (reg){ state.active = +reg.dataset.journee; visee = null; render(); return; }
+    var gl = t.closest("button[data-glisse]");
+    if (gl){
+      var n = state.active + (+gl.dataset.glisse);
+      if (n < 0 || n >= state.journees.length) return;
+      state.active = n; visee = null; render(); return;
+    }
+    var ong = t.closest("button[data-onglet]");
+    if (ong){ vueOnglet = ong.dataset.onglet; render(); return; }
+    var filt = t.closest("button[data-filtre]");
+    if (filt){
+      var v = filt.dataset.filtre;
+      filtreTheme = (!v || filtreTheme === v) ? null : v;
+      render(); return;
+    }
+    if (t.closest("button[data-ouvrir-ajout]")){ vueOnglet="actives"; ajoutOuvert=true; render(); return; }
+    if (t.closest("button[data-fermer-ajout]")){ ajoutOuvert=false; render(); return; }
+    if (t.closest("button[data-nouvelle]")){ nommeOuvert=true; render(); return; }
+    if (t.closest("button[data-annuler]")){ nommeOuvert=false; render(); return; }
+    if (t.closest("button[data-fermer-insp]")){ inspOuvert=false; render(); return; }
+    var jm = t.closest("button[data-journal]");
+    if (jm){ journalDeplie[jm.dataset.journal] = true; render(); return; }
+    jm = t.closest("button[data-journal-moins]");
+    if (jm){ journalDeplie[jm.dataset.journalMoins] = false; render(); return; }
+
+    /* — réglages : gardés, donc publiés — */
+    var tri = t.closest("button[data-tri]");
+    if (tri){
+      if (J().tri === tri.dataset.tri) return;
+      J().tri = tri.dataset.tri; touche(); render();
+      enregistrer(document.getElementById("etat-marche")); return;
+    }
+    var grp = t.closest("button[data-groupe]");
+    if (grp){
+      if ((J().groupe||"etat") === grp.dataset.groupe) return;
+      J().groupe = grp.dataset.groupe; touche(); render();
+      enregistrer(document.getElementById("etat-marche")); return;
+    }
+    var bg = t.closest("button[data-bouge]");
+    if (bg && visee){
+      var items = J().sections[visee.s].items;
+      var de = visee.i, vers = de + (+bg.dataset.bouge);
+      if (vers < 0 || vers >= items.length) return;
+      var tmp = items[de]; items[de] = items[vers]; items[vers] = tmp;
+      visee = {s:visee.s, i:vers};
+      touche(); render();
+      enregistrer(root.querySelector(".inspecteur .etat")); return;
+    }
+
+    /* — le nettoyage — */
+    if (t.closest("button[data-nettoyage]")){
+      J().nettoyage = {demande:maintenant()}; touche(); render();
+      enregistrer(document.getElementById("etat-nettoyage")); return;
+    }
+    if (t.closest("button[data-nettoyage-annule]")){
+      J().nettoyage = null; touche(); render();
+      enregistrer(document.getElementById("etat-marche")); return;
+    }
+
+    /* — l'ordre de marche — */
+    if (t.closest("button[data-arreter]")){
+      J().marche = null; touche(); render();
+      enregistrer(document.getElementById("etat-marche")); return;
+    }
+    var cop = t.closest("button[data-copier]");
+    if (cop){
+      var texte = "AU TRAVAIL — " + J().nom + "\n" + J().marche.ordre.map(function(o,i){
+        return (i+1)+". "+o.ref+" — "+o.titre;
+      }).join("\n");
+      var dit = document.getElementById("etat-marche");
+      if (navigator.clipboard && navigator.clipboard.writeText){
+        navigator.clipboard.writeText(texte)
+          .then(function(){ dit.textContent = "Copié — colle-le en discussion."; })
+          .catch(function(){ dit.textContent = "Copie refusée par le navigateur."; });
+      } else dit.textContent = "Copie indisponible ici.";
+      return;
+    }
+
+    /* — l'export vers le dépôt — */
+    var expo = t.closest("button[data-export]");
+    if (expo){
+      var json = JSON.stringify(state, null, 2) + "\n";
+      var dit2 = document.getElementById("etat-export");
+      /* Le dernier recours, et il ne peut PAS échouer : la zone de texte.
+         C'est ce qui a sauvé le carnet la première fois qu'il a disparu. */
+      function aLaMain(){
+        var zone = document.createElement("textarea");
+        zone.value = json; zone.readOnly = true;
+        expo.parentNode.parentNode.appendChild(zone);
+        zone.focus(); zone.select();
+        dit2.textContent = "À copier dans carnet/etat.json.";
+        expo.disabled = true;
+      }
+      /* ⚠️ DEUX CHEMINS, UN PAR MODE. Dans l'artefact, un `<a download>` est
+         inerte — le bac à sable bloque toute sauvegarde lancée par la page ;
+         il faut passer par la capacité `downloads`. Depuis le dépôt, c'est
+         l'inverse : il n'y a pas de capacité, mais le lien marche. */
+      if (mode === "depot"){
+        try{
+          var lien = document.createElement("a");
+          lien.href = URL.createObjectURL(new Blob([json], {type:"application/json"}));
+          lien.download = "etat.json";
+          document.body.appendChild(lien);
+          lien.click();
+          setTimeout(function(){ URL.revokeObjectURL(lien.href); lien.remove(); }, 0);
+          dit2.textContent = "Téléchargé. Le déposer dans carnet/etat.json.";
+        }catch(e){ aLaMain(); }
+        return;
+      }
+      window.claude.use("downloads").then(function(api){
+        if (!api) throw 0;
+        return api.save({filename:"etat.json", data:json});
+      }).then(function(){
+        dit2.textContent = "Enregistré. Le déposer dans carnet/etat.json.";
+      }).catch(aLaMain);
+      return;
+    }
+
+    /* — les verdicts. L'hôte est la carte, la ligne d'attente, ou l'inspecteur :
+         les trois portent les mêmes indices, et les trois savent trancher. — */
+    var bouton = t.closest("button[data-act]");
+    if (bouton){
+      var hote = bouton.closest("[data-s]");
+      if (!hote) return;
+      var it = J().sections[+hote.dataset.s].items[+hote.dataset.i];
+      var act = bouton.dataset.act;
+      var champ = hote.querySelector(".note") || root.querySelector(".inspecteur .note");
+      var txt = champ ? champ.value.trim() : "";
+      if (act === "rouvrir"){
+        it.statut = "ko";
+        it.journal.push({quand:aujourdhui(), qui:"Toi", texte:txt || "Rouverte : ça s’est remis à casser."});
+      } else if (act === "ok"){
+        it.statut = "ok";
+        it.journal.push({quand:aujourdhui(), qui:"Toi", texte:txt || "Ça marche."});
+      } else if (act === "ko"){
+        it.statut = "ko";
+        it.journal.push({quand:aujourdhui(), qui:"Toi", texte:txt || "Toujours cassé."});
+      } else if (act === "note"){
+        if (!txt){ if (champ) champ.focus(); return; }
+        it.journal.push({quand:aujourdhui(), qui:"Toi", texte:txt});
+      }
+      touche(); render();
+      enregistrer(etatDe(hote));
+      return;
+    }
+
+    /* — choisir une fiche : geste de lecture, mais il ouvre l'inspecteur — */
+    var carte = t.closest(".carte");
+    if (carte){
+      visee = {s:+carte.dataset.s, i:+carte.dataset.i};
+      inspOuvert = true;
+      render();
+      return;
+    }
+  });
+
+  render();
+})();
+</script>
+
+</body>
+</html>
