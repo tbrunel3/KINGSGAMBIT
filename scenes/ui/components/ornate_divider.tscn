@@ -5,10 +5,12 @@
 [node name="OrnateDivider" type="HBoxContainer"]
 layout_mode = 3
 anchors_preset = 0
+mouse_filter = 2
 theme_override_constants/separation = 8
 
 [node name="LineLeft" type="HSeparator" parent="."]
 layout_mode = 2
+mouse_filter = 2
 size_flags_horizontal = 3
 theme_override_colors/separator_color = Color(0.23921569, 0.30980393, 0.41960785, 1)
 
@@ -22,5 +24,6 @@ color = Color(1, 0.81960785, 0.101960786, 1)
 
 [node name="LineRight" type="HSeparator" parent="."]
 layout_mode = 2
+mouse_filter = 2
 size_flags_horizontal = 3
 theme_override_colors/separator_color = Color(0.23921569, 0.30980393, 0.41960785, 1)

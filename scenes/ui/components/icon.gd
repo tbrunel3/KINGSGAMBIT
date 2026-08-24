@@ -21,6 +21,19 @@ extends Control
 @export var line_width: float = 1.8
 
 
+## ⚠️ TRANSPARENTE AU DOIGT, DES LA CONSTRUCTION.
+##
+## Une icone ne se clique jamais - c'est toujours son parent qui porte
+## l'action. Mais un Control est en MOUSE_FILTER_STOP par defaut : posee dans
+## une zone defilante, elle y avale le geste et la zone ne defile plus sous
+## elle (21 blocages releves dans le seul codex, tous decoratifs).
+##
+## Dans _init et pas dans _ready : ce qui viendrait la poser autrement - une
+## scene, un appelant - passe apres et gagne.
+func _init() -> void:
+	mouse_filter = Control.MOUSE_FILTER_IGNORE
+
+
 func _ready() -> void:
 	if custom_minimum_size == Vector2.ZERO:
 		custom_minimum_size = Vector2(18, 18)

@@ -416,6 +416,53 @@ static func ignore_mouse_recursive(node: Node) -> void:
 		ignore_mouse_recursive(child)
 
 
+# ------------------------------- LE TOUCHER ----------------------------------
+#
+#  ⚠️ DANS UNE ZONE DEFILANTE, AGIR SUR L'APPUI EST UN BUG - pas un detail.
+#
+#  Un controle qui declenche son action sur l'evenement ENFONCE agit avant que
+#  le doigt ait bouge : poser le pouce dessus pour faire defiler la page suffit
+#  a l'actionner. Et en MOUSE_FILTER_STOP il avale en plus l'evenement, donc le
+#  ScrollContainer ne voit jamais le geste et la zone ne defile pas du tout.
+#
+#  Les DEUX defauts vont ensemble, et corriger l'un sans l'autre ne fait rien :
+#  c'est ce qui a ete paye sur les cachets de la carte de campagne (cf.
+#  CampaignSeal), ou poser le doigt partait en bataille.
+
+## Tolerance d'un appui au doigt, en points. Un pouce ne se pose pas au pixel :
+## en dessous c'est un APPUI, au-dessus c'est un GESTE, et le geste appartient a
+## la zone defilante. Meme valeur que CampaignSeal.TAP_SLOP - c'est la meme
+## main.
+const TAP_SLOP := 12.0
+
+
+## Branche `action` sur le TOUCHER de `control` : l'appui arme, le relachement
+## decide, et seulement s'il retombe a moins de TAP_SLOP du point de depart.
+##
+## Le controle passe en PASS : le geste remonte au ScrollContainer, qui peut
+## enfin faire defiler. A utiliser partout ou un controle cliquable vit DANS une
+## zone defilante - puce de filtre du codex, carte de la boutique, plaque de
+## prix. Un bouton hors zone defilante n'en a pas besoin.
+static func on_tap(control: Control, action: Callable) -> void:
+	control.mouse_filter = Control.MOUSE_FILTER_PASS
+	# Boite a un element : une lambda GDScript capture la valeur, pas la
+	# variable - un Vector2 nu serait fige a Vector2.INF pour toujours.
+	var origine: Array = [Vector2.INF]
+	control.gui_input.connect(func(event: InputEvent) -> void:
+		var click := event as InputEventMouseButton
+		if click == null or click.button_index != MOUSE_BUTTON_LEFT:
+			return
+		if click.pressed:
+			origine[0] = click.position
+			return
+		var depart: Vector2 = origine[0]
+		if depart == Vector2.INF:
+			return
+		origine[0] = Vector2.INF
+		if click.position.distance_to(depart) <= TAP_SLOP:
+			action.call())
+
+
 ## Formate une duree en secondes pour un compte a rebours (1h 05m / 3m 20s).
 ## "15 530" plutot que "15530". Un montant a cinq chiffres sans separateur se
 ## dechiffre au lieu de se lire, et la campagne en verse jusqu'a 15 000 d'un

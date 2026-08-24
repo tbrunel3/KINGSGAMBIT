@@ -331,6 +331,10 @@ func _build_deployment_panel() -> void:
 	header.add_child(title)
 
 	var spacer := Control.new()
+	# Transparente au doigt : une entretoise en EXPAND_FILL prend toute la
+	# largeur libre, et en STOP (le defaut) elle avale le geste de defilement
+	# sur toute cette bande.
+	spacer.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	spacer.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	header.add_child(spacer)
 
@@ -444,11 +448,12 @@ func _filled_slot(type: String) -> PanelContainer:
 func _empty_slot() -> Control:
 	var slot := DashedSlot.new()
 	slot.custom_minimum_size = Vector2(SLOT_SIZE, SLOT_SIZE)
-	slot.mouse_filter = Control.MOUSE_FILTER_STOP
-	slot.gui_input.connect(func(event: InputEvent):
-		if _is_tap(event):
-			_hint_label.text = "Touche une pièce de la caserne pour l'engager."
-	)
+	# La case vide ne porte qu'un rappel : elle n'a aucune raison d'avaler le
+	# geste de defilement de l'ecran (cf. UiTheme.on_tap). Les cases PLEINES et
+	# les cartes de caserne, elles, restent en STOP - ce sont des poignees de
+	# glisser-deposer, et c'est leur travail de garder le geste.
+	UiTheme.on_tap(slot, func() -> void:
+		_hint_label.text = "Touche une pièce de la caserne pour l'engager.")
 	return slot
 
 
@@ -468,6 +473,10 @@ func _build_barracks_panel() -> void:
 	header.add_child(title)
 
 	var spacer := Control.new()
+	# Transparente au doigt : une entretoise en EXPAND_FILL prend toute la
+	# largeur libre, et en STOP (le defaut) elle avale le geste de defilement
+	# sur toute cette bande.
+	spacer.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	spacer.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	header.add_child(spacer)
 
@@ -592,6 +601,7 @@ func _build_info_panel() -> void:
 			"Aura de %d Dame%s au repos" % [dames, "" if dames <= 1 else "s"], bonus))
 
 	var line := ColorRect.new()
+	line.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	line.color = PANEL_EDGE
 	line.custom_minimum_size = Vector2(0, 1)
 	column.add_child(line)
@@ -614,6 +624,10 @@ func _info_row(label_text: String, value: Control) -> HBoxContainer:
 	label.size_flags_vertical = Control.SIZE_SHRINK_CENTER
 	row.add_child(label)
 	var spacer := Control.new()
+	# Transparente au doigt : une entretoise en EXPAND_FILL prend toute la
+	# largeur libre, et en STOP (le defaut) elle avale le geste de defilement
+	# sur toute cette bande.
+	spacer.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	spacer.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	row.add_child(spacer)
 	value.size_flags_horizontal = Control.SIZE_SHRINK_END

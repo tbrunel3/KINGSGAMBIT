@@ -208,10 +208,11 @@ func _add_chip(type: String, text: String) -> void:
 	chip.set_padding(10, 8, 10, 8)
 	chip.inner_outline_color = Color(0, 0, 0, 0)
 	chip.highlight_alpha = 0.0
-	chip.mouse_filter = Control.MOUSE_FILTER_STOP
-	chip.gui_input.connect(func(event: InputEvent):
-		if event is InputEventMouseButton and event.pressed and event.button_index == MOUSE_BUTTON_LEFT:
-			_on_filter(type))
+	# ⚠️ LA RANGEE DE PUCES DEFILE (elle ne tient pas dans 361 points), donc une
+	# puce qui agit sur l'appui change le filtre des qu'on pose le doigt pour la
+	# faire glisser - et en STOP elle empeche en plus la rangee de defiler. Meme
+	# defaut que les cachets de la carte : cf. UiTheme.on_tap.
+	UiTheme.on_tap(chip, func() -> void: _on_filter(type))
 
 	var label := UiTheme.make_label(text, 11, TEXT_BRIGHT)
 	label.add_theme_font_override("font", UiTheme.font_bold())

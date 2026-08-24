@@ -15,6 +15,11 @@ enum Variant { DEFAULT, OUTLINE, INFO, GOLD, TOPBAR }
 @onready var _text: Label = %Text
 
 
+## Un badge ne se clique pas non plus (cf. Icon._init) : il indique.
+func _init() -> void:
+	mouse_filter = Control.MOUSE_FILTER_IGNORE
+
+
 func _ready() -> void:
 	set_variant(Variant.DEFAULT)
 

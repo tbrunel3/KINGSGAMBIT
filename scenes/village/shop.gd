@@ -422,10 +422,9 @@ func _free_chest_card(id: String) -> Control:
 
 	if is_ready:
 		col.add_child(_text("+%d gemmes" % int(data["gems"]), 12, GOLD))
-		card.mouse_filter = Control.MOUSE_FILTER_STOP
-		card.gui_input.connect(func(event: InputEvent):
-			if event is InputEventMouseButton and event.pressed and event.button_index == MOUSE_BUTTON_LEFT:
-				_on_claim(id))
+		# La boutique est une zone defilante : reclamer sur l'APPUI reclamait le
+		# coffre des qu'on posait le doigt pour faire defiler (cf. UiTheme.on_tap).
+		UiTheme.on_tap(card, func() -> void: _on_claim(id))
 	else:
 		var countdown := _text(
 			UiTheme.format_span(Game.free_chest_remaining(id)), 12, TEXT_DIM)
@@ -672,10 +671,9 @@ func _buy_button(price: int, enabled: bool, on_press: Callable) -> Control:
 	row.add_child(label)
 
 	if enabled:
-		plate.mouse_filter = Control.MOUSE_FILTER_STOP
-		plate.gui_input.connect(func(event: InputEvent):
-			if event is InputEventMouseButton and event.pressed and event.button_index == MOUSE_BUTTON_LEFT:
-				on_press.call())
+		# Idem, et ici l'appui DEPENSE : un geste de defilement qui partait d'une
+		# plaque de prix achetait le coffre (cf. UiTheme.on_tap).
+		UiTheme.on_tap(plate, on_press)
 	return plate
 
 
