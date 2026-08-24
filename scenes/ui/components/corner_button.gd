@@ -64,10 +64,16 @@ const GLYPH_COLOR := {
 var _pressed: Callable = Callable()
 
 
-## Bouton flottant : 34 points, coins arrondis a la moitie, donc rond.
+## Bouton flottant : 34 points par defaut, coins arrondis a la moitie, donc rond.
+##
+## ⚠️ `side` EXISTE POUR LA BARRE DU VILLAGE, ET C'EST LA SEULE RAISON. Le
+## joueur a demande des "boutons grossis" en haut ; les 34 points restent la
+## valeur par defaut partout ailleurs, pour que ce composant continue de tenir
+## la promesse qui l'a fait naitre - une seule taille au lieu des six d'avant.
+## N'en ajouter une troisieme que sur une demande explicite, jamais par gout.
 static func floating(glyph_name: String, on_press: Callable,
-		tone: Tone = Tone.NIGHT) -> Control:
-	return _make(glyph_name, "", on_press, tone, FLOATING_SIZE)
+		tone: Tone = Tone.NIGHT, side: float = FLOATING_SIZE) -> Control:
+	return _make(glyph_name, "", on_press, tone, side)
 
 
 ## Retour en tete d'ecran : 52 points, plaque royale.

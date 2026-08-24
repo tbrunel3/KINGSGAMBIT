@@ -43,6 +43,7 @@ func _ready() -> void:
 	await _test_gold_count()
 	await _test_codex_entry()
 	await _test_second_finger()
+	await _test_village_bars()
 
 	print("")
 	if _failures == 0:
@@ -339,11 +340,17 @@ func _test_village() -> void:
 	var corners := _corner_buttons(village)
 	_check(corners.size() >= 3,
 		"le village porte au moins trois boutons de coin (%d)" % corners.size())
+	# ⚠️ QUATRE TAILLES ADMISES, ET PAS UNE DE PLUS. Ce test existe parce que la
+	# meme chose vivait en SIX tailles avant le composant partage. Chacune se
+	# justifie : 34 le flottant ordinaire, 52 le retour en tete d'ecran, 45 la
+	# boutique (zone du pouce), 40 la barre du haut du village - "boutons
+	# grossis", demande du joueur le 24/08.
 	for button in corners:
 		_check(button.size.x == CornerButton.FLOATING_SIZE
 				or button.size.x == CornerButton.BACK_SIZE
-				or button.size.x == 45.0,
-			"%s : taille %.0f (34, 52, ou 45 pour la boutique)"
+				or button.size.x == 45.0
+				or button.size.x == village.TOP_BAR_BUTTON,
+			"%s : taille %.0f (34, 40, 45 ou 52)"
 				% [button.name, button.size.x])
 	_check(is_instance_valid(village._codex_button), "le bouton codex repond encore")
 	_check(is_instance_valid(village._shop_button), "le bouton boutique repond encore")
@@ -359,9 +366,16 @@ func _test_village() -> void:
 	# taps a l'engrenage.
 	var gesture: Control = village.find_child("DevGesture", true, false)
 	if gesture != null:
-		_check(gesture.get_global_rect().end.y <= village.TOP_BAR_Y,
-			"elle ne mord pas sur la barre haute (%.0f <= %.0f)"
-				% [gesture.get_global_rect().end.y, village.TOP_BAR_Y])
+		# ⚠️ LA VRAIE REGLE N'EST PAS "AU-DESSUS DE LA BARRE", C'EST "SUR AUCUN
+		# BOUTON". L'ancienne assertion mesurait un PROXY - elle tenait tant que
+		# la barre commencait a y=44, et elle est devenue fausse le jour ou on
+		# a collé la barre en haut. Une zone en MOUSE_FILTER_STOP posee sur un
+		# bouton lui vole ses taps : c'est CA qu'il faut interdire.
+		var geste := gesture.get_global_rect()
+		var voles: Array = corners.filter(
+			func(b: Control) -> bool: return geste.intersects(b.get_global_rect()))
+		_check(voles.is_empty(),
+			"la zone dev ne recouvre aucun bouton (%d)" % voles.size())
 
 	# Et l'ACCES survit : c'est tout l'interet du geste plutot que du masquage
 	# en build de debug.
@@ -1620,4 +1634,71 @@ func _test_second_finger() -> void:
 	await _frames(1)
 
 	battle.queue_free()
+	await _frames(1)
+
+
+## ═══════════════════════════════════════════════════════════════════════════
+## [17] LA BARRE DU HAUT DU VILLAGE, ET LE BAS DE L'ECRAN
+##
+## ⚠️ CE CAS MESURE DES CENTRES, PAS DES Y. C'est toute l'erreur d'avant :
+## poser une pastille de 26 de haut et un bouton de 34 au MEME y ne les aligne
+## pas, ça les décale de la moitié de leur différence. Le seul invariant qui
+## veuille dire "aligné" est l'égalité des centres.
+## ═══════════════════════════════════════════════════════════════════════════
+func _test_village_bars() -> void:
+	print("\n[17] La barre du haut, et le bas de l'ecran")
+
+	Game.reset_progress()
+	var village: Node = load("res://scenes/village/village.tscn").instantiate()
+	add_child(village)
+	await _frames(3)
+	await _skip_animations()
+
+	# ── LA BARRE DU HAUT : TOUT SUR UNE SEULE LIGNE ─────────────────────────
+	var ligne: float = village._top_bar_center()
+	var haut: float = village._top_bar_top()
+	_check(haut >= village.TOP_BAR_MIN_TOP and haut <= village.TOP_BAR_MAX_TOP,
+		"la barre est collee en haut (%.0f, entre %.0f et %.0f)"
+			% [haut, village.TOP_BAR_MIN_TOP, village.TOP_BAR_MAX_TOP])
+
+	var dans_la_barre: Array[Control] = [
+		village._gold_pill, village._gem_pill, village._missions_button,
+	]
+	for b in _corner_buttons(village):
+		# Les boutons de coin de la barre : ceux du HAUT, pas la boutique.
+		if b.get_global_rect().position.y < 200.0:
+			dans_la_barre.append(b)
+	_check(dans_la_barre.size() >= 5,
+		"la barre porte %d elements" % dans_la_barre.size())
+
+	var pires := 0.0
+	var coupable := ""
+	for e in dans_la_barre:
+		var centre: float = e.get_global_rect().get_center().y
+		var ecart: float = absf(centre - ligne)
+		if ecart > pires:
+			pires = ecart
+			coupable = String(e.name)
+	_check(pires <= 1.0,
+		"tous centres sur la meme ligne (pire ecart %.1f pt, %s)" % [pires, coupable])
+
+	# ── LE BAS : LA BOUTIQUE ET BATAILLE ────────────────────────────────────
+	# Mesure avant correction : 11 points d'ecart entre deux boutons côte à côte.
+	var boutique: float = village._shop_button.get_global_rect().get_center().y
+	var bataille: float = village._battle_button.get_global_rect().get_center().y
+	_check(absf(boutique - bataille) <= 0.5,
+		"la boutique est alignee sur BATAILLE (ecart %.1f pt)"
+			% absf(boutique - bataille))
+
+	# ── ET LE LIBELLE DU CHATEAU N'A PAS DE E ───────────────────────────────
+	# Retour E3. Le code l'ecrivait deja juste ; ce test empeche la faute de
+	# revenir par une reprise graphique.
+	var libelles: Array = village._castle_label.find_children("*", "Label", true, false) \
+		.map(func(l: Label) -> String: return String(l.text))
+	_check(libelles.has("CHÂTEAU ROYAL"),
+		"l'enseigne dit bien CHÂTEAU ROYAL (%s)" % ", ".join(libelles))
+	_check(not libelles.any(func(t: String) -> bool: return "ROYALE" in t.to_upper()),
+		"et nulle part ROYALE avec un e")
+
+	village.queue_free()
 	await _frames(1)

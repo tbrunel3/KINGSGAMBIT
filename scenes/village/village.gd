@@ -83,8 +83,33 @@ const ZOOM_SCALE := 1.18
 const SCREEN_WIDTH := 393.0
 const SCREEN_MARGIN := 8.0
 const BATTLE_RECT := Rect2(102, 765, 189, 59)
-const TOP_BAR_Y := 44.0
-const TOP_BAR_HEIGHT := 30.0
+## ══════════════════════════ LA BARRE DU HAUT ═══════════════════════════════
+##
+## Retour du joueur : "les gemmes n'apparaissent pas a cote de l'or ; a reunir
+## dans une barre haute, boutons grossis, au style de l'interface, VRAIMENT
+## collee en haut".
+##
+## Trois defauts, tous mesures sur la capture du village :
+##
+##  - RIEN N'ETAIT ALIGNE, et c'est de l'arithmetique. Les pastilles etaient
+##    posees a y = 44, les deux boutons de coin AUSSI a 44 - mais une pastille
+##    fait 26 de haut et un bouton 34 : leurs centres tombaient a 57 et a 61.
+##    Poser deux hauteurs differentes au meme Y ne les aligne pas, ca les
+##    decale de la moitie de leur difference.
+##  - ELLE N'ETAIT PAS COLLEE EN HAUT. Les 44 points etaient une allocation
+##    d'encoche ECRITE A LA MAIN, alors que `UiLayer` n'est PAS dans une zone
+##    sure. Sur un appareil sans encoche - le Web, precisement la ou il teste -
+##    c'etaient 44 points de vide.
+##  - LES BOUTONS ETAIENT PETITS : 34 points, contre 45 pour la boutique en bas.
+##
+## Desormais tout se centre sur UNE seule ligne, `_top_bar_center()`, la marge
+## haute vient du systeme au lieu d'etre devinee, et les boutons passent a 40.
+const TOP_BAR_MIN_TOP := 10.0
+const TOP_BAR_HEIGHT := 40.0
+const TOP_BAR_BUTTON := 40.0
+## Garde-fou : sur un appareil a tres grande encoche, la barre ne doit pas
+## descendre au point de mordre sur l'ile.
+const TOP_BAR_MAX_TOP := 52.0
 ## Fondus haut et bas de la maquette, qui detachent les pastilles et le bouton
 ## du decor sans assombrir toute l'ile.
 const TOP_FADE_HEIGHT := 143.0
@@ -350,7 +375,7 @@ func _build_top_bar() -> void:
 	bottom_fade.offset_top = -(DESIGN_SIZE.y - BOTTOM_FADE_TOP)
 	bottom_fade.offset_bottom = 0.0
 
-	var pill_y := TOP_BAR_Y
+	var pill_y := _top_bar_center()
 
 	_gold_pill = _place_pill(12, pill_y, "", Pill.Variant.TOPBAR)
 	_gold_pill.set_data("", "", Pill.Variant.TOPBAR)
@@ -384,13 +409,18 @@ func _build_top_bar() -> void:
 	# cote a cote ; c'est la BATAILLE qui les empile, parce que sa barre haute
 	# est prise par le badge de tour. Aligner le code en desalignant l'ecran
 	# serait exactement ce que la regle 2 interdit.
-	var settings: Control = CornerButton.floating("gear", func(): pass)
+	# "Boutons grossis", demande du joueur : 34 -> 40. Et leur marge haute se
+	# calcule pour que leur CENTRE tombe sur la meme ligne que les pastilles.
+	var marge_bouton := _top_bar_center() - TOP_BAR_BUTTON * 0.5
+	var settings: Control = CornerButton.floating(
+		"gear", func(): pass, CornerButton.Tone.NIGHT, TOP_BAR_BUTTON)
 	_ui.add_child(settings)
-	settings.row_top_right(0, Vector2(12, TOP_BAR_Y))
+	settings.row_top_right(0, Vector2(12, marge_bouton))
 
-	_codex_button = CornerButton.floating("info", _on_codex_pressed)
+	_codex_button = CornerButton.floating(
+		"info", _on_codex_pressed, CornerButton.Tone.NIGHT, TOP_BAR_BUTTON)
 	_ui.add_child(_codex_button)
-	_codex_button.row_top_right(1, Vector2(12, TOP_BAR_Y))
+	_codex_button.row_top_right(1, Vector2(12, marge_bouton))
 
 	# LA BOUTIQUE NE CHANGE PAS DE PLACE. Elle est en bas a gauche parce que le
 	# joueur l'y a mise : le bas de l'ecran est la zone du POUCE, et on y passe
@@ -409,7 +439,14 @@ func _build_top_bar() -> void:
 	_shop_button.anchor_bottom = 1.0
 	_shop_button.offset_left = SHOP_BUTTON_RECT.position.x
 	_shop_button.offset_right = SHOP_BUTTON_RECT.position.x + SHOP_BUTTON_RECT.size.x
-	_shop_button.offset_top = -(DESIGN_SIZE.y - SHOP_BUTTON_RECT.position.y)
+	# ⚠️ ELLE S'ALIGNE SUR BATAILLE, ELLE N'A PLUS SON PROPRE Y.
+	#
+	# Mesure avant : le centre de BATAILLE tombait a 794,5 du haut, celui de la
+	# boutique a 783,5 - ONZE POINTS d'ecart, sur deux boutons cote a cote. Deux
+	# Rect2 ecrits a la main a deux moments differents ne peuvent que deriver ;
+	# celui-ci se CALCULE, donc il ne peut plus.
+	var centre_bataille := DESIGN_SIZE.y 		- (BATTLE_RECT.position.y + BATTLE_RECT.size.y * 0.5)
+	_shop_button.offset_top = -(centre_bataille + SHOP_BUTTON_RECT.size.y * 0.5)
 	_shop_button.offset_bottom = _shop_button.offset_top + SHOP_BUTTON_RECT.size.y
 
 
@@ -530,6 +567,32 @@ func _on_missions_pressed() -> void:
 	# volent, et elle vit dans cet ecran-ci, pas dans le popup.
 	_popup.purse = _gold_pill
 	add_child(_popup)
+
+
+## LE HAUT DE LA BARRE, pris au systeme et non plus devine.
+##
+## Meme calcul que `SafeArea._apply` : la zone sure est en pixels d'ecran, il
+## faut la ramener en unites d'interface. `UiLayer` couvre tout l'ecran, donc
+## `size` est le viewport - c'est le bon diviseur.
+func _top_bar_top() -> float:
+	var haut := TOP_BAR_MIN_TOP
+	var fenetre := DisplayServer.window_get_size()
+	var sure := DisplayServer.get_display_safe_area()
+	if fenetre.x > 0 and fenetre.y > 0 and sure.size.x > 0 and size.y > 0:
+		haut = maxf(haut, float(sure.position.y) * (size.y / float(fenetre.y)))
+	return clampf(haut, TOP_BAR_MIN_TOP, TOP_BAR_MAX_TOP)
+
+
+## LA LIGNE MEDIANE DE LA BARRE. Tout s'y centre — pastilles, bouton des
+## missions, boutons de coin. C'est ce qui remplace les trois Y ecrits a la
+## main qui ne tombaient pas ensemble.
+func _top_bar_center() -> float:
+	return _top_bar_top() + TOP_BAR_HEIGHT * 0.5
+
+
+## Pose un controle de facon que son CENTRE tombe sur la ligne de la barre.
+func _center_on_top_bar(node: Control, x: float) -> void:
+	node.position = Vector2(x, _top_bar_center() - node.size.y * 0.5)
 
 
 func _place_pill(x: float, y: float, text: String, variant: Pill.Variant) -> Pill:
@@ -787,12 +850,21 @@ func _build_battle_button() -> void:
 func _build_dev_gesture() -> void:
 	var zone := Control.new()
 	zone.name = "DevGesture"
+	# ⚠️ ELLE EST PASSEE A GAUCHE, ET CE N'EST PAS UN GOUT.
+	#
+	# Elle etait ancree A DROITE et en MOUSE_FILTER_STOP, juste au-dessus des
+	# boutons de reglages et de codex - ca tenait tant que la barre du haut
+	# commencait a y=44. En la collant en haut (demande du joueur), les deux
+	# boutons sont remontes DANS cette zone : elle leur volait leurs taps.
+	#
+	# A gauche, elle ne recouvre que la pastille d'or, qui ne se clique pas.
+	# Le banc le verifie : la zone ne doit croiser AUCUN bouton de coin.
 	zone.mouse_filter = Control.MOUSE_FILTER_STOP
-	zone.anchor_left = 1.0
-	zone.anchor_right = 1.0
-	zone.grow_horizontal = Control.GROW_DIRECTION_BEGIN
-	zone.offset_left = -DEV_GESTURE_SIZE.x
-	zone.offset_right = 0.0
+	zone.anchor_left = 0.0
+	zone.anchor_right = 0.0
+	zone.grow_horizontal = Control.GROW_DIRECTION_END
+	zone.offset_left = 0.0
+	zone.offset_right = DEV_GESTURE_SIZE.x
 	zone.offset_top = 0.0
 	zone.offset_bottom = DEV_GESTURE_SIZE.y
 	_ui.add_child(zone)
@@ -852,24 +924,25 @@ func _format_thousands(n: int) -> String:
 ## et le bouton des missions resteraient a leur ancienne place pendant toute la
 ## montee, puis sauteraient a la fin.
 func _layout_topbar() -> void:
-	var pill_y := TOP_BAR_Y + 11.5
-
+	# ⚠️ UNE SEULE LIGNE MEDIANE POUR TOUT. Avant, chaque element avait son
+	# propre Y ecrit a la main (44, 44, 44 - 2, 55,5) et aucun ne tombait au
+	# meme endroit, parce qu'ils n'ont pas la meme hauteur.
 	_gold_pill.set_data("", _format_thousands(maxi(_gold_affiche, 0)),
 		Pill.Variant.TOPBAR)
 	_gold_pill.set_bold(true)
 	_gold_pill.size = _gold_pill.get_combined_minimum_size()
-	_gold_pill.position = Vector2(12, pill_y)
+	_center_on_top_bar(_gold_pill, 12)
 
 	_gem_pill.set_data("diamond", _format_thousands(Game.gems),
 		Pill.Variant.TOPBAR, Color("4f9ff0"))
 	_gem_pill.set_text_color(Color("cfe3ff"))
 	_gem_pill.set_bold(true)
 	_gem_pill.size = _gem_pill.get_combined_minimum_size()
-	_gem_pill.position = Vector2(_gold_pill.position.x + _gold_pill.size.x + 16, pill_y)
+	_center_on_top_bar(_gem_pill, _gold_pill.position.x + _gold_pill.size.x + 12)
 
 	_missions_button.reset_size()
-	_missions_button.position = Vector2(
-		_gem_pill.position.x + _gem_pill.size.x + 16, pill_y - 2)
+	_center_on_top_bar(_missions_button,
+		_gem_pill.position.x + _gem_pill.size.x + 12)
 
 
 ## Decide si l'or se pose ou s'il monte.
