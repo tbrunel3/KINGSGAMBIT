@@ -15,10 +15,6 @@
             "titre": "Le combat au doigt"
           },
           {
-            "ref": "D",
-            "titre": "Les animations qui manquent"
-          },
-          {
             "ref": "E",
             "titre": "L'habillage : barre du haut, alignements, polices"
           },
@@ -53,9 +49,9 @@
         ]
       },
       "build": {
-        "enLigne": "24/08, 03h05",
-        "commit": "940d5ea",
-        "quoi": "le glisser-déposer du chantier C",
+        "enLigne": "24/08, 14h31",
+        "commit": "c21d0ac",
+        "quoi": "la fiche D — le retour à l'appui, l'or qui monte, le codex qui s'ouvre",
         "note": "Recharge en forçant : le service worker de Godot sert volontiers l'ancien build."
       },
       "sections": [
@@ -219,7 +215,7 @@
               "ref": "D",
               "titre": "Les animations qui manquent",
               "detail": "Le retour à l'appui sur <strong>tous</strong> les boutons — à poser dans les composants partagés, jamais écran par écran, sinon la moitié en aura et l'autre pas. Le codex. L'or qui monte au lieu de sauter.",
-              "statut": "encours",
+              "statut": "attente",
               "journal": [
                 {
                   "quand": "24/08",
@@ -230,11 +226,41 @@
                   "quand": "24/08",
                   "qui": "Claude",
                   "texte": "Le socle existe : Balance.MOTION rassemble les vingt-deux durées qui vivaient dans huit fichiers, et MOTION.scale ralentit tout le jeu d'un seul bouton."
+                },
+                {
+                  "quand": "24/08",
+                  "qui": "Claude",
+                  "texte": "Le retour à l'appui est posé UNE fois, dans UiTheme.press_feedback : tout bouton du thème l'a sans rien demander, plus le bouton de coin, la chip et le cachet de campagne. Aucun écran n'a à s'en occuper."
+                },
+                {
+                  "quand": "24/08",
+                  "qui": "Claude",
+                  "texte": "L'or monte au lieu de sauter, et la durée suit l'écart. ⚠️ La valeur affichée est un état de l'écran, pas du jeu : pendant la montée l'affichage est à 324 quand Game.gold vaut déjà 940. Une animation ne doit rien pouvoir casser."
+                },
+                {
+                  "quand": "24/08",
+                  "qui": "Claude",
+                  "texte": "Le codex n'avait AUCUN tween. Entête, filtres puis blocs en cascade — opacité et échelle seulement, jamais la position : tout y est enfant d'un conteneur."
+                },
+                {
+                  "quand": "24/08",
+                  "qui": "Claude",
+                  "texte": "Quatre défauts trouvés en cours de route, dont trois par les bancs : create_tween ne tue pas le précédent, get_meta(clé, défaut) remonte quand même une ERROR, Game.gold est en lecture seule (mon test passait à côté), et une assertion visait un écran sans boutons de coin."
+                },
+                {
+                  "quand": "24/08",
+                  "qui": "Claude",
+                  "texte": "Bancs : ui_test 203 OK / 0 échec / 0 erreur (191 avant, +12 assertions neuves), smoke_test 10/10 batailles et 17 promotions, format_test les huit formats."
                 }
               ],
               "priorite": "moyenne",
               "theme": "Animations",
-              "avancement": 35
+              "avancement": 90,
+              "livre": {
+                "commit": "c21d0ac",
+                "quand": "24/08 à 14h31"
+              },
+              "resume": "À vérifier : appuie sur n'importe quel bouton (il doit s'enfoncer), gagne ou dépense de l'or au village (le compteur doit monter, pas sauter), et ouvre le codex (il doit se monter en cascade au lieu d'apparaître d'un bloc)."
             },
             {
               "ref": "E",
@@ -484,9 +510,9 @@
     }
   ],
   "credit": {
-    "restant": 14846000,
+    "restant": 14959000,
     "total": 15000000,
-    "releve": "24/08 à 06h22",
+    "releve": "24/08 à 14h35",
     "seuil": 12
   },
   "serie": 0
