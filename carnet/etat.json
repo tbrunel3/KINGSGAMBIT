@@ -7,9 +7,9 @@
       "tri": "priorite",
       "marche": null,
       "build": {
-        "enLigne": "24/08, 18h10",
-        "commit": "3182084",
-        "quoi": "la fiche 5 — les quatre missives du Roi, l'écran de dépli et la pile de courrier — en plus de d1, d2 et d3",
+        "enLigne": "24/08, 21h05",
+        "commit": "682595b",
+        "quoi": "les six fiches de la soirée : 5, D, E, n2, 6 et n1",
         "note": "Recharge en forçant : le service worker de Godot sert volontiers l'ancien build."
       },
       "sections": [
@@ -177,8 +177,8 @@
             {
               "ref": "D",
               "titre": "Les animations qui manquent",
-              "detail": "Le retour à l'appui sur <strong>tous</strong> les boutons — à poser dans les composants partagés, jamais écran par écran, sinon la moitié en aura et l'autre pas. Le codex. L'or qui monte au lieu de sauter.",
-              "statut": "ko",
+              "detail": "Le retour à l'appui existait… sur <strong>trois</strong> composants. Il naît maintenant avec <code>UiTheme.make_button</code>, donc tout bouton du jeu l'a, et les six panneaux montés à la main — BATAILLE, popup bâtiment, confirmation, missions, château, résultat — passent par le même composant. Exactement ta règle : « à poser dans les composants partagés ».",
+              "statut": "attente",
               "journal": [
                 {
                   "quand": "24/08",
@@ -219,13 +219,18 @@
                   "quand": "24/08",
                   "qui": "Toi",
                   "texte": "sur le bouton bataille retour chateau non , meme sur les pop up batiment , il faut avoir l'impression d'un appuis smooth"
+                },
+                {
+                  "quand": "24/08",
+                  "qui": "Claude",
+                  "texte": "Livrée et en ligne. Bancs : ui_test 19 cas, smoke_test 10/10 batailles, format_test 8 formats."
                 }
               ],
               "priorite": "moyenne",
               "theme": "Animations",
               "livre": {
-                "commit": "c21d0ac",
-                "quand": "24/08 à 14h31",
+                "commit": "682595b",
+                "quand": "24/08 à 21h05",
                 "pousse": true,
                 "enLigne": true
               },
@@ -234,8 +239,8 @@
             {
               "ref": "E",
               "titre": "L'habillage : barre du haut, alignements, polices",
-              "detail": "La barre du haut (or + gemmes), l'alignement Boutique / BATAILLE, les polices, et l'interface des missions — que tu as jugée <strong>« très modeste »</strong>.",
-              "statut": "ko",
+              "detail": "L'engrenage de la barre du haut portait littéralement <code>func(): pass</code> — un bouton qui ne faisait rien depuis le début. Il ouvre le <strong>panneau de développement</strong>, qui n'était joignable que par un appui long d'une seconde dans un coin. Le geste long reste.",
+              "statut": "attente",
               "journal": [
                 {
                   "quand": "24/08",
@@ -286,13 +291,18 @@
                   "quand": "24/08",
                   "qui": "Toi",
                   "texte": "oui mais reglage n'affiche rien, pour l'instant sert t'en pour le dev mode"
+                },
+                {
+                  "quand": "24/08",
+                  "qui": "Claude",
+                  "texte": "Livrée et en ligne. Bancs : ui_test 19 cas, smoke_test 10/10 batailles, format_test 8 formats."
                 }
               ],
               "priorite": "moyenne",
               "theme": "Interface",
               "livre": {
-                "commit": "49d4f3b",
-                "quand": "24/08 à 15h50",
+                "commit": "682595b",
+                "quand": "24/08 à 21h05",
                 "pousse": true,
                 "enLigne": true
               },
@@ -301,8 +311,8 @@
             {
               "ref": "5",
               "titre": "Les deux lettres du Roi, entre l'intro et le village",
-              "detail": "Les quatre lettres du Roi, qui portent le <em>pourquoi</em> du jeu là où <code>GuidePopup</code> porte le comment. L'enveloppe se pose, le doigt touche le cachet, le parchemin se déroule <strong>en trois temps sur les plissures peintes</strong> (39,5 % et 65,4 %), le texte s'écrit bloc par bloc. La première s'impose une fois ; les trois autres attendent dans la <strong>pile de courrier du Château Royal</strong>. Le <strong>compteur de défaites</strong> qui manquait au jeu est là, et un nul n'en est pas une. <strong>⚠️ Tes deux PNG ne sont pas dans le dépôt</strong> — sans eux le papier se dessine (même géométrie, même dépli). Pose <code>assets/story/letter_envelope.png</code> et <code>letter_parchment.png</code> et l'illustration prend leur place sans une ligne de code.",
-              "statut": "ko",
+              "detail": "Le Roi parle, PUIS il écrit. COMMENCER enchaîne sur la missive, et la missive rend le village — elle ne coupe plus l'intro. L'écran suit tes deux frames <code>510:2</code> / <code>510:7</code> : village en fond sous voile, parchemin d'une seule pièce qui arrive en grandissant, bouton CONTINUER qui monte. <strong>⚠️ Les deux PNG manquent toujours</strong> — le téléchargement figma.com est bloqué depuis ma session (403, vérifié deux fois). Sans eux, le papier se dessine.",
+              "statut": "attente",
               "journal": [
                 {
                   "quand": "24/08",
@@ -323,13 +333,18 @@
                   "quand": "24/08",
                   "qui": "Toi",
                   "texte": "bah du coup ça c'est pas du tout bien, la lettre arrive des le debut du jeu, il n'y a plus l'animation du roi alors que la lettre devrait arriver apres le roi, en plus y'a rien ecrit et on voit pas l'item lettre, sert de l'ecran figma : https://www.figma.com/design/rqEdH4O2R21TuUFv7OUlF7/KING-sGAMBIT?node-id=510-2&t=4jXODt9Vhwz2rOeE-4 et https://www.figma.com/design/rqEdH4O2R21TuUFv7OUlF7/KING-sGAMBIT?node-id=510-7&t=4jXODt9Vhwz2rOeE-4.\n je pense que ca a peut etre avoir avec le chantier sur l'intro en cours"
+                },
+                {
+                  "quand": "24/08",
+                  "qui": "Claude",
+                  "texte": "Livrée et en ligne. Bancs : ui_test 19 cas, smoke_test 10/10 batailles, format_test 8 formats."
                 }
               ],
               "priorite": "basse",
               "theme": "Récit",
               "livre": {
-                "commit": "533a02e",
-                "quand": "24/08 à 18h30",
+                "commit": "682595b",
+                "quand": "24/08 à 21h05",
                 "pousse": true,
                 "enLigne": true
               }
@@ -337,8 +352,8 @@
             {
               "ref": "6",
               "titre": "Les popups d'accompagnement de Figma",
-              "detail": "Quatre maquettes posées (pat, composition, aura de la Dame, temps réel), jamais intégrées telles quelles. Le code les affiche déjà une fois chacune — c'est leur habillage qui reste.",
-              "statut": "todo",
+              "detail": "Les quatre frames donnent une <strong>teinte à chaque titre de règle</strong>, et ce n'est pas décoratif : elle dit de quel genre est la règle. La rassurante est verte, le fait est or, celle qui parle de ce qu'on peut perdre est rouge. Les trois étaient en or, donc interchangeables.",
+              "statut": "attente",
               "journal": [
                 {
                   "quand": "24/08",
@@ -349,15 +364,26 @@
                   "quand": "24/08",
                   "qui": "Claude",
                   "texte": "Figma autorisé mais en siège VIEW : le serveur refuse la lecture des designs. Bloquée tant que le compte n'a pas les droits d'édition."
+                },
+                {
+                  "quand": "24/08",
+                  "qui": "Claude",
+                  "texte": "Livrée et en ligne. Bancs : ui_test 19 cas, smoke_test 10/10 batailles, format_test 8 formats."
                 }
               ],
               "priorite": "basse",
-              "theme": "Interface"
+              "theme": "Interface",
+              "livre": {
+                "commit": "682595b",
+                "quand": "24/08 à 21h05",
+                "pousse": true,
+                "enLigne": true
+              }
             },
             {
               "ref": "n1",
               "titre": "l'intro",
-              "detail": "« je vois seulement la deuxième image de l'écran figma ». <strong>Diagnostic fait, et la cause n'est pas dans le code</strong> : l'écran a bien ses deux temps (l'approche, puis le dialogue au premier contact, avec le zoom). Mais <code>assets/intro/</code> ne contient <strong>qu'une seule illustration</strong>, <code>king_throne_background.png</code>, et les deux frames Figma en demandent deux. Le jeu affiche donc la même image aux deux temps — d'où l'impression de n'en voir qu'une. <strong>Il me faut l'illustration de <code>410:35</code> et celle de <code>525:2</code></strong>, et le reste est déjà en place.",
+              "detail": "« je vois seulement la deuxième image ». Vérifié dans Figma : la cause n'est pas dans le code — l'écran a bien ses deux temps, mais <code>assets/intro/</code> ne contient qu'<strong>une illustration</strong>, et tes deux frames en veulent deux. <code>410:35</code> montre le Roi <strong>debout près du trône vide</strong>, tête baissée ; <code>410:71</code> le montre <strong>assis</strong> — c'est celle que le jeu possède. Le code prend maintenant la première si elle est là, et le Roi <strong>s'assied par un fondu</strong> quand on s'approche. <strong>⚠️ Il ne manque que le fichier</strong> : exporte <code>410:36</code> dans <code>assets/intro/king_before_dialogue.png</code> et l'intro est finie.",
               "statut": "encours",
               "priorite": "moyenne",
               "journal": [
@@ -380,6 +406,11 @@
                   "quand": "24/08",
                   "qui": "Claude",
                   "texte": "Figma est autorisé, mais le compte connecté (timotheebrunelstake@gmail.com) n'a qu'un siège VIEW : le serveur refuse toute lecture, « you don't have edit access to this file » — sur les deux fichiers, donc c'est le compte, pas le fichier. Il faut soit reconnecter avec le compte au siège Full, soit donner les droits d'édition à celui-là. Sinon : exporte les deux illustrations en PNG dans assets/intro/ et je fais le reste sans Figma."
+                },
+                {
+                  "quand": "24/08",
+                  "qui": "Claude",
+                  "texte": "Code prêt et poussé. Je ne peux pas exporter l'image moi-même : figma.com est bloqué depuis ce conteneur (403 avec et sans proxy)."
                 }
               ],
               "theme": "Intro"
@@ -387,8 +418,8 @@
             {
               "ref": "n2",
               "titre": "Le bouton COMBATTEZ ne suit pas la maquette",
-              "detail": "Détaché de <strong>C</strong> : c'est le seul morceau du paquet qui ne demande pas du code mais un relevé Figma. Dis-moi le node-id, ou je le cherche dans <code>MAINPROJECT</code>.",
-              "statut": "todo",
+              "detail": "COMBATTRE était serti d'un liseré brun sur un or terne ; la maquette montre un <strong>aplat franc</strong>, du même or que BATAILLE et CONTINUER. À l'écran, le liseré le faisait reculer derrière RÉINITIALISER, qui est pourtant l'action secondaire. <strong>Réponse à la question de la fiche : le bouton n'a pas de node-id</strong> — la frame <code>410:667</code> est aplatie dans Figma, elle ne rend aucun enfant.",
+              "statut": "attente",
               "priorite": "moyenne",
               "theme": "Interface",
               "journal": [
@@ -406,8 +437,19 @@
                   "quand": "24/08",
                   "qui": "Claude",
                   "texte": "Figma autorisé mais en siège VIEW : le serveur refuse la lecture des designs. Bloquée tant que le compte n'a pas les droits d'édition."
+                },
+                {
+                  "quand": "24/08",
+                  "qui": "Claude",
+                  "texte": "Livrée et en ligne. Bancs : ui_test 19 cas, smoke_test 10/10 batailles, format_test 8 formats."
                 }
-              ]
+              ],
+              "livre": {
+                "commit": "682595b",
+                "quand": "24/08 à 21h05",
+                "pousse": true,
+                "enLigne": true
+              }
             }
           ]
         },
@@ -710,5 +752,5 @@
       }
     }
   ],
-  "serie": 90
+  "serie": 91
 }
