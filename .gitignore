@@ -13,7 +13,19 @@ Thumbs.db
 .idea/
 
 # Etat local d'outils d'assistance (non lie au projet)
-.claude/
+#
+# ⚠️ `.claude/*` ET NON `.claude/` : git REFUSE de re-inclure un fichier dont
+# le DOSSIER parent est exclu. Avec `.claude/`, les deux exceptions ci-dessous
+# n'auraient servi a rien - et c'est silencieux, `git status` ne montre juste
+# rien.
+.claude/*
+
+# LE GARDE-FOU GIT DOIT SUIVRE LE DEPOT. Le 25/08, ce depot avait 23 commits de
+# retard sans que rien ne le dise, et une journee de travail a ete refaite en
+# parallele. Un garde qui ne vit que sur une machine ne protege pas l'autre :
+# c'est exactement le trou qu'il est cense boucher.
+!.claude/settings.json
+!.claude/launch.json
 
 # Captures des bancs (regenerees a la demande par tools/screenshot.tscn,
 # ui_test.tscn et resolutions.tscn) : sorties d'outil, pas des sources.

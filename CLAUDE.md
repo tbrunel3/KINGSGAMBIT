@@ -80,6 +80,45 @@ documents complètent celui-ci et ne le répètent pas :
 
 ---
 
+## ⚠️ AVANT TOUT : LE DÉPÔT EST-IL À JOUR ?
+
+**Le 25/08/2026, ce dépôt avait 23 commits de retard sans que rien ne le dise.**
+Une soirée entière de travail — l'intro, le bouton COMBATTRE, les missives,
+l'habillage des popups, trois dettes — avait été poussée depuis une autre
+session la veille. La copie locale ne l'a jamais tirée.
+
+Résultat : **une journée entière refaite à l'identique, en parallèle**, et six
+verdicts du joueur perdus — dont deux messages qu'il avait écrits et que
+personne n'a jamais lus.
+
+La cause n'est pas une faute de manipulation. C'est qu'**être en retard ne se
+voit pas** : `git status` dit « working tree clean » quand on est vingt-trois
+commits derrière. Il ne parle que du disque, jamais du distant.
+
+D'où [`tools/git_garde.py`](tools/git_garde.py), câblé dans
+[`.claude/settings.json`](.claude/settings.json) :
+
+| Garde | Quand | Ce qu'il fait |
+|---|---|---|
+| `debut` | au démarrage de chaque session | `git fetch`, et **dit** si on est en retard ou en avance. Silencieux si tout va bien |
+| `pousse` | après **chaque** `git commit` | pousse sur la branche courante tout de suite, pour que la fenêtre de divergence dure des minutes et non une journée |
+
+⚠️ **`pousse` NE FORCE JAMAIS.** Une poussée refusée veut dire que quelqu'un
+d'autre a travaillé : c'est une information, pas un obstacle à écraser. La
+procédure est alors celle du 25/08 — mettre son travail à l'abri sur une
+branche nommée, montrer la divergence au joueur, et **le laisser trancher**.
+
+⚠️ **Le garde est VERSIONNÉ**, exception faite dans `.gitignore` (motif
+`.claude/*`, pas `.claude/` — git refuse de ré-inclure un fichier dont le
+dossier parent est exclu). Un garde qui ne vit que sur une machine ne protège
+pas l'autre, ce qui est précisément le trou qu'il bouche.
+
+⚠️ **Un export Godot peut réécrire `project.godot`.** `--export-release` a
+supprimé la section `[input_devices]` — Godot n'écrit pas les valeurs égales au
+défaut. Regarder `git diff project.godot` après chaque export.
+
+---
+
 ## Les cinq règles qui priment sur tout
 
 **1. Aucune valeur de gameplay hors de [`scripts/data/balance.gd`](scripts/data/balance.gd).**

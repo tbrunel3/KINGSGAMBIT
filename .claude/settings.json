@@ -1,0 +1,31 @@
+{
+  "$schema": "https://json.schemastore.org/claude-code-settings.json",
+  "hooks": {
+    "SessionStart": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python tools/git_garde.py debut",
+            "timeout": 60,
+            "statusMessage": "Garde git : on regarde si le dépôt est à jour…"
+          }
+        ]
+      }
+    ],
+    "PostToolUse": [
+      {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "if": "Bash(git commit *)",
+            "command": "python tools/git_garde.py pousse",
+            "timeout": 180,
+            "statusMessage": "On pousse sur main…"
+          }
+        ]
+      }
+    ]
+  }
+}
