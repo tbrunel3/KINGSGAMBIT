@@ -15,8 +15,8 @@ compatibility/default_parent_skeleton_in_mesh_instance_3d=true
 [application]
 
 config/name="King's Gambit"
-config/version="1.2.0"
 config/description="Jeu de strategie fantasy inspire des echecs. MVP Phase 1."
+config/version="1.2.0"
 run/main_scene="res://scenes/intro/splash_screen.tscn"
 config/features=PackedStringArray("4.7", "GL Compatibility")
 config/icon="res://icon.svg"
@@ -43,21 +43,6 @@ window/handheld/orientation=1
 
 theme/default_font_multichannel_signed_distance_field=true
 theme/custom="res://assets/theme/kings_gambit_theme.tres"
-
-[input_devices]
-
-; TOUT LE JEU ECOUTE LA SOURIS, ET IL N'Y A PAS UN SEUL InputEventScreenTouch
-; DANS LE DEPOT. Il ne marche au doigt que grace a cette emulation - qui etait
-; laissee a son defaut, donc vraie par accident et ecrite nulle part.
-;
-; On l'ecrit. La couper casserait le jeu entier d'un coup, et ce serait au
-; moins visible ; la laisser implicite, c'est faire reposer tout le tactile sur
-; une valeur que personne n'a choisie.
-;
-; ⚠️ SON COUT EST REEL, et c'est la fiche T : un SECOND doigt produit un SECOND
-; appui emule. Voir grid_view._pointer_down, qui l'empeche de tuer le geste en
-; cours.
-pointing/emulate_mouse_from_touch=true
 
 [rendering]
 
