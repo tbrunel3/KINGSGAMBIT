@@ -216,6 +216,7 @@ func _start_dot_chase() -> void:
 		return
 	var tween := create_tween()
 	tween.set_loops()
+	tween.set_meta("boucle", true)
 	for dot in _dots:
 		tween.tween_property(dot, "modulate:a", 1.0, 0.22).set_trans(Tween.TRANS_SINE)
 		tween.tween_property(dot, "modulate:a", 0.35, 0.22).set_trans(Tween.TRANS_SINE)

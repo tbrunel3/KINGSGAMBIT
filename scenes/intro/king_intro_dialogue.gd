@@ -70,8 +70,11 @@ const PANEL_DURATION := 0.5
 #
 #    - la frappe lettre par lettre du dialogue n'existe pas dans Figma. C'est un
 #      ajout du jeu, et il vaut mieux que le fondu qu'il remplace.
-#    - le fondu des DEUX calques d'illustration (0-1 s puis 1,2-1,8 s) sert a
-#      Figma a empiler deux images ; le jeu n'en a qu'une.
+#  Et ce qui l'est DEPUIS le 25/08, apres avoir ete mal lu deux sessions
+#  durant : le fondu des DEUX calques d'illustration (0-1 s puis 1,2-1,8 s).
+#  Il etait note ici comme un artefact de Figma - "sert a empiler deux images ;
+#  le jeu n'en a qu'une". Les deux calques sont les deux POSES du Roi, et
+#  "le jeu n'en a qu'une" etait le defaut, pas une dispense. Voir _resolve_king.
 #
 #  Le zoom lent de 14 secondes reste : il est ambiant, la ou la maquette decrit
 #  une ENTREE. Les deux ne s'excluent pas, ils s'enchainent (cf. _start_zoom).
@@ -363,6 +366,7 @@ func _build_approach_hint() -> Control:
 	_hint_pulse = create_tween()
 	_hint_pulse.stop()
 	_hint_pulse.set_loops()
+	_hint_pulse.set_meta("boucle", true)
 	_hint_pulse.tween_property(row, "modulate:a", 0.35, 1.1).set_trans(Tween.TRANS_SINE)
 	_hint_pulse.tween_property(row, "modulate:a", 0.7, 1.1).set_trans(Tween.TRANS_SINE)
 	entree.finished.connect(func():

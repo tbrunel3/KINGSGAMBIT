@@ -44,6 +44,7 @@ func _ready() -> void:
 	await _test_codex_entry()
 	await _test_second_finger()
 	await _test_village_bars()
+	await _test_fight_button()
 
 	print("")
 	if _failures == 0:
@@ -1701,4 +1702,84 @@ func _test_village_bars() -> void:
 		"et nulle part ROYALE avec un e")
 
 	village.queue_free()
+	await _frames(1)
+
+
+## [18] LE BANDEAU DE PLACEMENT : LA PAIRE DE BOUTONS, ET LA LUEUR
+##
+## Fiche n2 du carnet : "le bouton COMBATTEZ ne suit pas la maquette". Releve
+## sur Buttons-Row (410:2140) : une rangee de 240 points POSEE AU MILIEU du
+## panneau, deux boutons a la largeur de leur libelle. Le jeu donnait a
+## REINITIALISER un SIZE_EXPAND_FILL, donc toute la place restante : la paire
+## s'etalait sur les 361 points utiles et COMBATTRE se retrouvait plaque contre
+## le bord droit.
+##
+## Et Btn-COMBATTRE porte une lueur verte pulsee (rgba(51,229,77,.6)) : le seul
+## bouton du jeu qui s'allume tout seul. Elle ne doit s'allumer que lorsqu'il
+## sert a quelque chose - c'est ce qui en fait un signal et pas une decoration.
+func _test_fight_button() -> void:
+	print("\n[18] Le bandeau de placement : la paire de boutons, et la lueur")
+
+	Game.reset_progress()
+	Router.current_battle_id = 1
+	var battle: Node = load("res://scenes/battle/battle.tscn").instantiate()
+	add_child(battle)
+	await _frames(3)
+
+	var fight: Button = battle._fight_button
+	_check(fight != null, "le bouton COMBATTRE est la")
+	if fight == null:
+		battle.queue_free()
+		await _frames(1)
+		return
+
+	var rangee: Control = fight.get_parent()
+	var panneau: Control = battle._bottom
+	var ecart: float = absf(rangee.get_global_rect().get_center().x
+			- panneau.get_global_rect().get_center().x)
+	_check(ecart <= 1.0, "la rangee de boutons est centree (ecart %.1f pt)" % ecart)
+
+	# Le vrai symptome : COMBATTRE colle au bord droit. Sur un panneau de 361
+	# points utiles, un bouton de ~103 laisse ~129 points de chaque cote quand
+	# la paire est centree, et ZERO quand REINITIALISER mange la place.
+	var marge: float = panneau.get_global_rect().end.x - fight.get_global_rect().end.x
+	_check(marge >= 20.0,
+		"COMBATTRE n'est pas plaque contre le bord (%.1f pt de marge)" % marge)
+
+	# ⚠️ MESURER LES BOUTONS, PAS LE CONTENEUR. La HBoxContainer occupe toute
+	# la largeur du panneau dans les deux cas : ce qui a change, c'est que son
+	# CONTENU est groupe au milieu au lieu d'etre etire. Un banc qui regarde le
+	# rectangle du conteneur ne voit donc rien - la premiere version de cette
+	# assertion mesurait 788 pt pour 788 et declarait un echec sur un ecran
+	# pourtant correct.
+	var contenu := Rect2()
+	for enfant in rangee.get_children():
+		if enfant is Control:
+			contenu = contenu.merge((enfant as Control).get_global_rect()) \
+				if contenu.size.x > 0.0 else (enfant as Control).get_global_rect()
+	var largeur_panneau: float = panneau.get_global_rect().size.x
+	_check(contenu.size.x < largeur_panneau * 0.75,
+		"les boutons sont groupes, pas etires (%.0f pt de boutons pour %.0f de panneau)"
+			% [contenu.size.x, largeur_panneau])
+
+	# La lueur : presente, DERRIERE le bouton, et eteinte tant qu'il est inerte.
+	var lueur: NinePatchRect = battle._fight_glow
+	_check(lueur != null and is_instance_valid(lueur), "la lueur est posee")
+	if lueur != null and is_instance_valid(lueur):
+		_check(lueur.show_behind_parent, "elle est dessinee DERRIERE le bouton")
+		_check(lueur.mouse_filter == Control.MOUSE_FILTER_IGNORE,
+			"et elle ne mange aucun clic")
+	_check(fight.disabled, "sans piece posee, COMBATTRE est inerte")
+	_check(not battle._fight_glow_on, "et la lueur reste eteinte")
+
+	Driver.auto_place(battle)
+	await _frames(2)
+	_check(not fight.disabled, "une fois l'armee posee, il devient actif")
+	_check(battle._fight_glow_on, "⚠️ et la lueur s'allume")
+
+	battle._on_reset_placement()
+	await _frames(2)
+	_check(not battle._fight_glow_on, "vider la grille la reeteint")
+
+	battle.queue_free()
 	await _frames(1)

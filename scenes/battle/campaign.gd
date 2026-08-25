@@ -359,6 +359,7 @@ func _refresh_medallion_glow(state: CampaignSeal.State) -> void:
 		return
 	_medallion_glow.modulate.a = 0.6
 	_medallion_glow_tween = create_tween().set_loops()
+	_medallion_glow_tween.set_meta("boucle", true)
 	_medallion_glow_tween.tween_property(_medallion_glow, "modulate:a", 1.0, 1.7) \
 		.set_trans(Tween.TRANS_SINE)
 	_medallion_glow_tween.tween_property(_medallion_glow, "modulate:a", 0.6, 1.7) \

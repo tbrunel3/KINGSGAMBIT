@@ -89,6 +89,10 @@ var _promotions_this_battle: int = 0
 var _status_label: Label = null
 var _type_buttons: Dictionary = {}
 var _fight_button: Button = null
+## La lueur verte derriere COMBATTRE, et son souffle.
+var _fight_glow: NinePatchRect = null
+var _fight_glow_pulse: Tween = null
+var _fight_glow_on: bool = false
 var _reset_button: Button = null
 
 
@@ -814,6 +818,11 @@ func _build_placement_ui() -> void:
 	# 6 plutot que 8 : a trois boutons, chaque point compte. Le bandeau doit
 	# tenir dans les 329 points utiles d'un ecran de 393, marges comprises.
 	actions.add_theme_constant_override("separation", 6)
+	# ⚠️ LA RANGEE EST CENTREE, ELLE NE S'ETALE PAS. Releve sur Buttons-Row
+	# (410:2140) : une rangee de 240 points de large, posee au milieu du
+	# panneau. Le jeu l'etalait sur toute la largeur utile - voir le
+	# size_flags de REINITIALISER plus bas.
+	actions.alignment = BoxContainer.ALIGNMENT_CENTER
 	_bottom.add_child(actions)
 
 	# DERNIERE FORMATION remplace l'ancien bouton AUTO, qui rangeait l'armee a
@@ -838,16 +847,26 @@ FORMATION", Color(1, 1, 1, 0.08), 10)
 	actions.add_child(reset)
 	_reset_button = reset
 
-	# Pas d'espaceur ici : sur 393 points de large, pousser COMBATTRE contre le
-	# bord droit le fait sortir du panneau. C'est REINITIALISER, le bouton le
-	# plus large, qui absorbe la place restante.
-	reset.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	# ⚠️ PLUS D'EXPAND_FILL ICI, ET C'ETAIT LE DEFAUT DE LA FICHE n2.
+	#
+	# REINITIALISER absorbait toute la place restante, ce qui poussait
+	# COMBATTRE contre le bord droit du panneau. La maquette fait l'inverse :
+	# les deux boutons sont une PAIRE de 240 points, posee au milieu, chacun a
+	# la largeur de son libelle (Btn-REINITIALISER et Btn-COMBATTRE, 410:2141
+	# et 410:2143, gap 8).
+	#
+	# L'ancien commentaire disait "pas d'espaceur ici, sinon COMBATTRE sort du
+	# panneau" - c'est vrai d'un espaceur, et le remede choisi etait pire que
+	# le mal : une rangee centree n'a besoin ni de l'un ni de l'autre.
+	reset.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
 
 	_fight_button = UiTheme.make_button("COMBATTRE", UiTheme.GOLD, 12)
 	_fight_button.add_theme_font_override("font", UiTheme.font_bold())
+	_fight_button.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
 	_style_fight_button()
 	_fight_button.pressed.connect(_start_combat)
 	actions.add_child(_fight_button)
+	_light_fight_button()
 
 	# Selectionne d'office le premier type disponible.
 	for type in _deployable_types():
@@ -884,6 +903,84 @@ func _style_fight_button() -> void:
 		_fight_button.add_theme_stylebox_override(state, box)
 	_fight_button.add_theme_color_override("font_color", Color("261a00"))
 
+	# Le filet clair du haut, a l'INTERIEUR du bouton (releve : inset 0 2px 0
+	# rgba(255,255,255,.2)). Deux points de blanc a 20 % qui font croire a une
+	# surface bombee. StyleBoxFlat ne sait pas donner une couleur differente a
+	# un seul cote, d'ou le petit bandeau pose par-dessus.
+	var lueur_haute := Panel.new()
+	lueur_haute.name = "InnerHighlight"
+	var filet := StyleBoxFlat.new()
+	filet.bg_color = Color(1, 1, 1, 0.2)
+	filet.corner_radius_top_left = 10
+	filet.corner_radius_top_right = 10
+	lueur_haute.add_theme_stylebox_override("panel", filet)
+	lueur_haute.set_anchors_preset(Control.PRESET_TOP_WIDE)
+	lueur_haute.offset_left = 2.0
+	lueur_haute.offset_right = -2.0
+	lueur_haute.offset_top = 2.0
+	lueur_haute.offset_bottom = 4.0
+	lueur_haute.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_fight_button.add_child(lueur_haute)
+
+
+## LA LUEUR VERTE DE COMBATTRE.
+##
+## Relevee sur Btn-COMBATTRE (410:2143) : une lueur verte qui s'allume quand le
+## bouton arrive, puis RESPIRE entre deux etats - alpha 0,70 et 0,40. C'est le
+## seul bouton du jeu qui s'allume tout seul, et ce n'est pas decoratif : rien
+## d'autre ne dit au joueur qu'il PEUT arreter de poser des pieces. Il reste
+## eteint tant que le bouton est inerte (aucune piece posee).
+##
+## ⚠️ SEULE L'OPACITE PULSE, pas le rayon. La maquette fait varier le flou de
+## 14 a 8 points ; un NinePatchRect qu'on redimensionne se decalerait de son
+## bouton a chaque image et ses coins se deformeraient. L'opacite porte
+## l'essentiel du mouvement, et le rayon reste a la valeur statique du releve.
+const FIGHT_GLOW_HIGH := 0.70
+const FIGHT_GLOW_LOW := 0.40
+
+
+func _light_fight_button() -> void:
+	_fight_glow = UiTheme.glow_behind(_fight_button, UiTheme.GLOW_FIGHT)
+	_fight_glow.modulate.a = 0.0
+
+
+## Allume ou eteint la lueur selon que le bouton sert a quelque chose.
+func _sync_fight_glow() -> void:
+	if not is_instance_valid(_fight_glow):
+		return
+	var allume := not _fight_button.disabled
+	if allume == _fight_glow_on:
+		return
+	_fight_glow_on = allume
+
+	# ⚠️ UN SEUL TWEEN A LA FOIS SUR CETTE OPACITE. En gardant l'arrivee et le
+	# souffle dans deux variables, une extinction lancee pendant l'arrivee
+	# laissait les deux tirer la meme propriete en sens contraire - et la
+	# derniere image depend alors de l'ordre de mise a jour, pas du code.
+	if is_instance_valid(_fight_glow_pulse):
+		_fight_glow_pulse.kill()
+
+	_fight_glow_pulse = create_tween()
+	var cible := FIGHT_GLOW_HIGH if allume else 0.0
+	_fight_glow_pulse.tween_property(_fight_glow, "modulate:a", cible,
+			Balance.motion("fight_glow_in")).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_OUT)
+	if allume:
+		_fight_glow_pulse.finished.connect(_start_fight_pulse)
+
+
+func _start_fight_pulse() -> void:
+	if not _fight_glow_on or not is_instance_valid(_fight_glow):
+		return
+	if is_instance_valid(_fight_glow_pulse):
+		_fight_glow_pulse.kill()
+	_fight_glow_pulse = create_tween()
+	_fight_glow_pulse.set_loops()
+	_fight_glow_pulse.set_meta("boucle", true)
+	_fight_glow_pulse.tween_property(_fight_glow, "modulate:a", FIGHT_GLOW_LOW,
+			Balance.motion("fight_glow_down")).set_trans(Tween.TRANS_SINE)
+	_fight_glow_pulse.tween_property(_fight_glow, "modulate:a", FIGHT_GLOW_HIGH,
+			Balance.motion("fight_glow_up")).set_trans(Tween.TRANS_SINE)
+
 
 ## Poids total (cf. Balance.deploy_weight) des pieces deja posees - c'est ce
 ## qu'on compare a Game.deploy_capacity(), pas un nombre de pieces : voir
@@ -914,6 +1011,7 @@ func _refresh_placement() -> void:
 			chip.set_icon(load(path))
 
 	_fight_button.disabled = _placed.is_empty()
+	_sync_fight_glow()
 	_update_preview()
 	_refresh_stats_hud()
 
@@ -1771,6 +1869,16 @@ func _clear_bottom() -> void:
 	_type_buttons.clear()
 	_status_label = null
 	_fight_button = null
+	# ⚠️ TUER LA RESPIRATION AVANT DE LACHER SA CIBLE. Une boucle de tween dont
+	# le noeud vient de disparaitre boucle en TEMPS NUL, et Godot la signale
+	# comme une boucle infinie - une ERREUR dans la sortie, donc un banc vert
+	# qui ment. Le meme piege avait deja ete paye sur l'invite de l'intro
+	# (king_intro_dialogue._dismiss_approach) ; il se retend a chaque boucle.
+	if is_instance_valid(_fight_glow_pulse):
+		_fight_glow_pulse.kill()
+	_fight_glow = null
+	_fight_glow_pulse = null
+	_fight_glow_on = false
 
 
 func _on_quit() -> void:

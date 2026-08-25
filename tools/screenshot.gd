@@ -38,9 +38,22 @@ const SHOTS := [
 ## un ecran a MOITIE APPARU - la preparation ressortait quasiment vide, et le
 ## banc accusait la mise en page. On saute donc a la fin des tweens plutot que
 ## d'attendre : c'est instantane, et c'est exact.
+## Saute a la fin des animations d'ENTREE, pour qu'une capture ne photographie
+## pas un ecran a moitie apparu.
+##
+## ⚠️ IL FAUT SAUTER LES BOUCLES, et ce n'est pas un detail de confort. Une
+## respiration sans fin (la lueur de COMBATTRE, le halo du chateau, celui du
+## medaillon, l'invite de l'intro, le logo du splash) n'a pas de "fin" ou
+## sauter : `custom_step` la fait tourner en rond et Godot finit par crier
+## "Infinite loop detected" - une ERREUR dans la sortie d'un banc, donc un
+## echec, meme si l'image sort quand meme.
+##
+## Elles se reconnaissent a leur marque `boucle`, posee la ou on appelle
+## set_loops() : Tween n'expose aucun moyen de demander combien de tours il
+## lui reste.
 func _finish_animations() -> void:
 	for tween in get_tree().get_processed_tweens():
-		if tween.is_valid():
+		if tween.is_valid() and not tween.has_meta("boucle"):
 			tween.custom_step(10.0)
 	await RenderingServer.frame_post_draw
 
@@ -428,6 +441,15 @@ func _capture_combat() -> void:
 	Driver.auto_place(battle)
 	for i in range(4):
 		await RenderingServer.frame_post_draw
+
+	# ⚠️ SANS CE SAUT, LA CAPTURE DU PLACEMENT EST VIDE. Quatre images apres
+	# l'instanciation, l'entree de l'ecran n'a pas commence : ni grille, ni
+	# bandeau du bas, ni bouton COMBATTRE - juste le decor. Le piege est deja
+	# ecrit dans le manuel ("une animation d'entree rend les bancs de capture
+	# menteurs") et _finish_animations existe pour ca ; c'est ce passage-la qui
+	# ne l'appelait pas. Le releve du bouton COMBATTRE se faisait donc sur une
+	# image ou il n'y avait pas de bouton.
+	await _finish_animations()
 	_save(battle, "5_placement.png")
 
 	# Le point i : les regles ecrites noir sur blanc, seul endroit du jeu ou

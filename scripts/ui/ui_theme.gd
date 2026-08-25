@@ -18,6 +18,10 @@ const GOLD_BUTTON := Color("c59b27")   ## bouton or secondaire (ameliorer, prepa
 const ACCENT := Color("268cd9")        ## accent joueur (bouton bleu, ex. AUTO)
 const DANGER := Color("ff3b30")   ## rouge vif (Enemies-Card, modale Defaite) - Phase 2
 const SUCCESS := Color("4cd964")  ## vert vif (Progression, Portee) - Phase 2
+## La lueur verte pulsee du bouton COMBATTRE, relevee sur Btn-COMBATTRE
+## (410:2143) : box-shadow 0 0 12px 2px rgba(51, 229, 77, .6). C'est le seul
+## endroit du jeu ou un bouton s'allume tout seul - il dit "quand tu veux".
+const GLOW_FIGHT := Color("33e54d")
 const ENEMY := Color("b5514f")
 
 const RADIUS := 10
@@ -278,6 +282,84 @@ static func _press_scale(control: Control, enfonce: bool) -> void:
 
 static func style_panel(panel: PanelContainer, color: Color = PANEL) -> void:
 	panel.add_theme_stylebox_override("panel", panel_box(color))
+
+
+# ------------------------------- LA LUEUR ------------------------------------
+#
+#  UNE LUEUR DOUCE DERRIERE UN CONTROLE, et pourquoi ce n'est pas une ombre.
+#
+#  Godot ne sait PAS flouter l'ombre d'une StyleBoxFlat : `shadow_size` etire
+#  un rectangle arrondi de la meme couleur, a bord franc. Une "lueur" faite
+#  comme ca donne un LISERE - exactement l'effet qu'on ne veut pas.
+#
+#  On genere donc la texture : un rectangle arrondi dont l'alpha decroit en
+#  douceur vers l'exterieur, servi en NinePatchRect pour qu'il s'etire a
+#  n'importe quelle taille de bouton sans deformer ses coins.
+#
+#  ⚠️ NI EMPILEMENT DE BANDES, NI DEGRADE RADIAL. L'empilement raye des qu'on
+#  change de format (piege deja paye sur EdgeFades) ; un degrade radial etire
+#  sur un rectangle large donne une tache ovale, pas un contour. Le nine-patch
+#  est le seul des trois qui garde ses coins.
+
+## Cote de la texture generee. 64 suffit : le nine-patch n'etire que les 8
+## points du centre, tout le detail est dans les marges.
+const _GLOW_TEXTURE_SIZE := 64
+## Epaisseur de la lueur autour du controle, en points de texture.
+const _GLOW_SPREAD := 16.0
+## Arrondi du coin interieur, cale sur le rayon des boutons du jeu.
+const _GLOW_CORNER := 12.0
+
+static var _glow_texture: Texture2D = null
+
+
+## La texture de lueur, fabriquee une fois pour tout le jeu.
+static func glow_texture() -> Texture2D:
+	if _glow_texture != null:
+		return _glow_texture
+	var n := _GLOW_TEXTURE_SIZE
+	var image := Image.create(n, n, false, Image.FORMAT_RGBA8)
+	var inner := Vector2(n, n) * 0.5 - Vector2(_GLOW_SPREAD, _GLOW_SPREAD)
+	var centre := Vector2(n, n) * 0.5
+	for y in range(n):
+		for x in range(n):
+			# Distance signee au rectangle arrondi interieur (SDF classique).
+			var p := Vector2(x + 0.5, y + 0.5) - centre
+			var q := Vector2(absf(p.x), absf(p.y)) - inner + Vector2(_GLOW_CORNER, _GLOW_CORNER)
+			var d := Vector2(maxf(q.x, 0.0), maxf(q.y, 0.0)).length() \
+					+ minf(maxf(q.x, q.y), 0.0) - _GLOW_CORNER
+			# Pleine a l'interieur, eteinte a _GLOW_SPREAD. Le carre adoucit le
+			# depart : une decroissance lineaire se lit comme un bord net.
+			var a := clampf(1.0 - d / _GLOW_SPREAD, 0.0, 1.0)
+			image.set_pixel(x, y, Color(1, 1, 1, a * a))
+	_glow_texture = ImageTexture.create_from_image(image)
+	return _glow_texture
+
+
+## Pose une lueur DERRIERE `control` et la renvoie, pour qu'on puisse animer
+## son opacite. Elle deborde de `_GLOW_SPREAD` de chaque cote et ne capte
+## aucun clic.
+##
+## `show_behind_parent` plutot qu'un frere : dans un conteneur, un frere ne
+## peut pas occuper le meme rectangle sans se battre avec la mise en page.
+static func glow_behind(control: Control, color: Color) -> NinePatchRect:
+	var glow := NinePatchRect.new()
+	glow.name = "Glow"
+	glow.texture = glow_texture()
+	var marge := int(_GLOW_SPREAD + _GLOW_CORNER)
+	glow.patch_margin_left = marge
+	glow.patch_margin_right = marge
+	glow.patch_margin_top = marge
+	glow.patch_margin_bottom = marge
+	glow.set_anchors_preset(Control.PRESET_FULL_RECT)
+	glow.offset_left = -_GLOW_SPREAD
+	glow.offset_top = -_GLOW_SPREAD
+	glow.offset_right = _GLOW_SPREAD
+	glow.offset_bottom = _GLOW_SPREAD
+	glow.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	glow.show_behind_parent = true
+	glow.self_modulate = color
+	control.add_child(glow)
+	return glow
 
 
 ## Cree un label deja stylise, pour eviter cinq lignes repetees partout.

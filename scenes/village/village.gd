@@ -691,6 +691,7 @@ func _refresh_castle_glow() -> void:
 		return
 	_castle_glow.modulate.a = 0.55
 	_castle_glow_tween = create_tween().set_loops()
+	_castle_glow_tween.set_meta("boucle", true)
 	_castle_glow_tween.tween_property(_castle_glow, "modulate:a", 1.0, 1.7) \
 		.set_trans(Tween.TRANS_SINE)
 	_castle_glow_tween.tween_property(_castle_glow, "modulate:a", 0.55, 1.7) \

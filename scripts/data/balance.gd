@@ -716,6 +716,14 @@ const MOTION := {
 	# dialogue, pour porter la bulle et le bouton.
 	"intro_gradient": 0.8,
 
+	# --- LA LUEUR DU BOUTON COMBATTRE. Relevee sur la timeline du placement
+	# (410:2143) : elle s'allume en arrivant, puis respire entre deux etats -
+	# 0,70 s pour baisser, 0,60 s pour remonter. Ce n'est pas decoratif : c'est
+	# le seul signal qui dise au joueur que le placement PEUT s'arreter la.
+	"fight_glow_in": 0.35,
+	"fight_glow_down": 0.70,
+	"fight_glow_up": 0.60,
+
 	# --- Le zoom du village vers un batiment.
 	# Etait a 0,35 s : trop court pour qu'on suive le mouvement de l'oeil.
 	"village_zoom": 0.55,
