@@ -8,19 +8,43 @@ extends Control
 ## Deux temps, comme la maquette V2 (frames king-intro-before-dialogue et
 ## king-intro-dialogue) :
 ##
-##   1. APPROCHE  le Roi seul sur son trone, et une invite discrete en bas :
-##                "S'APPROCHER DU TRONE >". L'ecran attend le doigt du joueur,
-##                rien ne se declenche tout seul.
-##   2. DIALOGUE  au premier contact, l'illustration part en zoom lent, la
-##                bulle apparait, le texte s'ecrit lettre par lettre, puis le
-##                bouton "COMMENCER" se debloque.
+##   1. APPROCHE  le Roi ACCABLE, seul devant le trone vide de la Dame, et une
+##                invite discrete en bas : "S'APPROCHER DU TRONE >". L'ecran
+##                attend le doigt du joueur, rien ne se declenche tout seul.
+##   2. DIALOGUE  au premier contact, le Roi SE REDRESSE - fondu d'une pose a
+##                l'autre - l'illustration part en zoom lent, la bulle
+##                apparait, le texte s'ecrit lettre par lettre, puis le bouton
+##                "COMMENCER" se debloque.
 ##
 ## Ne se montre qu'une fois (cf. GameState.has_seen_intro, verifie par
 ## splash_screen.gd) : un joueur qui revient au village ne le revoit pas.
 ##
+## ⚠️ LE ROI A DEUX POSES, ET LE JEU N'EN MONTRAIT QU'UNE. Signale par le
+## joueur (carnet, fiche n1) : "je vois seulement la deuxieme image de l'ecran
+## figma". Les deux frames de la maquette portent la MEME scene avec deux
+## illustrations differentes :
+##
+##   - 410:35 king-intro-before-dialogue : le Roi la main sur la tete, les yeux
+##     fermes, effondre sur son trone. Le trone de la Dame est vide a cote.
+##   - 410:71 king-intro-dialogue : le meme plan, le Roi redresse, le regard
+##     dur, les deux mains sur les accoudoirs.
+##
+## Ce n'est pas un decor et son gros plan : MESURE sur les deux exports, la
+## meilleure superposition est a l'echelle 1,000 et au decalage (0, 0). Meme
+## cadrage, pose differente. La transition est donc un FONDU DE POSE.
+##
+## L'indice etait deja dans ce fichier et il avait ete lu a l'envers : le
+## releve de timeline notait "le fondu des DEUX calques d'illustration sert a
+## Figma a empiler deux images ; le jeu n'en a qu'une". Les deux calques
+## etaient les deux poses, et "le jeu n'en a qu'une" etait le bug, pas une
+## dispense.
 
 signal _tapped
 
+## Le Roi accable - premier temps. Le jeu n'avait pas cette image.
+const BG_GRIEVING_PATH := "res://assets/intro/king_throne_grieving.png"
+## Le Roi redresse - second temps. C'est l'illustration que le jeu montrait
+## depuis le debut, y compris pendant l'approche.
 const BG_PATH := "res://assets/intro/king_throne_background.png"
 
 const DIALOGUE_TEXT := "\"Ma Dame s'est fait enlever... Soulevez une armée et ramenez-la, et je vous couvrirai d'or.\""
@@ -89,6 +113,13 @@ const HINT_TEXT := "S'APPROCHER DU TRÔNE"
 @onready var _overlay: Control = $Overlay
 @onready var _fade_overlay: ColorRect = $FadeOverlay
 
+## La pose redressee, posee PAR-DESSUS l'accablee et transparente jusqu'au
+## contact. Deux calques plutot qu'un echange de texture : un echange ferait
+## sauter le Roi d'une pose a l'autre, et c'est le fondu qui donne le geste.
+var _background_resolved: TextureRect = null
+## Le degrade du bas, garde pour le faire arriver avec le dialogue.
+var _bottom_gradient: TextureRect = null
+
 var _dialogue_label: Label
 var _commencer_button: PanelContainer
 var _commencer_ready: bool = false
@@ -115,6 +146,9 @@ func _ready() -> void:
 	tail.modulate.a = 0.0
 	_commencer_button.modulate.a = 0.5
 
+	# Le Roi releve la tete pendant que la bulle arrive : les deux se
+	# recouvrent, sinon on attendrait devant une image qui se transforme.
+	_resolve_king()
 	_start_zoom()
 	await get_tree().create_timer(PANEL_DELAY).timeout
 	await _reveal_panel(panel, tail)
@@ -125,10 +159,27 @@ func _ready() -> void:
 # ------------------------------- CONSTRUCTION --------------------------------
 
 func _build_background() -> void:
-	if ResourceLoader.exists(BG_PATH):
-		_background.texture = load(BG_PATH)
+	# Le premier temps montre le Roi ACCABLE. Repli sur la pose redressee si
+	# l'illustration manque : mieux vaut un Roi mal accorde qu'un ecran noir.
+	var grieving := BG_GRIEVING_PATH if ResourceLoader.exists(BG_GRIEVING_PATH) else BG_PATH
+	if ResourceLoader.exists(grieving):
+		_background.texture = load(grieving)
 	_background.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
 	_background.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_COVERED
+
+	# La pose redressee attend au-dessus, transparente. Elle est construite
+	# tout de suite pour que sa texture soit deja chargee quand le fondu part :
+	# charger 2 Mo au moment du contact ferait sauter la premiere image.
+	if ResourceLoader.exists(BG_PATH):
+		_background_resolved = TextureRect.new()
+		_background_resolved.name = "BackgroundResolved"
+		_background_resolved.texture = load(BG_PATH)
+		_background_resolved.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+		_background_resolved.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_COVERED
+		_background_resolved.set_anchors_preset(Control.PRESET_FULL_RECT)
+		_background_resolved.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		_background_resolved.modulate.a = 0.0
+		_background_wrap.add_child(_background_resolved)
 
 	# Meme defaut que les degrades, meme cause : le pivot etait pose a
 	# (196.5, 426), soit la moitie de 393 x 852 en dur. Sur un viewport elargi
@@ -179,10 +230,21 @@ func _build_gradients() -> void:
 	top.offset_bottom = VIGNETTE_TOP_HEIGHT
 	_overlay.add_child(top)
 
-	var bottom := _gradient_rect(Color("0c0614", 0.0), Color("0c0614", 0.97))
-	bottom.set_anchors_preset(Control.PRESET_BOTTOM_WIDE)
-	bottom.offset_top = -VIGNETTE_BOTTOM_HEIGHT
-	_overlay.add_child(bottom)
+	# ⚠️ LE DEGRADE DU BAS N'APPARTIENT QU'AU SECOND TEMPS. La frame
+	# king-intro-before-dialogue (410:35) ne porte qu'un vignetage HAUT : on
+	# voit le sol de la salle, et le Roi est seul dedans. C'est
+	# king-intro-dialogue (410:71) qui ajoute "Bottom Gradient Overlay", et sa
+	# timeline le fait bien ARRIVER (opacite 0 jusqu'a 0,8 s, pleine a 1,6 s).
+	#
+	# Le jeu le posait des la premiere image : 472 points de noir sous un Roi
+	# qu'on n'avait pas encore approche, ce qui donnait deja au premier temps
+	# la mise en page du second. C'est l'autre moitie de "je vois seulement la
+	# deuxieme image".
+	_bottom_gradient = _gradient_rect(Color("0c0614", 0.0), Color("0c0614", 0.97))
+	_bottom_gradient.set_anchors_preset(Control.PRESET_BOTTOM_WIDE)
+	_bottom_gradient.offset_top = -VIGNETTE_BOTTOM_HEIGHT
+	_bottom_gradient.modulate.a = 0.0
+	_overlay.add_child(_bottom_gradient)
 
 
 ## LE VIGNETAGE AUTOUR DU ROI.
@@ -508,6 +570,25 @@ func _build_commencer_button() -> PanelContainer:
 ## l'ENTREE de la frame Figma - le moment ou l'ecran apparait - et il avait ete
 ## branche sur le TAP, ou il n'a rien a faire. Le zoom part donc maintenant de
 ## 1,0 et ne fait que monter.
+## LE ROI SE REDRESSE, et le fond se ferme derriere lui.
+##
+## Les deux poses sont cadrees a l'identique (mesure : echelle 1,000, decalage
+## nul), donc un simple fondu croise suffit - il n'y a rien a recaler. La pose
+## accablee reste dessous : la redressee monte en opacite par-dessus elle.
+##
+## Le degrade du bas arrive en meme temps, un peu plus vite : il doit etre en
+## place quand la bulle se pose dessus, 0,5 s apres le contact.
+func _resolve_king() -> void:
+	var tween := create_tween()
+	tween.set_parallel(true)
+	if is_instance_valid(_background_resolved):
+		tween.tween_property(_background_resolved, "modulate:a", 1.0,
+				Balance.motion("intro_pose")).set_trans(Tween.TRANS_SINE)
+	if is_instance_valid(_bottom_gradient):
+		tween.tween_property(_bottom_gradient, "modulate:a", 1.0,
+				Balance.motion("intro_gradient")).set_trans(Tween.TRANS_SINE)
+
+
 func _start_zoom() -> void:
 	_background_wrap.scale = Vector2.ONE
 	var tween := create_tween()

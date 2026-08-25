@@ -389,13 +389,24 @@ func _capture_intro() -> void:
 	var intro: Node = load("res://scenes/intro/king_intro_dialogue.tscn").instantiate()
 	add_child(intro)
 
-	# Premier temps : le Roi seul, et l'invite a s'approcher.
-	await get_tree().create_timer(0.6).timeout
+	# Premier temps : le Roi ACCABLE, et l'invite a s'approcher.
+	#
+	# ⚠️ 1,9 s, pas 0,6 : l'invite est tenue a zero pendant HINT_DELAY (1 s)
+	# puis monte sur 0,8 s. A 0,6 s la capture montrait un ecran sans invite et
+	# ne prouvait donc rien du premier temps.
+	await get_tree().create_timer(1.9).timeout
 	_save(intro, "9a_intro_approche.png")
 
 	# Puis le dialogue, declenche comme le ferait un doigt sur l'ecran.
 	intro.skip_approach()
-	await get_tree().create_timer(1.4).timeout
+
+	# En plein fondu de pose : c'est la seule image qui montre le Roi entre les
+	# deux illustrations. Sans elle, rien ne distingue un fondu d'un echange
+	# sec de texture.
+	await get_tree().create_timer(0.7).timeout
+	_save(intro, "9b_intro_redressement.png")
+
+	await get_tree().create_timer(0.7).timeout
 	_save(intro, "9_intro_typing.png")
 	await get_tree().create_timer(3.2).timeout
 	_save(intro, "9_intro_ready.png")

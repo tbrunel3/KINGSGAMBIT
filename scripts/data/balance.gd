@@ -698,6 +698,24 @@ const MOTION := {
 	# pendant qu'il chargeait encore son fond : le joueur voyait du gris.
 	"veil_settle": 0.12,
 
+	# --- L'INTRO : LE ROI SE REDRESSE.
+	# La maquette a DEUX illustrations pour le meme plan - le Roi accable, la
+	# main sur la tete, et le Roi redresse qui parle. Le jeu n'en avait qu'une,
+	# la seconde, et le joueur l'a vu : "je vois seulement la deuxieme image de
+	# l'ecran figma". L'approche montre la premiere, le contact fond vers la
+	# seconde. Mesure : les deux frames sont cadrees a l'IDENTIQUE (echelle
+	# 1,000, decalage nul, releve sur les deux exports), donc c'est bien un
+	# fondu de POSE et pas un changement de plan.
+	#
+	# 1,4 s : assez long pour qu'on voie le Roi relever la tete, assez court
+	# pour que le dialogue n'attende pas apres lui - la bulle part a 0,5 s et
+	# les deux se recouvrent.
+	"intro_pose": 1.4,
+	# Le degrade du bas n'existe PAS sur l'ecran d'approche (frame 410:35 :
+	# un vignetage haut, rien en bas - on voit le sol). Il arrive avec le
+	# dialogue, pour porter la bulle et le bouton.
+	"intro_gradient": 0.8,
+
 	# --- Le zoom du village vers un batiment.
 	# Etait a 0,35 s : trop court pour qu'on suive le mouvement de l'oeil.
 	"village_zoom": 0.55,
