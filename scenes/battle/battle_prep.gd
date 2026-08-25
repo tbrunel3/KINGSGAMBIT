@@ -148,18 +148,11 @@ func _prepare_run() -> void:
 
 ## Fond de la maquette : un parchemin clair, a peine plus chaud sur les bords.
 func _build_background() -> void:
-	var gradient := Gradient.new()
-	gradient.set_color(0, PAGE_BG)
-	gradient.set_color(1, PAGE_BG_DEEP)
-
-	var texture := GradientTexture2D.new()
-	texture.gradient = gradient
-	texture.fill = GradientTexture2D.FILL_RADIAL
-	texture.fill_from = Vector2(0.5, 0.4)
-	texture.fill_to = Vector2(1.0, 0.5)
-	texture.width = 128
-	texture.height = 128
-	_background.texture = texture
+	# ⚠️ Le bord vise (1,0 / 0,5) alors que le centre est en (0,5 / 0,4) : ce
+	# n'est PAS un rayon horizontal, et c'est ce que la maquette demande.
+	_background.texture = UiTheme.radial_gradient(
+		[[0.0, PAGE_BG], [1.0, PAGE_BG_DEEP]],
+		Vector2(0.5, 0.4), Vector2(1.0, 0.5))
 
 
 # ------------------------------- EN-TETE -------------------------------------

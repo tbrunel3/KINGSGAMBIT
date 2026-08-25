@@ -284,6 +284,102 @@ static func style_panel(panel: PanelContainer, color: Color = PANEL) -> void:
 	panel.add_theme_stylebox_override("panel", panel_box(color))
 
 
+# ------------------------------- LES DEGRADES --------------------------------
+#
+#  LA MEME RECETTE ETAIT RECOPIEE DANS HUIT FICHIERS.
+#
+#  Fabriquer un degrade dans Godot demande toujours les memes huit lignes :
+#  un Gradient, une GradientTexture2D, le mode de remplissage, les deux points
+#  de remplissage, la largeur, la hauteur. Le jeu les avait recopiees dans
+#  battle_prep, battle_result, campaign, king_intro_dialogue, splash_screen,
+#  codex_popup, shop et village - et deux fois dans ce dernier.
+#
+#  Ce n'est pas qu'une question de lignes. Le vrai cout, c'est qu'une correction
+#  ne se propage pas : le jour ou le fondu de bord s'est mis a RAYER sur un
+#  autre format (piege n3 du manuel), il a fallu retrouver a la main tous les
+#  endroits qui empilaient des bandes. Une seule porte, une seule correction.
+#
+#  ⚠️ EdgeFades GARDE LA SIENNE, et c'est volontaire : elle fabrique des
+#  degrades DIRECTIONNELS (haut, bas, gauche, droite) avec un bornage a 9 % du
+#  cote, et c'est le code qui a paye le piege des bandes qui rayent. Le tirer
+#  ici l'aplatirait dans un cas general qui ne connait pas ses contraintes.
+
+## La texture d'un degrade VERTICAL, du haut vers le bas.
+##
+## 4 de large et 256 de haut : la largeur ne sert a rien - le GPU etire - et
+## la hauteur ne fait que la FINESSE du degrade, pas la taille du rectangle.
+static func vertical_gradient(haut: Color, bas: Color,
+		finesse := 256) -> GradientTexture2D:
+	var gradient := Gradient.new()
+	gradient.colors = PackedColorArray([haut, bas])
+	var texture := GradientTexture2D.new()
+	texture.gradient = gradient
+	texture.fill_from = Vector2(0, 0)
+	texture.fill_to = Vector2(0, 1)
+	texture.width = 4
+	texture.height = maxi(2, finesse)
+	return texture
+
+
+## La texture d'un HALO RADIAL - plein au centre, eteint au bord.
+##
+## `etapes` est une liste de [position, couleur], position de 0 (le centre) a
+## 1 (le bord). Deux etapes suffisent pour un halo simple ; une troisieme au
+## milieu resserre le coeur, ce que font le chateau et le medaillon.
+##
+## `centre` se decale quand le sujet n'est pas au milieu de l'image - le Roi
+## est assis sur son trone, pas au centre geometrique de l'ecran.
+## ⚠️ `bord` EST EXPLICITE, ET CE N'EST PAS UN EXCES DE ZELE. Les huit sites
+## d'origine ne visaient pas tous le meme point : la preparation part de
+## (0,5 / 0,4) et va vers (1,0 / 0,5), ce qui n'est PAS un rayon horizontal.
+## Uniformiser en douce aurait change l'image sans que rien ne le dise - un
+## nettoyage qui modifie ce que le joueur voit n'est plus un nettoyage.
+## Laisse `bord` a l'infini pour le cas courant : un rayon horizontal.
+static func radial_gradient(etapes: Array, centre := Vector2(0.5, 0.5),
+		bord := Vector2.INF, cote := 128) -> GradientTexture2D:
+	var gradient := Gradient.new()
+	# ⚠️ Un Gradient neuf porte DEJA deux points. On ecrase les deux premiers
+	# et on ajoute les suivants : ajouter les deux premiers en laisserait
+	# quatre, et les deux d'origine (noir vers blanc) repeindraient le halo.
+	for i in range(etapes.size()):
+		var etape: Array = etapes[i]
+		if i < 2:
+			gradient.set_offset(i, float(etape[0]))
+			gradient.set_color(i, etape[1])
+		else:
+			gradient.add_point(float(etape[0]), etape[1])
+
+	var texture := GradientTexture2D.new()
+	texture.gradient = gradient
+	texture.fill = GradientTexture2D.FILL_RADIAL
+	texture.fill_from = centre
+	texture.fill_to = centre + Vector2(0.5, 0.0) if bord == Vector2.INF else bord
+	texture.width = cote
+	texture.height = cote
+	return texture
+
+
+## Le rectangle qui PORTE une texture de degrade : etire sans deformer, et
+## transparent au doigt. Les cinq sites qui en fabriquaient un repetaient
+## exactement ces quatre reglages, et en oublier un se voit tout de suite -
+## un fondu de bord qui capte les clics avale le geste de defilement.
+static func gradient_rect(texture: Texture2D) -> TextureRect:
+	var rect := TextureRect.new()
+	rect.texture = texture
+	rect.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+	rect.stretch_mode = TextureRect.STRETCH_SCALE
+	rect.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	return rect
+
+
+## Le materiau des halos : ils S'AJOUTENT a ce qu'il y a dessous au lieu de le
+## recouvrir. C'est ce qui fait qu'une lueur eclaire au lieu de tacher.
+static func additive_material() -> CanvasItemMaterial:
+	var material := CanvasItemMaterial.new()
+	material.blend_mode = CanvasItemMaterial.BLEND_MODE_ADD
+	return material
+
+
 # ------------------------------- LA LUEUR ------------------------------------
 #
 #  UNE LUEUR DOUCE DERRIERE UN CONTROLE, et pourquoi ce n'est pas une ombre.

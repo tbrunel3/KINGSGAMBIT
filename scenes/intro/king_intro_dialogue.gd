@@ -300,23 +300,7 @@ func _build_vignette() -> TextureRect:
 
 
 func _gradient_rect(top_color: Color, bottom_color: Color) -> TextureRect:
-	var gradient := Gradient.new()
-	gradient.colors = PackedColorArray([top_color, bottom_color])
-	var texture := GradientTexture2D.new()
-	texture.gradient = gradient
-	texture.fill_from = Vector2(0, 0)
-	texture.fill_to = Vector2(0, 1)
-	texture.width = 4
-	# Hauteur de TEXTURE, pas de rectangle : elle ne fait que la finesse du
-	# degrade, que le GPU etire ensuite sur la hauteur reelle du bord.
-	texture.height = 256
-
-	var rect := TextureRect.new()
-	rect.texture = texture
-	rect.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
-	rect.stretch_mode = TextureRect.STRETCH_SCALE
-	rect.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	return rect
+	return UiTheme.gradient_rect(UiTheme.vertical_gradient(top_color, bottom_color))
 
 
 ## Invite du premier temps : un libelle discret et un chevron, en bas de

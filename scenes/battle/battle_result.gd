@@ -595,18 +595,7 @@ func _draw_ornament(node: Control) -> void:
 
 
 func _radial_glow(color: Color) -> GradientTexture2D:
-	var gradient := Gradient.new()
-	gradient.set_color(0, color)
-	gradient.set_color(1, Color(color, 0.0))
-
-	var texture := GradientTexture2D.new()
-	texture.gradient = gradient
-	texture.fill = GradientTexture2D.FILL_RADIAL
-	texture.fill_from = Vector2(0.5, 0.5)
-	texture.fill_to = Vector2(1.0, 0.5)
-	texture.width = 128
-	texture.height = 128
-	return texture
+	return UiTheme.radial_gradient([[0.0, color], [1.0, Color(color, 0.0)]])
 
 
 ## Plaque du bilan, sertie de son losange a cheval sur la tranche haute.

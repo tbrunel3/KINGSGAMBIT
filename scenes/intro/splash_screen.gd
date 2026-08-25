@@ -75,18 +75,9 @@ func _ready() -> void:
 ## dans la maquette). Un degrade genere plutot qu'une image : aucun asset a
 ## embarquer, et il reste net a n'importe quelle definition d'ecran.
 func _paint_background() -> void:
-	var gradient := Gradient.new()
-	gradient.set_color(0, Color("1e112a"))
-	gradient.set_color(1, Color("0c0614"))
-
-	var texture := GradientTexture2D.new()
-	texture.gradient = gradient
-	texture.fill = GradientTexture2D.FILL_RADIAL
-	texture.fill_from = Vector2(0.5, 0.5)
-	texture.fill_to = Vector2(1.0, 0.5)
-	texture.width = 256
-	texture.height = 256
-	_background.texture = texture
+	_background.texture = UiTheme.radial_gradient(
+		[[0.0, Color("1e112a")], [1.0, Color("0c0614")]],
+		Vector2(0.5, 0.5), Vector2.INF, 256)
 
 
 ## Les trois blocs de la maquette, separes par des espaceurs qui absorbent

@@ -92,7 +92,14 @@ func _frames(count: int = 2) -> void:
 ## tweens plutot que d'attendre - c'est instantane, et c'est exact.
 func _skip_animations() -> void:
 	for tween in get_tree().get_processed_tweens():
-		if tween.is_valid():
+		# ⚠️ SAUTER LES BOUCLES, comme screenshot._finish_animations. Une
+		# respiration sans fin - la lueur de COMBATTRE, le halo du chateau,
+		# celui du medaillon, l'invite de l'intro, le logo du splash - n'a pas
+		# de "fin" ou sauter : custom_step la fait tourner en rond et Godot
+		# finit par crier "Infinite loop detected". Une ERREUR dans la sortie
+		# d'un banc vert est un echec, et celle-la n'attendait que le jour ou
+		# un cas de ui_test traverserait un ecran qui respire.
+		if tween.is_valid() and not tween.has_meta("boucle"):
 			tween.custom_step(10.0)
 	await get_tree().process_frame
 

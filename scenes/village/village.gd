@@ -472,23 +472,10 @@ func _on_codex_pressed() -> void:
 
 ## Bandeau degrade vertical, pose sur le decor.
 func _fade_rect(pos: Vector2, size: Vector2, from_color: Color, to_color: Color) -> TextureRect:
-	var gradient := Gradient.new()
-	gradient.colors = PackedColorArray([from_color, to_color])
-
-	var texture := GradientTexture2D.new()
-	texture.gradient = gradient
-	texture.fill_from = Vector2(0, 0)
-	texture.fill_to = Vector2(0, 1)
-	texture.width = 4
-	texture.height = int(size.y)
-
-	var rect := TextureRect.new()
-	rect.texture = texture
-	rect.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
-	rect.stretch_mode = TextureRect.STRETCH_SCALE
+	var rect := UiTheme.gradient_rect(
+		UiTheme.vertical_gradient(from_color, to_color, int(size.y)))
 	rect.position = pos
 	rect.size = size
-	rect.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	return rect
 
 

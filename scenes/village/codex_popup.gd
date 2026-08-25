@@ -156,17 +156,8 @@ func _paraitre(tween: Tween, node: Control, retard: float, depuis: float,
 ## Fond de la maquette : un degrade radial tres sombre, plus clair au centre,
 ## repris tel quel de la preparation de bataille.
 func _build_background() -> void:
-	var gradient := Gradient.new()
-	gradient.set_color(0, Color("141d3a"))
-	gradient.set_color(1, Color("05070f"))
-	var texture := GradientTexture2D.new()
-	texture.gradient = gradient
-	texture.fill = GradientTexture2D.FILL_RADIAL
-	texture.fill_from = Vector2(0.5, 0.4)
-	texture.fill_to = Vector2(1.0, 0.4)
-	texture.width = 128
-	texture.height = 128
-	_background.texture = texture
+	_background.texture = UiTheme.radial_gradient(
+		[[0.0, Color("141d3a")], [1.0, Color("05070f")]], Vector2(0.5, 0.4))
 
 
 func _build_header() -> void:
