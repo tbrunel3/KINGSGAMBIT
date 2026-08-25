@@ -11,10 +11,6 @@
     "groupe": "tout",
     "ordre": [
      {
-      "ref": "5",
-      "titre": "Les deux lettres du Roi, entre l'intro et le village"
-     },
-     {
       "ref": "6",
       "titre": "Les popups d'accompagnement de Figma"
      },
@@ -34,8 +30,8 @@
    },
    "build": {
     "enLigne": false,
-    "commit": "ef84b11",
-    "quoi": "l'intro du Roi accablé (n1) et le bouton COMBATTRE (n2)",
+    "commit": "166773c",
+    "quoi": "l'intro (n1), le bouton COMBATTRE (n2) et les missives du Roi (5)",
     "note": "Recharge en forçant : le service worker de Godot sert volontiers l'ancien build."
    },
    "sections": [
@@ -308,10 +304,41 @@
        "ref": "5",
        "titre": "Les deux lettres du Roi, entre l'intro et le village",
        "detail": "Les écrans sont faits par le graphiste. Le reste est déjà spécifié dans <code>chantier_i_missives.md</code> : mesures des illustrations, quatre textes, déclencheurs. <strong>Une seule pièce manque au jeu : il n'a aucun compteur de défaite.</strong>",
-       "statut": "todo",
-       "journal": [],
+       "statut": "attente",
+       "journal": [
+        {
+         "quand": "25/08",
+         "qui": "Claude",
+         "texte": "Le graphiste a refait le support, et c'est plus simple que la spec : deux frames neuves (lettre-roi-fermée 510:2 et lettre-roi-ouverte 510:7). Une enveloppe scellée sur le village assombri, puis un parchemin à cadre doré. Plus de dépli en trois tranches sur les plissures — tout ce que chantier_i_missives.md décrivait là-dessus n'a plus lieu d'être."
+        },
+        {
+         "quand": "25/08",
+         "qui": "Claude",
+         "texte": "C'est un CALQUE, pas un écran : le fond est le vrai village, comme dans la maquette. Mesuré : il passe de 90,2 à 35,9 de luminance, soit exactement le voile à 0,60 de la maquette."
+        },
+        {
+         "quand": "25/08",
+         "qui": "Claude",
+         "texte": "⚠️ Le piège annoncé par la spec était réel : record_battle recevait « pas de victoire » aussi bien pour une défaite que pour un NUL. Le pat est fréquent (6 des 19 parties du banc) : la lettre de défaite serait arrivée tôt et à presque tout le monde, après un combat qu'ils n'avaient pas perdu. Le nul est maintenant passé explicitement."
+        },
+        {
+         "quand": "25/08",
+         "qui": "Claude",
+         "texte": "⚠️ Deux points à trancher pour toi. (1) La maquette écrit « mon plus fidèle destrier ainsi que trois de mes gardes » et « ramenez-moi les quatre » ; le jeu en donne quatre plus un. J'ai gardé le ton et recalculé les chiffres depuis Balance, comme le veut la règle. (2) Elle demande Poppins Medium, une graisse qu'on n'embarque pas : j'ai mis Comic Relief, déjà là et déjà établie comme la voix du Roi dans la bulle de l'intro."
+        },
+        {
+         "quand": "25/08",
+         "qui": "Claude",
+         "texte": "Bancs neufs : ui_test [19] (36 assertions) et format_test [4] (centrage à 0,00 pt sur les huit formats). ui_test 266 OK / 0 échec / 0 erreur, smoke_test 10/10. Et un banc qui échouait une fois sur deux a été corrigé au passage — il lisait le compteur d'or exactement une image après le gain."
+        }
+       ],
        "priorite": "basse",
-       "theme": "Récit"
+       "theme": "Récit",
+       "livre": {
+        "commit": "166773c",
+        "quand": "25/08 à 20h05"
+       },
+       "resume": "À vérifier : au tout premier retour au village après l'intro, une enveloppe scellée se pose sur le village assombri. Un doigt l'ouvre en parchemin. Les trois autres lettres n'apparaissent pas : elles attendent au Château Royal, avec une pastille ✉ sur l'enseigne du château."
       },
       {
        "ref": "6",
@@ -633,5 +660,5 @@
    "exportWeb": null
   }
  ],
- "serie": 64
+ "serie": 65
 }

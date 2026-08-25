@@ -80,6 +80,7 @@ func _build(key: String) -> void:
 		_:
 			_modal.open("", Modal.Context.NEUTRAL)
 
+	_skin()
 	_modal.body.add_child(_dismiss())
 
 
@@ -96,7 +97,12 @@ func _build(key: String) -> void:
 ## A false, le camp bloque PERD et il n'y a plus rien a expliquer : le retirer
 ## alors, ne pas le laisser mentir.
 func _build_stalemate() -> void:
-	_modal.open("PERSONNE N'A GAGNÉ", Modal.Context.NEUTRAL, "crown_broken")
+	# ⚠️ UNE COURONNE ENTIERE, PAS BRISEE. Le glyphe etait `crown_broken` -
+	# celui du blason de la DEFAITE - et il disait donc exactement le contraire
+	# du popup : un nul n'est pas une deroute, "ta serie n'est pas rompue" est
+	# meme la troisieme regle de l'ecran. La maquette (499:23) pose un ♛, la
+	# piece royale entiere.
+	_modal.open("PERSONNE N'A GAGNÉ", Modal.Context.NEUTRAL, "crown")
 	var body := _modal.body
 
 	body.add_child(_paragraph(
@@ -184,6 +190,43 @@ func _build_realtime() -> void:
 		+ "termine un chantier d'un coup."))
 
 
+# ------------------------------- LA PEAU COMMUNE -----------------------------
+#
+#  LES QUATRE POPUPS SONT UNE FAMILLE, et les quatre maquettes le disent :
+#  13-popup-guide-pat (499:2), 14 (500:2), 15 (500:55) et 16 (500:108) portent
+#  exactement le meme habillage, quel que soit le sujet. C'est ce qui les fait
+#  reconnaitre comme LA VOIX DU JEU plutot que comme quatre popups de plus.
+#
+#  Le code les servait au contraire dans quatre contextes differents (NEUTRAL,
+#  BLUE, GOLD, BLUE), ce qui donnait au popup du pat un cadre gris et une
+#  couronne grise - la seule chose qu'on voyait de lui etait qu'il etait terne.
+#
+#  Releve sur 499:18, valeurs exactes : cadre 2 pt #ffd700 (l'or VIF, pas le
+#  #d4af37 sourd des autres modales), pastille d'en-tete #262c3f avec le
+#  glyphe en #ffd700, titre #a0aabf, corps #ccd1e0, titres de regle #ffd700.
+
+## Le cadre des quatre : l'or vif, pas l'or sourd des modales ordinaires.
+const FRAME := Color("ffd700")
+## Le disque derriere le glyphe.
+const BADGE := Color("262c3f")
+## Le titre des quatre. ⚠️ GRIS, ET DANS LES QUATRE : les maquettes lui donnent
+## la meme couleur quel que soit le sujet, alors que Modal.set_context le
+## colorait selon l'accent - or pour l'aura, bleu pour la composition. Deux ors
+## empiles (le titre et les titres de regle) se disputent l'oeil ; le gris rend
+## aux regles leur relief.
+const TITLE := Color("a0aabf")
+## Le bouton J'AI COMPRIS, releve sur Btn-Dismiss (499:157).
+const DISMISS_BG := Color("ffc800")
+const DISMISS_BORDER := Color("b8860b")
+const DISMISS_INK := Color("331f00")
+
+
+func _skin() -> void:
+	_modal.set_border_color(FRAME)
+	_modal.set_header_badge(BADGE, FRAME)
+	_modal.set_title_color(TITLE)
+
+
 # ------------------------------- FABRIQUE ------------------------------------
 
 ## Les poids, relus dans Balance. Ecrire "Pion 1, Cavalier 3" a la main serait
@@ -220,7 +263,32 @@ func _rule(title_text: String, body_text: String) -> VBoxContainer:
 	return column
 
 
+## LE BOUTON QUI FERME, releve sur Btn-Dismiss (499:157) : fond #ffc800,
+## liseré 2 pt #b8860b, coins a 12, libelle Inter Bold 13 en #331f00.
+##
+## ⚠️ IL ETAIT EN OR SOURD AVEC UN LIBELLE BLANC. `UiTheme.make_button` laisse
+## la couleur de texte du theme, qui est claire : "J'AI COMPRIS" en blanc sur
+## #c59b27 est le pire contraste de tout le jeu, et c'est le seul bouton de ces
+## quatre ecrans.
 func _dismiss() -> Button:
-	var button := UiTheme.make_button("J'AI COMPRIS", UiTheme.GOLD_BUTTON, 15)
+	var button := UiTheme.make_button("J'AI COMPRIS", DISMISS_BG, 13)
+	button.add_theme_font_override("font", UiTheme.font_bold())
+	button.add_theme_color_override("font_color", DISMISS_INK)
+	button.add_theme_color_override("font_hover_color", DISMISS_INK)
+	button.add_theme_color_override("font_pressed_color", DISMISS_INK)
+	for state in ["normal", "hover", "pressed", "focus", "disabled"]:
+		var box := StyleBoxFlat.new()
+		box.bg_color = DISMISS_BG
+		if state == "hover":
+			box.bg_color = DISMISS_BG.lightened(0.12)
+		elif state == "pressed":
+			box.bg_color = DISMISS_BG.darkened(0.18)
+		box.border_color = DISMISS_BORDER
+		box.set_border_width_all(2)
+		box.set_corner_radius_all(12)
+		box.content_margin_top = 10
+		box.content_margin_bottom = 10
+		button.add_theme_stylebox_override(state, box)
+	UiTheme.press_feedback(button)
 	button.pressed.connect(func(): _modal.close())
 	return button

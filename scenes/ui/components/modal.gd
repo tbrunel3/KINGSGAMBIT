@@ -176,6 +176,54 @@ func set_context(context: Context) -> void:
 	_header_icon.set_icon(_header_icon.icon_name, color)
 
 
+## POSE UNE PASTILLE RONDE DERRIERE LE GLYPHE D'EN-TETE.
+##
+## Les quatre popups d'accompagnement la demandent (Guide-Header, 499:22) : un
+## disque bleu ardoise avec la couronne doree dedans. Sans elle, le glyphe
+## flotte tout seul au-dessus du titre et se lit comme une tache.
+##
+## ⚠️ OPT-IN, ET C'EST DELIBERE. Modal sert huit ecrans, dont la victoire, la
+## defaite et les popups de batiment - tous valides par le joueur. Une pastille
+## posee d'office les changerait tous pour un besoin qui vient de quatre
+## popups. Ceux qui ne l'appellent pas gardent exactement ce qu'ils avaient.
+func set_header_badge(fond: Color, glyphe: Color, rembourrage: int = 12) -> void:
+	if _header_icon == null:
+		return
+	_header_icon.color = glyphe
+	_header_icon.set_icon(_header_icon.icon_name, glyphe)
+
+	var existant: PanelContainer = _header_icon_wrap.get_node_or_null("Badge")
+	if existant != null:
+		existant.queue_free()
+
+	# Le glyphe change de parent pour tomber DANS la pastille : un frere pose
+	# derriere ne suivrait pas la mise en page du CenterContainer.
+	var badge := PanelContainer.new()
+	badge.name = "Badge"
+	var box := StyleBoxFlat.new()
+	box.bg_color = fond
+	# Un rayon plus grand que la moitie du cote donne un disque, quelle que
+	# soit la taille du glyphe - pas de nombre a recalculer si elle bouge.
+	box.set_corner_radius_all(999)
+	box.set_content_margin_all(rembourrage)
+	badge.add_theme_stylebox_override("panel", box)
+	badge.mouse_filter = Control.MOUSE_FILTER_IGNORE
+
+	var parent_glyphe: Node = _header_icon.get_parent()
+	parent_glyphe.remove_child(_header_icon)
+	badge.add_child(_header_icon)
+	_header_icon_wrap.add_child(badge)
+
+
+## Repeint le TITRE sans toucher au cadre ni au glyphe. Miroir exact de
+## set_border_color, et le pendant dont les popups d'accompagnement ont besoin :
+## leurs quatre maquettes donnent le meme titre gris quel que soit le sujet,
+## alors que set_context le colore selon l'accent.
+func set_title_color(color: Color) -> void:
+	if _title != null:
+		_title.add_theme_color_override("font_color", color)
+
+
 ## Recercle la modale sans toucher a la couleur de son titre.
 ##
 ## Le popup de batiment VERROUILLE en a besoin : la maquette (410:7488) le

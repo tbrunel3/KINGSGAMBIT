@@ -94,6 +94,7 @@ func _ready() -> void:
 	await _capture_splash()
 	await _capture_intro()
 	await _capture_letter()
+	await _capture_guides()
 	await _capture_shop()
 	await _capture_village_advanced()
 	get_tree().quit()
@@ -467,6 +468,28 @@ func _capture_letter() -> void:
 
 	village.queue_free()
 	await get_tree().process_frame
+	Game.reset_progress()
+
+
+## LES QUATRE POPUPS D'ACCOMPAGNEMENT (chantier E / fiche 6).
+##
+## Ils n'avaient AUCUNE capture, alors qu'ils portent quatre frames de la
+## maquette et qu'ils ne se montrent qu'UNE FOIS chacun en jeu : sans image, la
+## seule facon de les revoir etait de repartir d'une sauvegarde neuve. On force
+## donc leur ouverture par la porte de derriere.
+func _capture_guides() -> void:
+	for key in ["stalemate", "lineup", "dame_aura", "realtime"]:
+		Game.reset_progress()
+		var host := Control.new()
+		host.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+		add_child(host)
+		GuidePopup.show_once(host, key)
+		for i in range(4):
+			await RenderingServer.frame_post_draw
+		await _finish_animations()
+		_save(host, "11_guide_%s.png" % key)
+		host.queue_free()
+		await get_tree().process_frame
 	Game.reset_progress()
 
 
