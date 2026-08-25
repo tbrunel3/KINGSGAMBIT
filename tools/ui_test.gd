@@ -46,6 +46,7 @@ func _ready() -> void:
 	await _test_village_bars()
 	await _test_fight_button()
 	await _test_letters()
+	await _test_audit_du_banc()
 
 	print("")
 	if _failures == 0:
@@ -55,7 +56,19 @@ func _ready() -> void:
 	get_tree().quit(0 if _failures == 0 else 1)
 
 
+## ⚠️ QUAND LE BANC S'AUDITE LUI-MEME, ses echecs sont ATTENDUS - ils prouvent
+## que l'instrument sait refuser. Les imprimer laisserait des lignes ECHEC dans
+## la sortie d'une execution verte, et la regle du projet dit qu'une sortie
+## verte qui porte des echecs est un banc qui ment. On les compte, on ne les
+## dit pas : c'est le cas [20] qui rapporte le verdict.
+var _audit_muet: bool = false
+
+
 func _check(condition: bool, label: String) -> void:
+	if _audit_muet:
+		if not condition:
+			_failures += 1
+		return
 	if condition:
 		print("  OK   %s" % label)
 	else:
@@ -1106,14 +1119,103 @@ func _normalize(text: String) -> String:
 
 
 ## Declenche un clic sur un element trouve par _find_clickable.
+## ⚠️ CE BANC N'APPUYAIT SUR RIEN, SUR LA MOITIE DES CONTROLES DU JEU.
+##
+## Fiche d2. Trois defauts, et les trois etaient SILENCIEUX - un appui dans le
+## vide comptait comme un appui reussi, donc chaque assertion qui suivait
+## passait a vide.
+##
+## 1. `gui_input` est un SIGNAL, `_gui_input()` une METHODE VIRTUELLE. Emettre
+##    le signal n'appelle PAS la virtuelle. campaign_seal, grid_view et
+##    series_banner utilisent la virtuelle : le banc croyait les presser.
+##
+## 2. UN BUTTON ETAIT "PRESSE" EN EMETTANT `pressed` DIRECTEMENT, ce qui saute
+##    le bouton entier. Un bouton DESACTIVE, invisible, de taille nulle ou en
+##    MOUSE_FILTER_IGNORE repondait quand meme. C'est le pire des trois : le
+##    banc validait des boutons morts, et c'est exactement ce qu'un banc
+##    d'interface existe pour attraper.
+##
+## 3. IL N'ENVOYAIT QU'UN APPUI, JAMAIS DE RELACHEMENT. Un banc qui ne sait pas
+##    lever le doigt ne peut pas distinguer un appui d'un geste - c'est ce qui
+##    a laisse passer le bug des cachets de la carte de campagne.
+##
+## Desormais : on verifie d'abord que le controle est REELLEMENT pressable, on
+## choisit le bon canal, on envoie l'appui ET le relachement - et si rien n'a
+## pu etre atteint, LE BANC ECHOUE au lieu de se taire.
 func _press(node: Control) -> void:
-	if node is Button:
-		node.pressed.emit()
+	if node == null or not is_instance_valid(node):
+		_check(false, "⚠️ _press() sur un controle inexistant")
 		return
+	if not _pressable(node):
+		return
+	if node is Button:
+		# Un Button consomme lui-meme l'evenement en C++ ; l'atteindre par la
+		# virtuelle depuis GDScript n'appelle pas son implementation. On emet
+		# donc `pressed`, mais SEULEMENT apres avoir verifie qu'il aurait pu
+		# l'etre - c'est la verification qui manquait, pas l'emission.
+		(node as Button).pressed.emit()
+		return
+	# L'appui d'abord : s'il n'atteint personne, inutile de crier deux fois en
+	# envoyant aussi le relachement.
+	if not _envoyer(node, true):
+		return
+	_envoyer(node, false)
+
+
+## Le controle peut-il seulement recevoir un appui ? Chaque reponse "non" est
+## un ECHEC : le banc s'appretait a presser quelque chose d'impressable.
+func _pressable(node: Control) -> bool:
+	var nom := String(node.name)
+	if not node.is_inside_tree():
+		_check(false, "⚠️ %s n'est pas dans l'arbre" % nom)
+		return false
+	if not node.is_visible_in_tree():
+		_check(false, "⚠️ %s est invisible : un appui n'y arriverait jamais" % nom)
+		return false
+	if node.mouse_filter == Control.MOUSE_FILTER_IGNORE:
+		_check(false, "⚠️ %s ignore la souris : aucun doigt ne l'atteint" % nom)
+		return false
+	if node is Button and (node as Button).disabled:
+		_check(false, "⚠️ %s est DESACTIVE : le banc allait le valider quand meme" % nom)
+		return false
+	var taille := node.get_global_rect().size
+	if taille.x <= 0.0 or taille.y <= 0.0:
+		_check(false, "⚠️ %s est de taille nulle (%.0f x %.0f)" % [nom, taille.x, taille.y])
+		return false
+	return true
+
+
+## Porte l'evenement jusqu'au controle, PAR LE BON CANAL.
+##
+## Le signal si quelqu'un l'ecoute, la virtuelle sinon - et on regarde la liste
+## des methodes du SCRIPT plutot que has_method(), qui repond vrai pour toutes
+## les virtuelles declarees par Control, qu'elles soient redefinies ou non.
+## Rend `false` si personne n'a pu recevoir l'evenement.
+func _envoyer(node: Control, enfonce: bool) -> bool:
 	var event := InputEventMouseButton.new()
 	event.button_index = MOUSE_BUTTON_LEFT
-	event.pressed = true
-	node.gui_input.emit(event)
+	event.pressed = enfonce
+	event.position = node.size * 0.5
+
+	if not node.gui_input.get_connections().is_empty():
+		node.gui_input.emit(event)
+		return true
+	if _redefinit_gui_input(node):
+		node.call("_gui_input", event)
+		return true
+	_check(false, "⚠️ %s n'ecoute NI le signal NI la virtuelle : _press() ne "
+		% String(node.name) + "presse rien du tout")
+	return false
+
+
+func _redefinit_gui_input(node: Control) -> bool:
+	var script: Script = node.get_script()
+	while script != null:
+		for m in script.get_script_method_list():
+			if String(m.get("name", "")) == "_gui_input":
+				return true
+		script = script.get_base_script()
+	return false
 
 
 # ------------------------------- BOUTIQUE ------------------------------------
@@ -1934,3 +2036,113 @@ func _letter_in(root: Node) -> RoyalLetter:
 		if child is RoyalLetter:
 			return child
 	return null
+
+
+## [20] LE BANC S'AUDITE LUI-MEME
+##
+## Fiche d2. `_press()` a ete durci - il verifie que le controle est pressable,
+## choisit le bon canal, et envoie l'appui ET le relachement. Le banc est
+## repasse VERT du premier coup, ce qui ne prouve rien : un instrument qui ne
+## sait pas echouer rend le meme verdict quoi qu'il arrive.
+##
+## ⚠️ C'EST TOUT LE SENS DE LA FICHE. L'ancien `_press()` ne disait rien quand
+## il n'atteignait personne : un appui dans le vide comptait comme un appui
+## reussi, et chaque assertion qui suivait passait a vide. Ce cas construit
+## donc CINQ controles impressables et verifie que le banc les refuse - un par
+## un, en comptant les echecs qu'il declenche puis en les annulant.
+##
+## Si ce cas passe, `_press()` sait echouer. S'il echoue, l'instrument ment.
+func _test_audit_du_banc() -> void:
+	print("\n[20] Le banc s'audite lui-meme")
+
+	var hote := Control.new()
+	hote.set_anchors_preset(Control.PRESET_FULL_RECT)
+	add_child(hote)
+	await _frames(1)
+
+	# ── Un controle SAIN doit passer sans un echec ─────────────────────────
+	var vu := {"clic": 0}
+	var sain := Control.new()
+	sain.custom_minimum_size = Vector2(60, 40)
+	sain.size = Vector2(60, 40)
+	sain.mouse_filter = Control.MOUSE_FILTER_STOP
+	sain.gui_input.connect(func(_e: InputEvent): vu["clic"] += 1)
+	hote.add_child(sain)
+	await _frames(1)
+	var avant := _failures
+	_press(sain)
+	_check(_failures == avant, "un controle sain passe sans echec")
+	# ⚠️ DEUX evenements : l'appui ET le relachement. C'est le troisieme defaut
+	# de l'ancien _press(), celui qui a laisse passer le bug des cachets.
+	_check(int(vu["clic"]) == 2,
+		"⚠️ il recoit l'appui ET le relachement (%d evenements)" % int(vu["clic"]))
+
+	# ── Les cinq refus ─────────────────────────────────────────────────────
+	var cas: Array = []
+
+	var invisible := Control.new()
+	invisible.size = Vector2(60, 40)
+	invisible.mouse_filter = Control.MOUSE_FILTER_STOP
+	invisible.gui_input.connect(func(_e: InputEvent): pass)
+	invisible.visible = false
+	hote.add_child(invisible)
+	cas.append([invisible, "un controle invisible"])
+
+	var sourd := Control.new()
+	sourd.size = Vector2(60, 40)
+	sourd.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	sourd.gui_input.connect(func(_e: InputEvent): pass)
+	hote.add_child(sourd)
+	cas.append([sourd, "un controle qui ignore la souris"])
+
+	var plat := Control.new()
+	plat.size = Vector2.ZERO
+	plat.mouse_filter = Control.MOUSE_FILTER_STOP
+	plat.gui_input.connect(func(_e: InputEvent): pass)
+	hote.add_child(plat)
+	cas.append([plat, "un controle de taille nulle"])
+
+	var eteint := Button.new()
+	eteint.text = "INERTE"
+	eteint.custom_minimum_size = Vector2(80, 30)
+	eteint.disabled = true
+	hote.add_child(eteint)
+	cas.append([eteint, "⚠️ un BOUTON DESACTIVE"])
+
+	# Celui-la est le coeur de la fiche : personne n'ecoute, ni signal ni
+	# virtuelle. L'ancien _press() emettait dans le vide et repartait content.
+	var muet := Control.new()
+	muet.size = Vector2(60, 40)
+	muet.mouse_filter = Control.MOUSE_FILTER_STOP
+	hote.add_child(muet)
+	cas.append([muet, "⚠️ un controle que PERSONNE n'ecoute"])
+
+	await _frames(2)
+	for c in cas:
+		var cible: Control = c[0]
+		var quoi: String = c[1]
+		var repere := _failures
+		_audit_muet = true
+		_press(cible)
+		_audit_muet = false
+		var attrape := _failures > repere
+		# On annule les echecs volontaires : ils prouvent que l'instrument
+		# marche, ils ne disent rien du jeu.
+		_failures = repere
+		_check(attrape, "%s est REFUSE par le banc" % quoi)
+
+	# ── Et le bon canal est choisi ─────────────────────────────────────────
+	# Un controle qui redefinit la VIRTUELLE, sans connecter le signal : c'est
+	# le cas de campaign_seal, grid_view et series_banner.
+	var virtuel: Control = load("res://scenes/battle/campaign_seal.gd").new()
+	_check(_redefinit_gui_input(virtuel),
+		"⚠️ le banc reconnait un controle qui redefinit la virtuelle")
+	var signalant := Control.new()
+	signalant.gui_input.connect(func(_e: InputEvent): pass)
+	_check(not _redefinit_gui_input(signalant),
+		"et ne confond pas avec un controle qui n'ecoute que le signal")
+	virtuel.free()
+	signalant.free()
+
+	hote.queue_free()
+	await _frames(1)
