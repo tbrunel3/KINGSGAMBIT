@@ -32,6 +32,15 @@ documents complètent celui-ci et ne le répètent pas :
   la moitié des contrôles, et j'ai annoncé une correction avant de l'avoir
   prouvée. Le carnet de suivi vit dans un artefact web, dont l'adresse est dans
   la passation.
+- [`passation_intro_atelier.md`](passation_intro_atelier.md) — **la passation la
+  plus récente (24/08 au soir), et le premier fichier à ouvrir avec celle-ci.**
+  L'ordre de marche est **vide** — 14 fiches validées, 6 en attente de son
+  verdict, aucune à faire — donc la condition d'arrêt de la règle du carnet est
+  atteinte : ne rouvre pas une fiche en `attente` pour avancer. Elle porte
+  surtout **six pièges d'environnement payés dans cette session**, dont trois
+  qui ne sont nulle part ailleurs : Godot absent du conteneur cloud, `figma.com`
+  refusé par le proxy pendant que le MCP Figma marche, et le carnet qui se
+  republie amputé de sa galerie depuis un clone frais.
 - [`carnet/`](carnet/README.md) — **le carnet de travaux**, l'instrument de
   suivi des retours de test, et **la console qui commande le travail**. Depuis
   le 24/08 c'est une console en trois colonnes (Figma `13:373`, fichier
