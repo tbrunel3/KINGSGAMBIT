@@ -228,6 +228,18 @@ func _ready() -> void:
 	if Game.dames_owned() > 0:
 		GuidePopup.show_once.call_deferred(self, GuidePopup.DAME_AURA)
 
+	# LE COURRIER DU ROI (chantier I), et c'est le SEUL endroit qui le remet.
+	#
+	# Les quatre jalons se derivent de l'etat courant plutot que d'etre
+	# signales depuis battle_result, campaign_run ou castle_screen : c'est ce
+	# qui garantit qu'une lettre ne peut pas arriver par-dessus un ecran de
+	# defaite ou en pleine serie. Le village est le point de repos du jeu.
+	#
+	# `call_deferred` comme le popup d'aura : on ne pose pas un calque
+	# par-dessus un ecran qui est encore en train de se construire.
+	Game.letters_changed.connect(_refresh)
+	RoyalLetter.deliver_pending.call_deferred(self)
+
 	Game.check_upgrades()
 	var ticker := Timer.new()
 	ticker.wait_time = 1.0
@@ -1038,6 +1050,16 @@ func _refresh_castle() -> void:
 		dame_label.autowrap_mode = TextServer.AUTOWRAP_OFF
 		_castle_sub_row.add_child(dame_label)
 
+
+	# LA PASTILLE DE COURRIER (chantier I). Une lettre RECUE ET NON LUE est le
+	# seul cas ou le chateau reclame l'attention : c'est ce qui rend la pile
+	# decouvrable sans ajouter un cinquieme bouton de coin au village.
+	var courrier := Game.unread_letters()
+	if courrier > 0:
+		var sceau := UiTheme.make_label("✉ %d" % courrier, 11, Color("ffd933"))
+		sceau.add_theme_font_override("font", UiTheme.font_bold())
+		sceau.autowrap_mode = TextServer.AUTOWRAP_OFF
+		_castle_sub_row.add_child(sceau)
 
 	if Game.is_upgrading(Balance.CASTLE):
 		var eta := UiTheme.make_label(UiTheme.format_duration(Game.upgrade_remaining(Balance.CASTLE)),

@@ -239,6 +239,15 @@ func _refresh() -> void:
 		_panel_body.remove_child(child)
 		child.free()
 
+	# LE COURRIER DU ROI, en tete du panneau (chantier I).
+	#
+	# Au chateau et non au village : le trone est l'endroit du Roi, et le
+	# village porte deja Boutique, Codex, Missions, la pastille de gemmes,
+	# quatre casernes et BATAILLE. Une cinquieme entree de coin irait contre le
+	# nettoyage de G+F, qui avait mesure SIX tailles differentes pour la meme
+	# chose.
+	_build_mail()
+
 	_panel_body.add_child(_stat_pair(
 		"Déploiement actuel", "%d de charge" % Game.deploy_capacity(), Color.WHITE,
 		"Prochain niveau", "", Color.WHITE))
@@ -277,6 +286,90 @@ func _refresh() -> void:
 	_panel_body.add_child(costs)
 
 	_panel_body.add_child(_upgrade_button(cost))
+
+
+## LA PILE DE COURRIER. Rien tant qu'aucune lettre n'est arrivee : un intitule
+## vide apprendrait au joueur qu'il lui manque quelque chose, ce qui est
+## exactement le contraire de ce que le chantier cherche.
+##
+## Une lettre NON LUE est en or et porte un sceau ; une lettre lue reste
+## accessible mais s'efface. C'est le seul cas ou le chateau reclame
+## l'attention (cf. GameState.unread_letters).
+func _build_mail() -> void:
+	var recues: Array[String] = []
+	for key in Letters.ORDRE:
+		if Game.has_letter(key):
+			recues.append(key)
+	if recues.is_empty():
+		return
+
+	var titre := UiTheme.make_label("COURRIER DU ROI", 11, CAPTION)
+	titre.add_theme_font_override("font", UiTheme.font_bold())
+	_panel_body.add_child(titre)
+
+	var pile := VBoxContainer.new()
+	pile.add_theme_constant_override("separation", 6)
+	for key in recues:
+		pile.add_child(_mail_row(key))
+	_panel_body.add_child(pile)
+	_panel_body.add_child(_divider())
+
+
+func _mail_row(key: String) -> Control:
+	var lue := Game.has_read_letter(key)
+
+	# ⚠️ PanelContainer + `gui_input.connect`, PAS un Button avec des enfants.
+	# Deux raisons, et la seconde est un piege du projet : un Button n'est pas
+	# un conteneur, ses enfants ne comptent pas dans sa taille minimale et la
+	# rangee se replierait sur zero ; et `ui_test._press()` n'appuie QUE sur
+	# les controles qui connectent explicitement `gui_input` - la methode
+	# virtuelle ne repond pas au banc.
+	var row := PanelContainer.new()
+	row.name = "Mail_%s" % key
+	var box := StyleBoxFlat.new()
+	box.bg_color = Color(GOLD, 0.10 if not lue else 0.04)
+	box.border_color = Color(GOLD, 0.55 if not lue else 0.18)
+	box.set_border_width_all(1)
+	box.set_corner_radius_all(10)
+	box.content_margin_left = 12
+	box.content_margin_right = 12
+	box.content_margin_top = 10
+	box.content_margin_bottom = 10
+	row.add_theme_stylebox_override("panel", box)
+
+	var line := HBoxContainer.new()
+	line.add_theme_constant_override("separation", 10)
+	row.add_child(line)
+
+	var sceau := UiTheme.make_label("✦" if not lue else "·", 14,
+		GOLD if not lue else CAPTION)
+	sceau.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
+	sceau.autowrap_mode = TextServer.AUTOWRAP_OFF
+	line.add_child(sceau)
+
+	var nom := UiTheme.make_label(Letters.title(key), 13,
+		Color.WHITE if not lue else CAPTION)
+	nom.add_theme_font_override("font", UiTheme.font_bold())
+	nom.autowrap_mode = TextServer.AUTOWRAP_OFF
+	line.add_child(nom)
+
+	var etat := UiTheme.make_label("NON LUE" if not lue else "LUE", 10,
+		GOLD if not lue else CAPTION)
+	etat.add_theme_font_override("font", UiTheme.font_bold())
+	etat.autowrap_mode = TextServer.AUTOWRAP_OFF
+	etat.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
+	line.add_child(etat)
+
+	UiTheme.ignore_mouse_recursive(line)
+	row.mouse_filter = Control.MOUSE_FILTER_STOP
+	# ⚠️ La lettre s'ouvre sur `self`, pas sur la rangee : le panneau se
+	# reconstruit chaque seconde (le minuteur d'amelioration), et la rangee
+	# aura disparu avant la fin de l'animation d'entree du parchemin.
+	row.gui_input.connect(func(event: InputEvent):
+		if event is InputEventMouseButton and event.pressed 				and event.button_index == MOUSE_BUTTON_LEFT:
+			RoyalLetter.open(self, key))
+	UiTheme.press_feedback(row)
+	return row
 
 
 ## Deux colonnes de statistique cote a cote, comme la grille de la maquette.

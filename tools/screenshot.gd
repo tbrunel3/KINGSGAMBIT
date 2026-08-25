@@ -31,15 +31,9 @@ const SHOTS := [
 
 
 
-## Pousse toutes les animations en cours jusqu'a leur fin.
-##
-## Depuis que les ecrans ont une entree animee (preparation, resultat, bandeau
-## de serie), une capture prise quatre images apres l'instanciation photographie
-## un ecran a MOITIE APPARU - la preparation ressortait quasiment vide, et le
-## banc accusait la mise en page. On saute donc a la fin des tweens plutot que
-## d'attendre : c'est instantane, et c'est exact.
 ## Saute a la fin des animations d'ENTREE, pour qu'une capture ne photographie
-## pas un ecran a moitie apparu.
+## pas un ecran a MOITIE APPARU - la preparation ressortait quasiment vide, et
+## le banc accusait la mise en page.
 ##
 ## ⚠️ IL FAUT SAUTER LES BOUCLES, et ce n'est pas un detail de confort. Une
 ## respiration sans fin (la lueur de COMBATTRE, le halo du chateau, celui du
@@ -99,6 +93,7 @@ func _ready() -> void:
 	await _capture_draw()
 	await _capture_splash()
 	await _capture_intro()
+	await _capture_letter()
 	await _capture_shop()
 	await _capture_village_advanced()
 	get_tree().quit()
@@ -242,6 +237,13 @@ func _capture_dame_tower() -> void:
 	await get_tree().process_frame
 
 	# La salle du trone, Dame rentree : c'est l'ecran qui raconte l'histoire.
+	#
+	# Deux lettres posees dans la pile de courrier (chantier I), l'une lue et
+	# l'autre non : sans ca, la capture ne montre jamais la section, et le seul
+	# etat qu'on verrait serait celui ou elle n'existe pas.
+	Game.receive_letter(Letters.HERITAGE)
+	Game.mark_letter_read(Letters.HERITAGE)
+	Game.receive_letter(Letters.PREMIERE_DAME)
 	var castle: Node = load("res://scenes/village/castle_screen.tscn").instantiate()
 	add_child(castle)
 	for i in range(4):
@@ -425,6 +427,47 @@ func _capture_intro() -> void:
 	_save(intro, "9_intro_ready.png")
 	intro.queue_free()
 	await get_tree().process_frame
+
+
+## LA MISSIVE DU ROI, dans ses deux temps.
+##
+## Elle se pose PAR-DESSUS le village, comme en jeu : c'est le village reel
+## qui fait le fond assombri, pas une image de decor. La capture montre donc
+## exactement ce que le joueur verra.
+##
+## ⚠️ Le premier temps se photographie SANS sauter les tweens : sauter
+## afficherait l'enveloppe posee, ce qui est juste, mais c'est le seul endroit
+## ou l'on veut voir l'invite deja arrivee - d'ou l'attente reelle.
+func _capture_letter() -> void:
+	Game.reset_progress()
+	Game.mark_intro_seen()
+	var village: Node = load("res://scenes/village/village.tscn").instantiate()
+	add_child(village)
+	for i in range(4):
+		await RenderingServer.frame_post_draw
+
+	var lettre: Node = null
+	for child in village.get_children():
+		if child is RoyalLetter:
+			lettre = child
+	if lettre == null:
+		print("ATTENTION : aucune missive livree, capture sautee")
+		village.queue_free()
+		await get_tree().process_frame
+		return
+
+	await get_tree().create_timer(2.4).timeout
+	_save(village, "10_lettre_fermee.png")
+
+	lettre.open_now()
+	await get_tree().create_timer(1.2).timeout
+	_save(village, "10a_lettre_parchemin.png")
+	await _finish_animations()
+	_save(village, "10b_lettre_ouverte.png")
+
+	village.queue_free()
+	await get_tree().process_frame
+	Game.reset_progress()
 
 
 ## Joue reellement une bataille : placement automatique, combat en x4, puis

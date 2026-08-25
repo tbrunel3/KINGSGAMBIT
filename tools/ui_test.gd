@@ -45,6 +45,7 @@ func _ready() -> void:
 	await _test_second_finger()
 	await _test_village_bars()
 	await _test_fight_button()
+	await _test_letters()
 
 	print("")
 	if _failures == 0:
@@ -1460,7 +1461,17 @@ func _test_gold_count() -> void:
 	# bougeait pas, donc "il ne saute pas" etait vrai pour la mauvaise raison.
 	# On passe par la vraie porte, celle que le jeu emprunte.
 	Game.add_gold(640)
-	await _frames(1)
+	# ⚠️ ATTENDRE QUE LA MONTEE DEMARRE, PAS UNE IMAGE. Ce cas lisait le
+	# compteur exactement UNE image apres le gain : selon que le tween avait
+	# eu son premier pas ou non, il valait 356 ou encore 300, et le banc
+	# echouait une fois sur deux SANS QUE RIEN N'AIT CHANGE DANS LE JEU.
+	# Mesure : deux executions de suite, meme code, un echec et un succes.
+	# Une montee de 0,55 s dure une trentaine d'images - dix suffisent
+	# largement a la voir demarrer sans risquer de la voir finir.
+	var attente := 0
+	while village._gold_affiche == depart and attente < 10:
+		await _frames(1)
+		attente += 1
 	_check(village._gold_affiche > depart and village._gold_affiche < Game.gold,
 		"apres un gain il monte au lieu de sauter (%d entre %d et %d)"
 			% [village._gold_affiche, depart, Game.gold])
@@ -1783,3 +1794,143 @@ func _test_fight_button() -> void:
 
 	battle.queue_free()
 	await _frames(1)
+
+
+## [19] LES MISSIVES DU ROI
+##
+## Chantier I. Quatre questions, et la troisieme est celle qui coute cher si
+## personne ne la pose :
+##
+##   - la premiere lettre s'impose UNE FOIS, et ne se rouvre pas au retour
+##     suivant au village (un popup qui se rouvre est une punition) ;
+##   - les trois autres arrivent a leur jalon mais ATTENDENT au chateau ;
+##   - un NUL n'est pas une defaite. Le pat est frequent - 6 des 19 parties du
+##     banc - et si record_battle comptait les nuls, la lettre de defaite
+##     arriverait tot et a presque tout le monde, en disant au joueur qu'il a
+##     perdu un combat qu'il n'a pas perdu ;
+##   - le texte TIENT dans le parchemin, qui ne defile pas.
+func _test_letters() -> void:
+	print("\n[19] Les missives du Roi")
+
+	Game.reset_progress()
+	# Une sauvegarde ecrite avant ce chantier n'a pas la cle "letters" : elle
+	# doit se lire sans broncher, pas planter sur un acces direct.
+	_check(not Game.has_letter(Letters.HERITAGE),
+		"une sauvegarde sans la cle letters se lit sans broncher")
+	_check(Game.unread_letters() == 0, "et n'annonce aucun courrier")
+
+	# ── LE JALON N'EST PAS FRANCHI ──────────────────────────────────────────
+	var village: Node = load("res://scenes/village/village.tscn").instantiate()
+	add_child(village)
+	await _frames(3)
+	_check(_letter_in(village) == null,
+		"avant l'intro, aucune lettre ne s'impose")
+	village.queue_free()
+	await _frames(1)
+
+	# ── LA PREMIERE S'IMPOSE ────────────────────────────────────────────────
+	Game.mark_intro_seen()
+	village = load("res://scenes/village/village.tscn").instantiate()
+	add_child(village)
+	await _frames(3)
+	var lettre: RoyalLetter = _letter_in(village)
+	_check(lettre != null, "l'intro vue, la lettre d'heritage s'impose")
+	_check(Game.has_letter(Letters.HERITAGE), "et elle est enregistree")
+	_check(Game.unread_letters() == 1, "elle compte comme non lue (%d)"
+		% Game.unread_letters())
+
+	# Les trois autres n'ont pas leur jalon : elles ne doivent PAS etre la.
+	for key in [Letters.PREMIERE_DAME, Letters.PREMIERE_DEFAITE, Letters.ELLE_EST_LA]:
+		_check(not Game.has_letter(key), "%s attend son jalon" % key)
+
+	if lettre != null:
+		lettre.open_now()
+		await _skip_animations()
+		await _frames(2)
+		_check(Game.has_read_letter(Letters.HERITAGE), "l'ouvrir la marque lue")
+		_check(Game.unread_letters() == 0, "et la pastille retombe a zero")
+	village.queue_free()
+	await _frames(1)
+
+	# ── ET ELLE NE SE ROUVRE PAS ────────────────────────────────────────────
+	village = load("res://scenes/village/village.tscn").instantiate()
+	add_child(village)
+	await _frames(3)
+	_check(_letter_in(village) == null,
+		"⚠️ au retour suivant au village, elle ne se rouvre pas")
+	village.queue_free()
+	await _frames(1)
+
+	# ── UN NUL N'EST PAS UNE DEFAITE ────────────────────────────────────────
+	var avant := Game.stat("defeats")
+	Game.record_battle(false, 3, 2, 0, true)
+	_check(Game.stat("defeats") == avant,
+		"⚠️ un NUL ne compte pas comme une defaite (%d)" % Game.stat("defeats"))
+	_check(not Game.has_letter(Letters.PREMIERE_DEFAITE),
+		"et n'appelle donc pas la lettre de defaite")
+
+	Game.record_battle(false, 3, 2, 0, false)
+	_check(Game.stat("defeats") == avant + 1,
+		"une vraie defaite, elle, se compte (%d)" % Game.stat("defeats"))
+
+	# ── LES TROIS AUTRES ARRIVENT, MAIS ATTENDENT ───────────────────────────
+	village = load("res://scenes/village/village.tscn").instantiate()
+	add_child(village)
+	await _frames(3)
+	_check(Game.has_letter(Letters.PREMIERE_DEFAITE),
+		"la lettre de defaite est arrivee au chateau")
+	_check(_letter_in(village) == null,
+		"⚠️ mais elle ne s'impose PAS : seule la premiere s'impose")
+	_check(Game.unread_letters() == 1, "elle attend, non lue (%d)"
+		% Game.unread_letters())
+	village.queue_free()
+	await _frames(1)
+
+	# ── LE TEXTE TIENT DANS LE PARCHEMIN ────────────────────────────────────
+	# Le parchemin est une image de 340 x 420 qui NE DEFILE PAS. Une lettre
+	# retouchee d'une phrase de trop deborderait du cadre dore sans que rien
+	# ne le signale : RoyalLetter reduit alors la police. Si le banc voit une
+	# reduction, c'est que le texte est trop long - pas que le garde-fou
+	# marche.
+	var hote := Control.new()
+	hote.set_anchors_preset(Control.PRESET_FULL_RECT)
+	add_child(hote)
+	for key in Letters.ORDRE:
+		var vue: RoyalLetter = RoyalLetter.open(hote, key)
+		_check(vue != null, "la missive %s s'ouvre" % key)
+		if vue == null:
+			continue
+		vue.open_now()
+		await _skip_animations()
+		await _frames(2)
+		var corps: Label = vue._text
+		_check(corps != null and not String(corps.text).is_empty(),
+			"%s porte un texte" % key)
+		if corps != null:
+			var taille := corps.get_theme_font_size("font_size")
+			_check(taille >= RoyalLetter.TEXT_SIZE,
+				"%s tient a pleine taille (%d points pour %d attendus)"
+					% [key, taille, RoyalLetter.TEXT_SIZE])
+			_check(corps.get_line_count() <= 12,
+				"%s tient en %d lignes" % [key, corps.get_line_count()])
+		vue.queue_free()
+		await _frames(1)
+
+	# Aucun chiffre en dur : le texte d'heritage doit CITER la dotation reelle.
+	var heritage := Letters.body(Letters.HERITAGE)
+	_check(str(Balance.STARTING_GOLD) in heritage,
+		"l'heritage cite la vraie bourse (%d)" % Balance.STARTING_GOLD)
+	_check("quatre pions" in heritage and "un cavalier" in heritage,
+		"et la vraie troupe de depart")
+
+	hote.queue_free()
+	await _frames(1)
+	Game.reset_progress()
+
+
+## La lettre posee par-dessus un ecran, s'il y en a une.
+func _letter_in(root: Node) -> RoyalLetter:
+	for child in root.get_children():
+		if child is RoyalLetter:
+			return child
+	return null

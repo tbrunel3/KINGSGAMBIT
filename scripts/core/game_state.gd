@@ -16,6 +16,9 @@ signal buildings_changed
 signal progress_changed
 signal upgrade_finished(type: String)
 signal missions_changed
+## Une lettre du Roi est arrivee, ou vient d'etre lue : la pastille du Chateau
+## Royal et la pile de courrier s'y raccrochent.
+signal letters_changed
 
 var _state: Dictionary = {}
 
@@ -54,6 +57,14 @@ func _default_state() -> Dictionary:
 		# retombent jamais : ce sont des totaux de carriere, pas un etat.
 		"stats": {
 			"battles_won": 0,
+			# ⚠️ LES DEFAITES SE COMPTENT A PART, ET UN NUL N'EN EST PAS UNE.
+			# Le jeu a trois issues sans vainqueur (pat, position morte,
+			# enlisement) et le pat est FREQUENT - 6 des 19 parties du banc.
+			# Deduire les defaites de "batailles jouees moins gagnees" en
+			# compterait donc une a presque tout le monde des la premiere
+			# seance, et la missive de defaite arriverait sur un match nul.
+			# D'ou le drapeau `draw` de record_battle.
+			"defeats": 0,
 			"units_recruited": 0,
 			"upgrades": 0,
 			"flawless_wins": 0,
@@ -413,6 +424,13 @@ func _bump(key: String, amount: int = 1) -> void:
 	_state["stats"][key] = int(_state["stats"].get(key, 0)) + amount
 
 
+## Valeur brute d'un compteur de carriere ("battles_won", "defeats",
+## "captures"...). Defaut a zero : une sauvegarde ecrite avant l'ajout d'un
+## compteur n'a pas la cle.
+func stat(key: String) -> int:
+	return int(_state.get("stats", {}).get(key, 0))
+
+
 ## Valeur actuelle d'un compteur de mission. Les valeurs derivees (Dames au
 ## repos, niveau de chateau, campagne finie) se lisent directement dans
 ## l'etat plutot que d'etre comptees a part : impossible qu'elles derivent.
@@ -487,13 +505,19 @@ func claim_mission(id: String) -> int:
 
 ## Resultat d'une bataille, du point de vue des compteurs. Appele une fois
 ## par bataille depuis l'ecran de combat, victoire ou defaite.
-func record_battle(victory: bool, pieces_lost: int, captures: int, promotions: int) -> void:
+## `draw` : le combat s'est termine SANS VAINQUEUR. Ce n'est ni une victoire ni
+## une defaite - au nul, "la serie n'est pas rompue". L'appelant ne peut pas le
+## deduire de `victory`, qui vaut false dans les deux cas.
+func record_battle(victory: bool, pieces_lost: int, captures: int, promotions: int,
+		draw: bool = false) -> void:
 	_bump("captures", captures)
 	_bump("promotions", promotions)
 	if victory:
 		_bump("battles_won")
 		if pieces_lost <= 0:
 			_bump("flawless_wins")
+	elif not draw:
+		_bump("defeats")
 	save()
 	missions_changed.emit()
 
@@ -927,6 +951,70 @@ func mark_guide_seen(key: String) -> void:
 	seen[key] = true
 	_state["seen_guides"] = seen
 	save()
+
+
+# ------------------------------- LES MISSIVES --------------------------------
+#
+#  LES LETTRES DU ROI (chantier I). Deux etats et non un :
+#
+#    - `received` decide de la pastille sur l'entree du Chateau Royal ;
+#    - `read` decide du gras dans la pile de courrier.
+#
+#  Une lettre RECUE ET NON LUE est le seul cas ou le chateau reclame
+#  l'attention. Un seul drapeau ne saurait pas distinguer "il n'en a pas encore"
+#  de "il l'a lue".
+#
+#  ⚠️ `.get("letters", {})` comme has_seen_guide : une sauvegarde ecrite avant
+#  ce chantier n'a pas la cle et doit se charger sans broncher.
+
+
+func letter_state(key: String) -> Dictionary:
+	var letters: Dictionary = _state.get("letters", {})
+	return letters.get(key, {})
+
+
+func has_letter(key: String) -> bool:
+	return bool(letter_state(key).get("received", false))
+
+
+func has_read_letter(key: String) -> bool:
+	return bool(letter_state(key).get("read", false))
+
+
+## Rend true si la lettre vient d'arriver - false si elle etait deja la. C'est
+## ce qui permet a l'appelant de n'en imposer qu'une.
+func receive_letter(key: String) -> bool:
+	if has_letter(key):
+		return false
+	var letters: Dictionary = _state.get("letters", {})
+	letters[key] = {"received": true, "read": false}
+	_state["letters"] = letters
+	save()
+	letters_changed.emit()
+	return true
+
+
+func mark_letter_read(key: String) -> void:
+	if not has_letter(key) or has_read_letter(key):
+		return
+	var letters: Dictionary = _state.get("letters", {})
+	var entry: Dictionary = letters[key]
+	entry["read"] = true
+	letters[key] = entry
+	_state["letters"] = letters
+	save()
+	letters_changed.emit()
+
+
+## Combien attendent d'etre lues. C'est le chiffre de la pastille.
+func unread_letters() -> int:
+	var count := 0
+	var letters: Dictionary = _state.get("letters", {})
+	for key in letters.keys():
+		var entry: Dictionary = letters[key]
+		if bool(entry.get("received", false)) and not bool(entry.get("read", false)):
+			count += 1
+	return count
 
 
 func has_seen_intro() -> bool:

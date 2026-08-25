@@ -724,6 +724,26 @@ const MOTION := {
 	"fight_glow_down": 0.70,
 	"fight_glow_up": 0.60,
 
+	# --- LES MISSIVES DU ROI (chantier I), relevees sur les deux timelines de
+	# la maquette : lettre-roi-fermee (510:2, 2,5 s) et lettre-roi-ouverte
+	# (510:7, 4 s). Les delais sont donnes depuis le debut de chaque temps.
+	#
+	# ⚠️ letter_button_delay est LONG, et c'est voulu par le graphiste : trois
+	# secondes avant que CONTINUER apparaisse. Une lettre dont on peut sortir
+	# tout de suite ne se lit pas.
+	"letter_veil": 1.20,
+	"letter_envelope_delay": 0.80,
+	"letter_envelope": 0.80,
+	"letter_hint": 0.60,
+	# Le cachet se brise : l'enveloppe grandit un peu et s'efface. Ce temps-la
+	# n'est pas dans la maquette, qui saute d'une frame a l'autre.
+	"letter_seal": 0.35,
+	"letter_parchment": 0.80,
+	"letter_text_delay": 0.60,
+	"letter_text": 1.90,
+	"letter_button_delay": 3.00,
+	"letter_button": 0.60,
+
 	# --- Le zoom du village vers un batiment.
 	# Etait a 0,35 s : trop court pour qu'on suive le mouvement de l'oeil.
 	"village_zoom": 0.55,

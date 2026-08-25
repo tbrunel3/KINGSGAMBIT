@@ -43,6 +43,7 @@ func _ready() -> void:
 	_test_cover_fit()
 	_test_village_anchoring()
 	await _test_intro_overlays()
+	await _test_letter_layout()
 
 	print("")
 	if _failures == 0:
@@ -224,5 +225,70 @@ func _test_intro_overlays() -> void:
 		_check(worst < 1.0,
 			"%s : bande nue maximale %.2f pt (viewport %.0f de large)"
 				% [String(entry["name"]), worst, size.x])
+
+	host.queue_free()
+
+
+# ------------------------------- LA MISSIVE ----------------------------------
+
+## L'ECRAN DE LETTRE tient au centre sur les huit formats.
+##
+## ⚠️ POURQUOI CE CAS EXISTE. La maquette donne la lettre en coordonnees
+## absolues depuis le coin haut-gauche - enveloppe en 76,5 / 266, parchemin en
+## 26,5 / 160, bouton en 47 / 640. Les reporter telles quelles rejouerait mot
+## pour mot le defaut de l'intro : sur web-393x700 le viewport fait 478 de
+## large, et tout serait decale de 42 points a gauche. RoyalLetter n'en garde
+## donc que les TAILLES et les ecarts AU CENTRE, et ce banc verifie qu'on ne
+## recable pas un 393 en dur.
+##
+## Il verifie aussi que le bouton CONTINUER reste DANS l'ecran : c'est le seul
+## element pose loin du centre (238 points sous le milieu), donc le seul que
+## le raccourcissement d'un ecran court pourrait faire sortir.
+func _test_letter_layout() -> void:
+	print("\n[4] Missive : elle tient au centre sur les huit formats")
+
+	Game.reset_progress()
+	var host := Control.new()
+	add_child(host)
+	var letter: RoyalLetter = RoyalLetter.open(host, Letters.HERITAGE)
+	_check(letter != null, "la missive s'ouvre")
+	if letter == null:
+		host.queue_free()
+		return
+	letter.open_now()
+	# ⚠️ ATTENDRE LE PARCHEMIN, PAS UN NOMBRE D'IMAGES. Le cachet se brise sur
+	# un tween de 0,35 s de TEMPS REEL, et le parchemin n'est bati qu'apres :
+	# quatre images en headless ne font pas 0,35 s, et le banc concluait que
+	# l'ecran n'avait pas de parchemin.
+	var garde := 0
+	while letter.get_node_or_null("Parchment") == null and garde < 600:
+		await get_tree().process_frame
+		garde += 1
+
+	var parchemin: Control = letter.get_node_or_null("Parchment")
+	var bouton: Control = letter.get_node_or_null("Continue")
+	_check(parchemin != null and bouton != null,
+		"le parchemin et le bouton sont la")
+	if parchemin == null or bouton == null:
+		host.queue_free()
+		return
+
+	for entry in VIEWPORTS:
+		var size: Vector2 = entry["size"]
+		host.size = size
+		letter.size = size
+		await get_tree().process_frame
+
+		var ecart_parchemin: float = absf(
+			parchemin.position.x + parchemin.size.x * 0.5 - size.x * 0.5)
+		var ecart_bouton: float = absf(
+			bouton.position.x + bouton.size.x * 0.5 - size.x * 0.5)
+		var pire: float = maxf(ecart_parchemin, ecart_bouton)
+		_check(pire < 1.0,
+			"%s : centrage a %.2f pt pres (viewport %.0f de large)"
+				% [String(entry["name"]), pire, size.x])
+		_check(bouton.position.y + bouton.size.y <= size.y,
+			"%s : CONTINUER reste dans l'ecran (bas a %.0f pour %.0f)"
+				% [String(entry["name"]), bouton.position.y + bouton.size.y, size.y])
 
 	host.queue_free()

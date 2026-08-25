@@ -1617,7 +1617,12 @@ func _show_result() -> void:
 	var pieces_captured := 0
 	for count in _engine.losses(BattleUnit.TEAM_ENEMY).values():
 		pieces_captured += int(count)
-	Game.record_battle(victory, pieces_lost, pieces_captured, _promotions_this_battle)
+	# ⚠️ LE NUL EST PASSE EXPLICITEMENT. `victory` vaut false pour une defaite
+	# ET pour un nul : sans ce quatrieme argument, le compteur de defaites
+	# compterait les pats, et la missive de defaite arriverait apres un match
+	# nul en disant au joueur qu'il a perdu.
+	Game.record_battle(victory, pieces_lost, pieces_captured,
+			_promotions_this_battle, draw)
 
 	var total_enemies := 0
 	var enemy_data: Dictionary = _battle["enemies"]

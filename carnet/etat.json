@@ -11,10 +11,6 @@
     "groupe": "tout",
     "ordre": [
      {
-      "ref": "n2",
-      "titre": "Le bouton COMBATTEZ ne suit pas la maquette"
-     },
-     {
       "ref": "5",
       "titre": "Les deux lettres du Roi, entre l'intro et le village"
      },
@@ -38,8 +34,8 @@
    },
    "build": {
     "enLigne": false,
-    "commit": "c3568fe",
-    "quoi": "l'intro du Roi accablé (fiche n1)",
+    "commit": "ef84b11",
+    "quoi": "l'intro du Roi accablé (n1) et le bouton COMBATTRE (n2)",
     "note": "Recharge en forçant : le service worker de Godot sert volontiers l'ancien build."
    },
    "sections": [
@@ -370,7 +366,7 @@
        "ref": "n2",
        "titre": "Le bouton COMBATTEZ ne suit pas la maquette",
        "detail": "Détaché de <strong>C</strong> : c'est le seul morceau du paquet qui ne demande pas du code mais un relevé Figma. Dis-moi le node-id, ou je le cherche dans <code>MAINPROJECT</code>.",
-       "statut": "todo",
+       "statut": "attente",
        "priorite": "moyenne",
        "theme": "Interface",
        "journal": [
@@ -378,8 +374,33 @@
          "quand": "24/08",
          "qui": "Claude",
          "texte": "Sorti de la fiche C pour que tu puisses valider le glisser-déposer sans attendre celui-là."
+        },
+        {
+         "quand": "25/08",
+         "qui": "Claude",
+         "texte": "Relevé fait, node-ids : Buttons-Row 410:2140 et Btn-COMBATTRE 410:2143, dans 04_Bataille_Placement. Trois écarts. (1) La paire de boutons est une rangée de 240 pt CENTRÉE ; le jeu l'étirait sur toute la largeur utile. Mesuré en réintroduisant la régression : avant, 100 % de la largeur du panneau et COMBATTRE à 0,0 pt du bord ; après, 216 pt de boutons et 286 pt de marge. (2) La lueur verte pulsée manquait — rgba(51,229,77,.6), qui respire entre 0,70 et 0,40. (3) Le filet clair du haut, inset 2 px de blanc à 20 %."
+        },
+        {
+         "quand": "25/08",
+         "qui": "Claude",
+         "texte": "La lueur ne s'allume QUE lorsque le bouton sert à quelque chose. Ce n'est pas de la décoration : rien d'autre dans l'écran ne dit au joueur qu'il peut arrêter de poser des pièces."
+        },
+        {
+         "quand": "25/08",
+         "qui": "Claude",
+         "texte": "⚠️ Deux défauts d'instrument trouvés en chemin, tous les deux muets. La capture du placement était VIDE depuis toujours — prise quatre images après l'instanciation, avant que l'écran soit apparu : je relevais le bouton sur une image où il n'y avait pas de bouton. Et le saut d'animations faisait crier Godot sur les tweens en boucle : une respiration sans fin n'a pas de fin où sauter."
+        },
+        {
+         "quand": "25/08",
+         "qui": "Claude",
+         "texte": "Banc neuf : ui_test [18], douze assertions sur la rangée, la lueur et son extinction. 230 OK / 0 échec / 0 erreur de script, smoke_test 10/10, format_test les huit formats."
         }
-       ]
+       ],
+       "livre": {
+        "commit": "ef84b11",
+        "quand": "25/08 à 19h05"
+       },
+       "resume": "À vérifier au placement : RÉINITIALISER et COMBATTRE forment une paire CENTRÉE (avant, RÉINITIALISER mangeait toute la largeur et COMBATTRE touchait le bord droit), et COMBATTRE porte une lueur verte qui respire — mais seulement une fois une pièce posée."
       }
      ]
     },
@@ -612,5 +633,5 @@
    "exportWeb": null
   }
  ],
- "serie": 63
+ "serie": 64
 }
