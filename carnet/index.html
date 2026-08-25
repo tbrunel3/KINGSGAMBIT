@@ -387,6 +387,89 @@ button[disabled]{opacity:.45;cursor:progress}
 .ajout .duo{display:grid;grid-template-columns:1fr 1fr;gap:10px}
 .ajout .bas{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
 @media (max-width:560px){.ajout .duo{grid-template-columns:1fr}}
+/* ── l'ajout, en haut de la liste ─────────────────────────────────────────── */
+.ajout-vite{
+  display:flex;gap:8px;align-items:center;flex-wrap:nowrap;
+  border:1px solid var(--filet);border-radius:8px;background:var(--panneau);
+  padding:8px 10px;margin:0 0 10px
+}
+.ajout-vite input{
+  flex:1 1 0;min-width:0;padding:9px 12px;border-radius:6px;background:var(--fond);
+  border:1px solid var(--filet);color:var(--texte);font-family:var(--corps);font-size:14px
+}
+.ajout-vite input:focus{outline:none;border-color:var(--cyan)}
+.ajout-vite .bouton-cyan{padding:9px 12px;flex:none}
+.ajout-vite .lien-champs{
+  background:none;border:0;color:var(--attenue);font-family:var(--mono);font-size:10px;
+  letter-spacing:.06em;text-decoration:underline;cursor:pointer;padding:0;flex:none
+}
+.ajout-vite .lien-champs:hover{color:var(--cyan)}
+@media (max-width:560px){
+  .ajout-vite .lien-champs{text-decoration:none;font-size:15px;letter-spacing:0;padding:0 2px}
+  .ajout-vite .lien-champs::before{content:"⋯"}
+  .ajout-vite .lien-champs > span{display:none}
+}
+.ajout{margin:0 0 12px}
+
+/* ── le « + » du rail ─────────────────────────────────────────────────────── */
+.ajout-registre{
+  width:100%;margin-top:6px;padding:10px;border-radius:6px;
+  border:1px dashed var(--filet);background:transparent;color:var(--attenue);
+  font-family:var(--mono);font-size:10px;letter-spacing:.08em;cursor:pointer
+}
+.ajout-registre:hover{border-color:var(--cyan);color:var(--cyan)}
+.nouveau-registre{display:grid;gap:6px;margin-top:6px}
+.nouveau-registre input{
+  padding:9px 10px;border-radius:6px;background:var(--fond);border:1px solid var(--cyan);
+  color:var(--texte);font-family:var(--corps);font-size:13px;width:100%
+}
+.duo-mini{display:flex;gap:6px}
+.duo-mini > *{flex:1;justify-content:center}
+
+/* ── la priorité, cliquable ───────────────────────────────────────────────── */
+.prio.cliquable{cursor:pointer;border-bottom:1px dotted currentColor}
+.prio.cliquable:hover{filter:brightness(1.4)}
+
+/* ── l'archive ────────────────────────────────────────────────────────────── */
+.carte.archive{display:flex;align-items:center;gap:10px;opacity:.72}
+.carte.archive h3{flex:1;margin:0}
+.bouton-cyan.mini{padding:5px 10px;font-size:10px;flex:none}
+.reglages .ranger{
+  border-color:#2f6b45;color:var(--vert);font-weight:700
+}
+.reglages .ranger:hover{background:rgba(16,185,129,.12)}
+.reglages.replie{gap:8px}
+.reglages .depliant{
+  border-style:dashed;color:var(--attenue);font-weight:600
+}
+.reglages .depliant:hover{border-color:var(--cyan);color:var(--cyan)}
+
+/* ── les outils de la fiche ───────────────────────────────────────────────── */
+.outils-fiche{
+  display:flex;gap:6px;flex-wrap:wrap;margin:10px 0 0;
+  padding-top:10px;border-top:1px solid var(--filet)
+}
+.outils-fiche button{
+  background:transparent;border:1px solid var(--filet);border-radius:6px;
+  padding:7px 10px;color:var(--attenue);font-family:var(--mono);font-size:10px;
+  letter-spacing:.05em;cursor:pointer
+}
+.outils-fiche button:hover{border-color:var(--cyan);color:var(--cyan)}
+.outils-fiche .corbeille:hover{border-color:var(--rouge);color:var(--rouge)}
+.outils-fiche .corbeille.arme{
+  border-color:var(--rouge);background:rgba(239,68,68,.14);color:var(--rouge);font-weight:700
+}
+.edition{display:grid;gap:10px;margin:0 0 14px}
+.edition label{
+  display:grid;gap:5px;font-family:var(--mono);font-size:10px;
+  letter-spacing:.06em;color:var(--attenue)
+}
+.edition input,.edition textarea{
+  padding:9px 11px;border-radius:6px;background:var(--fond);border:1px solid var(--filet);
+  color:var(--texte);font-family:var(--corps);font-size:14px;width:100%
+}
+.edition textarea{min-height:90px;resize:vertical;line-height:1.5}
+.edition input:focus,.edition textarea:focus{outline:none;border-color:var(--cyan)}
 
 /* ───────────────────────────────  L'INSPECTEUR  ──────────────────────────── */
 
@@ -1264,7 +1347,7 @@ button[disabled]{opacity:.45;cursor:progress}
    "exportWeb": null
   }
  ],
- "serie": 69
+ "serie": 74
 }
 </script>
 <script id="app">
@@ -1301,7 +1384,7 @@ button[disabled]{opacity:.45;cursor:progress}
   /* L'ADRESSE DU CARNET QUI COMMANDE. La copie de secours doit pouvoir y
      renvoyer : c'est la seule difference qui compte entre les deux, et le
      joueur a lance le travail depuis la muette faute de le savoir. */
-  var ARTEFACT = "https://claude.ai/code/artifact/47c96d8b-a61a-4222-932d-04430c13692f";
+  var ARTEFACT = "https://claude.ai/code/artifact/857ffdc3-e16a-485b-8651-853b31916069";
 
   var CLE = "carnet-kings-gambit-v5";
   var plusFrais = null;
@@ -1396,6 +1479,21 @@ button[disabled]{opacity:.45;cursor:progress}
   var nomTravail = "";
   var groupeAuto = true;
   var journalDeplie = {};
+  /* L'edition et la suppression vivent dans la VUE, jamais dans l'etat publie :
+     une fiche laissee "en cours d'edition" au moment d'une republication
+     s'ouvrirait en edition chez l'autre lecteur. */
+  var editionOuverte = false;
+  /* ⚠️ LA SUPPRESSION SE CONFIRME. Ce carnet a ete perdu DEUX FOIS, et une
+     corbeille a un clic sur un telephone est le troisieme accident qui attend.
+     Le premier clic arme, le second efface - et le bouton dit lequel il est. */
+  var supprimeArme = null;
+  /* ⚠️ LA BARRE DE REGLAGES SE REPLIE SUR TELEPHONE, et c'est une mesure, pas
+     un gout : a 375 points de large elle prend 139 points de haut - CLASSER,
+     GROUPER, THEME et leurs onze boutons se replient sur cinq rangees. Avec le
+     reste du chrome il ne restait que 307 points de fiches sur un ecran de 812,
+     soit deux lignes et demie. Repliee, elle en rend 110.
+     Elle reste DEPLIEE sur grand ecran, ou la place ne manque pas. */
+  var reglagesOuverts = false;
 
   function J(){ return state.journees[state.active]; }
   function esc(s){
@@ -1428,6 +1526,30 @@ button[disabled]{opacity:.45;cursor:progress}
     });
     return liste;
   }
+  /* ── L'ARCHIVE ────────────────────────────────────────────────────────────
+     ⚠️ ARCHIVER N'EST PAS SUPPRIMER, et la distinction est le point.
+     Une fiche archivée sort de la LISTE DE TRAVAIL, pas des comptes : elle
+     reste validée, la jauge du haut ne bouge pas, le rail affiche toujours
+     « 12/20 ». Sinon archiver ferait reculer l'avancement, et on n'archiverait
+     plus rien.
+     Elle reste consultable dans son onglet, et un bouton l'en sort. Ce qui
+     efface vraiment, c'est la corbeille de l'inspecteur — et elle demande une
+     confirmation, parce que ce carnet a déjà été perdu deux fois. */
+  function archivee(it){ return it.archive === true; }
+  /* Les fiches encore À L'ŒUVRE : tout sauf l'archive. C'est ce que voit
+     l'onglet des tâches, et c'est ce que comptent les onglets. */
+  function vivantes(j){
+    return toutes(j).filter(function(e){ return !archivee(e[0]); });
+  }
+  function archivees(j){
+    return toutes(j).filter(function(e){ return archivee(e[0]); });
+  }
+  /* Validées et pas encore rangées : le chiffre du bouton « tout archiver ». */
+  function aRanger(j){
+    return toutes(j).filter(function(e){
+      return e[0].statut === "ok" && !archivee(e[0]);
+    });
+  }
   /* ⚠️ IL N'Y A PLUS D'AVANCEMENT EN POURCENTAGE, ET C'EST VOULU.
      Le joueur : "les barres d'avancement sont buggées". Elles l'étaient par
      construction — un pourcentage DÉDUIT d'un statut (todo 0, encours 50,
@@ -1443,7 +1565,7 @@ button[disabled]{opacity:.45;cursor:progress}
   }
   function themes(){
     var vus = [];
-    toutes().forEach(function(e){
+    vivantes().forEach(function(e){
       if (theme(e[0]) && vus.indexOf(theme(e[0])) < 0) vus.push(theme(e[0]));
     });
     return vus.sort();
@@ -1506,7 +1628,7 @@ button[disabled]{opacity:.45;cursor:progress}
 
   function paquets(){
     var j = J(), mode = j.groupe || "etat";
-    var vues = toutes().filter(function(e){ return retenue(e[0]); });
+    var vues = vivantes().filter(function(e){ return retenue(e[0]); });
     if (mode === "section"){
       return j.sections.map(function(sec, si){
         return {titre:sec.titre.toUpperCase(), chapo:sec.chapo, classe:"g-todo",
@@ -1588,6 +1710,21 @@ button[disabled]{opacity:.45;cursor:progress}
          + '<span class="nom">'+esc(sj.nom)+'</span>'
          + '<span class="part">'+faites+'/'+total+'</span></button>';
     });
+    /* ⚠️ LE « + » EST ICI, AU BOUT DE LA LISTE QU'IL RALLONGE, et plus dans la
+       barre du haut. Un registre est un CHANTIER A PART - « un autre travail
+       qui n'aurait rien a voir » - et les chantiers vivent dans ce rail. Le
+       bouton posé ailleurs demandait de deviner qu'il agissait ici. */
+    if (!lectureSeule){
+      if (nommeOuvert){
+        h += '<form class="nouveau-registre" data-nommer="1">'
+          +  '<input name="nom" required autofocus placeholder="Le nom du chantier">'
+          +  '<div class="duo-mini"><button class="bouton-cyan" type="submit">CRÉER</button>'
+          +  '<button class="bouton-cyan sourd" type="button" data-annuler="1">Annuler</button></div>'
+          +  '</form>';
+      } else {
+        h += '<button class="ajout-registre" data-nouvelle="1">+ NOUVEAU REGISTRE</button>';
+      }
+    }
     h += '</nav>' + moteurHtml(j) + '</aside>';
 
     /* ── la colonne principale ── */
@@ -1642,9 +1779,14 @@ button[disabled]{opacity:.45;cursor:progress}
     }
     h += '<div class="espace"><div class="colonne">' + ongletsHtml(j);
 
-    if (vueOnglet === "actives")      h += reglagesHtml(j) + listeHtml(j) + ajoutHtml(j);
+    /* ⚠️ L'AJOUT EST EN HAUT, PAS EN BAS. Il était en fin de liste, derrière un
+       bouton de la barre du haut : deux gestes et un défilement pour écrire une
+       ligne qu'on a en tête tout de suite. Le bouton est retiré — il faisait
+       doublon avec le champ, qui est maintenant toujours là. */
+    if (vueOnglet === "actives")       h += ajoutHtml(j) + reglagesHtml(j) + listeHtml(j);
     else if (vueOnglet === "verifier") h += attenteHtml();
     else if (vueOnglet === "marche")   h += marcheHtml(j);
+    else if (vueOnglet === "archives") h += archivesHtml(j);
     else                               h += nettoyageHtml(j);
 
     h += piedHtml(j) + '</div>' + inspecteurHtml(j) + '</div>';
@@ -1688,11 +1830,14 @@ button[disabled]{opacity:.45;cursor:progress}
     h += '<span class="mot">'+val+'/'+tout.length+' VALIDÉES</span>' + jauge(pc);
     h += '<span class="voyant '+(b.enLigne?'vert':'ambre')+'"><i></i>'
       + (b.enLigne ? esc(String(b.commit||"build"))+' EN LIGNE' : 'PAS ENCORE EN LIGNE')+'</span>';
-    h += '</div><div class="actions-haut">';
-    h += '<button class="bouton-cyan" data-ouvrir-ajout="1"><svg width="12" height="12" viewBox="0 0 14.5 14.5" fill="none"><path d="M1.25 7.25H13.25M7.25 1.25V13.25" stroke="#060913" stroke-width="2.5" stroke-linecap="round"/></svg>AJOUTER UN TRAVAIL</button>';
-    h += '<button class="bouton-cyan sourd" data-nouvelle="1">+ REGISTRE</button>';
+    /* ⚠️ PLUS AUCUN BOUTON ICI, ET LES DEUX ONT ETE RETIRES POUR LA MEME
+       RAISON : ils doublonnaient l'endroit ou la chose se fait. « AJOUTER UN
+       TRAVAIL » ouvrait un formulaire qui est desormais toujours en haut de la
+       liste ; « + REGISTRE » creait un registre alors que les registres vivent
+       dans le rail, a gauche - le « + » y est maintenant, au bout de la liste
+       qu'il rallonge. */
     h += '</div></div>';
-    if (nommeOuvert){
+    if (false){
       h += '<form class="barre-haute" data-nommer="1" style="gap:8px">'
         + '<input name="nom" required placeholder="Le nom du registre — « 25/08, les animations »" '
         + 'style="flex:1 1 240px;padding:9px 12px;border-radius:6px;background:var(--fond);'
@@ -1742,8 +1887,10 @@ button[disabled]{opacity:.45;cursor:progress}
   function ongletsHtml(j){
     var att = enAttente().length;
     var ouv = toutes(j).filter(function(e){ return ouverte(e[0]) && retenue(e[0]); }).length;
+    var arc = archivees(j).length;
     var o = [["actives","Tâches actives",ouv,"cyan"],["verifier","À vérifier",att,""],
-             ["marche","Ordre de marche",0,""],["nettoyage","Nettoyage",0,""]];
+             ["marche","Ordre de marche",0,""],["nettoyage","Nettoyage",0,""],
+             ["archives","Archives",arc,""]];
     var h = '<nav class="onglets">';
     o.forEach(function(x){
       h += '<button data-onglet="'+x[0]+'"'+(vueOnglet===x[0]?' class="actif"':'')+'>'+x[1];
@@ -1754,7 +1901,21 @@ button[disabled]{opacity:.45;cursor:progress}
   }
 
   function reglagesHtml(j){
-    var h = '<div class="reglages"><span class="mot">CLASSER</span>';
+    var ranger = aRanger(j).length;
+    var etroit = window.innerWidth <= 560;
+    if (etroit && !reglagesOuverts){
+      var h0 = '<div class="reglages replie">';
+      h0 += '<button data-reglages="1" class="depliant">⚙ CLASSER · GROUPER · THÈME</button>';
+      if (filtreTheme) h0 += '<button data-filtre="" class="actif">'+esc(filtreTheme)+' ✕</button>';
+      if (ranger && !lectureSeule){
+        h0 += '<button data-archiver-tout="1" class="ranger" title="Archiver les '
+           +  ranger+' fiches validées">↓ ARCHIVER ('+ranger+')</button>';
+      }
+      return h0 + '</div>';
+    }
+    var h = '<div class="reglages">';
+    if (etroit) h += '<button data-reglages="0" class="depliant actif">⚙ REPLIER</button>';
+    h += '<span class="mot">CLASSER</span>';
     h += '<button data-tri="priorite"'+(j.tri!=="manuel"?' class="actif"':'')+'>priorité</button>';
     h += '<button data-tri="manuel"'+(j.tri==="manuel"?' class="actif"':'')+'>à la main</button>';
     h += '<span class="sep"></span><span class="mot">GROUPER</span>';
@@ -1768,6 +1929,11 @@ button[disabled]{opacity:.45;cursor:progress}
       ts.forEach(function(t){
         h += '<button data-filtre="'+esc(t)+'"'+(filtreTheme===t?' class="actif"':'')+'>'+esc(t)+'</button>';
       });
+    }
+    if (ranger && !lectureSeule){
+      h += '<span class="sep"></span>';
+      h += '<button data-archiver-tout="1" class="ranger" title="Archiver les '
+        +  ranger+' fiches validées">↓ ARCHIVER ('+ranger+')</button>';
     }
     return h + '</div>';
   }
@@ -1790,9 +1956,15 @@ button[disabled]{opacity:.45;cursor:progress}
     if (rang) h += '<span class="puce-focus">'+rang+'<sup>'+(rang===1?"re":"e")+'</sup> DE L’ORDRE</span>';
     h += '</span><span class="badge '+it.statut+'">'+LABEL[it.statut]+'</span></span>';
     h += '<h3>'+esc(it.titre)+'</h3>';
-    h += '<span class="avance"><span class="prio prio-'+prio(it)+'">'
-      +  prio(it).toUpperCase()+'</span>'
-      +  (theme(it) ? '' : '') + '</span>';
+    /* ⚠️ LA PASTILLE DE PRIORITE EST CLIQUABLE, et elle tourne : haute →
+       moyenne → basse → haute. C'est le reglage qu'on change le plus souvent
+       et le seul qui demandait d'ouvrir l'inspecteur puis de viser un menu
+       deroulant. Un `span` et non un `button` : la carte EST un bouton, et un
+       bouton dans un bouton n'est pas du HTML valide - le clic est intercepte
+       avant celui de la carte. */
+    h += '<span class="avance"><span class="prio prio-'+prio(it)+' cliquable" '
+      +  'data-cycle-prio="1" title="Changer la priorité">'
+      +  prio(it).toUpperCase()+'</span></span>';
     return h + '</button>';
   }
 
@@ -1943,8 +2115,46 @@ button[disabled]{opacity:.45;cursor:progress}
     return h;
   }
 
+  /* ⚠️ UNE SEULE LIGNE PAR DEFAUT, ET SIX CHAMPS A LA DEMANDE.
+     Le formulaire complet toujours deplie mangerait l'ecran : sur 375 points de
+     large, le chrome laissait deja 465 points aux fiches, et six champs en
+     prennent 300. On garde donc l'essentiel visible - le titre, et le bouton -
+     et « plus de champs » deplie le reste EN PLACE, sans quitter le haut. */
+  /* LES ARCHIVES. Repliees, consultables, et reversibles : une ligne archivée
+     par erreur se ressort d'un clic. */
+  function archivesHtml(j){
+    var arc = archivees(j);
+    var h = '';
+    if (!arc.length){
+      return '<div class="vide">AUCUNE FICHE ARCHIVÉE.<br><span style="opacity:.7">'
+        + 'Range ici ce que tu as validé et qui n’a plus à encombrer la liste.</span></div>';
+    }
+    h += '<div class="groupe-titre g-ok">ARCHIVÉES<span class="compte">'+arc.length+'</span></div>';
+    h += '<div class="fiches">';
+    arc.forEach(function(e){
+      h += '<div class="carte ok archive" data-s="'+e[1]+'" data-i="'+e[2]+'">';
+      h += '<span class="pastille-ronde" style="background:var(--vert)"></span>';
+      h += '<span class="ref">'+esc(e[0].ref)+'</span><h3>'+esc(e[0].titre)+'</h3>';
+      if (!lectureSeule){
+        h += '<button class="bouton-cyan sourd mini" data-desarchiver="1">SORTIR</button>';
+      }
+      h += '</div>';
+    });
+    return h + '</div>';
+  }
+
   function ajoutHtml(j){
-    if (!ajoutOuvert) return "";
+    if (lectureSeule) return "";
+    if (!ajoutOuvert){
+      return '<form class="ajout-vite" data-ajout="1" data-vite="1">'
+        + '<input name="titre" placeholder="Ajouter un travail — ce que tu veux voir corrigé ou fait">'
+        + '<button class="bouton-cyan" type="submit" title="Ajouter au carnet">'
+        + '<svg width="12" height="12" viewBox="0 0 14.5 14.5" fill="none"><path d="M1.25 7.25H13.25'
+        + 'M7.25 1.25V13.25" stroke="#060913" stroke-width="2.5" stroke-linecap="round"/></svg></button>'
+        + '<button class="lien-champs" type="button" data-ouvrir-ajout="1" '
+        + 'title="Plus de champs"><span>plus de champs</span></button>'
+        + '<span class="etat" id="etat-ajout"></span></form>';
+    }
     var h = '<form class="ajout" data-ajout="1"><h2>+ AJOUTER UN TRAVAIL</h2>';
     h += '<label>CE QUE TU VEUX VOIR CORRIGÉ OU FAIT<input name="titre" required placeholder="Le bouton COMBATTEZ ne suit pas la maquette"></label>';
     h += '<label>LE DÉTAIL, SI TU EN AS<textarea name="detail" placeholder="Où tu l’as vu, ce que tu attendais…"></textarea></label>';
@@ -1961,7 +2171,7 @@ button[disabled]{opacity:.45;cursor:progress}
       +  '<option value="ko">toujours cassé</option><option value="attente">à vérifier</option>'
       +  '</select></label></div>';
     h += '<div class="bas"><button class="bouton-cyan" type="submit">AJOUTER AU CARNET</button>';
-    h += '<button class="bouton-cyan sourd" type="button" data-fermer-ajout="1">ANNULER</button>';
+    h += '<button class="bouton-cyan sourd" type="button" data-fermer-ajout="1">Replier</button>';
     h += '<span class="etat" id="etat-ajout"></span></div></form>';
     return h;
   }
@@ -1979,7 +2189,16 @@ button[disabled]{opacity:.45;cursor:progress}
     h += '<div data-s="'+visee.s+'" data-i="'+visee.i+'" style="display:contents">';
     h += '<div class="insp-tete"><span class="mot">INSPECTEUR CONSOLE // FICHE '+esc(it.ref)+'</span>';
     h += '<span class="badge '+it.statut+'">'+LABEL[it.statut]+'</span></div>';
-    h += '<h2 class="sujet">'+esc(it.titre)+'</h2><hr class="trait">';
+    if (editionOuverte && !lectureSeule){
+      h += '<form class="edition" data-editer="1">'
+        +  '<label>TITRE<input name="titre" required value="'+esc(it.titre)+'"></label>'
+        +  '<label>DÉTAIL<textarea name="detail">'+esc(detailBrut(it))+'</textarea></label>'
+        +  '<div class="duo-mini"><button class="bouton-cyan" type="submit">ENREGISTRER</button>'
+        +  '<button class="bouton-cyan sourd" type="button" data-editer-annuler="1">Annuler</button>'
+        +  '</div></form><hr class="trait">';
+    } else {
+      h += '<h2 class="sujet">'+esc(it.titre)+'</h2><hr class="trait">';
+    }
 
     h += '<div class="meta">';
     var liv = it.livre;
@@ -1992,7 +2211,7 @@ button[disabled]{opacity:.45;cursor:progress}
                    prio(it)==="haute"?"rouge":prio(it)==="basse"?"":"");
     h += '</div>';
 
-    if (it.detail) h += '<p class="insp-detail">'+it.detail+'</p>';
+    if (it.detail && !editionOuverte) h += '<p class="insp-detail">'+it.detail+'</p>';
 
     if (!lectureSeule){
       h += '<div class="bloc-note"><span>NOTE DE RAPPORT DE VALIDATION (ENTRÉE LOG)</span>';
@@ -2013,11 +2232,36 @@ button[disabled]{opacity:.45;cursor:progress}
         h += '<button data-bouge="-1" title="Monter">↑</button><button data-bouge="1" title="Descendre">↓</button>';
       }
       h += '<span class="etat"></span></div>';
+
+      /* ── LES OUTILS DE LA FICHE ────────────────────────────────────────────
+         Trois gestes rares, groupés à part des verdicts : on ne les cherche
+         qu'en sachant qu'on les veut, et aucun ne doit tomber sous le pouce
+         quand on visait « Ça marche ». */
+      h += '<div class="outils-fiche">';
+      h += '<button data-editer-ouvrir="1">✎ Éditer</button>';
+      if (it.statut === "ok"){
+        h += archivee(it)
+          ? '<button data-desarchiver="1">↑ Sortir de l’archive</button>'
+          : '<button data-archiver="1">↓ Archiver</button>';
+      }
+      var arme = supprimeArme === it.ref;
+      h += '<button class="corbeille'+(arme?' arme':'')+'" data-supprimer="1">'
+        +  (arme ? '⚠ CONFIRMER LA SUPPRESSION' : '🗑 Supprimer') + '</button>';
+      h += '</div>';
     }
     h += '</div>';
 
     h += '<hr class="trait">' + journalHtml(it) + resumeJourneesHtml();
     return h + '</aside>';
+  }
+
+  /* Le détail accepte du HTML (<strong>, <code>, <em>) : pour l'éditer il faut
+     le rendre lisible. On ne défait que ce que le formulaire d'ajout échappe,
+     le reste est de la mise en forme que j'ai posée et qu'il peut garder. */
+  function detailBrut(it){
+    return String(it.detail || "")
+      .replace(/&lt;/g, "<").replace(/&gt;/g, ">")
+      .replace(/&quot;/g, '"').replace(/&amp;/g, "&");
   }
 
   function ligneMeta(cle, val, classe){
@@ -2196,12 +2440,32 @@ button[disabled]{opacity:.45;cursor:progress}
       return;
     }
 
+    f = ev.target.closest("form[data-editer]");
+    if (f){
+      ev.preventDefault();
+      var ie = fiche(visee);
+      if (!ie) return;
+      var nt = f.titre.value.trim();
+      if (!nt){ f.titre.focus(); return; }
+      ie.titre = nt;
+      ie.detail = f.detail.value.trim();
+      editionOuverte = false;
+      touche(); render();
+      enregistrer(root.querySelector(".inspecteur .etat"));
+      return;
+    }
+
     f = ev.target.closest("form[data-ajout]");
     if (!f) return;
     ev.preventDefault();
     var titre = f.titre.value.trim();
     if (!titre){ f.titre.focus(); return; }
-    var si = +f.section.value, n = 1;
+    /* L'ajout rapide n'a QUE le titre. Les autres champs prennent le défaut
+       le plus probable : la première section, priorité moyenne, à faire, et le
+       thème du filtre en cours - c'est presque toujours celui qu'on regardait
+       quand l'idée est venue. */
+    var vite = f.dataset.vite === "1";
+    var si = vite ? 0 : +f.section.value, n = 1;
     J().sections.forEach(function(sec){
       sec.items.forEach(function(it){
         var m = /^n(\d+)$/.exec(it.ref);
@@ -2209,8 +2473,11 @@ button[disabled]{opacity:.45;cursor:progress}
       });
     });
     J().sections[si].items.push({
-      ref:"n"+n, titre:titre, detail:esc(f.detail.value.trim()),
-      statut:f.statut.value, priorite:f.priorite.value, theme:f.theme.value.trim(),
+      ref:"n"+n, titre:titre,
+      detail: vite ? "" : esc(f.detail.value.trim()),
+      statut: vite ? "todo" : f.statut.value,
+      priorite: vite ? "moyenne" : f.priorite.value,
+      theme: vite ? (filtreTheme || "") : f.theme.value.trim(),
       journal:[{quand:aujourdhui(), qui:"Toi", texte:"Ajoutée au carnet."}]
     });
     touche(); ajoutOuvert = false; render();
@@ -2263,6 +2530,72 @@ button[disabled]{opacity:.45;cursor:progress}
     }
     if (t.closest("button[data-ouvrir-ajout]")){ vueOnglet="actives"; ajoutOuvert=true; render(); return; }
     if (t.closest("button[data-fermer-ajout]")){ ajoutOuvert=false; render(); return; }
+
+    /* ── LA PRIORITE, AU CLIC SUR LA PASTILLE ──────────────────────────────
+       ⚠️ AVANT le clic de la carte : la pastille vit DEDANS, et sans ce
+       retour anticipé changer la priorité ouvrirait aussi l'inspecteur. */
+    var cyc = t.closest("[data-cycle-prio]");
+    if (cyc && !lectureSeule){
+      ev.preventDefault(); ev.stopPropagation();
+      var hc = cyc.closest("[data-s]");
+      if (!hc) return;
+      var ic = J().sections[+hc.dataset.s].items[+hc.dataset.i];
+      var ROND = ["haute","moyenne","basse"];
+      ic.priorite = ROND[(ROND.indexOf(prio(ic)) + 1) % 3];
+      touche(); render();
+      enregistrer(root.querySelector(".inspecteur .etat"));
+      return;
+    }
+
+    /* ── ARCHIVER ──────────────────────────────────────────────────────────
+       Une seule ligne, ou toutes les validées d'un coup. Réversible dans les
+       deux sens : rien n'est perdu, la fiche change de rangement. */
+    var arch = t.closest("[data-archiver]");
+    if (arch && !lectureSeule){
+      var ha = arch.closest("[data-s]");
+      if (!ha) return;
+      var ia = J().sections[+ha.dataset.s].items[+ha.dataset.i];
+      ia.archive = true;
+      touche(); render();
+      enregistrer(root.querySelector(".inspecteur .etat"));
+      return;
+    }
+    var desa = t.closest("[data-desarchiver]");
+    if (desa && !lectureSeule){
+      var hd = desa.closest("[data-s]");
+      if (!hd) return;
+      var id2 = J().sections[+hd.dataset.s].items[+hd.dataset.i];
+      delete id2.archive;
+      touche(); render();
+      enregistrer(root.querySelector(".inspecteur .etat"));
+      return;
+    }
+    if (t.closest("[data-archiver-tout]") && !lectureSeule){
+      aRanger(J()).forEach(function(e){ e[0].archive = true; });
+      touche(); render();
+      enregistrer(document.getElementById("etat-marche"));
+      return;
+    }
+
+    /* ── LA CORBEILLE, EN DEUX TEMPS ───────────────────────────────────────
+       Le premier clic ARME, le second efface, et le bouton dit lequel il est.
+       Viser une autre fiche désarme : on ne garde pas une corbeille amorcée
+       dans le dos du lecteur. */
+    var supp = t.closest("[data-supprimer]");
+    if (supp && !lectureSeule && visee){
+      var isup = fiche(visee);
+      if (!isup) return;
+      if (supprimeArme !== isup.ref){ supprimeArme = isup.ref; render(); return; }
+      J().sections[visee.s].items.splice(visee.i, 1);
+      supprimeArme = null; visee = null; inspOuvert = false;
+      touche(); render();
+      enregistrer(document.getElementById("etat-marche"));
+      return;
+    }
+
+    /* ── EDITER LE TITRE ET LE DETAIL ──────────────────────────────────────*/
+    if (t.closest("[data-editer-ouvrir]")){ editionOuverte = true; render(); return; }
+    if (t.closest("[data-editer-annuler]")){ editionOuverte = false; render(); return; }
     if (t.closest("button[data-nouvelle]")){ nommeOuvert=true; render(); return; }
     if (t.closest("button[data-annuler]")){ nommeOuvert=false; render(); return; }
     if (t.closest("button[data-fermer-insp]")){ inspOuvert=false; render(); return; }
@@ -2278,6 +2611,8 @@ button[disabled]{opacity:.45;cursor:progress}
       J().tri = tri.dataset.tri; touche(); render();
       enregistrer(document.getElementById("etat-marche")); return;
     }
+    var rgl = t.closest("button[data-reglages]");
+    if (rgl){ reglagesOuverts = rgl.dataset.reglages === "1"; render(); return; }
     var grp = t.closest("button[data-groupe]");
     if (grp){
       if ((J().groupe||"etat") === grp.dataset.groupe) return;
@@ -2421,6 +2756,10 @@ button[disabled]{opacity:.45;cursor:progress}
     if (carte){
       visee = {s:+carte.dataset.s, i:+carte.dataset.i};
       inspOuvert = true;
+      /* Changer de fiche désarme la corbeille et referme l'édition : les deux
+         portaient sur la fiche PRECEDENTE. */
+      supprimeArme = null;
+      editionOuverte = false;
       render();
       return;
     }
