@@ -372,22 +372,6 @@ button[disabled]{opacity:.45;cursor:progress}
 .livraison{font-family:var(--mono);font-size:11px;color:var(--vert);display:flex;gap:8px;flex-wrap:wrap}
 .livraison code{color:var(--cyan)}
 .livraison .attend{color:var(--ambre)}
-/* ⚠️ TROIS ETATS DE LIVRAISON, ET LE CARNET N'EN MONTRAIT AUCUN.
-   Le chapo de l'onglet disait « Livres et en ligne » pour tout le monde : il
-   mentait des qu'une fiche etait livree sans reexport web, et le joueur allait
-   tester sur son telephone une correction que le build ne portait pas. */
-.pastille-livr{
-  font-family:var(--mono);font-size:9.5px;font-weight:700;letter-spacing:.06em;
-  padding:2px 7px;border-radius:3px;border:1px solid;white-space:nowrap;
-}
-.pastille-livr.vert{color:var(--vert);border-color:var(--vert);background:var(--fond-vert)}
-.pastille-livr.ambre{color:var(--ambre);border-color:var(--ambre);background:#1d1608}
-.pastille-livr.rouge{color:var(--rouge);border-color:var(--rouge);background:var(--fond-rouge)}
-.attente-bloc .groupe{
-  margin:14px 0 8px;font-family:var(--mono);font-size:10.5px;letter-spacing:.08em;
-  color:var(--attenue);display:flex;align-items:center;gap:8px;
-}
-.attente-bloc .groupe:before{content:"";flex:1 0 10px;height:1px;background:var(--filet);order:2}
 
 /* ───────────────────────────── LE FORMULAIRE D'AJOUT ─────────────────────── */
 
@@ -598,28 +582,24 @@ button[disabled]{opacity:.45;cursor:progress}
    "tri": "priorite",
    "marche": {
     "nom": "reprise, demandee en discussion",
-    "lance": "24/08 à 18h05",
+    "lance": "24/08 à 16h05",
     "groupe": "tout",
     "ordre": [
      {
-      "ref": "n1",
-      "titre": "l'intro — bloquée : Figma non autorisé"
+      "ref": "d2",
+      "titre": "L'audit du banc d'interface n'a jamais été fait"
      },
      {
-      "ref": "n2",
-      "titre": "Le bouton COMBATTEZ — bloqué : Figma non autorisé"
-     },
-     {
-      "ref": "6",
-      "titre": "Les popups d'accompagnement — bloqués : Figma non autorisé"
+      "ref": "d3",
+      "titre": "Quatre zones défilantes jamais auditées"
      }
     ]
    },
    "build": {
-    "enLigne": "24/08, 17h56",
-    "commit": "70c353b",
-    "quoi": "d1 (la charge gelée), d2 (le banc qui n'appuyait sur rien), d3 (les quatre zones défilantes) et la part code de la fiche 5 — le compteur de défaites",
-    "note": "Recharge en forçant : le service worker de Godot sert volontiers l'ancien build."
+    "enLigne": "25/08, 21h30",
+    "commit": "5d42afe",
+    "quoi": "l'intro du Roi accablé (n1), le bouton COMBATTRE (n2), les quatre missives (5), l'habillage des popups (6) et la charge gelée en série (d1)",
+    "note": "Recharge en FORÇANT : le service worker de Godot sert volontiers l'ancien build."
    },
    "sections": [
     {
@@ -688,9 +668,7 @@ button[disabled]{opacity:.45;cursor:progress}
        "theme": "Village",
        "livre": {
         "commit": "7dcf766",
-        "quand": "24/08 à 02h30",
-        "pousse": true,
-        "enLigne": true
+        "quand": "24/08 à 02h30"
        }
       },
       {
@@ -714,9 +692,7 @@ button[disabled]{opacity:.45;cursor:progress}
        "theme": "Navigation",
        "livre": {
         "commit": "7dcf766",
-        "quand": "24/08 à 02h30",
-        "pousse": true,
-        "enLigne": true
+        "quand": "24/08 à 02h30"
        }
       }
      ]
@@ -777,9 +753,7 @@ button[disabled]{opacity:.45;cursor:progress}
        "theme": "Placement",
        "livre": {
         "commit": "940d5ea",
-        "quand": "24/08 à 03h05",
-        "pousse": true,
-        "enLigne": true
+        "quand": "24/08 à 03h05"
        },
        "resume": "À vérifier : glisse une carte de la caserne dans le déploiement, et une pièce de l'inventaire directement sur sa case. Le tap doit marcher exactement comme avant, partout."
       },
@@ -829,9 +803,7 @@ button[disabled]{opacity:.45;cursor:progress}
        "theme": "Animations",
        "livre": {
         "commit": "c21d0ac",
-        "quand": "24/08 à 14h31",
-        "pousse": true,
-        "enLigne": true
+        "quand": "24/08 à 14h31"
        },
        "resume": "À vérifier : appuie sur n'importe quel bouton (il doit s'enfoncer), gagne ou dépense de l'or au village (le compteur doit monter, pas sauter), et ouvre le codex (il doit se monter en cascade au lieu d'apparaître d'un bloc)."
       },
@@ -891,63 +863,85 @@ button[disabled]{opacity:.45;cursor:progress}
        "theme": "Interface",
        "livre": {
         "commit": "49d4f3b",
-        "quand": "24/08 à 15h50",
-        "pousse": true,
-        "enLigne": true
+        "quand": "24/08 à 15h50"
        },
        "resume": "À vérifier au village : la barre du haut est collée en haut, or / gemmes / Missions / infos / réglages sont sur UNE ligne, les boutons de droite sont plus gros, et la Boutique est enfin alignée sur BATAILLE. ⚠️ E4 (les missions « très modestes ») n'est PAS fait : dis-moi ce que tu veux y voir."
       },
       {
        "ref": "5",
        "titre": "Les deux lettres du Roi, entre l'intro et le village",
-       "detail": "Les quatre lettres du Roi, qui portent le \u003cem>pourquoi\u003c/em> du jeu là où \u003ccode>GuidePopup\u003c/code> porte le comment. L'enveloppe se pose, le doigt touche le cachet, le parchemin se déroule \u003cstrong>en trois temps sur les plissures peintes\u003c/strong> (39,5 % et 65,4 %), le texte s'écrit bloc par bloc. La première s'impose une fois ; les trois autres attendent dans la \u003cstrong>pile de courrier du Château Royal\u003c/strong>. Le \u003cstrong>compteur de défaites\u003c/strong> qui manquait au jeu est là, et un nul n'en est pas une. \u003cstrong>⚠️ Tes deux PNG ne sont pas dans le dépôt\u003c/strong> — sans eux le papier se dessine (même géométrie, même dépli). Pose \u003ccode>assets/story/letter_envelope.png\u003c/code> et \u003ccode>letter_parchment.png\u003c/code> et l'illustration prend leur place sans une ligne de code.",
+       "detail": "Les écrans sont faits par le graphiste. Le reste est déjà spécifié dans \u003ccode>chantier_i_missives.md\u003c/code> : mesures des illustrations, quatre textes, déclencheurs. \u003cstrong>Une seule pièce manque au jeu : il n'a aucun compteur de défaite.\u003c/strong>",
        "statut": "attente",
        "journal": [
         {
-         "quand": "24/08",
+         "quand": "25/08",
          "qui": "Claude",
-         "texte": "Part code livrée en 2750e83 : letters.gd, l'état dans GameState, le compteur de défaites (un nul n'en est pas une — mesuré : le banc échoue à 1 au lieu de 0 sans la distinction). L'écran enveloppe/parchemin attend les deux PNG."
+         "texte": "Le graphiste a refait le support, et c'est plus simple que la spec : deux frames neuves (lettre-roi-fermée 510:2 et lettre-roi-ouverte 510:7). Une enveloppe scellée sur le village assombri, puis un parchemin à cadre doré. Plus de dépli en trois tranches sur les plissures — tout ce que chantier_i_missives.md décrivait là-dessus n'a plus lieu d'être."
         },
         {
-         "quand": "24/08",
+         "quand": "25/08",
          "qui": "Claude",
-         "texte": "Reprise demandée en discussion. Je prends l'écran de dépli : la géométrie se mesure sans les images (les plissures sont à 39,5 % et 65,4 %, relevées dans la spec), et les deux PNG ne seront plus qu'un échange de texture."
+         "texte": "C'est un CALQUE, pas un écran : le fond est le vrai village, comme dans la maquette. Mesuré : il passe de 90,2 à 35,9 de luminance, soit exactement le voile à 0,60 de la maquette."
         },
         {
-         "quand": "24/08",
+         "quand": "25/08",
          "qui": "Claude",
-         "texte": "Écran livré. Mesures : format_test [4] rend 0,00 pt de dérive sur les huit formats, plis à 39,5 % / 65,4 % partout. ui_test [19] : glisser depuis le cachet n'ouvre rien, le toucher l'ouvre, aucune tranche ne reste écrasée. smoke_test 10/10."
+         "texte": "⚠️ Le piège annoncé par la spec était réel : record_battle recevait « pas de victoire » aussi bien pour une défaite que pour un NUL. Le pat est fréquent (6 des 19 parties du banc) : la lettre de défaite serait arrivée tôt et à presque tout le monde, après un combat qu'ils n'avaient pas perdu. Le nul est maintenant passé explicitement."
+        },
+        {
+         "quand": "25/08",
+         "qui": "Claude",
+         "texte": "⚠️ Deux points à trancher pour toi. (1) La maquette écrit « mon plus fidèle destrier ainsi que trois de mes gardes » et « ramenez-moi les quatre » ; le jeu en donne quatre plus un. J'ai gardé le ton et recalculé les chiffres depuis Balance, comme le veut la règle. (2) Elle demande Poppins Medium, une graisse qu'on n'embarque pas : j'ai mis Comic Relief, déjà là et déjà établie comme la voix du Roi dans la bulle de l'intro."
+        },
+        {
+         "quand": "25/08",
+         "qui": "Claude",
+         "texte": "Bancs neufs : ui_test [19] (36 assertions) et format_test [4] (centrage à 0,00 pt sur les huit formats). ui_test 266 OK / 0 échec / 0 erreur, smoke_test 10/10. Et un banc qui échouait une fois sur deux a été corrigé au passage — il lisait le compteur d'or exactement une image après le gain."
         }
        ],
        "priorite": "basse",
        "theme": "Récit",
        "livre": {
-        "commit": "533a02e",
-        "quand": "24/08 à 18h30",
-        "pousse": true,
-        "enLigne": false
-       }
+        "commit": "166773c",
+        "quand": "25/08 à 20h05"
+       },
+       "resume": "À vérifier : au tout premier retour au village après l'intro, une enveloppe scellée se pose sur le village assombri. Un doigt l'ouvre en parchemin. Les trois autres lettres n'apparaissent pas : elles attendent au Château Royal, avec une pastille ✉ sur l'enseigne du château."
       },
       {
        "ref": "6",
        "titre": "Les popups d'accompagnement de Figma",
        "detail": "Quatre maquettes posées (pat, composition, aura de la Dame, temps réel), jamais intégrées telles quelles. Le code les affiche déjà une fois chacune — c'est leur habillage qui reste.",
-       "statut": "todo",
+       "statut": "attente",
        "journal": [
         {
-         "quand": "24/08",
+         "quand": "25/08",
          "qui": "Claude",
-         "texte": "⚠️ Les quatre maquettes (499:2, 500:2, 500:55, 500:108) ne sont pas lisibles sans Figma."
+         "texte": "Le contenu était déjà bon. Les quatre maquettes portent EXACTEMENT le même habillage quel que soit le sujet ; le code, lui, les servait dans quatre contextes différents. Le popup du pat — le plus utile des quatre — avait donc un cadre gris et une couronne grise."
+        },
+        {
+         "quand": "25/08",
+         "qui": "Claude",
+         "texte": "⚠️ Deux vrais défauts trouvés en le faisant. Le bouton J'AI COMPRIS était en or sourd avec un libellé BLANC — le pire contraste du jeu, sur le seul bouton de ces quatre écrans. Et le glyphe du pat était la couronne BRISÉE, celle du blason de la défaite, sur un écran dont la troisième règle est « ta série n'est pas rompue »."
+        },
+        {
+         "quand": "25/08",
+         "qui": "Claude",
+         "texte": "Les quatre popups n'avaient AUCUNE capture, alors qu'ils ne se montrent qu'une fois chacun en jeu : la seule façon de les revoir était de repartir d'une sauvegarde neuve. Elles existent maintenant. Bancs : ui_test 266 OK / 0 échec, smoke_test 10/10, format_test les huit formats."
         }
        ],
        "priorite": "basse",
-       "theme": "Interface"
+       "theme": "Interface",
+       "livre": {
+        "commit": "baff6c2",
+        "quand": "25/08 à 21h20"
+       },
+       "resume": "À vérifier : les quatre popups d'accompagnement (pat, composition, aura de la Dame, amélioration en temps réel) sont maintenant cerclés d'or, avec une pastille ronde sous le glyphe et un bouton J'AI COMPRIS doré à texte foncé. Ils se ressemblent tous les quatre — c'est voulu."
       },
       {
        "ref": "n1",
        "titre": "l'intro",
        "detail": "je vois seulement la deuxieme image de l'ecran figma, il faut que au depart le bouton soit cet ecran : https://www.figma.com/design/rqEdH4O2R21TuUFv7OUlF7/KING-sGAMBIT?node-id=410-35&amp;t=ttUec04lRmnYwEXC-4\napres le click ça passe à ça :https://www.figma.com/design/rqEdH4O2R21TuUFv7OUlF7/KING-sGAMBIT?node-id=525-2&amp;t=ttUec04lRmnYwEXC-4 . L'ecran a ete retravaillé par le graphiste tu peux t'y fier aussi a l'animation avec le zoom",
-       "statut": "encours",
+       "statut": "attente",
        "priorite": "moyenne",
        "journal": [
         {
@@ -961,18 +955,33 @@ button[disabled]{opacity:.45;cursor:progress}
          "texte": "« continue les taches du carnet » — reprise demandee en discussion apres l'arret."
         },
         {
-         "quand": "24/08",
+         "quand": "25/08",
          "qui": "Claude",
-         "texte": "⚠️ Bloquée ici : la connexion Figma demande une autorisation que cette session ne peut pas faire. Je ne peux pas lire l'écran 525:2 que le graphiste a retravaillé."
+         "texte": "Deux causes, pas une. (1) La maquette a DEUX illustrations du même plan — le Roi accablé (410:35) et le Roi redressé (410:71) — et le jeu n'embarquait que la seconde. Mesuré sur les deux exports : même cadrage exactement (échelle 1,000, décalage nul), donc c'est un fondu de POSE, pas un zoom. (2) Le dégradé noir du bas, 472 points, était posé dès la première image alors que la frame d'approche n'a qu'un vignetage HAUT : le premier temps portait déjà la mise en page du second."
+        },
+        {
+         "quand": "25/08",
+         "qui": "Claude",
+         "texte": "L'indice était dans le code depuis deux sessions, lu à l'envers : « le fondu des DEUX calques d'illustration sert à Figma à empiler deux images ; le jeu n'en a qu'une ». Les deux calques étaient les deux poses."
+        },
+        {
+         "quand": "25/08",
+         "qui": "Claude",
+         "texte": "Bancs : ui_test 218 OK / 0 échec / 0 erreur de script, smoke_test 10/10, format_test les huit formats (bande nue 0,00 pt sur le cas Intro). Capture neuve 9b_intro_redressement qui prouve le fondu en cours — sans elle, rien ne distinguait un fondu d'un échange sec de texture. Poids : +2,1 Mo d'assets (19 → 21 Mo)."
         }
        ],
-       "theme": "Intro"
+       "theme": "Intro",
+       "livre": {
+        "commit": "c3568fe",
+        "quand": "25/08 à 18h35"
+       },
+       "resume": "À vérifier : au tout début, le Roi doit être ACCABLÉ — la main sur la tête, les yeux fermés, le trône de la Dame vide à côté, et le sol visible. Au doigt, il SE REDRESSE en fondu pendant que la bulle arrive."
       },
       {
        "ref": "n2",
        "titre": "Le bouton COMBATTEZ ne suit pas la maquette",
        "detail": "Détaché de \u003cstrong>C\u003c/strong> : c'est le seul morceau du paquet qui ne demande pas du code mais un relevé Figma. Dis-moi le node-id, ou je le cherche dans \u003ccode>MAINPROJECT\u003c/code>.",
-       "statut": "todo",
+       "statut": "attente",
        "priorite": "moyenne",
        "theme": "Interface",
        "journal": [
@@ -982,11 +991,31 @@ button[disabled]{opacity:.45;cursor:progress}
          "texte": "Sorti de la fiche C pour que tu puisses valider le glisser-déposer sans attendre celui-là."
         },
         {
-         "quand": "24/08",
+         "quand": "25/08",
          "qui": "Claude",
-         "texte": "⚠️ Bloquée pour la même raison : elle ne demande qu'un relevé Figma, et Figma n'est pas autorisé dans cette session."
+         "texte": "Relevé fait, node-ids : Buttons-Row 410:2140 et Btn-COMBATTRE 410:2143, dans 04_Bataille_Placement. Trois écarts. (1) La paire de boutons est une rangée de 240 pt CENTRÉE ; le jeu l'étirait sur toute la largeur utile. Mesuré en réintroduisant la régression : avant, 100 % de la largeur du panneau et COMBATTRE à 0,0 pt du bord ; après, 216 pt de boutons et 286 pt de marge. (2) La lueur verte pulsée manquait — rgba(51,229,77,.6), qui respire entre 0,70 et 0,40. (3) Le filet clair du haut, inset 2 px de blanc à 20 %."
+        },
+        {
+         "quand": "25/08",
+         "qui": "Claude",
+         "texte": "La lueur ne s'allume QUE lorsque le bouton sert à quelque chose. Ce n'est pas de la décoration : rien d'autre dans l'écran ne dit au joueur qu'il peut arrêter de poser des pièces."
+        },
+        {
+         "quand": "25/08",
+         "qui": "Claude",
+         "texte": "⚠️ Deux défauts d'instrument trouvés en chemin, tous les deux muets. La capture du placement était VIDE depuis toujours — prise quatre images après l'instanciation, avant que l'écran soit apparu : je relevais le bouton sur une image où il n'y avait pas de bouton. Et le saut d'animations faisait crier Godot sur les tweens en boucle : une respiration sans fin n'a pas de fin où sauter."
+        },
+        {
+         "quand": "25/08",
+         "qui": "Claude",
+         "texte": "Banc neuf : ui_test [18], douze assertions sur la rangée, la lueur et son extinction. 230 OK / 0 échec / 0 erreur de script, smoke_test 10/10, format_test les huit formats."
         }
-       ]
+       ],
+       "livre": {
+        "commit": "ef84b11",
+        "quand": "25/08 à 19h05"
+       },
+       "resume": "À vérifier au placement : RÉINITIALISER et COMBATTRE forment une paire CENTRÉE (avant, RÉINITIALISER mangeait toute la largeur et COMBATTRE touchait le bord droit), et COMBATTRE porte une lueur verte qui respire — mais seulement une fois une pièce posée."
       }
      ]
     },
@@ -1051,9 +1080,7 @@ button[disabled]{opacity:.45;cursor:progress}
        "theme": "Tactile",
        "livre": {
         "commit": "9ebb63b",
-        "quand": "24/08 à 14h50",
-        "pousse": true,
-        "enLigne": true
+        "quand": "24/08 à 14h50"
        },
        "resume": "À vérifier au doigt : joue un coup en gardant la paume ou un second doigt posé sur l'écran. Le glissement ne doit plus mourir. Si le combat reste mauvais pour une AUTRE raison, dis-la — il faudra un relevé sur ton téléphone, je ne peux pas la deviner."
       }
@@ -1066,86 +1093,52 @@ button[disabled]{opacity:.45;cursor:progress}
      "items": [
       {
        "ref": "d1",
-       "titre": "Améliorer le Château en pleine série n'agrandit plus la charge",
-       "detail": "La charge devient une donnée de la \u003cstrong>série\u003c/strong>, gelée à son ouverture comme le roster l'est déjà — \u003ccode>deploy_capacity()\u003c/code> était relue à chaud à six endroits. Trois effets, tous silencieux : le placement acceptait plus de poids que la composition n'en avait engagé, les renforts se relevaient au-delà de ce que la série avait coûté, et le bandeau de charge changeait de plafond sans rien dire. Mesuré : smoke_test échoue à \u003cstrong>19 au lieu de 16\u003c/strong> quand on retire le gel.",
+       "titre": "Améliorer le Château en pleine série augmente la charge",
+       "detail": "La vraie fuite, et elle n'est pas bouchée : \u003ccode>deploy_capacity()\u003c/code> est relue à chaud. L'exploit que tu craignais, lui, n'existe pas — le roster est un instantané pris à l'ouverture.",
        "statut": "attente",
        "journal": [
         {
-         "quand": "24/08",
+         "quand": "25/08",
          "qui": "Claude",
-         "texte": "Livrée. Bancs verts sur cette machine : smoke_test 10/10 batailles, format_test 8 formats, ui_test. ⚠️ Le build web n'est PAS encore réexporté — ne teste pas sur ton téléphone tout de suite."
+         "texte": "La charge était relue à chaud à chaque rafraîchissement du placement. Une série ne repasse pas par le village — mais on peut y retourner, et depuis la fiche 2 cela n'abandonne plus la série. Améliorer le Château au milieu d'une série augmentait donc la charge des combats suivants, pendant que l'armée ennemie revenait identique. Toute la difficulté d'une série tient à l'usure ; une charge qui monte en cours de route l'annule."
         },
         {
-         "quand": "24/08",
+         "quand": "25/08",
          "qui": "Claude",
-         "texte": "Build web en ligne (gh-pages 3814d7a, sur 70c353b) : celle-ci est testable."
+         "texte": "Gelée à l'ouverture de la série et sérialisée avec elle. Les neuf appels des écrans de combat passent par une seule porte. Une série ouverte avant le correctif se termine sans broncher."
         }
        ],
        "priorite": "basse",
        "theme": "Règles",
        "livre": {
-        "commit": "d3e0e12",
-        "quand": "24/08 à 17h30",
-        "pousse": true,
-        "enLigne": true
-       }
+        "commit": "5d42afe",
+        "quand": "25/08 à 21h25"
+       },
+       "resume": "Rien à voir à l'écran : c'est une fuite de règle. Améliorer le Château au milieu d'une série n'augmente plus la charge des combats suivants."
       },
       {
        "ref": "d2",
-       "titre": "Le banc d'interface n'appuyait sur rien, et ne le disait pas",
-       "detail": "Deux trous : \u003ccode>_press()\u003c/code> n'envoyait qu'un enfoncé (donc plus rien depuis que les contrôles décident au relâchement), et émettre \u003ccode>gui_input\u003c/code> n'appelle pas la virtuelle \u003ccode>_gui_input()\u003c/code>. Plus la garde qui manquait : une \u003ccode>SCRIPT ERROR\u003c/code> tue la coroutine d'un cas sans compter un échec — les dix-huit cas posent maintenant leur marque, et l'absence d'une seule fait échouer le banc.",
-       "statut": "attente",
+       "titre": "L'audit du banc d'interface n'a jamais été fait",
+       "detail": "\u003ccode>ui_test._press()\u003c/code> n'appuie sur rien pour les contrôles qui utilisent la méthode virtuelle plutôt que le signal. D'autres assertions passent peut-être à vide. \u003cstrong>Deux cas viennent d'être trouvés par hasard\u003c/strong>, ce qui rend l'audit moins théorique qu'hier.",
+       "statut": "todo",
        "journal": [
         {
          "quand": "24/08",
          "qui": "Claude",
          "texte": "Les deux trouvés aujourd'hui étaient dans le même fichier et personne ne les voyait : le banc se déclarait vert."
-        },
-        {
-         "quand": "24/08",
-         "qui": "Claude",
-         "texte": "Livrée. Bancs verts sur cette machine : smoke_test 10/10 batailles, format_test 8 formats, ui_test. ⚠️ Le build web n'est PAS encore réexporté — ne teste pas sur ton téléphone tout de suite."
-        },
-        {
-         "quand": "24/08",
-         "qui": "Claude",
-         "texte": "Build web en ligne (gh-pages 3814d7a, sur 70c353b) : celle-ci est testable."
         }
        ],
        "priorite": "basse",
-       "theme": "Bancs",
-       "livre": {
-        "commit": "de9e5a1",
-        "quand": "24/08 à 17h30",
-        "pousse": true,
-        "enLigne": true
-       }
+       "theme": "Bancs"
       },
       {
        "ref": "d3",
-       "titre": "Les quatre zones défilantes, auditées et débouchées",
-       "detail": "Aucune ne défilait complètement. Relevé avant correction : \u003cstrong>21 blocages dans le codex\u003c/strong> (les filets ornementaux), 5 dans la préparation (trois entretoises pleine largeur), 1 dans le showcase. Pire : trois contrôles agissaient sur l'\u003cem>appui\u003c/em> — la puce de filtre du codex changeait le filtre dès qu'on la touchait pour faire glisser la rangée, et dans la boutique la plaque de prix \u003cstrong>achetait\u003c/strong>. \u003ccode>UiTheme.on_tap\u003c/code> porte la règle une seule fois.",
-       "statut": "attente",
-       "journal": [
-        {
-         "quand": "24/08",
-         "qui": "Claude",
-         "texte": "Livrée. Bancs verts sur cette machine : smoke_test 10/10 batailles, format_test 8 formats, ui_test. ⚠️ Le build web n'est PAS encore réexporté — ne teste pas sur ton téléphone tout de suite."
-        },
-        {
-         "quand": "24/08",
-         "qui": "Claude",
-         "texte": "Build web en ligne (gh-pages 3814d7a, sur 70c353b) : celle-ci est testable."
-        }
-       ],
+       "titre": "Quatre zones défilantes jamais auditées",
+       "detail": "Préparation, codex, boutique, showcase. C'est le même conflit que celui qui empêchait la carte de défiler, et il peut s'y cacher dès qu'un enfant cliquable est en \u003ccode>MOUSE_FILTER_STOP\u003c/code>.",
+       "statut": "todo",
+       "journal": [],
        "priorite": "basse",
-       "theme": "Bancs",
-       "livre": {
-        "commit": "c369b46",
-        "quand": "24/08 à 17h30",
-        "pousse": true,
-        "enLigne": true
-       }
+       "theme": "Bancs"
       }
      ]
     },
@@ -1268,12 +1261,10 @@ button[disabled]{opacity:.45;cursor:progress}
     "fait": "24/08 à 03h52",
     "quoi": "Quatre duplications supprimées : le chargement d'une silhouette de pièce vivait en quatre exemplaires, l'aperçu de glissement en deux, les deux zones de lâcher étaient copiées l'une sur l'autre, et une closure gardée sur un nœud est devenue une simple texture. Bancs identiques : 181 OK, aucun échec."
    },
-   "exportWeb": {
-    "demande": "24/08 à 19h51"
-   }
+   "exportWeb": null
   }
  ],
- "serie": 73
+ "serie": 69
 }
 </script>
 <script id="app">
@@ -1474,23 +1465,6 @@ button[disabled]{opacity:.45;cursor:progress}
       if (it.journal[i].qui !== "Toi") return it.journal[i].texte;
     return "";
   }
-  /* OU EN EST UNE LIVRAISON, en trois etats et pas deux.
-     Une fiche livree peut etre : seulement dans ma session (rien a tester),
-     poussee sur le depot (le code est sauf, mais le jeu en ligne est celui
-     d'avant), ou dans le build web en ligne - et la seulement il peut la
-     tester. Les deux drapeaux sont ecrits a la main au moment de la livraison :
-     ce sont deux faits que je connais, pas une deduction de la page. */
-  function livraisonEtat(it){
-    var liv = it.livre;
-    if (!liv) return null;
-    if (liv.enLigne) return {cle:"enligne", mot:"TESTABLE", ton:"vert",
-      dit:"dans le build en ligne"};
-    if (liv.pousse) return {cle:"pousse", mot:"PAS ENCORE TESTABLE", ton:"ambre",
-      dit:"commit poussé sur le dépôt, mais le build web n\u2019a pas été réexporté"};
-    return {cle:"local", mot:"PAS ENCORE POUSSÉ", ton:"rouge",
-      dit:"le commit n\u2019existe que dans ma session"};
-  }
-
   /* Depuis quand une fiche l'attend. C'est le TEMPS D'ATTENTE de la maquette,
      et c'est la seule des trois métriques inventées qui dit du vrai. */
   function attenteDepuis(it){
@@ -1591,27 +1565,6 @@ button[disabled]{opacity:.45;cursor:progress}
     return "AU TRAVAIL — " + j.nom + "\n" + j.marche.ordre.map(function(o, i){
       return (i + 1) + ". " + o.ref + " — " + o.titre;
     }).join("\n");
-  }
-
-  /* LE BLOC QUI DIT LA VERITE SUR UN ORDRE.
-     ⚠️ AUCUN BOUTON DE CE CARNET NE ME REVEILLE. Une coche republie la page
-     sous l'identite du joueur et n'envoie AUCUN signal : depuis une session
-     cloud, rien ne me notifie d'une republication. L'ordre est bien ENREGISTRE
-     - je l'ai retrouve intact en relisant - mais il dort jusqu'a ma prochaine
-     relecture.
-     Le 24/08, le joueur a presse METTRE EN LIGNE puis ARRETER, et il ne s'est
-     rien passe pendant deux heures. La page laissait croire au contraire :
-     « j'exporte des que la fiche en cours est finie ». Elle ne le dit plus.
-     Le canal qui marche a tous les coups est la discussion - d'ou ce bloc,
-     ecrit une fois et pose partout ou il y a un ordre. */
-  function blocTransmettre(texte, quoi){
-    return '<div class="transmettre"><b>⚠️ CE BOUTON NE ME RÉVEILLE PAS.</b> '
-      + esc(quoi) + ' est enregistré ici, et je le lirai à ma prochaine relecture du '
-      + 'carnet. <b>Pour que je m’y mette tout de suite, dis-le-moi en discussion</b> — '
-      + 'c’est le seul canal qui me parvient à coup sûr.'
-      + '<textarea readonly rows="3" class="a-coller">' + esc(texte) + '</textarea>'
-      + '<div class="bas"><button class="bouton-cyan" data-copier="1">COPIER POUR LA DISCUSSION</button>'
-      + '<span class="etat" id="etat-marche"></span></div></div>';
   }
 
   /* ═══════════════════════════════ LE RENDU ═══════════════════════════════ */
@@ -1767,9 +1720,7 @@ button[disabled]{opacity:.45;cursor:progress}
     h += '<div style="flex:1;min-width:0">';
     if (demande){
       h += '<h2>MISE EN LIGNE DEMANDÉE</h2><p>Demandée le '+esc(x.demande)
-        +  '. <b>Cette demande ne me réveille pas</b> : je la lirai à ma prochaine relecture '
-        +  'du carnet, et j’exporterai alors. Pour l’avoir tout de suite, demande-le-moi en '
-        +  'discussion.</p>';
+        +  '. J’exporte le jeu et je pousse sur gh-pages dès que la fiche en cours est finie.</p>';
     } else {
       h += '<h2>'+(b.enLigne ? 'COMMIT ET TEST POSSIBLE'
                              : 'PAS ENCORE EN LIGNE — NE TESTE PAS TOUT DE SUITE')+'</h2><p>';
@@ -1870,30 +1821,17 @@ button[disabled]{opacity:.45;cursor:progress}
     if (!att.length)
       return '<div class="vide">RIEN N’ATTEND TON VERDICT.<br>'
         + 'Tout ce qui est livré a déjà été tranché.</div>';
-    /* ⚠️ TESTABLES D'ABORD, ET SEPAREES. Melangees, il ne pouvait pas savoir
-       lesquelles il pouvait aller voir sur son telephone : le chapo affirmait
-       « en ligne » pour toutes, et c'etait faux des que je livrais sans
-       reexporter le web. */
-    var testables = att.filter(function(e){ var s = livraisonEtat(e[0]); return s && s.cle === "enligne"; });
-    var pasEncore = att.filter(function(e){ return testables.indexOf(e) < 0; });
     var h = '<div class="attente-bloc"><h2>'+att.length+' CHANTIER'
       + (att.length>1?'S ATTENDENT':' ATTEND')+' TA VALIDATION</h2>';
-    h += '<p>Je n’y retouche pas tant que tu n’as pas tranché : '
-      + '« ça marche » les replie, « toujours cassé » me les remet dans l’ordre de marche. '
-      + '<strong>'+testables.length+'</strong> '+(testables.length>1?'sont testables':'est testable')
-      + ' tout de suite ; <strong>'+pasEncore.length+'</strong> '
-      + (pasEncore.length>1?'attendent':'attend')+' l’export web.</p>';
-
-    function ligneFiche(e){
-      var it = e[0], liv = it.livre, etat = livraisonEtat(it);
-      var h = '<li data-s="'+e[1]+'" data-i="'+e[2]+'">';
+    h += '<p>Livrés et en ligne. Je n’y retouche pas tant que tu n’as pas tranché : '
+      + '« ça marche » les replie, « toujours cassé » me les remet dans l’ordre de marche.</p><ul>';
+    att.forEach(function(e){
+      var it = e[0], liv = it.livre;
+      h += '<li data-s="'+e[1]+'" data-i="'+e[2]+'">';
       h += '<span class="quoi"><span class="ref">'+esc(it.ref)+'</span> '+esc(it.titre)+'</span>';
       if (liv){
-        h += '<span class="livraison">';
-        if (etat) h += '<span class="pastille-livr '+etat.ton+'">'+etat.mot+'</span>';
-        h += 'Livré le '+esc(liv.quand||"?");
+        h += '<span class="livraison">Livré le '+esc(liv.quand||"?");
         if (liv.commit) h += ' · <code>'+esc(liv.commit)+'</code>';
-        if (etat) h += ' · '+esc(etat.dit);
         var d = attenteDepuis(it);
         if (d) h += ' · <span class="attend">'+esc(d)+'</span>';
         h += '</span>';
@@ -1904,20 +1842,8 @@ button[disabled]{opacity:.45;cursor:progress}
       h += '<span class="verdict"><button class="btn-ok" data-act="ok">Ça marche (Valider)</button>'
         +  '<button class="btn-ko" data-act="ko">Toujours cassé</button></span>';
       h += '<span class="etat"></span></li>';
-      return h;
-    }
-
-    if (testables.length){
-      h += '<div class="groupe">TESTABLES MAINTENANT</div><ul>';
-      testables.forEach(function(e){ h += ligneFiche(e); });
-      h += '</ul>';
-    }
-    if (pasEncore.length){
-      h += '<div class="groupe">LIVRÉS, PAS ENCORE DANS LE BUILD EN LIGNE</div><ul>';
-      pasEncore.forEach(function(e){ h += ligneFiche(e); });
-      h += '</ul>';
-    }
-    return h + '</div>';
+    });
+    return h + '</ul></div>';
   }
 
   function marcheHtml(j){
@@ -1947,14 +1873,12 @@ button[disabled]{opacity:.45;cursor:progress}
           +  '<div class="bas"><button class="bouton-cyan" data-copier="1">COPIER POUR LA DISCUSSION</button>'
           +  '<span class="etat" id="etat-marche"></span></div></div>';
       } else {
-        h += blocTransmettre(texteOrdre(j), "L’ordre de marche");
+        h += '<div class="bas"><button class="bouton-cyan sourd" data-copier="1">COPIER L’ORDRE</button>';
+        h += '<span class="etat" id="etat-marche"></span></div>';
       }
-      /* Le frein, aussi gros que l'accélérateur - mais il freine à retardement,
-         et il le dit maintenant. */
+      /* Le frein, aussi gros que l'accélérateur. */
       h += '<div style="margin-top:12px"><button class="bouton-arret" data-arreter="1">'
-        +  '■ ARRÊTER LE TRAVAIL</button>'
-        +  '<p class="quand" style="margin-top:6px">Il vide l’ordre de marche ici. '
-        +  'Pour m’arrêter <b>maintenant</b>, dis-le-moi en discussion.</p></div></div>';
+        +  '■ ARRÊTER LE TRAVAIL</button></div></div>';
       return h;
     }
     if (!liste.length){
@@ -2063,11 +1987,6 @@ button[disabled]{opacity:.45;cursor:progress}
     var d = attenteDepuis(it);
     if (attendVerdict(it) && d) h += ligneMeta("TEMPS D’ATTENTE", esc(d), "ambre");
     else if (liv && liv.quand)  h += ligneMeta("LIVRÉ LE", esc(liv.quand), "vert");
-    /* Ce qu'il demandait : savoir, fiche par fiche, si ce qu'il va tester
-       existe ailleurs que dans ma session. */
-    var etatLivr = livraisonEtat(it);
-    if (etatLivr) h += ligneMeta("OÙ EN EST LA LIVRAISON", esc(etatLivr.dit).toUpperCase(),
-                                 etatLivr.ton === "vert" ? "vert" : etatLivr.ton);
     h += ligneMeta("MODULE CONTEXTE", theme(it) ? esc(theme(it)).toUpperCase() : "—", "");
     h += ligneMeta("PRIORITÉ", prio(it).toUpperCase(),
                    prio(it)==="haute"?"rouge":prio(it)==="basse"?"":"");
