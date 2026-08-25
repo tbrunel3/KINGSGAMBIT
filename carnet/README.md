@@ -16,7 +16,7 @@ Depuis le 24/08/2026, c'est une **console en trois colonnes** — maquette Figma
 
 | | Où | Ce qu'il sait faire |
 |---|---|---|
-| **L'artefact** | `https://claude.ai/code/artifact/47c96d8b-a61a-4222-932d-04430c13692f` | se republie tout seul à chaque coche. C'est le carnet vivant |
+| **L'artefact** | `https://claude.ai/code/artifact/857ffdc3-e16a-485b-8651-853b31916069` | se republie tout seul à chaque coche. C'est le carnet vivant |
 | **Le dépôt** | `https://tbrunel3.github.io/KINGSGAMBIT/carnet/` | ne publie rien — les coches vont dans le navigateur, et l'export les rend. En échange, **personne ne peut le supprimer** |
 
 L'adresse de l'artefact vit aussi dans `carnet.py` (`ADRESSE`), et `build` la

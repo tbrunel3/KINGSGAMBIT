@@ -55,7 +55,7 @@ BRANCHE = "gh-pages"
 #     qu'elle part, pour qu'une suppression ne laisse pas les mains vides ;
 #   - avant de republier, VERIFIER QUE L'ADRESSE REPOND (WebFetch dessus). Une
 #     suppression se voit alors tout de suite, et pas trois jours plus tard.
-ADRESSE = "https://claude.ai/code/artifact/47c96d8b-a61a-4222-932d-04430c13692f"
+ADRESSE = "https://claude.ai/code/artifact/857ffdc3-e16a-485b-8651-853b31916069"
 
 # Le trou de la page, a l'endroit exact ou l'etat s'insere.
 MARQUE = "__ETAT__"

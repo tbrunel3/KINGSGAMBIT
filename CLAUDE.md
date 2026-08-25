@@ -53,7 +53,7 @@ documents complètent celui-ci et ne le répètent pas :
   je l'écris après chaque livraison, et jamais pendant un chantier.
 
   **Deux adresses, et c'est voulu.** L'artefact
-  `https://claude.ai/code/artifact/47c96d8b-a61a-4222-932d-04430c13692f`
+  `https://claude.ai/code/artifact/857ffdc3-e16a-485b-8651-853b31916069`
   (il se republie tout seul à chaque coche), et le dépôt
   `https://tbrunel3.github.io/KINGSGAMBIT/carnet/` via `carnet.py enligne` —
   celui-là ne publie rien, mais **personne ne peut le supprimer**.
