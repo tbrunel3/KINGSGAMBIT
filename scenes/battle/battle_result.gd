@@ -534,9 +534,7 @@ func _build_title_block() -> VBoxContainer:
 	glow.stretch_mode = TextureRect.STRETCH_SCALE
 	glow.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	glow.texture = _radial_glow(_skin["glow"])
-	var material := CanvasItemMaterial.new()
-	material.blend_mode = CanvasItemMaterial.BLEND_MODE_ADD
-	glow.material = material
+	glow.material = UiTheme.additive_material()
 	frame.add_child(glow)
 
 	var word := TextureRect.new()

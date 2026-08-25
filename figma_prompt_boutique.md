@@ -20,7 +20,7 @@ tout ça n'a bougé. Ce qui a changé, ce sont **des libellés qui annonçaient 
 règles que le jeu ne joue pas**, et **un bloc qui manquait**.
 
 Le contexte général du jeu est dans [`figma_contexte_projet.md`](figma_contexte_projet.md).
-Les règles de la boutique sont dans [`chantier_h_boutique.md`](chantier_h_boutique.md).
+Les règles de la boutique sont dans [`archive/chantier_h_boutique.md`](archive/chantier_h_boutique.md).
 
 ---
 

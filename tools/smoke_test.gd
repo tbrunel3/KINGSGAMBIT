@@ -105,9 +105,6 @@ func _check_run() -> void:
 		_fail("aucune bataille ne se joue en serie")
 		return
 
-	var battle := Balance.battle(series_id)
-	var fights := Balance.battle_fights(battle)
-
 	var pions_before := Game.units_owned(Balance.PION)
 	var gold_before := Game.gold
 	var run := Game.begin_run(series_id)

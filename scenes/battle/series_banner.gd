@@ -28,7 +28,6 @@ const GOLD_EDGE := Color("e6b940")
 const TEXT_BRIGHT := Color("f5efea")
 const TEXT_DIM := Color("a89b91")
 const BOX_FILL := Color("291e12")
-const RECOVERED := Color("5fb37a")
 const CONTINUE_FILL := Color("9b2c2c")
 
 ## Au-dela, la rangee de silhouettes deborde de la plaque.

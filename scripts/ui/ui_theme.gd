@@ -6,7 +6,6 @@ class_name UiTheme
 ## couleur ne doit etre ecrite ailleurs que dans ce fichier.
 ##
 
-const BG := Color("0f111a")
 const PANEL := Color("161926")
 const PANEL_LIGHT := Color("262c3f")
 const BORDER := Color("3d4f6b")

@@ -111,7 +111,6 @@ func _traverser(battle_id: int) -> bool:
 	var battle := Balance.battle(battle_id)
 	var achats := 0
 	var replays := 0
-	var or_depart := Game.gold
 
 	while true:
 		var issue := _jouer_serie(battle_id)

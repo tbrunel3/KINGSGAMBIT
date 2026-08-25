@@ -75,9 +75,6 @@ var _crowned: Dictionary = {TEAM_PLAYER: 0, TEAM_ENEMY: 0}
 ## peuvent plus s'atteindre.
 var _idle_activations: int = 0
 
-## Tours passes d'affilee faute de coup legal : deux de suite et plus personne
-## ne peut jouer (cf. _pass_turn).
-var _passes_in_a_row: int = 0
 ## Activation a laquelle la position est devenue morte, ou -1. Sert au compte
 ## a rebours affiche avant le nul.
 var _dead_position_since: int = -1
@@ -201,8 +198,9 @@ func threatened_cells(team: int) -> Array:
 	return cells
 
 
-## Vrai si ce camp a au moins un coup legal. Un camp qui n'en a aucun passe
-## son tour (cf. _pass_turn) plutot que de bloquer la partie.
+## Vrai si ce camp a au moins un coup legal. Un camp qui n'en a aucun est PAT :
+## la partie s'arrete sur-le-champ, elle ne se poursuit pas. PASSER SON TOUR
+## N'EXISTE PLUS - _pass_turn signale desormais une erreur au lieu de passer.
 func has_any_move(team: int) -> bool:
 	for unit in living(team):
 		if not MovementRules.legal_moves(unit, grid).is_empty():
@@ -289,7 +287,6 @@ func _resolve(unit: BattleUnit, destination: Vector2i) -> Array:
 	# Une prise vient d'avoir lieu : la position n'etait donc pas morte.
 	if captured:
 		_dead_position_since = -1
-	_passes_in_a_row = 0
 	_end_of_activation(events)
 	return events
 

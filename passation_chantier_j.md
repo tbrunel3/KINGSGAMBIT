@@ -195,7 +195,7 @@ Voir le carnet pour l'état à jour. En résumé :
 - **F** — les fonds par bâtiment, à récupérer dans Figma.
 - **Les deux écrans de lettre du Roi**, faits par le graphiste, à placer **entre
   l'intro et le village**. Le reste du chantier est déjà spécifié dans
-  [`chantier_i_missives.md`](chantier_i_missives.md) — mesures des
+  [`archive/chantier_i_missives.md`](archive/chantier_i_missives.md) — mesures des
   illustrations, quatre textes, déclencheurs.
 
 ### Ce que le code seul ne peut pas trancher

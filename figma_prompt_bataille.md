@@ -9,8 +9,8 @@
 designer. Il concerne **deux frames existantes** du fichier
 `rqEdH4O2R21TuUFv7OUlF7` :
 
-- `04_Bataille_Placement` — node-id **49:2**
-- `05_Bataille_Combat` — node-id **2:407**
+- `04_Bataille_Placement` — node-id **`410:667`** (page `MAINPROJECT`, `410:2`)
+- `05_Bataille_Combat` — node-id **`410:3764`** (page `MAINPROJECT`, `410:2`)
 
 ---
 
@@ -119,7 +119,7 @@ comptent plus que le cadre autour.
 
 ---
 
-## L'écran de placement (49:2)
+## L'écran de placement (`410:667`)
 
 Il change moins, mais il change.
 

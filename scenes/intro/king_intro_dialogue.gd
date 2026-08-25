@@ -83,11 +83,6 @@ const PANEL_DURATION := 0.5
 const PANEL_RISE := 20.0
 const BUTTON_RISE := 15.0
 
-## Echelle de depart de l'illustration, qui se pose ensuite sur 1,2 s
-## (Figma : scale 1.08 -> 1, cubic-bezier(0.25, 0, 0.35, 1)).
-const SETTLE_SCALE := 1.08
-const SETTLE_DURATION := 1.2
-
 ## Delai avant que l'invite du premier ecran apparaisse (Figma
 ## king-intro-before-dialogue : opacite tenue a zero jusqu'a 40 % d'une boucle
 ## de 2,5 s). Le Roi doit se laisser regarder avant qu'on propose de s'approcher.
@@ -550,7 +545,7 @@ func _build_commencer_button() -> PanelContainer:
 ## a decrit : "apres l'appui il y a un effet de dezoom etrange, il faudrait un
 ## effet zoom et pas de tremblement".
 ##
-## L'ancienne version partait de SETTLE_SCALE (1,08), redescendait a 1,0, PUIS
+## L'ancienne version partait d'une echelle de 1,08, redescendait a 1,0, PUIS
 ## montait a 1,12. L'image retrecissait avant de grandir, et ce changement de
 ## sens se lit comme un tremblement.
 ##

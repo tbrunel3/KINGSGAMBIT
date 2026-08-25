@@ -328,12 +328,9 @@ func _build_medallion_glow(id: int) -> void:
 	texture.width = 128
 	texture.height = 128
 
-	var material := CanvasItemMaterial.new()
-	material.blend_mode = CanvasItemMaterial.BLEND_MODE_ADD
-
 	_medallion_glow = TextureRect.new()
 	_medallion_glow.texture = texture
-	_medallion_glow.material = material
+	_medallion_glow.material = UiTheme.additive_material()
 	_medallion_glow.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
 	_medallion_glow.stretch_mode = TextureRect.STRETCH_SCALE
 	_medallion_glow.mouse_filter = Control.MOUSE_FILTER_IGNORE

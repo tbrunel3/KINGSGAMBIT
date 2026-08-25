@@ -3,7 +3,7 @@
 Ce brief est celui qui a manqué au codex. Il concerne le fichier
 `rqEdH4O2R21TuUFv7OUlF7` et trois choses :
 
-1. **`codex-popup`** — node-id **194:4**. La mise en page est juste et on la
+1. **`codex-popup`** — node-id **194:4** *(ancienne page `KINGS GAMBIT` / `0:1` ; la v3 livrée est `codex-popup-v3`, node-id `410:6525` sur `MAINPROJECT`)*. La mise en page est juste et on la
    garde ; **les données décrivent un autre jeu** et sont toutes à refaire.
    Le résultat est posé dans une frame neuve, **`codex-popup-v3`**, à côté de
    l'originale — rien n'est écrasé.
@@ -268,7 +268,7 @@ seule de la campagne qui accorde une Dame à sa première victoire. C'est donc
 son écran.
 
 **Ce qu'on demande** : une frame `preparation-bataille-10-v3`, variante de
-`preparation-bataille-v2` (node-id **169:4**) — le même écran, **plus un
+`preparation-bataille-v2` (node-id **`410:7227`**) — le même écran, **plus un
 bandeau d'enjeu** portant l'illustration, entre la plaque royale du titre et le
 briefing des forces.
 

@@ -129,12 +129,6 @@ func _fade_to(alpha: float, duration: float) -> void:
 	await _tween.finished
 
 
-## Vrai quand le voile masque encore quelque chose. Sert aux ecrans qui
-## veulent savoir s'ils sont deja visibles avant de lancer leur propre entree.
-func is_covering() -> bool:
-	return _rect != null and _rect.color.a > 0.01
-
-
 ## RETENIR LE VOILE le temps qu'un ecran finisse de se poser.
 ##
 ## ⚠️ POURQUOI CA EXISTE. Le joueur voyait un "flick" en arrivant sur la carte

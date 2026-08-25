@@ -305,7 +305,6 @@ static func battle_center_x(viewport: Vector2) -> float:
 ## l'ecran de reference est rigoureusement inchange.
 func _fit_decor_to_background() -> void:
 	var viewport := get_viewport_rect().size
-	var design_rect := decor_rect(DESIGN_SIZE)
 	var design_scale := CoverFit.scale(DESIGN_SIZE, BACKGROUND_SIZE)
 
 	var ratio := CoverFit.scale(viewport, BACKGROUND_SIZE) / design_scale
@@ -654,9 +653,7 @@ func _glow_rect(core_alpha: float, rect: Rect2) -> TextureRect:
 	var glow := TextureRect.new()
 	glow.texture = texture
 
-	var material := CanvasItemMaterial.new()
-	material.blend_mode = CanvasItemMaterial.BLEND_MODE_ADD
-	glow.material = material
+	glow.material = UiTheme.additive_material()
 
 	glow.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
 	glow.stretch_mode = TextureRect.STRETCH_SCALE

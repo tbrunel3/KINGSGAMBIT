@@ -1593,7 +1593,6 @@ func _test_gold_count() -> void:
 
 	# ⚠️ ET ELLE DESCEND AUSSI. Un achat retire de l'or : le meme compteur doit
 	# savoir aller dans l'autre sens, sinon la pastille se fige au maximum.
-	var avant_achat: int = Game.gold
 	_check(Game.spend_gold(300), "la depense passe")
 	await _skip_animations()
 	_check(village._gold_affiche == Game.gold,
