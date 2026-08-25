@@ -17,6 +17,7 @@ vivent les règles, comment le mesurer, et les pièges déjà payés.
 | [`figma_reference.md`](figma_reference.md) | **avant de toucher à un écran** | les node-ids des 24 écrans, l'inventaire des animations, le relevé des polices, les pièges d'import |
 | [`figma_contexte_projet.md`](figma_contexte_projet.md) | le designer | l'état du jeu vu de la maquette, règles de collaboration |
 | `figma_prompt_*.md` | le designer | les briefs, un par écran |
+| [`ameliorations_proposees.md`](ameliorations_proposees.md) | le joueur | des propositions **non engagées**, triées par fondement (mesuré / constaté / hypothèse) |
 | [`archive/`](archive/) | mémoire | les chantiers **livrés** — leurs mesures sont remontées ici |
 
 ⚠️ **Ne pas rouvrir un chantier de `archive/` en croyant qu'il reste à faire.**
