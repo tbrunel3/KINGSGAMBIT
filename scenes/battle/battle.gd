@@ -176,6 +176,24 @@ func _battle_id() -> int:
 	return int(_battle["id"])
 
 
+## LA CHARGE QUI FAIT FOI POUR CE COMBAT.
+##
+## ⚠️ PAS Game.deploy_capacity(), ET C'ETAIT LA FUITE. La charge etait relue a
+## chaud a chaque rafraichissement : ameliorer le Chateau Royal au milieu d'une
+## serie augmentait la charge des combats suivants, alors que l'armee ennemie
+## revient identique a chaque combat. Une serie est "une seule unite
+## economique", et toute sa difficulte tient a l'usure - une charge qui monte
+## en cours de route l'annule.
+##
+## Elle est donc gelee a l'ouverture de la serie (CampaignRun.capacity). Hors
+## serie, ou sur une sauvegarde d'avant ce correctif, on retombe sur la charge
+## du chateau.
+func _capacity() -> int:
+	if _run != null and _run.capacity > 0:
+		return _run.capacity
+	return Game.deploy_capacity()
+
+
 ## Types que le joueur peut poser sur la grille : ses casernes, plus la Dame
 ## s'il en a ramene une vivante d'une bataille precedente.
 ##
@@ -983,7 +1001,7 @@ func _start_fight_pulse() -> void:
 
 
 ## Poids total (cf. Balance.deploy_weight) des pieces deja posees - c'est ce
-## qu'on compare a Game.deploy_capacity(), pas un nombre de pieces : voir
+## qu'on compare a _capacity(), pas un nombre de pieces : voir
 ## CASTLE_DATA.deploy_capacity dans balance.gd.
 func _placed_weight() -> int:
 	var weight := 0
@@ -993,7 +1011,7 @@ func _placed_weight() -> int:
 
 
 func _refresh_placement() -> void:
-	var capacity := Game.deploy_capacity()
+	var capacity := _capacity()
 	# A droite de l'en-tete du bandeau, la maquette v2 ecrit la CHARGE, en or.
 	# Elle etait deja au HUD lateral, mais le joueur a les yeux sur ses puces
 	# quand il pose : c'est la qu'il faut lui dire ce qu'il lui reste de budget.
@@ -1033,7 +1051,7 @@ func _refresh_stats_hud() -> void:
 		label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 		_stats_box.add_child(label)
 		_stats_box.add_child(_hud_separator())
-		var count := UiTheme.make_label("%d/%d" % [_placed_weight(), Game.deploy_capacity()], 13, Color("99ccff"))
+		var count := UiTheme.make_label("%d/%d" % [_placed_weight(), _capacity()], 13, Color("99ccff"))
 		count.autowrap_mode = TextServer.AUTOWRAP_OFF
 		count.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 		_stats_box.add_child(count)
@@ -1182,7 +1200,7 @@ func _peut_poser(type: String, cell: Vector2i) -> bool:
 		return false
 	if int(_remaining.get(type, 0)) <= 0:
 		return false
-	return _placed_weight() + Balance.deploy_weight(type) <= Game.deploy_capacity()
+	return _placed_weight() + Balance.deploy_weight(type) <= _capacity()
 
 
 ## La piece portee depuis l'inventaire arrive sur sa case. On repasse par le
@@ -1213,7 +1231,7 @@ func _on_placement_tap(cell: Vector2i) -> void:
 		return
 	if _selected_type.is_empty() or int(_remaining[_selected_type]) <= 0:
 		return
-	var capacity := Game.deploy_capacity()
+	var capacity := _capacity()
 	if _placed_weight() + Balance.deploy_weight(_selected_type) > capacity:
 		_status_label.text = "Charge max : %d" % capacity
 		return
@@ -1272,7 +1290,7 @@ func _on_reset_placement() -> void:
 func _on_last_formation() -> void:
 	_on_reset_placement()
 
-	var capacity := Game.deploy_capacity()
+	var capacity := _capacity()
 	for piece in Game.playable_formation(_battle_id(), _remaining):
 		var type := String(piece[0])
 		var cell := Vector2i(int(piece[1]), int(piece[2]))
@@ -1674,7 +1692,7 @@ func _show_fight_won(losses: Dictionary) -> void:
 	# On avance MAINTENANT plutot qu'au clic : la serie est sauvegardee au
 	# combat suivant, donc fermer le jeu sur cet ecran ne fait pas rejouer le
 	# combat qu'on vient de gagner.
-	var recovered := _run.advance(Balance.RUN_REINFORCE_WEIGHT, Game.deploy_capacity())
+	var recovered := _run.advance(Balance.RUN_REINFORCE_WEIGHT, _capacity())
 	Game.save_run(_run)
 
 	# PAS d'ecran de victoire ici. Une serie est UN engagement : la couronner
@@ -1717,7 +1735,7 @@ func _show_fight_drawn(losses: Dictionary) -> void:
 		Game.finish_run(_run, false)
 		consolation = int(round(float(promised) * Balance.DEFEAT_CONSOLATION_RATIO))
 	else:
-		recovered = _run.replay(Balance.RUN_REINFORCE_WEIGHT, Game.deploy_capacity())
+		recovered = _run.replay(Balance.RUN_REINFORCE_WEIGHT, _capacity())
 		Game.save_run(_run)
 
 	var screen := BattleResult.new()

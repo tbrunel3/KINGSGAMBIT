@@ -83,6 +83,24 @@ var dames_made: int = 0
 ## infinie - au-dela de Balance.RUN_DRAWS_ALLOWED, la serie s'acheve.
 var draws: int = 0
 
+## LA CHARGE DE LA SERIE, GELEE A SON OUVERTURE.
+##
+## ⚠️ ELLE ETAIT RELUE A CHAUD, et c'etait une vraie fuite. Une serie ne
+## repasse pas par le village entre deux combats - mais on PEUT y retourner
+## (fermer le codex, la boutique, le chateau y ramene, et depuis la fiche 2
+## cela n'abandonne plus la serie). Ameliorer le Chateau Royal au milieu d'une
+## serie augmentait donc la charge des combats suivants, alors que l'armee
+## ennemie, elle, revient identique a chaque fois.
+##
+## Ce n'est pas un detail d'equilibrage : la serie est "une seule unite
+## economique, pas trois batailles cote a cote", et toute la difficulte du jeu
+## tient a l'USURE. Une charge qui monte en cours de route annule l'usure.
+##
+## Zero = une sauvegarde ecrite avant ce correctif : on retombe alors sur la
+## charge courante, comme avant.
+var capacity: int = 0
+
+
 ## Promus NON-Dames faits pendant la serie et encore en ligne. Ils restent
 ## jusqu'au dernier combat puis redeviennent des pions : le village n'en voit
 ## jamais un seul, puisque seule `losses` lui est appliquee a la fin.
@@ -90,12 +108,14 @@ var knights_made: int = 0
 
 
 ## Ouvre une serie sur cette bataille, avec l'armee du village au complet.
-static func start(id: int, fights: int, army: Dictionary) -> CampaignRun:
+static func start(id: int, fights: int, army: Dictionary,
+		deploy_capacity: int = 0) -> CampaignRun:
 	var run := CampaignRun.new()
 	run.battle_id = id
 	run.total = maxi(1, fights)
 	run.fight = 1
 	run.roster = army.duplicate()
+	run.capacity = maxi(0, deploy_capacity)
 	return run
 
 
@@ -365,6 +385,7 @@ func to_dict() -> Dictionary:
 		"dames_made": dames_made,
 		"knights_made": knights_made,
 		"draws": draws,
+		"capacity": capacity,
 	}
 
 
@@ -380,6 +401,9 @@ static func from_dict(data: Dictionary) -> CampaignRun:
 	# Absent des sauvegardes d'avant le plafond de nuls : elles reprennent a zero.
 	run.draws = int(data.get("draws", 0))
 	run.knights_made = int(data.get("knights_made", 0))
+	# Absente des sauvegardes d'avant le gel de la charge : elles retombent
+	# sur la charge courante, exactement comme avant.
+	run.capacity = int(data.get("capacity", 0))
 
 	# Les cles reviennent du disque en String et les valeurs en float (JSON) :
 	# on les repasse par des entiers, sinon un "3.0" se glisse dans un

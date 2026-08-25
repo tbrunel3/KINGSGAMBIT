@@ -671,7 +671,14 @@ func _commit_lineup() -> bool:
 
 # ------------------------------- COMPOSITION ---------------------------------
 
+## ⚠️ LA CHARGE GELEE DE LA SERIE, quand il y en a une - pas celle du chateau.
+##
+## Au combat 2 d'une serie l'ecran est en lecture seule, mais il AFFICHE la
+## charge : s'il montrait celle du chateau apres une amelioration faite entre
+## deux combats, il annoncerait un budget que le placement refuserait ensuite.
 func _capacity() -> int:
+	if _run != null and _run.capacity > 0:
+		return _run.capacity
 	return Game.deploy_capacity()
 
 

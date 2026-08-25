@@ -11,10 +11,6 @@
     "groupe": "tout",
     "ordre": [
      {
-      "ref": "6",
-      "titre": "Les popups d'accompagnement de Figma"
-     },
-     {
       "ref": "d1",
       "titre": "Améliorer le Château en pleine série augmente la charge"
      },
@@ -30,8 +26,8 @@
    },
    "build": {
     "enLigne": false,
-    "commit": "166773c",
-    "quoi": "l'intro (n1), le bouton COMBATTRE (n2) et les missives du Roi (5)",
+    "commit": "baff6c2",
+    "quoi": "l'intro (n1), COMBATTRE (n2), les missives (5) et les popups d'accompagnement (6)",
     "note": "Recharge en forçant : le service worker de Godot sert volontiers l'ancien build."
    },
    "sections": [
@@ -344,10 +340,31 @@
        "ref": "6",
        "titre": "Les popups d'accompagnement de Figma",
        "detail": "Quatre maquettes posées (pat, composition, aura de la Dame, temps réel), jamais intégrées telles quelles. Le code les affiche déjà une fois chacune — c'est leur habillage qui reste.",
-       "statut": "todo",
-       "journal": [],
+       "statut": "attente",
+       "journal": [
+        {
+         "quand": "25/08",
+         "qui": "Claude",
+         "texte": "Le contenu était déjà bon. Les quatre maquettes portent EXACTEMENT le même habillage quel que soit le sujet ; le code, lui, les servait dans quatre contextes différents. Le popup du pat — le plus utile des quatre — avait donc un cadre gris et une couronne grise."
+        },
+        {
+         "quand": "25/08",
+         "qui": "Claude",
+         "texte": "⚠️ Deux vrais défauts trouvés en le faisant. Le bouton J'AI COMPRIS était en or sourd avec un libellé BLANC — le pire contraste du jeu, sur le seul bouton de ces quatre écrans. Et le glyphe du pat était la couronne BRISÉE, celle du blason de la défaite, sur un écran dont la troisième règle est « ta série n'est pas rompue »."
+        },
+        {
+         "quand": "25/08",
+         "qui": "Claude",
+         "texte": "Les quatre popups n'avaient AUCUNE capture, alors qu'ils ne se montrent qu'une fois chacun en jeu : la seule façon de les revoir était de repartir d'une sauvegarde neuve. Elles existent maintenant. Bancs : ui_test 266 OK / 0 échec, smoke_test 10/10, format_test les huit formats."
+        }
+       ],
        "priorite": "basse",
-       "theme": "Interface"
+       "theme": "Interface",
+       "livre": {
+        "commit": "baff6c2",
+        "quand": "25/08 à 21h20"
+       },
+       "resume": "À vérifier : les quatre popups d'accompagnement (pat, composition, aura de la Dame, amélioration en temps réel) sont maintenant cerclés d'or, avec une pastille ronde sous le glyphe et un bouton J'AI COMPRIS doré à texte foncé. Ils se ressemblent tous les quatre — c'est voulu."
       },
       {
        "ref": "n1",
@@ -660,5 +677,5 @@
    "exportWeb": null
   }
  ],
- "serie": 65
+ "serie": 66
 }

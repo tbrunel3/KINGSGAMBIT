@@ -556,6 +556,26 @@ func deploy_capacity() -> int:
 	return Balance.deploy_capacity(castle_level())
 
 
+## LA CHARGE QUI FAIT FOI PENDANT UN COMBAT, et la seule porte a emprunter
+## depuis les ecrans de bataille.
+##
+## Hors serie, c'est la charge du chateau. EN SERIE, c'est celle qui a ete
+## gelee a l'ouverture : une serie ne repasse pas par le village, mais on peut
+## y retourner - fermer le codex, la boutique ou le chateau y ramene, et depuis
+## la fiche 2 cela n'abandonne plus la serie. Ameliorer le Chateau Royal au
+## milieu d'une serie augmentait donc la charge des combats suivants, pendant
+## que l'armee ennemie revenait identique.
+##
+## ⚠️ NE PAS APPELER deploy_capacity() DEPUIS UN ECRAN DE COMBAT. C'est
+## exactement ce que faisaient battle.gd et battle_prep.gd, et c'est par la que
+## la fuite passait.
+func combat_capacity(battle_id: int = -1) -> int:
+	var run := current_run(battle_id)
+	if run != null and run.capacity > 0:
+		return run.capacity
+	return deploy_capacity()
+
+
 # ------------------------------- AURA DE LA DAME -----------------------------
 #
 #  Une Dame laissee au village tient la cour pendant que le Roi se bat : elle
@@ -822,7 +842,8 @@ func begin_run(battle_id: int) -> CampaignRun:
 	var army: Dictionary = {}
 	for type in Balance.ARMY_TYPES:
 		army[type] = units_owned(type)
-	var run := CampaignRun.start(battle_id, Balance.battle_fights(battle), army)
+	var run := CampaignRun.start(battle_id, Balance.battle_fights(battle), army,
+			deploy_capacity())
 	# La serie s'ouvre sur la derniere composition que le joueur avait validee
 	# ici, ramenee a ce qu'il possede encore et a la charge d'aujourd'hui. Sans
 	# rien en memoire - premiere bataille, ou un banc qui n'ouvre jamais la
