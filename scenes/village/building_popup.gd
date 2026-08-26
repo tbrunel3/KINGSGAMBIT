@@ -449,14 +449,16 @@ func _action_row(title_text: String, title_color: Color, cost_text: String, extr
 	button_label.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	button.add_child(button_label)
 	if not disabled:
-		button.mouse_filter = Control.MOUSE_FILTER_STOP
 		# call_deferred, et pas call : l'action (recruter, ameliorer) fait
 		# reconstruire le popup, donc liberer CE bouton - or il est en train
 		# d'emettre le signal qui nous amene ici. On laisse la frame se
 		# terminer avant de se supprimer soi-meme.
-		button.gui_input.connect(func(event: InputEvent):
-			if event is InputEventMouseButton and event.pressed and event.button_index == MOUSE_BUTTON_LEFT:
-				on_press.call_deferred())
+		#
+		# ⚠️ `on_tap` PLUTOT QUE `gui_input` NU : c'est la fiche D. Le joueur a
+		# nomme ces boutons-la, « meme sur les pop up batiment ». Ils n'avaient
+		# pas de retour a l'appui parce qu'ils ne passaient ni par le theme ni
+		# par un composant partage.
+		UiTheme.on_tap(button, func() -> void: on_press.call_deferred())
 	row.add_child(button)
 
 	return row_panel

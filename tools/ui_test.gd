@@ -1543,6 +1543,80 @@ func _test_press_feedback() -> void:
 	chip.queue_free()
 	await _frames(1)
 
+	# ── LES QUATRE QUE LE JOUEUR A NOMMES ───────────────────────────────────
+	#
+	# ⚠️ CE BLOC EXISTE PARCE QUE LE BANC ETAIT VERT PENDANT QUE LE DEFAUT
+	# ETAIT LA. Il verifiait le theme, le cachet, le bouton de coin et la chip
+	# - et tous les quatre l'avaient. Mais BATAILLE, l'entree du Chateau Royal,
+	# les panneaux de batiment et les boutons du popup de batiment sont des
+	# PanelContainer rendus cliquables A LA MAIN : ils ne croisaient jamais le
+	# theme, et rien ne les regardait.
+	#
+	# Retour du joueur, mot pour mot : « sur le bouton bataille retour chateau
+	# non, meme sur les pop up batiment, il faut avoir l'impression d'un appui
+	# smooth ». Verifier ce qui passe deja par le composant partage ne prouve
+	# rien - il faut nommer ceux qui n'y passaient PAS.
+	Game.reset_progress()
+	var village: Node = load("res://scenes/village/village.tscn").instantiate()
+	add_child(village)
+	await _frames(3)
+	await _skip_animations()
+
+	_check(village._battle_button != null
+			and village._battle_button.has_meta("_press_feedback"),
+		"⚠️ le bouton BATAILLE a le retour a l'appui")
+	_check(village._castle_label != null
+			and village._castle_label.has_meta("_press_feedback"),
+		"⚠️ l'entree du Chateau Royal l'a aussi")
+
+	var casernes_sans := []
+	for type in village._building_buttons.keys():
+		var panneau: Control = village._building_buttons[type]
+		if not panneau.has_meta("_press_feedback"):
+			casernes_sans.append(String(type))
+	_check(casernes_sans.is_empty(),
+		"⚠️ les %d panneaux de batiment l'ont%s" % [
+			village._building_buttons.size(),
+			"" if casernes_sans.is_empty() else " — SANS : " + ", ".join(casernes_sans)])
+
+	village.queue_free()
+	await _frames(2)
+
+	# Et les boutons du popup de batiment, nommes eux aussi.
+	var popup: Node = load("res://scenes/village/building_popup.tscn").instantiate()
+	add_child(popup)
+	popup.open(Balance.PION)
+	await _frames(3)
+	await _skip_animations()
+
+	# ⚠️ LE VOILE DE LA MODALE N'EST PAS UN BOUTON, et il ne doit surtout PAS
+	# recevoir le retour a l'appui : c'est un ColorRect plein ecran qui ferme
+	# la modale quand on tape a cote. Le retrecir de 4 % ferait retracter tout
+	# l'ecran sous le doigt. Le banc l'a signale au premier passage, et c'est
+	# l'assertion qui etait trop large, pas le jeu.
+	var tapables := []
+	var pile: Array = [popup]
+	while not pile.is_empty():
+		var noeud: Node = pile.pop_back()
+		for enfant in noeud.get_children():
+			pile.append(enfant)
+			if enfant.name == "Dim":
+				continue
+			if enfant is Control and not (enfant as Control).gui_input.get_connections().is_empty():
+				tapables.append(enfant)
+	var sans_retour := []
+	for control in tapables:
+		if not (control as Control).has_meta("_press_feedback"):
+			sans_retour.append(String((control as Control).name))
+	_check(not tapables.is_empty(),
+		"le popup de batiment porte des boutons (%d)" % tapables.size())
+	_check(sans_retour.is_empty(),
+		"⚠️ les boutons du popup de batiment ont tous le retour%s" % (
+			"" if sans_retour.is_empty() else " — SANS : " + ", ".join(sans_retour)))
+
+	popup.queue_free()
+	await _frames(2)
+
 
 ## ═══════════════════════════════════════════════════════════════════════════
 ## [14] L'OR MONTE, IL NE SAUTE PLUS

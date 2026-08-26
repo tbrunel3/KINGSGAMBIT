@@ -358,6 +358,23 @@ static func on_tap(control: Control, action: Callable) -> void:
 		if click.position.distance_to(depart) <= TAP_SLOP:
 			action.call())
 
+	# LE RETOUR A L'APPUI VIENT AVEC, ET C'EST LA FICHE D.
+	#
+	# Retour du joueur, mot pour mot : « sur le bouton bataille retour chateau
+	# non, meme sur les pop up batiment, il faut avoir l'impression d'un appui
+	# smooth ». Il avait raison, et la cause etait structurelle :
+	# `press_feedback` etait bien pose une seule fois, mais seuls les Button du
+	# theme et trois cliquables maison y passaient. BATAILLE, l'entree du
+	# chateau, les panneaux de batiment et les boutons du popup de batiment
+	# sont des PanelContainer rendus cliquables a la main - ils branchaient
+	# `gui_input` sans jamais croiser le theme.
+	#
+	# En l'accrochant ICI, tout ce qui devient tapable devient aussi sensible
+	# a l'appui, et aucun ecran n'a plus a y penser. C'est la regle que la
+	# fiche pose elle-meme : dans les composants partages, jamais ecran par
+	# ecran, sinon la moitie en aura et l'autre pas.
+	press_feedback(control)
+
 	# Le controle peut ne pas encore etre dans l'arbre : la plupart des ecrans
 	# le construisent puis l'ajoutent. On attend son entree pour chercher le
 	# ScrollContainer, sinon la remontee ne trouverait rien.

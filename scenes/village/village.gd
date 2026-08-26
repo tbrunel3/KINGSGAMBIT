@@ -774,11 +774,18 @@ func _build_building_label(type: String) -> void:
 ## Les labels de batiments sont des PanelContainer (pas des Button) pour
 ## coller au visuel Figma - fond sombre pose sur la carte, pas un bouton
 ## classique. On reproduit juste l'interaction click.
+## ⚠️ CE HELPER NE FAIT PLUS QUE DELEGUER, et c'est le correctif de la fiche D.
+##
+## Il posait `mouse_filter = STOP` et branchait `gui_input` sur l'ENFONCE, sans
+## jamais croiser le theme : BATAILLE, l'entree du Chateau Royal et les quatre
+## panneaux de batiment n'avaient donc AUCUN retour a l'appui. C'est exactement
+## ce que le joueur a signale - « il faut avoir l'impression d'un appui smooth ».
+##
+## `UiTheme.on_tap` apporte les trois choses d'un coup : le retour a l'appui, le
+## declenchement au RELACHEMENT, et l'ouverture du chemin si le controle vit un
+## jour dans une zone qui defile.
 func _make_clickable(panel: PanelContainer, action: Callable) -> void:
-	panel.mouse_filter = Control.MOUSE_FILTER_STOP
-	panel.gui_input.connect(func(event: InputEvent):
-		if event is InputEventMouseButton and event.pressed and event.button_index == MOUSE_BUTTON_LEFT:
-			action.call())
+	UiTheme.on_tap(panel, action)
 
 
 ## Panneau clic-able (pas un Button) : seul moyen d'inserer une Icon
