@@ -1895,6 +1895,25 @@ func _test_village_bars() -> void:
 	_check(not libelles.any(func(t: String) -> bool: return "ROYALE" in t.to_upper()),
 		"et nulle part ROYALE avec un e")
 
+	# ── L'ENGRENAGE OUVRE QUELQUE CHOSE ─────────────────────────────────────
+	#
+	# ⚠️ RETOUR E : « reglage n'affiche rien, pour l'instant sers-t'en pour le
+	# dev mode ». Il portait `func(): pass` - un bouton qui ne fait
+	# LITTERALEMENT rien, et rien dans le depot ne s'en plaignait. Un banc qui
+	# verifie qu'un bouton existe et qu'il est bien aligne peut rester vert
+	# pendant que le bouton n'ouvre rien : il faut l'APPUYER.
+	_check(village._settings_button != null, "l'engrenage des reglages existe")
+	if village._settings_button != null:
+		_check(not is_instance_valid(village._popup),
+			"aucun panneau n'est ouvert avant l'appui")
+		_press(village._settings_button)
+		await _frames(3)
+		_check(is_instance_valid(village._popup),
+			"⚠️ l'engrenage ouvre le panneau de dev")
+		if is_instance_valid(village._popup):
+			village._popup.queue_free()
+			await _frames(2)
+
 	village.queue_free()
 	await _frames(1)
 

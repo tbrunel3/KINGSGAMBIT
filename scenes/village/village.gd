@@ -185,6 +185,9 @@ var _missions_button: PanelContainer
 var _missions_label: Label
 var _missions_badge: PanelContainer
 var _codex_button: Control
+## L'engrenage de la barre du haut. Garde en champ pour que le banc puisse le
+## presser : un bouton qui n'ouvre rien est deja passe une fois inapercu.
+var _settings_button: Control
 var _shop_button: Control
 var _castle_label: PanelContainer
 var _castle_glow: TextureRect
@@ -423,10 +426,25 @@ func _build_top_bar() -> void:
 	# "Boutons grossis", demande du joueur : 34 -> 40. Et leur marge haute se
 	# calcule pour que leur CENTRE tombe sur la meme ligne que les pastilles.
 	var marge_bouton := _top_bar_center() - TOP_BAR_BUTTON * 0.5
-	var settings: Control = CornerButton.floating(
-		"gear", func(): pass, CornerButton.Tone.NIGHT, TOP_BAR_BUTTON)
-	_ui.add_child(settings)
-	settings.row_top_right(0, Vector2(12, marge_bouton))
+	# ⚠️ L'ENGRENAGE OUVRE LE PANNEAU DE DEV, ET C'EST PROVISOIRE.
+	#
+	# Il portait `func(): pass` - il ne faisait litteralement RIEN. Retour du
+	# joueur : « reglage n'affiche rien, pour l'instant sers-t'en pour le dev
+	# mode ». Un bouton qui ne repond pas est pire qu'un bouton absent : on
+	# croit que le jeu est casse.
+	#
+	# « Pour l'instant » : le jour ou les reglages auront un vrai contenu,
+	# l'engrenage le prendra et le panneau de dev redeviendra le seul appui
+	# long. C'est pour ca que `_build_dev_gesture` RESTE - le geste est le
+	# repli, et il ne coute rien puisqu'il est invisible.
+	#
+	# Les deux ne se marchent pas dessus : le geste vit en haut a GAUCHE (il y
+	# a ete deplace precisement pour ne plus voler les taps de cette rangee),
+	# l'engrenage en haut a DROITE.
+	_settings_button = CornerButton.floating(
+		"gear", _on_dev_pressed, CornerButton.Tone.NIGHT, TOP_BAR_BUTTON)
+	_ui.add_child(_settings_button)
+	_settings_button.row_top_right(0, Vector2(12, marge_bouton))
 
 	_codex_button = CornerButton.floating(
 		"info", _on_codex_pressed, CornerButton.Tone.NIGHT, TOP_BAR_BUTTON)
