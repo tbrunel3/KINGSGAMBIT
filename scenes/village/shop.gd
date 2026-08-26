@@ -413,10 +413,10 @@ func _free_chest_card(id: String) -> Control:
 
 	if is_ready:
 		col.add_child(_text("+%d gemmes" % int(data["gems"]), 12, GOLD))
-		card.mouse_filter = Control.MOUSE_FILTER_STOP
-		card.gui_input.connect(func(event: InputEvent):
-			if event is InputEventMouseButton and event.pressed and event.button_index == MOUSE_BUTTON_LEFT:
-				_on_claim(id))
+		# La boutique est un long ScrollContainer : cf. UiTheme.on_tap, un
+		# coffre reclame au RELACHEMENT, jamais des qu'on pose le doigt dessus
+		# pour faire defiler la page.
+		UiTheme.on_tap(card, func() -> void: _on_claim(id))
 	else:
 		var countdown := _text(
 			UiTheme.format_span(Game.free_chest_remaining(id)), 12, TEXT_DIM)
@@ -663,10 +663,11 @@ func _buy_button(price: int, enabled: bool, on_press: Callable) -> Control:
 	row.add_child(label)
 
 	if enabled:
-		plate.mouse_filter = Control.MOUSE_FILTER_STOP
-		plate.gui_input.connect(func(event: InputEvent):
-			if event is InputEventMouseButton and event.pressed and event.button_index == MOUSE_BUTTON_LEFT:
-				on_press.call())
+		# ⚠️ C'EST LE BOUTON QUI DEPENSE. Il vit au milieu d'une page qui
+		# defile, et il declenchait sur l'ENFONCE : faire glisser la boutique
+		# en partant d'une plaque d'achat ACHETAIT. C'est le pire endroit du
+		# jeu ou laisser ce bug.
+		UiTheme.on_tap(plate, func() -> void: on_press.call())
 	return plate
 
 

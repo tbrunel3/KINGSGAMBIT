@@ -46,6 +46,7 @@ func _ready() -> void:
 	await _test_village_bars()
 	await _test_fight_button()
 	await _test_letters()
+	await _test_zones_defilantes()
 	await _test_audit_du_banc()
 
 	print("")
@@ -2152,3 +2153,178 @@ func _test_audit_du_banc() -> void:
 
 	hote.queue_free()
 	await _frames(1)
+
+
+# ---------------------- [21] LES QUATRE ZONES DEFILANTES ---------------------
+#
+#  Fiche d3 du carnet. Le bug est celui des cachets de campagne, et il se cache
+#  partout ou un cliquable vit dans un ScrollContainer :
+#
+#    - il declenche sur l'ENFONCE, donc faire defiler la page en partant de lui
+#      DECLENCHE (dans la boutique, ca ACHETE) ;
+#    - il est en MOUSE_FILTER_STOP, donc le ScrollContainer ne voit jamais le
+#      geste et la page ne defile pas du tout.
+#
+#  ⚠️ CETTE FICHE A DEJA REGRESSE UNE FOIS. Le joueur l'avait validee le 24/08,
+#  mais sur l'implementation d'une branche qui a ete ecartee ensuite. Un banc
+#  qui la mesure est le seul moyen qu'elle ne se reperde pas une deuxieme fois.
+
+
+## Remonte de `control` jusqu'au ScrollContainer qui le contient et rend les
+## maillons restes en STOP. UN SEUL suffit a tuer le defilement : l'evenement
+## s'y arrete, et le ScrollContainer au-dessus ne voit rien.
+##
+## Hors d'une zone defilante, rend une liste vide - il n'y a rien a exiger.
+func _maillons_bloquants(control: Control) -> Array:
+	var chaine: Array = []
+	var noeud: Node = control
+	while noeud != null and not (noeud is ScrollContainer):
+		if noeud is Control and (noeud as Control).mouse_filter == Control.MOUSE_FILTER_STOP:
+			chaine.append(noeud.name)
+		noeud = noeud.get_parent()
+	# `noeud` vaut null si on est remonte jusqu'a la racine sans rencontrer de
+	# ScrollContainer : ce cliquable n'est pas dans une zone defilante.
+	return chaine if noeud != null else []
+
+
+func _descendants(racine: Node, sortie: Array) -> void:
+	for enfant in racine.get_children():
+		sortie.append(enfant)
+		_descendants(enfant, sortie)
+
+
+## Tous les controles cliquables (ceux qui ecoutent `gui_input`) qui vivent
+## SOUS un ScrollContainer de cet ecran.
+func _cliquables_sous_defilement(racine: Node) -> Array:
+	var tous: Array = []
+	_descendants(racine, tous)
+	var trouves: Array = []
+	for noeud in tous:
+		if not (noeud is ScrollContainer):
+			continue
+		var dedans: Array = []
+		_descendants(noeud, dedans)
+		for enfant in dedans:
+			if enfant is Control and not (enfant as Control).gui_input.get_connections().is_empty():
+				trouves.append(enfant)
+	return trouves
+
+
+## Envoie un evenement de bouton a un controle, par le SIGNAL.
+##
+## ⚠️ C'est le bon sens, et c'est l'inverse du piege de `_press()`. Tous les
+## cliquables de ces quatre zones passent par `UiTheme.on_tap`, qui fait
+## `gui_input.connect(...)` : emettre le signal les atteint. Ce sont les
+## controles qui redefinissent la VIRTUELLE qu'il faut appeler directement.
+func _doigt(control: Control, enfonce: bool, ou: Vector2) -> void:
+	var event := InputEventMouseButton.new()
+	event.button_index = MOUSE_BUTTON_LEFT
+	event.pressed = enfonce
+	event.position = ou
+	control.gui_input.emit(event)
+
+
+func _zone_defile(ecran: Node, nom: String) -> void:
+	var cliquables := _cliquables_sous_defilement(ecran)
+	_check(not cliquables.is_empty(),
+		"%s : la zone defilante porte des cliquables (%d)" % [nom, cliquables.size()])
+
+	var bloques: Array = []
+	for control in cliquables:
+		var maillons := _maillons_bloquants(control)
+		if not maillons.is_empty():
+			bloques.append("%s (par %s)" % [control.name, ", ".join(maillons)])
+
+	_check(bloques.is_empty(),
+		"%s : rien n'arrete le geste avant le defilement%s" % [
+			nom,
+			"" if bloques.is_empty() else " — BLOQUE : " + ", ".join(bloques)])
+
+
+func _test_zones_defilantes() -> void:
+	print("\n[21] Les quatre zones defilantes (fiche d3)")
+
+	# ── 1. LA STRUCTURE, sur les quatre ecrans ─────────────────────────────
+	Game.reset_progress()
+	Game.add_gems(2000)
+
+	var codex: Node = load("res://scenes/village/codex_popup.tscn").instantiate()
+	add_child(codex)
+	await _frames(3)
+	await _skip_animations()
+	_zone_defile(codex, "codex")
+
+	var shop: Node = load("res://scenes/village/shop.tscn").instantiate()
+	add_child(shop)
+	await _frames(4)
+	await _skip_animations()
+	_zone_defile(shop, "boutique")
+
+	Router.current_battle_id = 1
+	var prep: Node = load("res://scenes/battle/battle_prep.tscn").instantiate()
+	add_child(prep)
+	await _frames(3)
+	await _skip_animations()
+	_zone_defile(prep, "preparation")
+
+	var showcase: Node = load("res://scenes/ui/ui_kit_showcase.tscn").instantiate()
+	add_child(showcase)
+	await _frames(3)
+	await _skip_animations()
+	_zone_defile(showcase, "showcase")
+
+	# ── 2. LE COMPORTEMENT, sur la rangee de filtres du codex ──────────────
+	#
+	# C'est le cas le plus net du jeu : les six puces ne tiennent pas dans 361
+	# points, la rangee est donc un ScrollContainer HORIZONTAL, et elle n'a
+	# aucune autre raison d'exister que d'etre glissee.
+	var type: String = String(Balance.ARMY_TYPES[0])
+	var puce: Control = codex._chips.get(type, null)
+	_check(puce != null, "la puce de filtre « %s » existe" % type)
+
+	if puce != null:
+		var centre: Vector2 = puce.size * 0.5
+		var depart: String = String(codex._filter)
+
+		# a. Poser le doigt ne filtre pas. C'est ce qui armait le bug.
+		_doigt(puce, true, centre)
+		await _frames(2)
+		_check(String(codex._filter) == depart,
+			"⚠️ poser le doigt sur une puce ne change PAS le filtre")
+
+		# b. Le relever loin : c'est un glissement, pas un appui.
+		_doigt(puce, false, centre + Vector2(UiTheme.TAP_SLOP + 30.0, 0))
+		await _frames(2)
+		_check(String(codex._filter) == depart,
+			"⚠️ faire glisser la rangee ne change PAS le filtre")
+
+		# c. Un VRAI appui filtre. Sans ce troisieme point, on aurait pu
+		#    « corriger » le bug en cassant la puce, et le banc serait vert.
+		_doigt(puce, true, centre)
+		await _frames(1)
+		_doigt(puce, false, centre + Vector2(3.0, 0))
+		await _frames(2)
+		_check(String(codex._filter) != depart,
+			"mais un appui immobile filtre bien (« %s »)" % String(codex._filter))
+
+	# ── 3. LA BOUTIQUE NE DEPENSE PAS SUR UN GLISSEMENT ────────────────────
+	#
+	# ⚠️ C'est le pire endroit du jeu ou laisser ce bug : la plaque d'achat
+	# vivait au milieu d'une page qui defile et declenchait sur l'ENFONCE.
+	var achats := _cliquables_sous_defilement(shop)
+	var or_avant: int = Game.gold
+	var gemmes_avant: int = Game.gems
+	for control in achats:
+		var centre: Vector2 = (control as Control).size * 0.5
+		_doigt(control, true, centre)
+		_doigt(control, false, centre + Vector2(0, UiTheme.TAP_SLOP + 40.0))
+	await _frames(2)
+	_check(Game.gold == or_avant and Game.gems == gemmes_avant,
+		"⚠️ faire defiler la boutique n'achete RIEN (%d or / %d gemmes intacts)" % [
+			Game.gold, Game.gems])
+
+	codex.queue_free()
+	shop.queue_free()
+	prep.queue_free()
+	showcase.queue_free()
+	await _frames(2)

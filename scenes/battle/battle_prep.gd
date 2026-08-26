@@ -417,11 +417,12 @@ func _filled_slot(type: String) -> PanelContainer:
 	var slot := _shell(TILE_BG, TILE_EDGE, 1.5, 10.0, 3, true)
 	slot.custom_minimum_size = Vector2(SLOT_SIZE, SLOT_SIZE)
 	if _composing:
-		slot.mouse_filter = Control.MOUSE_FILTER_STOP
 		slot.tooltip_text = "Glisse-le vers la caserne, ou touche-le, pour le renvoyer"
-		slot.gui_input.connect(func(event: InputEvent):
-			if _is_tap(event):
-				_remove(type))
+		# ⚠️ Le tap et le glisser-deposer cohabitent, et dans cet ordre-la.
+		# Godot ne demande `_get_drag_data` qu'une fois le bouton enfonce ET la
+		# souris deplacee : le relachement part alors vers la cible du lacher,
+		# jamais ici. Un glissement ne peut donc pas declencher AUSSI le tap.
+		UiTheme.on_tap(slot, func() -> void: _remove(type))
 		_saisir(slot, "deploiement", type)
 
 	var sprite := TextureRect.new()
@@ -436,11 +437,8 @@ func _filled_slot(type: String) -> PanelContainer:
 func _empty_slot() -> Control:
 	var slot := DashedSlot.new()
 	slot.custom_minimum_size = Vector2(SLOT_SIZE, SLOT_SIZE)
-	slot.mouse_filter = Control.MOUSE_FILTER_STOP
-	slot.gui_input.connect(func(event: InputEvent):
-		if _is_tap(event):
-			_hint_label.text = "Touche une pièce de la caserne pour l'engager."
-	)
+	UiTheme.on_tap(slot, func() -> void:
+		_hint_label.text = "Touche une pièce de la caserne pour l'engager.")
 	return slot
 
 
@@ -519,12 +517,9 @@ func _rebuild_barracks() -> void:
 			_status_pill("AU COMBAT" if engaged else "RÉSERVE", engaged))
 
 		if _composing:
-			card.mouse_filter = Control.MOUSE_FILTER_STOP
 			card.tooltip_text = "Glisse-le vers le déploiement, ou touche-le : %s, charge %d" % [
 				Balance.unit_name(type), Balance.deploy_weight(type)]
-			card.gui_input.connect(func(event: InputEvent):
-				if _is_tap(event):
-					_add(type))
+			UiTheme.on_tap(card, func() -> void: _add(type))
 			# On ne saisit que ce qui reste en reserve : glisser une carte vide
 			# ferait miroiter un engagement que `_add` refuserait au lacher.
 			if left > 0:

@@ -28,7 +28,15 @@ var _count_value: int = 0
 
 
 func _ready() -> void:
-	gui_input.connect(_on_gui_input)
+	# ⚠️ `on_tap` PLUTOT QUE `gui_input` NU : la chip vit aussi dans le
+	# showcase, qui est un ScrollContainer. Emettre sur l'ENFONCE y changeait la
+	# selection des qu'on faisait defiler la page - le bug des cachets, deja
+	# paye une fois sur la carte de campagne.
+	#
+	# Sur l'ecran de placement, ou la rangee de chips n'est PAS dans une zone
+	# defilante, `on_tap` ne touche a aucun `mouse_filter` : le comportement y
+	# est inchange, au relachement pres.
+	UiTheme.on_tap(self, func() -> void: pressed.emit())
 	UiTheme.press_feedback(self)
 	UiTheme.ignore_mouse_recursive($Column)
 	_restyle()
@@ -67,12 +75,6 @@ func _get_drag_data(_position: Vector2) -> Variant:
 		return null
 	UiTheme.drag_preview_for(self, _icon.texture if _icon != null else null, 48.0)
 	return {"ou": "inventaire", "type": piece_type}
-
-
-
-func _on_gui_input(event: InputEvent) -> void:
-	if event is InputEventMouseButton and event.pressed and event.button_index == MOUSE_BUTTON_LEFT:
-		pressed.emit()
 
 
 ## Cf. capture Figma 04 (Chips-Row) : fond blanc translucide au repos, fond

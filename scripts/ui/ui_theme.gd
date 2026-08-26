@@ -279,6 +279,132 @@ static func _press_scale(control: Control, enfonce: bool) -> void:
 	control.set_meta("_press_tween", tween)
 
 
+# ---------------------------- LE TAP DANS UNE ZONE QUI DEFILE ----------------
+#
+#  ⚠️ CE BLOC EXISTE PARCE QUE LE BUG A DEJA ETE PAYE UNE FOIS, sur la carte de
+#  campagne : poser le doigt sur un cachet partait en bataille AVANT d'avoir
+#  bouge, et la carte ne defilait pas quand le geste partait d'un cachet.
+#
+#  Il fallait DEUX corrections, et l'une sans l'autre ne sert a rien :
+#
+#    1. l'appui n'ARME que le geste ; c'est le RELACHEMENT qui decide, et
+#       seulement s'il retombe a moins de TAP_SLOP du point de depart ;
+#    2. la chaine de `mouse_filter` doit laisser passer l'evenement jusqu'au
+#       ScrollContainer. En STOP, Godot arrete la propagation des evenements de
+#       BOUTON vers les parents.
+#
+#  ⚠️ ET LE POINT 2 NE SE JOUE PAS SUR LE SEUL CONTROLE CLIQUABLE. Le passer en
+#  PASS ne suffit pas si un conteneur INTERMEDIAIRE est reste en STOP :
+#  l'evenement s'y arrete une rangee plus haut, et rien ne defile. C'est ce que
+#  campaign.tscn fait a la main, en posant `mouse_filter = 2` (IGNORE) sur
+#  Content, Map, Parchment, Glow et Path. Les quatre autres zones defilantes du
+#  jeu - preparation, codex, boutique, showcase - ne l'avaient jamais eu.
+#
+#  D'ou `on_tap`, qui fait les deux d'un coup et au meme endroit. La fiche D du
+#  carnet le demande explicitement : dans les composants partages, jamais ecran
+#  par ecran, sinon la moitie des ecrans l'aura et l'autre pas.
+
+## Au-dela de ce deplacement, ce n'est plus un appui, c'est un glissement.
+## 12 points : la valeur eprouvee sur le cachet de campagne.
+##
+## ⚠️ A ne pas confondre avec `grid_view._DRAG_THRESHOLD` (8 pt), qui repond a
+## une autre question - a partir de quand un geste devient un glisser-deposer
+## de piece. Celui-ci dit a partir de quand un appui CESSE d'en etre un.
+const TAP_SLOP := 12.0
+
+const _TAP_ORIGIN := "_tap_origin"
+
+
+## Branche `action` sur un appui VRAI, et ouvre le chemin du defilement.
+##
+## A utiliser partout ou un controle cliquable vit dans un ScrollContainer.
+## Remplace le motif `mouse_filter = STOP` + `gui_input.connect(... event.pressed
+## ...)`, qui declenche des qu'on POSE le doigt.
+static func on_tap(control: Control, action: Callable) -> void:
+	if control == null or not action.is_valid():
+		return
+
+	# ⚠️ UN CLIQUABLE DOIT D'ABORD RECEVOIR, et ca ne va pas de soi ici.
+	# Plusieurs de ces controles sortent de fabriques partagees (`_plate`,
+	# `_shell`) qui les posent en IGNORE pour que le decor ne vole pas le doigt.
+	# Les appelants compensaient en ecrivant `mouse_filter = STOP` juste avant
+	# de brancher `gui_input` ; en leur retirant cette ligne, on branchait un
+	# signal que Godot n'alimentait plus jamais.
+	#
+	# Mesure : 69 echecs dans `ui_test`, tous « ignore la souris : aucun doigt
+	# ne l'atteint ». C'est le banc qui l'a vu, pas moi.
+	if control.mouse_filter == Control.MOUSE_FILTER_IGNORE:
+		control.mouse_filter = Control.MOUSE_FILTER_STOP
+
+	control.gui_input.connect(func(event: InputEvent) -> void:
+		# Cast explicite plutot que `event is ...` : sur une variable typee
+		# InputEvent, GDScript ne deduit pas le type de `event.position`.
+		var click := event as InputEventMouseButton
+		if click == null or click.button_index != MOUSE_BUTTON_LEFT:
+			return
+
+		if click.pressed:
+			control.set_meta(_TAP_ORIGIN, click.position)
+			return
+
+		# ⚠️ `has_meta` D'ABORD : `get_meta(cle, defaut)` remonte une ERROR
+		# quand la cle manque, et la valeur par defaut ne la supprime pas. Une
+		# erreur dans une sortie de banc par ailleurs verte est precisement ce
+		# que le manuel interdit de laisser passer.
+		if not control.has_meta(_TAP_ORIGIN):
+			return
+		var depart: Vector2 = control.get_meta(_TAP_ORIGIN)
+		control.remove_meta(_TAP_ORIGIN)
+		if click.position.distance_to(depart) <= TAP_SLOP:
+			action.call())
+
+	# Le controle peut ne pas encore etre dans l'arbre : la plupart des ecrans
+	# le construisent puis l'ajoutent. On attend son entree pour chercher le
+	# ScrollContainer, sinon la remontee ne trouverait rien.
+	if control.is_inside_tree():
+		open_scroll_path(control)
+	else:
+		control.tree_entered.connect(
+			func() -> void: open_scroll_path(control), CONNECT_ONE_SHOT)
+
+
+## Ouvre la chaine de `mouse_filter` entre `control` et le ScrollContainer qui
+## le contient, pour que le geste de defilement arrive jusqu'a lui. Retourne le
+## nombre de noeuds ouverts - le banc s'en sert pour verifier qu'il a mordu.
+##
+## ⚠️ PASSER DE STOP A PASS N'ENLEVE RIEN. Un controle en PASS recoit toujours
+## l'evenement ; il le transmet EN PLUS a son parent. On n'ouvre donc jamais un
+## clic, on ne fait qu'ajouter la propagation.
+##
+## S'il n'y a aucun ScrollContainer au-dessus, on ne touche a rien : hors d'une
+## zone defilante, laisser un cliquable en STOP evite qu'un clic traverse vers
+## ce qu'il y a derriere.
+static func open_scroll_path(control: Control) -> int:
+	if control == null or not control.is_inside_tree():
+		return 0
+
+	# Premiere passe : y a-t-il seulement un ScrollContainer au-dessus ?
+	var chaine: Array[Control] = []
+	var noeud: Node = control
+	var trouve := false
+	while noeud != null:
+		if noeud is ScrollContainer:
+			trouve = true
+			break
+		if noeud is Control:
+			chaine.append(noeud as Control)
+		noeud = noeud.get_parent()
+	if not trouve:
+		return 0
+
+	var ouverts := 0
+	for maillon in chaine:
+		if maillon.mouse_filter == Control.MOUSE_FILTER_STOP:
+			maillon.mouse_filter = Control.MOUSE_FILTER_PASS
+			ouverts += 1
+	return ouverts
+
+
 static func style_panel(panel: PanelContainer, color: Color = PANEL) -> void:
 	panel.add_theme_stylebox_override("panel", panel_box(color))
 

@@ -199,10 +199,12 @@ func _add_chip(type: String, text: String) -> void:
 	chip.set_padding(10, 8, 10, 8)
 	chip.inner_outline_color = Color(0, 0, 0, 0)
 	chip.highlight_alpha = 0.0
-	chip.mouse_filter = Control.MOUSE_FILTER_STOP
-	chip.gui_input.connect(func(event: InputEvent):
-		if event is InputEventMouseButton and event.pressed and event.button_index == MOUSE_BUTTON_LEFT:
-			_on_filter(type))
+	# ⚠️ CETTE RANGEE DEFILE, et c'est pour ca que le tap y est un vrai tap.
+	# Les six puces ne tiennent pas dans 361 points (404 dans la maquette, ROI
+	# compris) : la rangee est un ScrollContainer horizontal. Declencher sur
+	# l'ENFONCE - ce qu'elle faisait - changeait donc de filtre des qu'on
+	# essayait de la faire glisser. Meme bug que les cachets de campagne.
+	UiTheme.on_tap(chip, func() -> void: _on_filter(type))
 
 	var label := UiTheme.make_label(text, 11, TEXT_BRIGHT)
 	label.add_theme_font_override("font", UiTheme.font_bold())
