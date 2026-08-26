@@ -9,22 +9,13 @@
         "nom": "reprise, demandee en discussion",
         "lance": "24/08 à 16h05",
         "groupe": "tout",
-        "ordre": [
-          {
-            "ref": "D",
-            "titre": "Les animations qui manquent"
-          },
-          {
-            "ref": "E",
-            "titre": "L'habillage : barre du haut, alignements, polices"
-          }
-        ]
+        "ordre": []
       },
       "build": {
-        "enLigne": "25/08, 21h30",
-        "commit": "5d42afe",
-        "quoi": "l'intro du Roi accablé (n1), le bouton COMBATTRE (n2), les quatre missives (5), l'habillage des popups (6) et la charge gelée en série (d1)",
-        "note": "Recharge en FORÇANT : le service worker de Godot sert volontiers l'ancien build."
+        "enLigne": false,
+        "commit": "e26dd7e",
+        "quoi": "d3 (les quatre zones défilantes), D (le retour à l'appui) et E (l'engrenage) sont commitées et poussées, mais PAS ré-exportées sur gh-pages",
+        "note": "Le dernier build en ligne reste celui du 25/08 (5d42afe) : il ne contient rien de cette nuit. Demande la mise en ligne quand tu veux tester, je n'exporte pas de moi-même."
       },
       "sections": [
         {
@@ -186,7 +177,7 @@
               "ref": "D",
               "titre": "Les animations qui manquent",
               "detail": "Le retour à l'appui sur <strong>tous</strong> les boutons — à poser dans les composants partagés, jamais écran par écran, sinon la moitié en aura et l'autre pas. Le codex. L'or qui monte au lieu de sauter.",
-              "statut": "ko",
+              "statut": "attente",
               "journal": [
                 {
                   "quand": "24/08",
@@ -237,21 +228,26 @@
                   "quand": "25/08",
                   "qui": "Claude",
                   "texte": "Ton retour du 24/08 s'était perdu avec la bascule de branche : « il faut avoir l'impression d'un appui smooth », y compris sur le bouton BATAILLE, le retour au château et les popups de bâtiment. La ligne rouvre — elle n'a jamais été validée."
+                },
+                {
+                  "quand": "26/08",
+                  "qui": "Claude",
+                  "texte": "Tu avais raison, et voici pourquoi la fiche disait le contraire. press_feedback était bien posé UNE fois, mais il n'atteignait que les Button du thème et trois cliquables maison. Or BATAILLE, l'entrée du Château, les panneaux de bâtiment et les boutons du popup sont des PanelContainer rendus cliquables À LA MAIN : ils ne croisaient jamais le thème. ⚠️ Et le banc était vert pendant ce temps — il vérifiait les quatre qui l'avaient déjà, jamais ceux qui ne l'avaient pas. UiTheme.on_tap installe maintenant le retour à l'appui, donc tout ce qui devient tapable devient sensible. Le banc [13] nomme désormais tes quatre cibles et rend le nom de celles qui manqueraient. Il a mordu au premier passage sur un cinquième cliquable — le voile de la modale — et là c'était l'assertion qui avait tort : un voile plein écran ne doit pas rétrécir."
                 }
               ],
               "priorite": "moyenne",
               "theme": "Animations",
               "livre": {
-                "commit": "c21d0ac",
-                "quand": "24/08 à 14h31"
+                "commit": "3518608",
+                "quand": "26/08 à 04h35"
               },
-              "resume": "À vérifier : appuie sur n'importe quel bouton (il doit s'enfoncer), gagne ou dépense de l'or au village (le compteur doit monter, pas sauter), et ouvre le codex (il doit se monter en cascade au lieu d'apparaître d'un bloc)."
+              "resume": "À vérifier au doigt, sur les quatre que tu avais nommés : le bouton BATAILLE, l'entrée du Château Royal, les quatre panneaux de bâtiment du village, et les boutons des popups de bâtiment. Chacun doit s'enfoncer sous le doigt et se relever au relâchement. ⚠️ Si l'appui te paraît encore sec, ce n'est plus la couverture, c'est la COURBE : dis-le et je règle Balance.MOTION (press_in 0,06 s / press_out 0,13 s) et Balance.PRESS_SCALE (0,96)."
             },
             {
               "ref": "E",
               "titre": "L'habillage : barre du haut, alignements, polices",
               "detail": "La barre du haut (or + gemmes), l'alignement Boutique / BATAILLE, les polices, et l'interface des missions — que tu as jugée <strong>« très modeste »</strong>.",
-              "statut": "ko",
+              "statut": "attente",
               "journal": [
                 {
                   "quand": "24/08",
@@ -312,15 +308,20 @@
                   "quand": "25/08",
                   "qui": "Claude",
                   "texte": "Ton retour du 24/08 s'était perdu lui aussi : « réglage n'affiche rien, pour l'instant sers-t'en pour le dev mode ». La ligne rouvre sur ce point précis."
+                },
+                {
+                  "quand": "26/08",
+                  "qui": "Claude",
+                  "texte": "C'était littéral : le bouton portait `func(): pass`. Il appelle maintenant le panneau de dev. ⚠️ Pourquoi rien ne l'avait vu — le banc [17] vérifiait que l'engrenage existe, qu'il est à la bonne taille et qu'il est centré au 0,0 pt près. Tout était vrai. Un banc peut mesurer un bouton au dixième de point pendant qu'il n'ouvre rien : il faut l'APPUYER. Il l'appuie désormais et exige qu'un panneau s'ouvre."
                 }
               ],
               "priorite": "moyenne",
               "theme": "Interface",
               "livre": {
-                "commit": "49d4f3b",
-                "quand": "24/08 à 15h50"
+                "commit": "e26dd7e",
+                "quand": "26/08 à 04h35"
               },
-              "resume": "À vérifier au village : la barre du haut est collée en haut, or / gemmes / Missions / infos / réglages sont sur UNE ligne, les boutons de droite sont plus gros, et la Boutique est enfin alignée sur BATAILLE. ⚠️ E4 (les missions « très modestes ») n'est PAS fait : dis-moi ce que tu veux y voir."
+              "resume": "À vérifier : au village, l'engrenage en haut à droite ouvre le panneau de dev. Il portait littéralement `func(): pass` — il ne faisait rien du tout. L'appui long en haut à GAUCHE reste, comme repli pour le jour où les réglages auront un vrai contenu. ⚠️ E4 attend TA réponse : tu as jugé l'interface des missions « très modeste » — la liste, les récompenses, ou l'écran entier ? Je ne l'invente pas."
             },
             {
               "ref": "5",
@@ -885,5 +886,5 @@
       "exportWeb": null
     }
   ],
-  "serie": 77
+  "serie": 78
 }
